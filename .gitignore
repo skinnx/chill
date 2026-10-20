@@ -1,0 +1,15 @@
+# Godot 4+
+.godot/
+/android/
+*.translation
+export_presets.local.cfg
+/build/
+/exports/
+*.tmp
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+# QA output (regenerated)
+/qa/out/
