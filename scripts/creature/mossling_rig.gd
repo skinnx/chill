@@ -148,7 +148,7 @@ func static_params(species_id: StringName, seed01: float) -> Dictionary:
 	out[I_ACCENT] = _col(c, "accent", float(ant.get("emission", 0.0)))
 	out[I_TIP] = _col(c, "tip", float(view().get("tip_mix", 0.45)))
 	out[I_CHEEK] = _col(c, "cheek", float(c.get("cheek_alpha", defaults.get("cheek_alpha", 0.5))))
-	out[I_EYE] = _col(c, "eye", float(eye.get("size", defaults.get("eye_size", 0.2))))
+	out[I_EYE] = eye_ink(species_id, _col(c, "eye", float(eye.get("size", defaults.get("eye_size", 0.2)))))
 	out[I_BODY] = Vector4(float(body.get("w_h", 1.0)), float(body.get("squircle_n", defaults.get("squircle_n", 2.4))),
 		body_px(species_id), float(defaults.get("bottom_flatten_n_add", 1.2)))
 	out[I_PARTS] = Vector4(float(ear.get("id", 0)), float(tail.get("id", 0)), float(ant.get("id", 0)),
@@ -157,8 +157,36 @@ func static_params(species_id: StringName, seed01: float) -> Dictionary:
 		float(ant.get("length", 0.0)))
 	out[I_FACE] = Vector4(float(eye.get("id", 0)), float(eye.get("spacing", defaults.get("eye_spacing", 0.4))),
 		float(eye.get("height_from_top", defaults.get("eye_height_from_top", 0.58))), float(mouth.get("id", 0)))
-	out[I_MISC] = Vector4(seed01, 1.0, float(body.get("feet_nubs", 0)), float(CLOSED_OPEN))
+	# i_misc.y = nestle 0..1 (grass blades at the feet), animated by Mossling
+	out[I_MISC] = Vector4(seed01, 0.0, float(body.get("feet_nubs", 0)), float(CLOSED_OPEN))
 	return out
+
+
+## Eye ink lifted to view.eye_ink.ok_l (per-species override), tinted a little toward the fur hue,
+## so big dark eyes never outrank the scene focal (QA round 1: pebblepaw iris L* ~10 -> ~22).
+func eye_ink(species_id: StringName, base: Color) -> Color:
+	var ink: Dictionary = view().get("eye_ink", {})
+	if ink.is_empty():
+		return base
+	var per: Dictionary = ink.get("species_ok_l", {})
+	var l := float(per.get(String(species_id), ink.get("ok_l", base.ok_hsl_l)))
+	var fur := Color.html(String(species_colours(species_id).get("fur", "#FFFFFF")))
+	var tint := float(ink.get("fur_tint", 0.0))
+	var hue := base.ok_hsl_h
+	var dh := wrapf(fur.ok_hsl_h - hue, -0.5, 0.5)
+	var out := Color.from_ok_hsl(wrapf(hue + dh * tint, 0.0, 1.0), base.ok_hsl_s, maxf(l, base.ok_hsl_l), base.a)
+	return out
+
+
+## Grass nestle at a spot: 0 on props (sun stone, stump ...), 1 on the meadow.
+func nestle_at(spot: StringName) -> float:
+	var n: Dictionary = view().get("nestle", {})
+	var off: Array = n.get("off_spots", [])
+	return 0.0 if off.has(String(spot)) else float(n.get("amount", 1.0))
+
+
+func nestle_hop_fade_px() -> float:
+	return float((view().get("nestle", {}) as Dictionary).get("hop_fade_px", 6.0))
 
 
 func ear_type(species_id: StringName) -> String:
@@ -202,6 +230,14 @@ func make_fur_material() -> ShaderMaterial:
 	return mat
 
 
+## Binds the fur material's palette grass slots (nestle blades) to [param feed]; the owner calls
+## feed.apply(TimeOfDay.colors) on TimeOfDay.globals_updated.
+static func bind_palette(mat: ShaderMaterial, feed: PaletteFeed) -> void:
+	feed.bind(mat, &"u_grass_tip", "grass_tip")
+	feed.bind(mat, &"u_grass_root", "grass_root")
+	feed.bind(mat, &"u_ground", "ground_front_lit")
+
+
 func make_shadow_material() -> ShaderMaterial:
 	var mat := ShaderMaterial.new()
 	mat.shader = load(SHADOW_SHADER) as Shader
@@ -216,6 +252,10 @@ func make_fx_materials() -> Dictionary:
 	var spark := fx_colour("sparkle")
 	var zzz := fx_colour("zzz")
 	var leaf := material_tones("leaf_boat")
+	# the umbrella leaf sits with the felt creatures: leaf tones at reduced chroma (QA round 1)
+	var keep := float((view().get("umbrella", {}) as Dictionary).get("chroma_keep", 0.85))
+	for i in leaf.size():
+		leaf[i] = Color.from_ok_hsl(leaf[i].ok_hsl_h, leaf[i].ok_hsl_s * keep, leaf[i].ok_hsl_l, leaf[i].a)
 	var spec := {
 		MosslingFx.KIND_HEART: [MosslingFx.HEART_HALF_PX, heart, heart.darkened(0.12), spark],
 		MosslingFx.KIND_Z: [MosslingFx.Z_HALF_PX, zzz, zzz, zzz],

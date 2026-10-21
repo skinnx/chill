@@ -50,10 +50,10 @@ uniform float crest_glow_px = 70.0;
 uniform vec2 crest_band = vec2(760.0, 880.0);
 uniform vec2 brook_band = vec2(1400.0, 1540.0);
 uniform float mist_sigma = 40.0;
-uniform float focal_pool_k = 0.55;
+uniform float focal_pool_k = 0.42;
 // Depth frame: near ground below the brook and the bottom corners sink toward the shadow tint.
-uniform float near_frame_k = 0.22;
-uniform float corner_k = 0.30;
+uniform float near_frame_k = 0.26;
+uniform float corner_k = 0.48;
 uniform float far_haze_k = 0.10;
 
 const vec2 FOCAL = vec2(540.0, 1123.0);
@@ -134,7 +134,7 @@ vec3 meadow_color(vec2 uv, vec2 frag) {
 	float elev = light_elevation();
 	float low = 1.0 - smoothstep(0.25, 0.85, elev);  // 1 when the light is low (long shading)
 	float night = g_lights;
-	vec3 shade_c = c * g_shadow.rgb * SHADE_K;
+	vec3 shade_c = shade_of(c);
 
 	// 2. Relief: the hollow's bowl and moss mounds, lit by the key.
 	vec4 rel = texture(relief_tex, (p - RELIEF_RECT.xy) / RELIEF_RECT.zw);
@@ -146,7 +146,7 @@ vec3 meadow_color(vec2 uv, vec2 frag) {
 	// Higher ground leans toward the lit grass tone, hollows toward the cool root tone.
 	float hh = rel.r - 0.5;
 	c = mix(c, hh > 0.0 ? grass_tip.rgb : grass_root.rgb, abs(hh) * 2.0 * height_tint_k);
-	c = mix(c, c * g_shadow.rgb * SHADE_K, (1.0 - rel.a) * occlusion_k);
+	c = mix(c, shade_of(c), (1.0 - rel.a) * occlusion_k);
 
 	// 4a. The focal floor around the sun stone gathers a pool of key light; the open floor of the
 	// hollow is lighter than its walls, leading the eye to the stone.
@@ -165,7 +165,7 @@ vec3 meadow_color(vec2 uv, vec2 frag) {
 	// Lumps read through directional light only (soft lit side, soft shaded side) and a faint,
 	// wide occlusion in the deepest gaps; never dark crevice lines (they read as cracked earth).
 	float gap = 1.0 - smoothstep(0.0, 0.42, m.r);
-	c = mix(c, c * g_shadow.rgb * SHADE_K, (gap * moss_crevice_k + clamp(-ml, 0.0, 1.0) * moss_shade_k) * moss_amt);
+	c = mix(c, shade_of(c), (gap * moss_crevice_k + clamp(-ml, 0.0, 1.0) * moss_shade_k) * moss_amt);
 	c += (g_key.rgb * 0.6 + c * 0.4) * clamp(ml, 0.0, 1.0) * moss_lit_k * moss_amt * (0.6 + 0.4 * low);
 	c *= 1.0 + (m.a - 0.5) * 2.0 * fibre_k * moss_amt;
 	// Broad dapple so wide areas never read as one flat value.
@@ -173,7 +173,7 @@ vec3 meadow_color(vec2 uv, vec2 frag) {
 
 	// Drifting cloud shadows toward the tinted shadow (off at dusk, night and in rain).
 	if (g_cloud_shadow > 0.001) {
-		c = mix(c, c * g_shadow.rgb * SHADE_K, cloud_shadow(p) * 1.3);
+		c = mix(c, shade_of(c), cloud_shadow(p) * 1.3);
 	}
 	// 4c. Depth frame: the near ground below the brook and the bottom corners sink toward the
 	// shadow tint (richer, darker foreground; the far meadow keeps a touch of aerial haze).
@@ -181,7 +181,7 @@ vec3 meadow_color(vec2 uv, vec2 frag) {
 	float near = smoothstep(bank_y, 1960.0, p.y);
 	vec2 cq = vec2(abs(p.x - 540.0) / 620.0, (p.y - 1150.0) / 820.0);
 	float corner = smoothstep(0.55, 1.35, length(cq)) * step(1150.0, p.y);
-	c = mix(c, c * g_shadow.rgb * SHADE_K, clamp(near * near_frame_k + corner * corner_k, 0.0, 0.6));
+	c = mix(c, shade_of(c), clamp(near * near_frame_k + corner * corner_k, 0.0, 0.6));
 	c = mix(c, g_sky_horizon.rgb, far_haze_k * (1.0 - smoothstep(T_TOP, 980.0, p.y)) * (1.0 - night));
 	// Wet sheen in rain (sky reflection), stronger toward the crest.
 	c += g_rain * wet_sheen_k * (g_sky_mid.rgb - c) * (1.0 - t * 0.5);

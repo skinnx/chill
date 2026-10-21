@@ -86,12 +86,16 @@ var _rain: bool = false
 var _sleepers: PackedStringArray = PackedStringArray()
 var _frame: Vector2 = Vector2(1080, 1920)
 var _obstacles: Array[Rect2] = []
+var _feed := PaletteFeed.new()
 
 
 func _ready() -> void:
 	_content = ContentRegistry.content
 	rig = MosslingRig.new(_content)
 	_fur = rig.make_fur_material()
+	MosslingRig.bind_palette(_fur, _feed)
+	_feed.apply(TimeOfDay.colors)
+	TimeOfDay.globals_updated.connect(_on_globals)
 	_shadow = rig.make_shadow_material()
 	_fx = rig.make_fx_materials()
 	var frame: Dictionary = _content.spots_doc.get("frame", {})
@@ -126,6 +130,10 @@ func _ready() -> void:
 	if Game.is_ready:
 		# deferred: BehindCrest is added to Ground, which is still setting up its children now
 		_on_world_ready.call_deferred([])
+
+
+func _on_globals(_values: Dictionary) -> void:
+	_feed.apply(TimeOfDay.colors)
 
 
 func _exit_tree() -> void:
@@ -253,7 +261,7 @@ func _process(delta: float) -> void:
 			_commanded[sp] = bout
 			_command(m, bout)
 		if bout != null:
-			m.set_rain(_rain, bout.shelter)
+			m.set_rain(_rain, bout.shelter, bout.umbrella)
 	_update_depth_parents()
 	_report_sleepers()
 	if _qa_count > 0 or _qa_pet != &"":

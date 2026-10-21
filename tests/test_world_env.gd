@@ -172,3 +172,26 @@ func test_stream_tap_makes_a_ripple() -> void:
 	away.position = b.get_global_transform_with_canvas() * Vector2(x, 1000.0)
 	b._unhandled_input(away)
 	assert_signal_emit_count(b, "tapped", 1, "taps away from the water are ignored")
+
+
+func test_grass_bands_sort_behind_creatures_in_them() -> void:
+	# Round 1 blocker: a band's origin is its TOP edge, so no clump behind a creature's feet can
+	# draw in front of it (only a clump just in front of the feet may hide behind the body).
+	var g := GrassField.new()
+	add_child_autofree(g)
+	for b: Node in g.get_children():
+		var mmi := b as MultiMeshInstance2D
+		if mmi == null:
+			continue
+		for i in mmi.multimesh.instance_count:
+			assert_gte(mmi.multimesh.get_instance_transform_2d(i).origin.y, -0.001, "%s clump above its band origin" % b.name)
+
+
+func test_lamp_pools_are_discrete() -> void:
+	LampRegistry.set_lamp(&"a", Vector2(300, 1400), 150.0, 1.0)
+	LampRegistry.set_lamp(&"b", Vector2(540, 1400), 150.0, 1.0)
+	var centre := LampRegistry.weight_at(Vector2(300, 1400))
+	var gap := LampRegistry.weight_at(Vector2(420, 1400))
+	assert_gt(centre, 0.3, "a pool peaks at its lamp")
+	assert_lt(gap, centre * 0.5, "max-combined pools leave a darker gap between lanterns")
+	assert_eq(LampRegistry.weight_at(Vector2(300, 1800)), 0.0, "nothing outside the pool")

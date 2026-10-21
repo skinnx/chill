@@ -19,6 +19,9 @@ uniform float rain_edge_px = 56.0;
 uniform float rain_alpha_max = 0.55;
 // Night: clouds sit at least this much above the local sky value (about +6 L* on the navy sky).
 uniform float night_lift = 0.05;
+// sky.gdshader overcast colour: mean lit mix and its night dimming.
+const float OVERCAST_MIX = 0.57;
+const float OVERCAST_NIGHT_DIM = 0.45;
 
 // x seed, y alpha multiplier, z flatten (0..1), w 1 = rain-only cloud.
 instance uniform vec4 i_cloud = vec4(0.0, 1.0, 0.5, 0.0);
@@ -80,8 +83,10 @@ void fragment() {
 	float lit = clamp(lam * 0.55 + top * 0.45 - (1.0 - depth) * 0.08, 0.0, 1.0);
 	vec3 col = mix(cloud_shade.rgb, cloud_lit.rgb, lit);
 	col += sun_veil(v_canvas, 0.8);
-	col = mix(col, cloud_shade.rgb, g_rain * 0.35 * (1.0 - rain_only));
-	col = mix(col, mix(cloud_shade.rgb, cloud_lit.rgb, 0.55), 0.6 * rain_only);
+	// In rain every cloud melts into the overcast's felt-grey (same mix as sky.gdshader), a touch
+	// lighter so the masses still read in front of it.
+	vec3 overcast = mix(cloud_shade.rgb, cloud_lit.rgb, OVERCAST_MIX * (1.0 - OVERCAST_NIGHT_DIM * g_stars)) + 0.03;
+	col = mix(col, overcast, g_rain * mix(0.6, 0.85, rain_only));
 	// A cloud is never darker than the sky behind it (night clouds are moonlit wool, not holes).
 	vec2 p_design = v_canvas - g_world_offset;
 	vec3 sky_local = mix(g_sky_mid.rgb, g_sky_top.rgb, clamp((560.0 - p_design.y) / 700.0, 0.0, 1.0));

@@ -265,7 +265,7 @@
 				"pattern": "belly",
 				"eye": "round",
 				"fuzz_dp": 0.9,
-				"fur": "cr_mist",
+				"fur": "cr_sky",
 				"fur_2": "cr_lilac",
 				"belly": "cr_snow",
 				"accent": "cr_berry"
@@ -382,7 +382,7 @@
 				"pattern": "spots",
 				"eye": "round",
 				"fuzz_dp": 0.6,
-				"fur": "cr_mist",
+				"fur": "cr_pond",
 				"fur_2": "cr_sage",
 				"belly": "cr_snow",
 				"accent": "cr_sky"

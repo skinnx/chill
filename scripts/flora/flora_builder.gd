@@ -60,6 +60,9 @@ const SPARKLE_RING := 0.75
 const SPARKLE_PX := 14.0
 ## Back petals of the 3/4 cup sit in the cup's shadow (lightness jitter units).
 const BACK_PETAL_DARK := 0.8
+## Clusters: golden-angle spiral, slightly squashed for the 3/4 view.
+const GOLDEN_ANGLE := 2.39996
+const CLUSTER_SQUASH := 0.85
 ## Folded petals fade in over the first 15 % of their opening (a closed head is just the bud).
 const PETAL_FADE_IN := 0.15
 
@@ -202,44 +205,59 @@ static func row_of(content: GameContent, flower_id: StringName) -> int:
 
 
 func build_mesh(stems: Array[Stem], extras: Array[Dictionary] = []) -> ArrayMesh:
-	var arrays := build_arrays(stems, extras)
-	var mesh := ArrayMesh.new()
-	if (arrays[Mesh.ARRAY_VERTEX] as PackedVector2Array).is_empty():
-		return mesh
-	var flags := (Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM0_SHIFT) \
-			| (Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM1_SHIFT)
-	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays, [], {}, flags)
-	return mesh
+	return _mesh_of(build_arrays(stems, extras))
 
 
 ## Mesh arrays (Mesh.ARRAY_MAX entries) for the stems, back to front, then loose stamps on top
 ## ([param extras]: {stamp, pos, scale, part, row, alpha}; the planting seed arc and soil puff).
 func build_arrays(stems: Array[Stem], extras: Array[Dictionary] = []) -> Array:
+	begin()
+	tips.clear()
+	var order: Array[int] = []
+	for i in stems.size():
+		order.append(i)
+	order.sort_custom(func(a: int, b: int) -> bool:
+		var ra := stems[a].root
+		var rb := stems[b].root
+		return ra.y < rb.y or (ra.y == rb.y and ra.x < rb.x))
+	for i in order:
+		_emit_cushion(stems[i])
+	for i in order:
+		_emit_stem(stems[i], i)
+	for e: Dictionary in extras:
+		var sc := float(e.get("scale", 1.0))
+		add_stamp(String(e["stamp"]), e["pos"] as Vector2, 0.0, Vector2(sc, sc), int(e.get("part", PART_SOIL)),
+				int(e.get("row", 0)), float(e.get("alpha", 1.0)))
+	return _arrays()
+
+
+## Loose stamps outside any stem (butterflies, the planting seed and soil puff): begin(),
+## add_stamp() per stamp (pivot at [param pos], rotation, signed scale), then end_mesh().
+func begin() -> void:
 	_v = PackedVector2Array()
 	_uv = PackedVector2Array()
 	_col = PackedColorArray()
 	_c0 = PackedFloat32Array()
 	_c1 = PackedFloat32Array()
 	_idx = PackedInt32Array()
-	tips.clear()
-	var order: Array[int] = []
-	for i in stems.size():
-		order.append(i)
-	order.sort_custom(func(a: int, b: int) -> bool:
-		return stems[a].root.y < stems[b].root.y or (stems[a].root.y == stems[b].root.y and stems[a].root.x < stems[b].root.x))
-	for i in order:
-		_emit_cushion(stems[i])
-	for i in order:
-		_emit_stem(stems[i], i)
-	for e: Dictionary in extras:
-		_row = int(e.get("row", 0))
-		_alpha = float(e.get("alpha", 1.0))
-		_amp = 0.0
-		_jit = 0.0
-		var p: Vector2 = e["pos"]
-		_root = p
-		var sc := float(e.get("scale", 1.0))
-		_part_at(String(e["stamp"]), p, 0.0, Vector2(sc, sc), int(e.get("part", PART_SOIL)), 0.0, p)
+
+
+func add_stamp(stamp: String, pos: Vector2, rot: float, sc: Vector2, part: int, row: int, alpha: float = 1.0,
+		bloom: float = 1.0) -> void:
+	_row = row
+	_alpha = alpha
+	_amp = 0.0
+	_jit = 0.0
+	_root = pos
+	_len = 1.0
+	_part_at(stamp, pos, rot, sc, part, 0.0, pos, bloom)
+
+
+func end_mesh() -> ArrayMesh:
+	return _mesh_of(_arrays())
+
+
+func _arrays() -> Array:
 	var arrays := []
 	arrays.resize(Mesh.ARRAY_MAX)
 	arrays[Mesh.ARRAY_VERTEX] = _v
@@ -249,6 +267,16 @@ func build_arrays(stems: Array[Stem], extras: Array[Dictionary] = []) -> Array:
 	arrays[Mesh.ARRAY_CUSTOM1] = _c1
 	arrays[Mesh.ARRAY_INDEX] = _idx
 	return arrays
+
+
+static func _mesh_of(arrays: Array) -> ArrayMesh:
+	var mesh := ArrayMesh.new()
+	if (arrays[Mesh.ARRAY_VERTEX] as PackedVector2Array).is_empty():
+		return mesh
+	var flags := (Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM0_SHIFT) \
+			| (Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM1_SHIFT)
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays, [], {}, flags)
+	return mesh
 
 
 # ================================================================= one stem
@@ -362,7 +390,8 @@ func _emit_stem(st: Stem, index: int) -> void:
 	var bud_scale := float(bud.get("scale", 1.0)) * hscale
 	if not bloom:
 		var swell_r: Array = gr.get("bud_swell", [0.6, 1.0])
-		var g := lerpf(float(swell_r[0]), float(swell_r[1]), st.growth) if st.stage == WorldSim.STAGE_BUD and not st.ready else 1.0
+		var growing := st.stage == WorldSim.STAGE_BUD and not st.ready
+		var g := lerpf(float(swell_r[0]), float(swell_r[1]), st.growth) if growing else 1.0
 		_bud(String(bud.get("stamp", "bud_round")), tip, curve, bud_scale * g * st.swell * st.pop, 0.0)
 		return
 	var opens := _openness(st)
@@ -410,8 +439,11 @@ func _openness(st: Stem) -> PackedFloat32Array:
 	var antic := float(_unfurl.get("anticipation_ms", 60))
 	var dur := float(_unfurl.get("petal_open_ms", 420))
 	var stag := float(_unfurl.get("petal_stagger_ms", 30))
+	# Stagger steps wrap so the last petal still lands inside total_ms (60 + 4 x 30 + 420 = 600).
+	var total := float(_unfurl.get("total_ms", 600))
+	var steps := maxi(1, int(floor((total - antic - dur) / maxf(stag, 1.0))) + 1)
 	for i in out.size():
-		out[i] = _petal_curve.progress(clampf((t - antic - stag * float(i % 8)) / dur, 0.0, 1.0))
+		out[i] = _petal_curve.progress(clampf((t - antic - stag * float(i % steps)) / dur, 0.0, 1.0))
 	return out
 
 
@@ -501,16 +533,19 @@ func _emit_cup(head: Dictionary, tip: Vector2, scale: float, opens: PackedFloat3
 
 func _emit_cluster(head: Dictionary, tip: Vector2, curve: Array, scale: float, opens: PackedFloat32Array,
 		rng: RandomNumberGenerator, side: float) -> void:
+	# A rounded bunch (phyllotaxis: golden-angle spiral, r ~ sqrt) that leans with the curling tip;
+	# at this scale it reads better than a strict scorpioid curl, and keeps the curl's lean.
 	var n := int(head.get("count", 7))
 	var r := float(head.get("curl_r", 9.0)) * scale
 	var bs: Array = head.get("bloom_scale", [0.6, 0.75])
 	var tan := (_bez_tangent(curve, 1.0)).normalized()
 	var perp := Vector2(-tan.y, tan.x) * side
-	var c := tip + perp * r * 0.6 + tan * r * 0.2
+	var c := tip + perp * r * 0.35 + tan * r * 0.45
+	var a0 := rng.randf() * TAU
 	for j in n:
-		var a := (tan.angle() - side * PI * 0.5) + side * float(j) * 0.62
-		var rr := r * (1.05 - 0.07 * float(j))
-		var p := c + Vector2.from_angle(a) * rr + Vector2(rng.randf_range(-1.5, 1.5), rng.randf_range(-1.5, 1.5)) * scale
+		var a := a0 + GOLDEN_ANGLE * float(j)
+		var rr := r * sqrt((float(j) + 0.5) / float(n))
+		var p := c + Vector2(cos(a), sin(a) * CLUSTER_SQUASH) * rr
 		var o := opens[j % opens.size()]
 		var sc := rng.randf_range(float(bs[0]), float(bs[1])) * scale * lerpf(0.35, 1.0, o)
 		var saved := _alpha
@@ -519,10 +554,11 @@ func _emit_cluster(head: Dictionary, tip: Vector2, curve: Array, scale: float, o
 		_alpha = saved
 	var nb := int(head.get("buds", 0))
 	for j in nb:
-		var a2 := (tan.angle() - side * PI * 0.5) + side * (float(n) + float(j) * 0.8) * 0.62
-		var p2 := c + Vector2.from_angle(a2) * r * 0.45
+		var a2 := tan.angle() + side * (0.5 + 0.7 * float(j))
+		var p2 := c + Vector2.from_angle(a2) * r * 1.05
 		var sc2 := float(head.get("bud_scale", 0.4)) * scale
-		_part_at(String(head.get("bud_stamp", "bud_round")), p2, a2 + PI * 0.5, Vector2(sc2, sc2), PART_BUD, 1.0, tip, 0.6)
+		_part_at(String(head.get("bud_stamp", "bud_round")), p2, a2 + PI * 0.5, Vector2(sc2, sc2), PART_BUD, 1.0, tip,
+				0.6)
 
 
 func _emit_bells(head: Dictionary, curve: Array, scale: float, opens: PackedFloat32Array,

@@ -19,8 +19,11 @@ extends Node2D
 ##  * Choose-a-bed mode (GDD §2.4 rule 1): the UI sets [member choose_mode]; beds with room glow
 ##    and a tap emits [signal bed_chosen].
 ##
-## QA user arg: --fixture=<garden_mid|night_lanterns|garden_full> (GardenFixture) plants a
-## deterministic mid-game garden before the world layers bind.
+## QA user args: --fixture=<garden_mid|night_lanterns|garden_full> (GardenFixture) plants a
+## deterministic mid-game garden before the world layers bind; --qa-ready=<bed_id> turns that bed's
+## bloomed stems into ready buds (glow, swell); --qa-unfurl=<s> taps every ready bud that many
+## seconds after the layer is ready (e.g. 2.7 with the default 90 frames = a still 0.3 s into the
+## 600 ms unfurl; with tools/qa/capture.sh video, the whole unfurl).
 
 # Data boundary: values read from JSON / Dictionaries are Variants and each one is converted
 # explicitly (int(), float(), String() ...) where it is read; the analyzer still flags every
@@ -44,8 +47,9 @@ const HIT_EXTEND_DP := 4.0
 ## GDD §8.2: long-press 450 ms; a move beyond the drag threshold cancels.
 const LONG_PRESS_S := 0.45
 const DRAG_CANCEL_PX := 24.0
-## Slow in-stage growth refresh (a rebuild per growing bed every few seconds is plenty).
-const GROWTH_REFRESH_S := 6.0
+## Slow in-stage growth refresh: stages last minutes to hours, so a static rebuild of each growing
+## bed every 30 s shows the growth without a per-frame cost.
+const GROWTH_REFRESH_S := 30.0
 ## Moonbloom wave: each stem opens up to this late after dusk begins (Art Bible §6.2).
 const MOON_WAVE_S := 20.0
 const MOON_CLOSE_S := 2.0
@@ -57,14 +61,21 @@ const TAP_SWAY_PX := 9.0
 const TAP_SWAY_DECAY_S := 0.55
 const TAP_SWAY_HZ := 2.2
 ## Ready-bud and tutorial-seed halos (Art Bible §6.2: r0 14 px, alpha 0.25).
-const HALO_QUAD_K := 4.5
+const HALO_QUAD_K := 3.2
 ## Garden dock button (Art Bible §2.6 dock centres x 405, pill y 1541-1781): where seeds come from.
 const SEED_FROM := Vector2(405.0, 1661.0)
 const SEED_ARC_LIFT := 160.0
 const SOIL_PUFF_DOTS := 4
+## The tutorial seed and its mound (x depth scale).
+const SEED_SCALE := 2.8
+## The tutorial seed glows brighter than a ready bud: it is the only thing asking for a tap.
+const SEED_GLOW_K := 2.2
+const SEED_MOUND_SCALE := 0.62
 const SOIL_PUFF_PX := 22.0
 ## The node sorts against creatures at the bed centre (creatures at the nibble points stand in front).
 const SORT_OFFSET_Y := 0.0
+const ARG_QA_READY := "--qa-ready="
+const ARG_QA_UNFURL := "--qa-unfurl="
 
 static var current: PlotsLayer = null
 
@@ -95,6 +106,10 @@ var _puff_s: float = 0.12
 var _ready_cfg: Dictionary = {}
 var _grow_cfg: Dictionary = {}
 var _unfurl_total_s: float = 0.6
+var _bloom_tips: Dictionary = {}   # stem index -> design px of an open flower head
+var _butterflies: Butterflies
+var _qa_ready: StringName = &""
+var _qa_unfurl_s: float = -1.0
 
 
 class BedView:
@@ -102,6 +117,11 @@ class BedView:
 	var id: StringName
 	var node: Node2D
 	var mesh: MeshInstance2D
+	## Stems mid-animation (unfurl, grow step, planting, moonbloom open/close) are drawn by a second
+	## small mesh rebuilt every frame, so a 16-stem bed is never rebuilt per frame (its static mesh
+	## changes only when a stem starts or stops animating, on events and on the slow refresh).
+	var anim_mesh: MeshInstance2D
+	var anim: Array[int] = []
 	var centre := Vector2.ZERO
 	var hit := Rect2()
 	var dirty: bool = true
@@ -191,6 +211,14 @@ func _ready() -> void:
 	_bezier_decel = CubicBezier.from_array((curves[String(plant["seed_arc_curve"])] as Dictionary)["bezier"])
 	for b: Dictionary in _content.beds:
 		_make_bed(b)
+	for a: String in OS.get_cmdline_user_args():
+		if a.begins_with(ARG_QA_READY):
+			_qa_ready = StringName(a.trim_prefix(ARG_QA_READY))
+		elif a.begins_with(ARG_QA_UNFURL):
+			_qa_unfurl_s = maxf(0.0, a.trim_prefix(ARG_QA_UNFURL).to_float())
+	_butterflies = Butterflies.new()
+	_butterflies.name = "Butterflies"
+	add_child(_butterflies)
 	_phase = TimeOfDay.phase
 	TimeOfDay.phase_changed.connect(_on_phase_changed)
 	Game.sim_event.connect(_on_sim_event)
@@ -198,6 +226,13 @@ func _ready() -> void:
 	tree_exiting.connect(_on_exit)
 	if Game.is_ready:
 		_sync_all()
+
+
+func _setup_butterflies() -> void:
+	if Game.sim == null or _butterflies == null or _butterflies.get_child_count() > 0:
+		return
+	_butterflies.setup(FloraBuilder.new(FloraBuilder.load_doc(), ContentRegistry.motion_tokens()), _mat, _atlas,
+			_content, func() -> Array: return _bloom_tips.values(), Game.sim.state.install_seed)
 
 
 func _on_exit() -> void:
@@ -220,6 +255,10 @@ func _make_bed(b: Dictionary) -> void:
 	v.mesh.texture = _atlas
 	v.mesh.material = _mat
 	v.node.add_child(v.mesh)
+	v.anim_mesh = MeshInstance2D.new()
+	v.anim_mesh.texture = _atlas
+	v.anim_mesh.material = _mat
+	v.node.add_child(v.anim_mesh)
 	v.press = Motion.spring(&"press", 1.0)
 	_beds[v.id] = v
 
@@ -231,15 +270,19 @@ func _sync_all() -> void:
 	if sim == null:
 		return
 	_views.clear()
+	_bloom_tips.clear()
 	for bv: BedView in _beds.values():
 		for h: HaloSprite in bv.halos.values():
 			h.queue_free()
 		bv.halos.clear()
 		bv.dirty = true
 	for i in sim.state.stems.size():
-		_view_for(i)
+		var v := _view_for(i)
+		if v.bed == _qa_ready and int(sim.state.stems[i]["stage"]) == WorldSim.STAGE_BLOOM and v.open_target > 0.0:
+			v.ready_s = 0.0
 	_update_seed_hint()
 	_refresh_choose_glow()
+	_setup_butterflies()
 	set_process(true)
 
 
@@ -328,6 +371,7 @@ func _process(delta: float) -> void:
 		_growth_t = 0.0
 	var auto_after := float(_ready_cfg["auto_unfurl_after_s"])
 	var auto_rate := _unfurl_total_s * 1000.0 / float(_ready_cfg["auto_unfurl_ms"])
+	var anim_by_bed: Dictionary = {}
 	for v: StemView in _views.values():
 		var animating := false
 		if v.ready_s >= 0.0 and v.unfurl_s < 0.0:
@@ -357,21 +401,36 @@ func _process(delta: float) -> void:
 		if v.open != v.open_target:
 			animating = _step_open(v, delta) or animating
 		if animating:
-			_mark(v.bed)
+			var list: Array[int] = anim_by_bed.get(v.bed, [] as Array[int])
+			list.append(v.index)
+			anim_by_bed[v.bed] = list
 			busy = true
 	for bv: BedView in _beds.values():
 		if bv.growing and refresh:
 			bv.dirty = true
 		if _step_press(bv, delta):
 			busy = true
+		var anim: Array[int] = anim_by_bed.get(bv.id, [] as Array[int])
+		anim.sort()
+		if anim != bv.anim:
+			bv.anim = anim
+			bv.dirty = true
 		if bv.dirty:
 			_rebuild(bv)
+		if not bv.anim.is_empty():
+			_build_into(bv, bv.anim_mesh, bv.anim, true)
+		elif bv.anim_mesh.mesh != null:
+			bv.anim_mesh.mesh = null
 	if _press_bed != &"" and not _press_long_sent:
 		_press_t += delta
 		if _press_t >= LONG_PRESS_S:
 			_press_long_sent = true
 			bed_card_requested.emit(_press_bed)
 		busy = true
+	if _qa_unfurl_s >= 0.0:
+		_qa_unfurl_s -= delta
+		if _qa_unfurl_s < 0.0 and _beds.has(_qa_ready):
+			_tap_bed(_beds[_qa_ready])
 	if busy:
 		FrameGovernor.poke()
 
@@ -424,29 +483,54 @@ func _step_press(bv: BedView, delta: float) -> bool:
 	return busy
 
 
+## The bed's static mesh: every stem of the bed that is not mid-animation.
 func _rebuild(bv: BedView) -> void:
 	bv.dirty = false
 	bv.growing = false
+	var index_of: Array[int] = []
+	for i in Game.sim.state.stems.size():
+		if StringName(Game.sim.state.stems[i]["bed"]) == bv.id and not bv.anim.has(i):
+			index_of.append(i)
+	_build_into(bv, bv.mesh, index_of, false)
+
+
+## The glowing tutorial seed resting on its bed (GDD §3.4): a little tended mound and the seed.
+func _seed_extras(bv: BedView) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	if _seed == null or not bv.hit.has_point(_seed.position):
+		return out
+	var d := depth_scale(_seed.position.y)
+	var p := _seed.position - bv.node.position
+	out.append({"stamp": "moss_pad", "pos": p + Vector2(0.0, 4.0) * d, "scale": d * SEED_MOUND_SCALE,
+		"part": FloraBuilder.PART_MOSS, "row": FloraBuilder.ROW_GROUND})
+	out.append({"stamp": "seed_glow", "pos": p, "scale": d * SEED_SCALE, "part": FloraBuilder.PART_SPARKLE,
+		"row": FloraBuilder.ROW_FX})
+	return out
+
+
+func _build_into(bv: BedView, mi: MeshInstance2D, index_of: Array[int], with_extras: bool) -> void:
 	var sim := Game.sim
 	var stems: Array[FloraBuilder.Stem] = []
-	var index_of: Array[int] = []
 	var t := sim.state.t
-	for i in sim.state.stems.size():
-		var s: Dictionary = sim.state.stems[i]
-		if StringName(s["bed"]) != bv.id:
-			continue
-		var st := _stem_spec(i, s, t, bv)
-		stems.append(st)
-		index_of.append(i)
-	var extras: Array[Dictionary] = []
 	for i in index_of:
-		var v: StemView = _views.get(i)
-		if v != null and v.plant_s >= 0.0:
-			_plant_extras(v, extras, bv)
-	bv.mesh.mesh = _builder.build_mesh(stems, extras)
-	# Ready-bud halos follow the tips.
+		stems.append(_stem_spec(i, sim.state.stems[i], t, bv))
+	var extras: Array[Dictionary] = []
+	if not with_extras:
+		extras = _seed_extras(bv)
+	else:
+		for i in index_of:
+			var v: StemView = _views.get(i)
+			if v != null and v.plant_s >= 0.0:
+				_plant_extras(v, extras, bv)
+	mi.mesh = _builder.build_mesh(stems, extras)
+	# Ready-bud halos follow the tips; open heads are where butterflies land.
 	for k in index_of.size():
 		var i := index_of[k]
+		var st2 := stems[k]
+		if st2.stage == WorldSim.STAGE_BLOOM and not st2.ready and st2.open > 0.9 and _builder.tips.has(k):
+			_bloom_tips[i] = (_builder.tips[k] as Vector2) + bv.node.position
+		else:
+			_bloom_tips.erase(i)
 		var v: StemView = _views.get(i)
 		if v != null and v.ready_s >= 0.0 and v.unfurl_s < 0.0 and _builder.tips.has(k):
 			_ensure_halo(bv, v, _builder.tips[k])
@@ -605,7 +689,7 @@ func _update_seed_hint() -> void:
 		_seed.ring_width = float(ring["stroke_dp"]) * _dp
 		_seed.ring_color = Color.html(String(_content.palettes["ui"]["surface"]))
 		_seed.breathe_hz = float((_content.motion["loops_k"]["zzz_emit"] as Array)[0]) / 600.0
-		_seed.base_alpha = float(_ready_cfg["glow_alpha"]) * 1.6
+		_seed.base_alpha = float(_ready_cfg["glow_alpha"]) * SEED_GLOW_K
 		var r0 := 14.0 * depth_scale(pos.y)
 		_seed.halo = HaloSprite.new().setup(r0, r0 * HALO_QUAD_K, Color(1, 1, 1, _seed.base_alpha), 0.0,
 				HaloSprite.FLAG_ACCENT)

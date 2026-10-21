@@ -59,6 +59,11 @@ const float OVERCAST_CELL = 240.0;
 // Overcast shape: y scale (1.3 = masses only slightly wider than tall) and domain-warp strength.
 const float OVERCAST_ASPECT = 1.3;
 const float OVERCAST_WARP = 0.9;
+// At night the wool is a dim moonlit grey just above the sky value (never a light smoke).
+const float OVERCAST_NIGHT_DIM = 0.45;
+// Rain hides the discs (Art Bible §1.4: no sun disc in rain); a soft glow may remain.
+const float RAIN_DISC_HIDE = 0.95;
+const float RAIN_HALO_HIDE = 0.6;
 const float OVERCAST_TILE = 1920.0;
 
 varying vec2 v_design;
@@ -106,9 +111,9 @@ void fragment() {
 		float limb = 1.0 - LIMB_DARKEN * smoothstep(R - LIMB_PX, R, r);
 		float d = disc(r, R, DISC_AA_PX);
 		// Screen-blend the halo so it never clips to white; the disc sits on top of it.
-		vec3 halo = g_glow.rgb * clamp((inner + outer) * g_celestial.x, 0.0, 1.0);
+		vec3 halo = g_glow.rgb * clamp((inner + outer) * g_celestial.x * (1.0 - RAIN_HALO_HIDE * g_rain), 0.0, 1.0);
 		c = c + halo * (1.0 - c);
-		c = mix(c, max(c, sun_col * limb), d * g_celestial.x);
+		c = mix(c, max(c, sun_col * limb), d * g_celestial.x * (1.0 - RAIN_DISC_HIDE * g_rain));
 	}
 
 	// Moon: disc with soft maria, small cool halo.
@@ -124,9 +129,9 @@ void fragment() {
 		float m = smoothstep(MARIA_THRESHOLD - 0.12, MARIA_THRESHOLD + 0.12, mn);
 		vec3 mc = mix(moon_color.rgb, moon_maria.rgb, 0.4 * m);
 		mc *= (1.0 - LIMB_DARKEN * smoothstep(R - LIMB_PX, R, r)) * MOON_DIM;
-		vec3 mhalo = g_glow.rgb * clamp((inner + outer) * g_celestial.y, 0.0, 1.0);
+		vec3 mhalo = g_glow.rgb * clamp((inner + outer) * g_celestial.y * (1.0 - RAIN_HALO_HIDE * g_rain), 0.0, 1.0);
 		c = c + mhalo * (1.0 - c);
-		c = mix(c, mc, d * g_celestial.y);
+		c = mix(c, mc, d * g_celestial.y * (1.0 - RAIN_DISC_HIDE * g_rain));
 	}
 
 	// Stars: one candidate per cell, jittered away from the cell border, soft core + faint glow;
@@ -172,7 +177,7 @@ void fragment() {
 		float lift = (1.0 - t) * 0.16;
 		float bank = smoothstep(0.30, 0.58, n * 0.7 + banks * 0.3 + lift) * oc;
 		float lit = clamp((n - n_up) * 3.0 + 0.5, 0.0, 1.0);
-		vec3 cc = mix(cloud_shade.rgb, cloud_lit.rgb, 0.42 + 0.30 * lit + 0.12 * (n - 0.5));
+		vec3 cc = mix(cloud_shade.rgb, cloud_lit.rgb, (0.42 + 0.30 * lit + 0.12 * (n - 0.5)) * (1.0 - OVERCAST_NIGHT_DIM * g_stars));
 		cc = max(cc, c + vec3(0.04) * g_stars);
 		c = mix(c, cc, bank * 0.88);
 	}

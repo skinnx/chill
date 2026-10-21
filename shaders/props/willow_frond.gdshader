@@ -18,7 +18,7 @@ uniform vec4 leaf_detail : source_color = vec4(0.824, 0.902, 0.761, 1.0);
 uniform float strip_px = 24.0;
 uniform float max_len_px = 260.0;
 uniform float max_amp_px = 18.0;
-uniform float leaf_spacing_px = 9.0;
+uniform float leaf_spacing_px = 6.5;
 uniform float sway_k = 76.0;
 uniform float wave_rad = 1.2;
 
@@ -46,8 +46,8 @@ vec2 leaf(vec2 q, float i, float len_px, vec2 kd) {
 	vec2 o = vec2(0.0, i * leaf_spacing_px);
 	float ang = side * mix(0.62, 0.42, t);  // hangs down and out
 	vec2 lq = rot2(-ang) * (q - o);
-	float L = 8.5 * size;
-	float d = sd_vesica(lq - vec2(0.0, L), L, 2.7 * size);
+	float L = 10.0 * size;
+	float d = sd_vesica(lq - vec2(0.0, L), L, 3.3 * size);
 	float cov = 1.0 - smoothstep(-0.6, 0.6, d / max(fwidth(d), 1e-3) * 0.5);
 	vec2 axis = vec2(sin(ang), cos(ang));
 	float light = 0.5 + 0.5 * dot(normalize(vec2(axis.y * side, -axis.x * side) + vec2(0.0, -0.6)), kd);

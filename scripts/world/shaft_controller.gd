@@ -21,7 +21,7 @@ const FOCAL := Vector2(540.0, 1123.0)
 ## Per phase: [count, fan half-angle deg, start offset px, length px, width near px, width far px, dapple].
 const PLANS := {
 	&"day": [3, 14.0, 120.0, 1000.0, Vector2(90, 160), Vector2(200, 260), 0.0],
-	&"golden": [4, 25.0, 90.0, 900.0, Vector2(60, 70), Vector2(220, 260), 0.0],
+	&"golden": [4, 25.0, 90.0, 760.0, Vector2(60, 70), Vector2(200, 240), 0.0],
 	&"dawn": [3, 18.0, 100.0, 950.0, Vector2(80, 120), Vector2(200, 240), 1.0],
 }
 const ALPHA_RANGE := Vector2(0.07, 0.10)

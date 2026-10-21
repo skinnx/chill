@@ -1248,6 +1248,47 @@
 			],
 			"scale": 0.55,
 			"margin_px": 36
+		},
+		"eye_ink": {
+			"doc": "round 2 (QA round 1): eye ink lifted to this OKHSL lightness (cr_eye is ~0.24) and tinted toward the fur hue, so a creature's eyes never outrank the scene focal; per-species overrides for the big foreground faces",
+			"ok_l": 0.25,
+			"fur_tint": 0.0,
+			"species_ok_l": {
+				"pebblepaw": 0.31,
+				"puddlewump": 0.29
+			}
+		},
+		"nestle": {
+			"doc": "round 2: soft grass blades drawn in front of the feet by mossling_fur (i_misc.y), so creatures sit IN the meadow; off on props, faded while hopping",
+			"amount": 1.0,
+			"off_spots": [
+				"sun_stone",
+				"stump_hollow",
+				"moon_rock",
+				"moss_cushion",
+				"stream_stones"
+			],
+			"hop_fade_px": 6.0
+		},
+		"lamp_refresh_s": 0.5,
+		"zzz_spawn": {
+			"doc": "round 2: z's start beside the head on the tail side and drift away from it (never printed on a prop behind the head)",
+			"side_bu": 0.5,
+			"up_bu": 0.1,
+			"drift_px": 34
+		},
+		"umbrella": {
+			"doc": "round 2: the leaf umbrella's stem foot sits at the paw (front side), drawn behind the body and tilted umbrella_tilt_deg in over the head",
+			"paw_x_bu": 0.38,
+			"paw_y_bu": 0.5,
+			"chroma_keep": 0.85,
+			"ref_width_px": 150.0
+		},
+		"lamp": {
+			"doc": "round 2: lantern light on creatures (i_light) - a body stands out of the pool, so it catches a lamp up to reach_mul x the pool radius; weight = peak x intensity x (1 - q)^falloff_pow",
+			"reach_mul": 2.2,
+			"peak": 0.5,
+			"falloff_pow": 1.6
 		}
 	}
 }

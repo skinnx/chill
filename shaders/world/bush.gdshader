@@ -53,6 +53,23 @@ float hs(float seed, float i, float salt) {
 	return h12(vec2(seed * 211.0 + i * 5.17, salt));
 }
 
+// Lobe k of the canopy (0..7, back to front): centre and radius in canopy units. Rows: one top
+// lobe, an upper row of three, a lower (front) row of four, jittered per seed.
+vec3 lobe(float seed, int k, float crown_y, float hk, bool tree) {
+	float fk = float(k);
+	vec2 j = vec2(hs(seed, fk, 2.0), hs(seed, fk, 3.0)) - 0.5;
+	float w = tree ? 0.78 : 1.0;
+	if (k == 0) {
+		return vec3(j.x * 0.18 * w, crown_y - 1.12 * hk - 0.04 * j.y, mix(0.27, 0.34, hs(seed, fk, 4.0)));
+	}
+	if (k < 4) {
+		float u = (fk - 2.0) * 0.42;
+		return vec3((u + j.x * 0.12) * w, crown_y - 0.76 * hk - 0.08 * j.y - 0.1 * (1.0 - abs(u)), mix(0.30, 0.40, hs(seed, fk, 4.0)));
+	}
+	float u = (fk - 5.5) / 1.5 * 0.62;
+	return vec3((u + j.x * 0.10) * w, crown_y - 0.36 - 0.06 * j.y, mix(0.34, 0.44, hs(seed, fk, 4.0)) * (1.0 - 0.18 * abs(u)));
+}
+
 void fragment() {
 	vec2 p = v_local;
 	float seed = v_inst.r;
@@ -62,47 +79,9 @@ void fragment() {
 	float r_px = max(v_custom.w, 1.0);
 	vec2 kd = key_dir(v_canvas);
 	float fw = max(fwidth(p.x) + fwidth(p.y), 0.002);
-
-	// Canopy: lobes along a soft arch (trees: a taller crown above a trunk).
-	float n = 5.0 + floor(hs(seed, 0.0, 1.0) * 3.99);
-	float d = 1e3;
-	vec2 lob_n = vec2(0.0, -1.0);
-	float lob_d = 1e3;
 	float crown_y = tree ? -0.75 * hk : 0.0;
-	for (int i = 0; i < 8; i++) {
-		float fi = float(i);
-		if (fi >= n) {
-			break;
-		}
-		float u = fi / max(n - 1.0, 1.0) * 2.0 - 1.0;
-		float r = mix(0.34, 0.52, hs(seed, fi, 2.0)) * (1.0 - 0.25 * abs(u));
-		float x = u * (tree ? 0.55 : 0.72) + (hs(seed, fi, 3.0) - 0.5) * 0.16;
-		float top = tree ? 0.62 : 0.55;
-		float y = crown_y - r - (top * hk) * (1.0 - u * u) * mix(0.65, 1.0, hs(seed, fi, 4.0));
-		vec2 c = vec2(x, y);
-		float dl = length(p - c) - r;
-		if (dl < lob_d) {
-			lob_d = dl;
-			lob_n = (p - c) / r;
-		}
-		d = smin(d, dl, 0.12);
-	}
-	// A low skirt joins the lobes to the ground (bushes) or to the trunk (trees).
-	float skirt = sd_ellipse(p - vec2(0.0, crown_y - 0.16), vec2(tree ? 0.55 : 0.82, 0.24));
-	d = smin(d, skirt, 0.14);
-	float trunk = 1e3;
-	if (tree) {
-		trunk = sd_capsule(p, vec2(0.0, 0.0), vec2(0.0, crown_y - 0.1), 0.085 + 0.04 * (1.0 + p.y / max(-crown_y, 0.1)));
-	}
 	// Felt fringe: fibres in canopy units so the fuzz is a constant ~1.5 px at any size.
 	float fuzz = (vnoise(p * r_px / 1.3 + seed * 37.0) - 0.5) * 1.6 / r_px;
-	float dc = d + fuzz;
-	float a_c = 1.0 - smoothstep(-0.7 * fw, 0.7 * fw, dc);
-	float a_t = 1.0 - smoothstep(-0.7 * fw, 0.7 * fw, trunk);
-	float a = max(a_c, a_t);
-	if (a < 0.004) {
-		discard;
-	}
 
 	// Colours by depth: hedge (between mid and near, hazed) .. edge shrubs (near family); objects
 	// (the willow crown) use their albedo x ambient.
@@ -113,34 +92,72 @@ void fragment() {
 		base = i_albedo.rgb * g_ambient.rgb;
 	}
 	base *= 1.0 + (hs(seed, 9.0, 9.0) - 0.5) * 0.10;
-	vec3 shade = base * g_shadow.rgb * SHADE_K;
-	// Lobe light: the lobe's own normal toward the key plus a top-lit bias for the whole canopy.
-	float lit = dot(normalize(lob_n + vec2(0.0, -0.35)), kd);
-	// Contre-jour: with the light behind the hedge the viewer sees its shaded side; only the rims
-	// glow (below). Front light lights the lobes.
+	vec3 shade = shade_of(base);
 	float back = g_backlight * g_celestial.x;
-	vec3 c = mix(base, shade, clamp(-lit, 0.0, 1.0) * 0.45 + back * 0.32);
-	c += (g_key.rgb * 0.65 + base * 0.35) * clamp(lit, 0.0, 1.0) * 0.18 * (0.5 + g_ground_light * 2.5) * (1.0 - 0.7 * back);
-	// Crevices between lobes and the base sink into shade (felted masses, not one blob).
-	float crease = smoothstep(0.0, 0.07, lob_d - d);
-	c = mix(c, shade, crease * 0.35);
-	c = mix(c, shade, smoothstep(crown_y - 0.35, crown_y + 0.05, p.y) * 0.45);
-	// Felt cushion texture.
 	vec4 m = texture(moss_tex, p * r_px / moss_px + seed * 5.0);
-	float ml = dot(m.gb * 2.0 - 1.0, kd);
-	c = mix(c, shade, clamp(-ml, 0.0, 1.0) * 0.16);
-	c += g_key.rgb * clamp(ml, 0.0, 1.0) * m.r * 0.06;
+	vec2 mn = m.gb * 2.0 - 1.0;
+	vec2 dome_c = vec2(0.0, crown_y - 0.62 * hk);
+
+	// Painter's order, back to front: each lobe is a felted ball (lit toward the key, soft shade
+	// below) and casts a soft contact shadow on the lobes behind it, so the canopy reads as a pile
+	// of felt cushions rather than one blob.
+	vec3 c = shade;
+	float a_c = 0.0;
+	float union_d = 1e3;
+	float front_n = 0.0;
+	for (int k = 0; k < 8; k++) {
+		vec3 L = lobe(seed, k, crown_y, hk, tree);
+		float dl = length(p - L.xy) - L.z;
+		union_d = smin(union_d, dl, 0.08);
+		// Contact shadow of this lobe on what is already drawn behind it.
+		float ring = (1.0 - smoothstep(0.0, 0.11, dl)) * step(0.0, dl);
+		c = mix(c, shade, ring * 0.32 * a_c);
+		float cov = 1.0 - smoothstep(-0.7 * fw, 0.7 * fw, dl + fuzz);
+		vec2 nl = (p - L.xy) / L.z;
+		vec2 nd = (p - dome_c) / vec2(0.95, 0.8);
+		float lit = dot(normalize(nl * 0.55 + nd * 0.45 + mn * 0.25 + vec2(0.0, -0.25)), kd);
+		vec3 lc = mix(base, shade, clamp(-lit, 0.0, 1.0) * 0.48 + back * 0.30);
+		lc += (g_key.rgb * 0.65 + base * 0.35) * clamp(lit, 0.0, 1.0) * 0.20 * (0.5 + g_ground_light * 2.5) * (1.0 - 0.7 * back);
+		// The underside of each ball turns away from the sky.
+		lc = mix(lc, shade, smoothstep(0.2, 1.0, nl.y) * 0.30);
+		lc *= 1.0 + (hs(seed, float(k), 7.0) - 0.5) * 0.08;
+		c = mix(c, lc, cov);
+		if (cov > 0.5) {
+			front_n = dot(normalize(nl), kd);
+		}
+		a_c = max(a_c, cov);
+	}
+	// A low skirt joins the lobes to the ground (bushes) or to the trunk (trees).
+	float skirt = sd_ellipse(p - vec2(0.0, crown_y - 0.18), vec2(tree ? 0.5 : 0.86, 0.22));
+	float a_s = (1.0 - smoothstep(-0.7 * fw, 0.7 * fw, skirt + fuzz)) * (1.0 - a_c);
+	c = mix(c, mix(shade, base, 0.35), a_s);
+	a_c = max(a_c, a_s);
+	union_d = min(union_d, skirt);
+	float trunk = 1e3;
+	if (tree) {
+		trunk = sd_capsule(p, vec2(0.0, 0.0), vec2(0.0, crown_y - 0.1), 0.085 + 0.04 * (1.0 + p.y / max(-crown_y, 0.1)));
+	}
+	float a_t = 1.0 - smoothstep(-0.7 * fw, 0.7 * fw, trunk);
+	float a = max(a_c, a_t);
+	if (a < 0.004) {
+		discard;
+	}
+	// The base of the canopy sinks into shade (it meets the ground or the trunk).
+	c = mix(c, shade, smoothstep(crown_y - 0.32, crown_y + 0.05, p.y) * 0.40 * a_c);
+	// Felt cushion texture.
+	float ml = dot(mn, kd);
+	c = mix(c, shade, clamp(-ml, 0.0, 1.0) * 0.12);
 	c *= 1.0 + (m.a - 0.5) * 0.10;
 	// Contre-jour rim on the silhouette (golden, dawn): a thin glowing edge on the lit side.
-	float edge = smoothstep(-3.0 * fw, 0.0, dc) * a_c;
-	float facing = clamp(dot(normalize(lob_n), kd) * 0.7 + 0.3, 0.0, 1.0);
+	float edge = smoothstep(-3.0 * fw, 0.0, union_d + fuzz) * a_c;
+	float facing = clamp(front_n * 0.7 + 0.3, 0.0, 1.0);
 	c += g_key.rgb * g_rim * g_backlight * 0.55 * edge * facing;
 	// Trunk: bark-dark, tinted by the canopy's shade.
 	vec3 bark = mix(shade, base * vec3(0.78, 0.66, 0.58), 0.45) * trunk_k / 0.55;
 	c = mix(c, bark, a_t * (1.0 - a_c));
 	vec2 p_design = v_canvas - g_world_offset;
 	if (g_cloud_shadow > 0.001) {
-		c = mix(c, c * g_shadow.rgb * SHADE_K, cloud_shadow(p_design) * 1.4);
+		c = mix(c, shade_of(c), cloud_shadow(p_design) * 1.4);
 	}
 	c += sun_veil(v_canvas, mix(0.6, 0.25, depth));
 	c = mix(c, mix(g_sky_horizon.rgb, g_glow.rgb, 0.2), g_mist * 0.3 * (1.0 - depth));

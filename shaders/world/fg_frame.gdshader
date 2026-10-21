@@ -19,7 +19,7 @@ instance uniform vec4 i_region = vec4(0.0, 0.0, 1.0, 1.0);
 
 uniform float fg_mix = 0.84;
 // The frame is the darkest value of the picture (Art Bible §1.2, §2.5 value plan).
-uniform float fg_dark = 0.82;
+uniform float fg_dark = 0.72;
 uniform float rim_k = 0.55;
 uniform float rim_px = 9.0;
 uniform float glow_k = 0.10;

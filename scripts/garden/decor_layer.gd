@@ -88,6 +88,9 @@ const PUFF_RADIUS := 26.0
 const PUFF_S := 0.5
 ## Depth scale (Art Bible §2.4).
 const DEPTH := Vector3(0.62, 760.0, 740.0)
+## Every additive décor glow (lantern heads, ring motes) shares one node drawn after the whole play
+## layer (one halo_add batch instead of one per piece); below the 1920 frame bottom.
+const GLOW_SORT_Y := 2000.0
 ## Contact shadows: [half_w, half_h, height] at depth 1 per set.
 const SHADOWS := {
 	&"leaf_pinwheel": Vector3(9.0, 3.0, 90.0), &"firefly_lantern": Vector3(13.0, 4.0, 150.0),
@@ -105,6 +108,8 @@ var _pieces: Dictionary = {}           # decor id -> Array of Piece
 var _shadows: Node2D
 var _chime_set: Node2D
 var _motes: Node2D
+var _glow: Node2D
+var _units: Dictionary = {}           # unit key -> Node2D (one y-sort unit = one batch)
 var _wind: float = 0.35
 var _light: Dictionary = {}
 var _dp: float = 3.0
@@ -151,6 +156,10 @@ func _ready() -> void:
 	_shadows.name = "Shadows"
 	_shadows.y_sort_enabled = false
 	add_child(_shadows)
+	_glow = Node2D.new()
+	_glow.name = "Glow"
+	_glow.position = Vector2(0.0, GLOW_SORT_Y)
+	add_child(_glow)
 	_chime_set = Node2D.new()
 	_chime_set.name = "Chimes"
 	_chime_set.position = Vector2(0.0, float(kit.layout.get("chime_sort_y", 806.0)))
@@ -261,7 +270,11 @@ func _add_piece(id: StringName, i: int, animate: bool) -> Piece:
 		CHIME:
 			_build_chime(p)
 	if p.node.get_parent() == null:
-		add_child(p.node)
+		var unit := _unit_for(p)
+		if unit != null:
+			_add_to_unit(unit, p.node)
+		else:
+			add_child(p.node)
 	if SHADOWS.has(id) and (id != CAIRN or i == 0):
 		var s: Vector3 = SHADOWS[id]
 		p.shadow = ContactShadow.new(Vector2(s.x, s.y) * p.depth, s.z * p.depth, 1.0)
@@ -281,6 +294,54 @@ func _add_piece(id: StringName, i: int, animate: bool) -> Piece:
 		AudioDirector.play_cue(CUE_PLACE, {"world": true, "position": _canvas_of(p.foot)})
 		FrameGovernor.hold_for(Motion.duration(&"emphasized"))
 	return p
+
+
+## Stepping stones (in the water, no one stands behind them) and each half of the toadstool ring
+## (back half behind a mossling sitting in the ring, front half in front of it) are single sort
+## units, so their sprites batch into one draw call each (synthesis §3 <= 100 draw calls).
+func _unit_for(p: Piece) -> Node2D:
+	var key := ""
+	var sort_y := 0.0
+	if p.decor == STONES:
+		key = "stones"
+		sort_y = _max_anchor_y(STONES)
+	elif p.decor == TOADSTOOL:
+		var ring: Dictionary = kit.layout.get("toadstool_ring", {})
+		var cy := float((ring.get("centre", [0.0, 825.6]) as Array)[1])
+		if p.foot.y < cy:
+			key = "toadstools_back"
+			sort_y = cy - 1.0
+		else:
+			key = "toadstools_front"
+			sort_y = _max_anchor_y(TOADSTOOL)
+	if key == "":
+		return null
+	var unit: Node2D = _units.get(key)
+	if unit == null:
+		unit = Node2D.new()
+		unit.name = key
+		unit.position = Vector2(0.0, sort_y)
+		add_child(unit)
+		_units[key] = unit
+	return unit
+
+
+func _add_to_unit(unit: Node2D, node: Node2D) -> void:
+	node.position -= unit.position
+	unit.add_child(node)
+	var at := 0
+	for c: Node in unit.get_children():
+		if c != node and (c as Node2D).position.y <= node.position.y:
+			at += 1
+	unit.move_child(node, at)
+
+
+func _max_anchor_y(id: StringName) -> float:
+	var a: Dictionary = _content.anchors_by_decor.get(id, {})
+	var y := 0.0
+	for q: Array in a.get("positions", []):
+		y = maxf(y, GardenRules.frame_to_px(_content, Vector2(float(q[0]), float(q[1]))).y)
+	return y
 
 
 func _add_sprite(p: Piece, parent: Node2D, part: String, pos: Vector2, material_id: String = "",
@@ -313,7 +374,7 @@ func _build_cairn(p: Piece) -> void:
 	var list: Array = _pieces.get(CAIRN, [])
 	if p.index > 0 and not list.is_empty():
 		base = list[0]
-		p.node.queue_free()
+		p.node.free()  # never entered the tree: the pebble joins the base copy's node
 		p.node = base.node
 	else:
 		p.node.y_sort_enabled = false
@@ -362,10 +423,11 @@ func _build_lantern(p: Piece) -> void:
 	p.halo = HaloSprite.new().setup(LANTERN_HALO.x * p.depth, LANTERN_HALO.y * p.depth,
 			Color(1, 1, 1, LANTERN_HALO_ALPHA), float((lk["lantern_breath"] as Array)[0]),
 			HaloSprite.FLAG_NIGHT + HaloSprite.FLAG_ACCENT, float(p.index) * 1.7)
-	p.halo.position = Vector2(0.0, float(kit.layout.get("jar_centre_dy", 28.0)) * p.depth)
-	p.head.add_child(p.halo)
+	var jar_centre := p.foot + p.head.position + Vector2(0.0, float(kit.layout.get("jar_centre_dy", 28.0)) * p.depth)
+	p.halo.position = jar_centre - _glow.position
+	_glow.add_child(p.halo)
 	p.pend = Motion.spring(&"follow", 0.0)
-	p.hit = p.foot + p.head.position + p.halo.position
+	p.hit = jar_centre
 	if p.index < MAX_LANTERN_POOLS:
 		p.lamp = StringName("lantern_%d" % p.index)
 		LampRegistry.set_lamp(p.lamp, Vector2(p.foot.x + p.head.position.x, p.foot.y + LANTERN_POOL_DY),
@@ -392,8 +454,8 @@ func _refresh_ring() -> void:
 		var centre := Vector2(float(c[0]), float(c[1]))
 		_motes = Node2D.new()
 		_motes.name = "RingMotes"
-		_motes.position = centre
-		add_child(_motes)
+		_motes.position = centre - _glow.position
+		_glow.add_child(_motes)
 		var k := float((_content.motion["loops_k"]["glow_mushroom"] as Array)[0])
 		for i in n:
 			var a := TAU * (float(i) + 0.5) / float(n)

@@ -2,6 +2,9 @@
 // Includes globals.gdshaderinc (every g_* global) and noise.gdshaderinc.
 //
 //   light_object(albedo, up, ao)  ambient multiply, tinted AO toward g_shadow, key on top
+//   shade_of(c)                   terrain shade: darker, hue leaning toward the shadow token but
+//                                 keeping the surface's own hue (green moss stays green; no pixel
+//                                 crushed under L* 6 at night)
 //   light_body()                  canvas px of the brighter body (sun unless the moon wins)
 //   key_dir(p_canvas)             unit vector toward the light; turns toward the body with backlight
 //   light_elevation()             clamp((horizon_y - body_y) / 400, 0.05, 1) in design px
@@ -36,6 +39,21 @@ const float GUST_AMP = 0.35;
 const float WIND_K_BASE = 0.5;
 const float WIND_K_NORM = 0.85;
 const float LOOP_S = 600.0;
+
+// Terrain shade keeps the surface's own hue (the moss stays green in shadow, round-2 directive 1):
+// darken, then lean TERRAIN_SHADE_TINT of the way toward the shadow token's hue at the same luminance.
+const float TERRAIN_SHADE_DARK = 0.58;
+const float TERRAIN_SHADE_TINT = 0.32;
+
+float wl_luma(vec3 c) {
+	return dot(c, vec3(0.2126, 0.7152, 0.0722));
+}
+
+vec3 shade_of(vec3 c) {
+	vec3 d = c * TERRAIN_SHADE_DARK;
+	vec3 tint = g_shadow.rgb / max(wl_luma(g_shadow.rgb), 1e-3) * wl_luma(d);
+	return mix(d, min(tint, vec3(1.0)), TERRAIN_SHADE_TINT);
+}
 
 vec3 light_object(vec3 albedo, float up, float ao) {
 	vec3 c = albedo * g_ambient.rgb;

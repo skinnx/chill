@@ -15,6 +15,10 @@ extends Node2D
 # such conversion, so only that warning is silenced in this file (docs/ARCHITECTURE.md §10).
 @warning_ignore_start("unsafe_call_argument")
 
+## Collect emptied the basket: canvas px of the basket opening and how many gifts left it (the UI
+## can fly them from here to the dew counter, GDD §3.2).
+signal emptied(canvas_pos: Vector2, gifts: int)
+
 const PROPS_ATLAS := "res://art/props/props_atlas.json"
 const BASKET_PROP := &"basket"
 const BASKET_PART := "basket"
@@ -22,8 +26,8 @@ const BASKET_PART := "basket"
 const SORT_AFTER := 0.5
 const MAX_DEW := 12
 const MAX_GIFTS := 3
-const GIFT_SCALE := 1.1
-const DEW_SCALE := 0.8
+const GIFT_SCALE := 1.45
+const DEW_SCALE := 1.05
 ## Glint halo (Art Bible §6.5): r0 10 px, gold, alpha 0.3, breathing k 76.
 const GLINT_R0 := 10.0
 const GLINT_QUAD := 64.0
@@ -65,7 +69,8 @@ func setup(content: GameContent, kit: DecorKit) -> void:
 	_items = Node2D.new()
 	_items.name = "Items"
 	add_child(_items)
-	var gm: Dictionary = content.palettes["materials"].get(GLINT_MATERIAL, {})
+	var mats: Dictionary = content.palettes["materials"]
+	var gm: Dictionary = mats.get(GLINT_MATERIAL, {})
 	var gc := Color.html(String(gm.get("lit", "#F6D58C")))
 	gc.a = GLINT_ALPHA
 	var k := float((content.motion["loops_k"]["glow_mushroom"] as Array)[0])
@@ -79,7 +84,10 @@ func setup(content: GameContent, kit: DecorKit) -> void:
 
 func _on_sim_event(ev: Dictionary) -> void:
 	if StringName(ev["type"]) == WorldSim.EV_COLLECTED:
+		var gifts := int(ev.get("gifts", 0))
 		refresh()
+		if gifts > 0 and not bool(ev.get("catch_up", false)):
+			emptied.emit(get_global_transform_with_canvas() * _glint.position, gifts)
 
 
 func _local(frame_px: Vector2) -> Vector2:

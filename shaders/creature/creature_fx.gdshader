@@ -6,6 +6,7 @@ shader_type canvas_item;
 render_mode blend_premul_alpha, unshaded;
 
 #include "res://shaders/inc/globals.gdshaderinc"
+#include "res://shaders/inc/noise.gdshaderinc"
 #include "res://shaders/inc/finish.gdshaderinc"
 
 // One shared material per stamp kind (no instance uniforms: on GLES3 every canvas item that uses
@@ -19,7 +20,8 @@ uniform vec4 u_c : source_color = vec4(1.0);   // detail colour
 
 const float RING_STROKE = 0.085;   // ring stroke as a fraction of the radius
 const float RING_TRACK_A = 0.28;
-const float AMBIENT_MIX = 0.35;    // feedback stamps keep their colour at night (readability)
+const float AMBIENT_MIX = 0.35;
+const float UMB_FRINGE_PX = 3.0;    // umbrella felt fringe length (local px)    // feedback stamps keep their colour at night (readability)
 
 varying vec2 v_local;
 
@@ -103,25 +105,40 @@ void fragment() {
 		a = ra * mix(RING_TRACK_A, 1.0, fill);
 		col = u_a.rgb;
 	} else {
-		// leaf umbrella: a big round leaf (tone mask lit/shade/detail), midrib, veins, petiole
+		// leaf umbrella (QA round 1: same felt hand as the creatures): a round leaf in the tone mask
+		// (lit / shade / detail), midrib and veins, a short petiole; felted fibre fringe on the leaf
+		// edge, the underside in shade, key rim, ambient multiply and object-anchored grain.
 		vec2 lp = p - vec2(0.0, 0.18);
 		float dl = sd_vesica(vec2(lp.x * 0.62, lp.y * 1.55 + 0.02), 0.62, 0.5) - 0.02;
-		float dpet = sd_segment(p, vec2(0.0, 0.05), vec2(0.03, -0.95)) - 0.035;
-		float d = min(dl, dpet);
-		a = 1.0 - smoothstep(-aa, aa, d);
+		float dpet = sd_segment(p, vec2(0.0, 0.05), vec2(0.03, -0.95)) - mix(0.022, 0.034, smoothstep(-0.95, 0.0, p.y));
+		float px = u_half;                                   // local px per unit
+		float dl_px = dl * px;
+		// fibre fringe: anisotropic noise along the edge, 2-3 px long
+		float ang = atan(lp.y, lp.x);
+		float fib = smoothstep(0.4, 0.85, vnoise(vec2(ang * 38.0, dl_px * 0.6)));
+		float fr_t = clamp(dl_px / UMB_FRINGE_PX, 0.0, 1.0);
+		float fringe = dl_px > 0.0 ? fib * (1.0 - fr_t) * (1.0 - fr_t) * 0.8 : 0.0;
+		float wob = (vnoise(vec2(ang * 6.0, 1.7)) - 0.5) * 1.2;
+		float core_l = 1.0 - smoothstep(-aa, aa, dl + wob / px);
+		float core_p = 1.0 - smoothstep(-aa, aa, dpet);
+		a = max(max(core_l, core_p), fringe);
 		float under = smoothstep(0.05, -0.2, lp.y);       // the underside reads in shade
 		col = mix(u_a.rgb, u_b.rgb, under * 0.6 + 0.25 * smoothstep(-0.2, 0.0, dl));
 		float rib = 1.0 - smoothstep(0.012, 0.03, abs(lp.x));
 		float veins = 1.0 - smoothstep(0.015, 0.035, abs(fract((lp.y + abs(lp.x) * 0.7) * 3.2) - 0.5) * 0.3);
-		veins *= step(0.0, dl * -1.0) * smoothstep(0.05, 0.2, abs(lp.x));
+		veins *= step(0.0, -dl) * smoothstep(0.05, 0.2, abs(lp.x));
 		col = mix(col, u_c.rgb, max(rib * step(dl, 0.0), veins * 0.35) * 0.6);
-		col = mix(col, u_b.rgb, step(dl, dpet) * step(dpet, 0.0) * 0.0 + (dpet < dl ? 0.4 : 0.0));
+		col = mix(col, u_b.rgb * 0.92, core_p * (1.0 - core_l) * 0.6);
+		// felt mottling + lighter fibre tips in the fringe
+		col *= 1.0 + (vnoise(lp * 7.0) - 0.5) * 0.06;
+		col = mix(col, mix(col, u_c.rgb, 0.5), (1.0 - core_l) * core_p * 0.0 + fringe * (1.0 - core_l) * 0.6);
 		// rim from the key so the umbrella belongs to the same light as the creatures
 		float rim = smoothstep(-0.12, 0.0, dl) * clamp(dot(normalize(lp + 1e-4), normalize(vec2(g_sun_dir.x, -g_sun_dir.y))), 0.0, 1.0);
 		col += g_key.rgb * rim * g_rim * 0.35;
 		col *= g_ambient.rgb;
+		col = finish(col, p * px / PX_PER_DP, FRAGCOORD.xy, GRAIN_OBJECT);
 	}
 	a *= alpha;
-	col += tpdf(FRAGCOORD.xy);
+	col += kind > 3.5 ? 0.0 : tpdf(FRAGCOORD.xy);
 	COLOR = vec4(col * a, a);
 }

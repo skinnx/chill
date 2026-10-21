@@ -264,3 +264,13 @@ func test_brain_follows_a_real_sim_across_a_save_reload() -> void:
 		plans.append(sig)
 	assert_gt(plans[0].size(), 0, "someone is visiting after five hours")
 	assert_eq(plans[0], plans[1], "the same visit looks the same after a reload")
+
+
+func test_forced_bouts_carry_the_rain_umbrella_rule() -> void:
+	var b := _brain(SEED, &"day", &"rain")
+	b.add_visit(&"buttonbud", 0.0, 3600.0)
+	b.add_visit(&"puddlewump", 0.0, 3600.0)
+	var dry := b.force_bout(&"buttonbud", &"wander", &"clover_bank", 10.0, 60.0)
+	assert_true(dry.umbrella, "a forced bout in rain away from shelter holds a leaf")
+	var wet := b.force_bout(&"puddlewump", &"play", &"stream_bend", 10.0, 60.0)
+	assert_false(wet.umbrella, "puddlewump loves rain: no umbrella")

@@ -128,6 +128,8 @@ var _alpha_to: float = 1.0
 var _alpha_rate: float = 2.5
 var _rain: bool = false
 var _sheltered: bool = false
+var _wants_umbrella: bool = true
+var _umbrella_back: Node2D
 
 # walking
 var _path: PackedVector2Array = PackedVector2Array()
@@ -186,6 +188,10 @@ var _u_state: Vector4 = Vector4(-1, 0, 0, 0)
 var _u_misc: Vector4 = Vector4.ZERO
 var _u_shadow: Vector4 = Vector4(-1, 0, 0, 0)
 var _u_shadow2: Vector4 = Vector4(-1, 0, 0, 0)
+var _u_light: Vector4 = Vector4(-1, 0, 0, 0)
+var _light: Vector4 = Vector4.ZERO
+var _lamp_t: float = 0.0
+var _nestle: float = 0.0
 
 
 ## Builds the node tree for [param p_species]. Materials are shared across all mosslings.
@@ -212,6 +218,11 @@ func setup(p_rig: MosslingRig, p_species: StringName, p_seed01: float, fur: Shad
 	_shadow.material = shadow_mat
 	_shadow.rect = Rect2(-2.2 * _w_px, -0.5 * _s_px, 4.4 * _w_px, 2.2 * _s_px)
 	_visual.add_child(_shadow)
+	# the leaf umbrella draws BEHIND the body: its stem rises from behind the paw side, never
+	# across the face (QA round 1)
+	_umbrella_back = Node2D.new()
+	_umbrella_back.name = "UmbrellaBack"
+	_visual.add_child(_umbrella_back)
 	_body = SdfQuad.new()
 	_body.name = "Body"
 	_body.material = fur
@@ -220,7 +231,7 @@ func setup(p_rig: MosslingRig, p_species: StringName, p_seed01: float, fur: Shad
 	_fx = MosslingFx.new()
 	_fx.name = "Fx"
 	_visual.add_child(_fx)
-	_fx.setup(rig, fx_mats)
+	_fx.setup(rig, fx_mats, _umbrella_back)
 	_build_tag()
 	# springs
 	_squash = Motion.spring(&"jelly", 1.0)
@@ -369,9 +380,11 @@ func greet() -> void:
 	_reopen_t = float(_b.get("greet_hold_s", 1.2))
 
 
-func set_rain(on: bool, sheltered: bool) -> void:
+## [param umbrella]: the bout wants a leaf umbrella (false for rain lovers and under shelter).
+func set_rain(on: bool, sheltered: bool, umbrella: bool = true) -> void:
 	_rain = on
 	_sheltered = sheltered
+	_wants_umbrella = umbrella
 	_update_rest_pose()
 
 
@@ -553,6 +566,7 @@ func _process(delta: float) -> void:
 	_update_face(delta)
 	_update_springs(delta)
 	_update_fx(delta)
+	_update_light(delta)
 	if _alpha != _alpha_to:
 		_alpha = move_toward(_alpha, _alpha_to, delta * _alpha_rate)
 		modulate.a = _alpha
@@ -805,7 +819,10 @@ func _tick_nap(delta: float) -> void:
 		var k := float(_b.get("zzz_k", 124))
 		_zzz_t = Clock.g_time_wrap_s / maxf(k, 1.0)
 		if _fx.zzz_alive() < int(_b.get("zzz_max", 2)):
-			_fx.zzz(_head_local() + Vector2(_w_px * 0.22, -_s_px * 0.05))
+			var zs: Dictionary = rig.view().get("zzz_spawn", {})
+			var side := -_facing
+			var at := Vector2(side * _w_px * float(zs.get("side_bu", 0.5)), -_s_px * (0.85 + float(zs.get("up_bu", 0.1))))
+			_fx.zzz(at, side * float(zs.get("drift_px", 34.0)))
 
 
 ## Nibble: lean toward the bed, chew bobs at 2 Hz for 1.5 s, pause 2-4 s, repeat (§5.7).
@@ -1058,9 +1075,53 @@ func _update_springs(delta: float) -> void:
 
 
 func _update_fx(_delta: float) -> void:
-	var head := _head_local()
-	var show_umbrella := _rain and not _sheltered and not leaving
-	_fx.set_umbrella(show_umbrella, head + Vector2(_facing * _w_px * 0.12, 0.0), _ear.value * 0.6 + _lean.value)
+	var show_umbrella := _rain and _wants_umbrella and not _sheltered and not leaving
+	var u: Dictionary = rig.view().get("umbrella", {})
+	# rooted at the paw on the front-facing side, held up behind the head
+	var side := _facing
+	var base := Vector2(side * _w_px * float(u.get("paw_x_bu", 0.42)), -_s_px * float(u.get("paw_y_bu", 0.5)) - _hop_h)
+	var size_k := _w_px / float(u.get("ref_width_px", 150.0))
+	_fx.set_umbrella(show_umbrella, base, _ear.value * 0.6 + _lean.value, side, size_k)
+
+
+## Lantern light at the feet (LampRegistry, the same falloff as the ground pools), refreshed at
+## view.lamp_refresh_s (2 Hz, Art Bible §5.5 slot 14). i_light.xy is local (y up).
+func _update_light(delta: float) -> void:
+	_lamp_t -= delta
+	if _lamp_t > 0.0:
+		return
+	_lamp_t = float(rig.view().get("lamp_refresh_s", 0.5))
+	_light = lamp_light(_feet, rig.view().get("lamp", {}))
+
+
+## Strongest lamp on a creature at [param feet] (design px): (dir x, dir y up, weight, 0). A body
+## stands up out of the pool, so it catches a lantern from further away than the ground does:
+## reach = reach_mul x pool radius, weight = peak x (1 - q)^falloff_pow (Art Bible §5.5 slot 14).
+static func lamp_light(feet_design: Vector2, cfg: Dictionary) -> Vector4:
+	var reach := float(cfg.get("reach_mul", 2.2))
+	var peak := float(cfg.get("peak", 0.45))
+	var fpow := float(cfg.get("falloff_pow", 2.0))
+	var best := Vector4.ZERO
+	for l: Vector4 in LampRegistry.lamps():
+		var d := Vector2(l.x, l.y) - feet_design
+		var q := d.length() / maxf(l.z * reach, 1.0)
+		if q >= 1.0:
+			continue
+		var w := peak * clampf(l.w, 0.0, 1.0) * pow(1.0 - q, fpow)
+		if w > best.z:
+			var dir := d.normalized() if d.length_squared() > 1.0 else Vector2(0.0, -1.0)
+			best = Vector4(dir.x, -dir.y, w, 0.0)
+	return best
+
+
+## Grass nestle (i_misc.y): on the meadow, off on props and while hopping.
+func _nestle_now() -> float:
+	var base := 1.0
+	if not _walking and _hop_state == Hop.NONE:
+		base = rig.nestle_at(spot_id)
+	elif _sort_bias != 0.0:
+		base = 0.0
+	return base * (1.0 - smoothstep(0.0, rig.nestle_hop_fade_px(), _hop_h))
 
 
 func _apply_position() -> void:
@@ -1097,10 +1158,13 @@ func _push_uniforms(force: bool) -> void:
 	if force or not _vec_eq(state, _u_state):
 		_u_state = state
 		_body.set_instance_shader_parameter(MosslingRig.I_STATE, state)
-	var misc := Vector4(_u_misc.x, _u_misc.y, _u_misc.z, float(_closed))
+	var misc := Vector4(_u_misc.x, _nestle_now(), _u_misc.z, float(_closed))
 	if force or misc != _u_misc:
 		_u_misc = misc
 		_body.set_instance_shader_parameter(MosslingRig.I_MISC, misc)
+	if force or not _vec_eq(_light, _u_light):
+		_u_light = _light
+		_body.set_instance_shader_parameter(MosslingRig.I_LIGHT, _light)
 	var hop_n := clampf(_hop_h / maxf(_s_px * 0.3, 1.0), 0.0, 1.0)
 	var sh := Vector4(_w_px, _s_px, hop_n, 1.0)
 	if force or not _vec_eq(sh, _u_shadow):

@@ -169,6 +169,8 @@ func _add_part(part: Dictionary, content: GameContent, mats: Dictionary, offset:
 			region.size.x / size.x, region.size.y / size.y))
 	var rim_on := float(part.get("rim", 1)) > 0.0 and minf(region.size.x, region.size.y) >= MIN_RIM_PX
 	sp.set_instance_shader_parameter(&"i_fx", Vector4(0.0, 1.0, 1.0 if rim_on else 0.0, float(part.get("ground", 0.0))))
+	if part.has("focal"):
+		sp.set_instance_shader_parameter(&"i_focal", Vector4(float(part["focal"]), 0.0, 0.0, 0.0))
 	if part.has("sway"):
 		var sw := PackedFloat64Array(part["sway"] as Array)
 		sp.set_instance_shader_parameter(&"i_sway", Vector4(sw[0], sw[1], sw[2], TerrainMath.hash01(

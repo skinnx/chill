@@ -29,22 +29,27 @@ const IN_STAGE := 0.6
 const BLOOMED_AGO_S := 900.0
 const SEED_AGO_S := 30.0
 const FIXTURE_DEW := 340
+## decor.json fx flag of a set whose copies add chime shells (AUDIO_BIBLE §5).
+const FX_CHIME_NOTE := "adds_chime_note"
 
-## [flower, bed, count, stage]: the mid-game garden (38 stems, every flower, all five beds).
+## [flower, bed, count, stage]: the mid-game garden (50 stems, every flower, all five beds: the
+## three lower beds full of bloom with a few buds, the two upper beds younger).
 const MID_STEMS: Array[Array] = [
 	[&"sweet_clover", &"bed_1", 4, WorldSim.STAGE_BLOOM],
-	[&"button_daisy", &"bed_1", 3, WorldSim.STAGE_BLOOM],
+	[&"button_daisy", &"bed_1", 4, WorldSim.STAGE_BLOOM],
 	[&"button_daisy", &"bed_1", 1, WorldSim.STAGE_BUD],
-	[&"forget_me_not", &"bed_1", 3, WorldSim.STAGE_BLOOM],
-	[&"bluebell", &"bed_2", 3, WorldSim.STAGE_BLOOM],
-	[&"primrose", &"bed_2", 2, WorldSim.STAGE_BLOOM],
+	[&"forget_me_not", &"bed_1", 4, WorldSim.STAGE_BLOOM],
+	[&"bluebell", &"bed_2", 4, WorldSim.STAGE_BLOOM],
+	[&"primrose", &"bed_2", 3, WorldSim.STAGE_BLOOM],
 	[&"primrose", &"bed_2", 1, WorldSim.STAGE_BUD],
 	[&"button_daisy", &"bed_2", 2, WorldSim.STAGE_BLOOM],
-	[&"buttercup", &"bed_3", 3, WorldSim.STAGE_BLOOM],
+	[&"sweet_clover", &"bed_2", 2, WorldSim.STAGE_BLOOM],
+	[&"buttercup", &"bed_3", 4, WorldSim.STAGE_BLOOM],
 	[&"buttercup", &"bed_3", 1, WorldSim.STAGE_BUD],
-	[&"dandelion", &"bed_3", 2, WorldSim.STAGE_BLOOM],
+	[&"dandelion", &"bed_3", 3, WorldSim.STAGE_BLOOM],
+	[&"forget_me_not", &"bed_3", 2, WorldSim.STAGE_BLOOM],
 	[&"sweet_clover", &"bed_3", 2, WorldSim.STAGE_SPROUT],
-	[&"moonbloom", &"bed_4", 2, WorldSim.STAGE_BLOOM],
+	[&"moonbloom", &"bed_4", 3, WorldSim.STAGE_BLOOM],
 	[&"forget_me_not", &"bed_4", 3, WorldSim.STAGE_BUD],
 	[&"button_daisy", &"bed_4", 1, WorldSim.STAGE_SEED],
 	[&"primrose", &"bed_5", 2, WorldSim.STAGE_SPROUT],
@@ -90,6 +95,12 @@ static func apply_from_args(content: GameContent) -> void:
 	apply(content, state, name)
 	Game.sim = WorldSim.new(content, state)
 	applied = name
+	# The chime gusts need the owned shells (Game pushes them again on its next sim event).
+	var shells := 0
+	for d: Dictionary in content.decor:
+		if (d.get("fx", []) as Array).has(FX_CHIME_NOTE):
+			shells += Game.sim.owned_count(StringName(d["id"]))
+	AudioDirector.set_world_state(shells, PackedInt32Array(), 0)
 
 
 ## Writes fixture [param name] into [param state] at world time state.t. Returns false if unknown.

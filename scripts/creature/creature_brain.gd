@@ -185,6 +185,9 @@ func force_bout(species: StringName, behaviour: StringName, spot: StringName, t:
 	b.slot = _free_slot(spot, t, v)
 	b.pos = spot_position(spot, b.slot, v)
 	b.shelter = is_shelter(spot)
+	var rain := StringName(_env(t).get("weather", &"")) == RAIN
+	var sp: Dictionary = content.species_by_id.get(species, {})
+	b.umbrella = rain and not _likes_weather(sp, RAIN) and not b.shelter
 	v.bouts.append(b)
 	v.planned_to = b.end_t
 	return b

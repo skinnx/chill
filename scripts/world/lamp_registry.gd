@@ -9,6 +9,12 @@ extends RefCounted
 ##   LampRegistry.remove_lamp(&"lantern_3")
 
 const MAX_LAMPS := 12
+## shaders/inc/lamps.gdshaderinc falloff (keep in sync): ground-plane squash, peak alpha range,
+## hot core, breath.
+const POOL_SQUASH := 0.70
+const PEAK_RANGE := Vector2(0.30, 0.40)
+const CORE_Q := 0.16
+const CORE_K := 0.22
 
 static var _lamps: Dictionary = {}
 static var _materials: Array[ShaderMaterial] = []
@@ -31,6 +37,29 @@ static func remove_lamp(key: StringName) -> void:
 ## Active lamps (design x, y, radius, intensity) in their stable shader order.
 static func lamps() -> Array[Vector4]:
 	return _packed()
+
+
+## Pool weight at a design position (0..~0.6 before g_lights), the same falloff as the shader's
+## lamp_weight(): the max over lamps of peak * (1 - q^2)^2 + core, q = squashed distance / radius.
+static func weight_at(p_design: Vector2) -> float:
+	return light_at(p_design).z
+
+
+## Strongest lamp at a design position: (unit direction from p toward the lamp, weight). Creatures
+## use it for i_light (warm fill on the lamp-facing side, round-2 directive 5).
+static func light_at(p_design: Vector2) -> Vector3:
+	var best := Vector3(0.0, -1.0, 0.0)
+	for l: Vector4 in _packed():
+		var d := p_design - Vector2(l.x, l.y)
+		var q := Vector2(d.x, d.y / POOL_SQUASH).length() / maxf(l.z, 1.0)
+		if q >= 1.0:
+			continue
+		var f := 1.0 - q * q
+		var w := lerpf(PEAK_RANGE.x, PEAK_RANGE.y, clampf(l.w, 0.0, 1.0)) * f * f + CORE_K * exp(-(q * q) / (CORE_Q * CORE_Q))
+		if w > best.z:
+			var dir := (-d).normalized() if d.length_squared() > 1.0 else Vector2(0.0, -1.0)
+			best = Vector3(dir.x, dir.y, w)
+	return best
 
 
 static func lamp_count() -> int:

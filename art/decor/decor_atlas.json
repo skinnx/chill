@@ -67,7 +67,7 @@
 		},
 		"pebble_0": {
 			"region": [
-				298,
+				306,
 				326,
 				116,
 				46
@@ -86,7 +86,7 @@
 		},
 		"pebble_1": {
 			"region": [
-				642,
+				650,
 				326,
 				100,
 				42
@@ -99,13 +99,13 @@
 				0.5,
 				0.86
 			],
-			"material": "pebble_alt",
+			"material": "stone_cool",
 			"emission": 0.0,
 			"rim": 1
 		},
 		"pebble_2": {
 			"region": [
-				754,
+				762,
 				326,
 				92,
 				38
@@ -118,13 +118,13 @@
 				0.5,
 				0.86
 			],
-			"material": "stone_warm",
+			"material": "pebble_alt",
 			"emission": 0.0,
 			"rim": 1
 		},
 		"pebble_3": {
 			"region": [
-				858,
+				866,
 				326,
 				84,
 				36
@@ -137,7 +137,7 @@
 				0.5,
 				0.86
 			],
-			"material": "stone_cool",
+			"material": "stone_warm",
 			"emission": 0.0,
 			"rim": 1
 		},
@@ -181,18 +181,18 @@
 		},
 		"stream_stone": {
 			"region": [
-				174,
+				6,
 				326,
-				112,
-				48
+				120,
+				60
 			],
 			"size": [
-				56,
-				24
+				60,
+				30
 			],
 			"pivot": [
 				0.5,
-				0.78
+				0.66
 			],
 			"material": "stone_cool",
 			"emission": 0.0,
@@ -200,7 +200,7 @@
 		},
 		"toadstool_cap": {
 			"region": [
-				6,
+				138,
 				326,
 				100,
 				60
@@ -219,7 +219,7 @@
 		},
 		"toadstool_stem": {
 			"region": [
-				118,
+				250,
 				326,
 				44,
 				54
@@ -371,7 +371,7 @@
 		},
 		"gift_acorn_cup": {
 			"region": [
-				954,
+				962,
 				326,
 				44,
 				36
@@ -390,7 +390,7 @@
 		},
 		"gift_petal_bundle": {
 			"region": [
-				538,
+				546,
 				326,
 				44,
 				44
@@ -428,7 +428,7 @@
 		},
 		"gift_seed_pouch": {
 			"region": [
-				594,
+				602,
 				326,
 				36,
 				44
@@ -504,7 +504,7 @@
 		},
 		"leaf_boat": {
 			"region": [
-				426,
+				434,
 				326,
 				100,
 				44
@@ -587,12 +587,12 @@
 			116
 		],
 		"set_scale": {
-			"leaf_pinwheel": 1.1,
+			"leaf_pinwheel": 1.3,
 			"pebble_cairn": 1.0,
 			"toadstool_seat": 1.25,
-			"stream_stones": 1.0,
+			"stream_stones": 0.82,
 			"firefly_lantern": 1.0,
-			"wind_chime": 1.0
+			"wind_chime": 1.35
 		},
 		"toadstool_cap_dy": -20.0,
 		"jar_centre_dy": 28.0,
@@ -618,66 +618,66 @@
 		},
 		"gift_slots": [
 			[
-				50,
-				47
+				48,
+				44
 			],
 			[
-				88,
-				46
+				92,
+				43
 			],
 			[
 				70,
-				44
+				41
 			]
 		],
 		"dew_slots": [
 			[
-				36,
-				47
+				34,
+				46
 			],
 			[
-				104,
-				47
+				106,
+				46
 			],
 			[
-				60,
-				49
+				58,
+				48
 			],
 			[
-				80,
-				49
+				82,
+				48
 			],
 			[
-				46,
-				45
+				44,
+				43
 			],
 			[
-				94,
-				45
+				96,
+				43
 			],
 			[
 				70,
-				50
+				49
 			],
 			[
-				28,
-				48
+				26,
+				47
 			],
 			[
-				112,
-				48
+				114,
+				47
 			],
 			[
 				56,
-				44
+				41
 			],
 			[
 				84,
-				44
+				41
 			],
 			[
 				70,
-				46
+				44
 			]
 		]
 	}

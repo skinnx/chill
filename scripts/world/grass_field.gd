@@ -7,7 +7,7 @@ extends Node2D
 ## Sorting (QA round 1 blocker: tufts drew across a creature's face): each band's origin is its
 ## TOP edge, so a band sorts behind every creature whose feet are inside or below it. The only
 ## possible error is a clump just in front of a creature's feet drawing behind it, which hides
-## under the body instead of crossing it. Bands are 70 px tall where creatures walk (crest to the
+## under the body instead of crossing it. Bands are 105 px tall where creatures walk (crest to the
 ## brook) and one band covers the near bank, where no creature stands.
 ##
 ## The ground cover (clover, moss mounds, wild flowers) is built by [method build_cover] into the
@@ -21,9 +21,9 @@ extends Node2D
 const SHADER_PATH := "res://shaders/world/grass.gdshader"
 const MOSS_TEX := "res://art/fx/moss_tile.png"
 const SEED := 4243
-## Band edges (design y): 70 px bands from above the crest to the brook, then the near bank.
+## Band edges (design y): 105 px bands from above the crest to the brook, then the near bank.
 const BAND_TOP := 700.0
-const BAND_STEP := 70.0
+const BAND_STEP := 105.0
 const BAND_SPLIT := 1540.0
 const BAND_BOTTOM := 1980.0
 ## Quad (local px at depth 1, root at the origin): x +-QUAD_HW, y -QUAD_TOP..QUAD_BOTTOM.

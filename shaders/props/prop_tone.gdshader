@@ -21,6 +21,8 @@ instance uniform vec4 i_sway = vec4(0.0, 120.0, 1.0, 0.0);
 instance uniform vec4 i_fx = vec4(0.0, 1.0, 1.0, 0.0);
 // The sprite's atlas region in UV (x, y, w, h): local UV = (UV - xy) / zw.
 instance uniform vec4 i_region = vec4(0.0, 0.0, 1.0, 1.0);
+// x focal 0..1 (the sun stone: its lit top plane catches every key light, Art Bible §2.5, §6.5).
+instance uniform vec4 i_focal = vec4(0.0);
 
 uniform float rim_px = 3.5;
 uniform float rim_k = 0.6;
@@ -30,6 +32,8 @@ uniform float tap_tint = 0.06;
 uniform float backlight_k = 0.38;
 uniform float ground_k = 0.18;
 uniform float ground_backlight_k = 0.3;
+uniform float focal_k = 0.05;
+uniform float focal_back_k = 0.08;
 
 varying vec2 v_canvas;
 varying vec2 v_size;
@@ -63,7 +67,10 @@ void fragment() {
 	vec3 c = light_object(alb, 1.0 - v_luv.y, smoothstep(0.80, 1.0, v_luv.y));
 	// Contre-jour: with the light behind (golden, dusk) the viewer sees the shaded faces; tops
 	// stay lit, sides and fronts sink toward the tinted shadow (Art Bible §8.1) [J].
-	c = mix(c, c * g_shadow.rgb * SHADE_K, backlight_k * g_backlight * (0.45 + 0.55 * smoothstep(0.1, 0.9, v_luv.y)));
+	c = mix(c, c * g_shadow.rgb * SHADE_K, backlight_k * g_backlight * (0.45 + 0.55 * smoothstep(0.1, 0.9, v_luv.y))
+			* (1.0 - 0.7 * i_focal.x * m.r));
+	// The focal's lit top plane: a warm key wash (strongest at golden), a cooler front face.
+	c += (g_key.rgb * 0.75 + alb * 0.25) * i_focal.x * m.r * (focal_k + focal_back_k * g_backlight) * (1.0 - 0.6 * g_lights);
 	c = mix(c, c * g_shadow.rgb * SHADE_K, i_fx.w * (ground_k + ground_backlight_k * g_backlight));
 	// Rim: inside the shape, with empty space toward the light (one extra, slightly blurred read).
 	if (i_fx.z > 0.5) {

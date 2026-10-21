@@ -118,18 +118,29 @@ def pebble_flat(svg: Svg, seed: int, w: float, h: float, moss: bool) -> Part:
 
 
 def stream_stone(svg: Svg) -> Part:
-    """Flat stepping stone (stone_cool): moss cap (detail), wet darker band at the waterline."""
-    p = Part(svg, 56, 24, (0.5, 0.78))
+    """Stepping stone sitting IN the brook (stone_cool): a rounded dome above the waterline with a
+    moss cap (detail), a dark wet band at the waterline, the submerged foot fading into the water,
+    and a pale riffle ring hugging it. Pivot at the waterline."""
+    p = Part(svg, 60, 30, (0.5, 0.66))
     rng = random.Random(211)
-    d = smooth_path(blob_pts(28, 12.5, 26.5, 10.6, 16, 0.04, rng))
-    clip = svg.clip(d)
-    p.path(d, svg.lin(0, 2, 0, 23, [(0, LIT), (0.45, LIT), (1, SHADE)]))
-    p.path(smooth_path([(1, 16), (14, 19.5), (28, 20.6), (42, 19.5), (55, 15), (56, 24), (0, 24)]), SHADE, 0.85,
-           svg.blur(0.8), clip=clip)
-    p.path(smooth_path([(12, 7.6), (20, 4.0), (32, 3.2), (42, 5.6), (40, 9.6), (28, 10.6), (17, 10.2)]), DETAIL, 0.9,
-           clip=clip)
-    p.speckles(rng, (8, 6, 48, 16), 14, (0.4, 0.8), SHADE, (0.2, 0.4), clip)
-    p.ellipse(22, 7, 6, 1.6, LIT, 0.6, svg.blur(0.8), clip)
+    wl = 20.0
+    dome = smooth_path([(4, wl), (6, 12.5), (14, 6.0), (26, 3.0), (38, 3.4), (49, 7.0), (55, 13.0), (56, wl),
+                        (44, wl + 2.2), (30, wl + 2.6), (16, wl + 2.2)])
+    clip = svg.clip(dome)
+    # submerged foot: a darker blob below the waterline fading out
+    p.path(smooth_path([(5, wl - 1), (30, wl - 2), (55, wl - 1), (50, wl + 7), (30, wl + 8.5), (10, wl + 7)]),
+           svg.lin(0, wl - 2, 0, wl + 9, [(0, SHADE, 0.85), (1, SHADE, 0.0)]))
+    p.path(dome, svg.lin(0, 3, 0, wl + 2, [(0, LIT), (0.5, LIT), (0.85, SHADE), (1, SHADE)]))
+    p.path(smooth_path([(4, wl - 3.6), (18, wl - 1.4), (30, wl - 0.8), (42, wl - 1.4), (56, wl - 3.6), (56, wl + 3),
+                        (4, wl + 3)]), LINE, 0.35, svg.blur(1.0), clip=clip)
+    cap = smooth_path([(12, 9.0), (20, 4.8), (31, 3.6), (42, 5.8), (47, 9.6), (40, 11.8), (28, 12.6), (17, 12.0)])
+    p.path(cap, DETAIL, 0.95, clip=clip)
+    p.speckles(rng, (14, 5, 46, 11), 8, (0.4, 0.8), LIT, (0.25, 0.45), clip)
+    p.speckles(rng, (8, 9, 52, 18), 12, (0.4, 0.8), SHADE, (0.2, 0.4), clip)
+    p.ellipse(22, 6.4, 5, 1.4, LIT, 0.7, svg.blur(0.8), clip)
+    # riffle ring at the waterline (pale water catching the light)
+    p.path(smooth_path([(1, wl + 0.4), (14, wl + 3.6), (30, wl + 4.4), (46, wl + 3.6), (59, wl + 0.4)], closed=False),
+           "none", 0.55, svg.blur(0.7), LIT, 1.8)
     return p
 
 
@@ -176,9 +187,16 @@ def lantern_crook(svg: Svg) -> Part:
     """Shepherd's-crook stick, 150 px, its hook holding the jar's wire; a little leaf lid."""
     p = Part(svg, 40, 154, (0.3, 0.985))
     stick = [(12, 152), (12.6, 110), (11.4, 60), (12, 24), (16, 10), (25, 6), (32, 10), (33, 18)]
-    p.line(stick, SHADE, 6.4)
-    p.line(stick, LIT, 4.4)
-    p.line([(11.2, 140), (11.0, 90), (10.6, 40), (13, 18)], DETAIL, 1.2, 0.5)
+    p.line(stick, SHADE, 6.0)
+    p.line([(x - 0.9, y) for x, y in stick[:4]] + stick[4:], LIT, 2.6, 0.9)
+    p.line([(10.8, 140), (10.6, 90), (10.2, 40), (12.6, 18)], DETAIL, 0.9, 0.35)
+    # a few felted bark knots and fibre flecks along the stick
+    for y in (46, 92, 128):
+        p.ellipse(12.4, y, 2.6, 1.4, SHADE, 0.8)
+    rng = random.Random(251)
+    for _ in range(18):
+        y = rng.uniform(26, 146)
+        p.ellipse(11.4 + rng.uniform(-0.8, 0.8), y, 0.7, 1.4, DETAIL, rng.uniform(0.35, 0.6))
     p.ellipse(12, 151, 7, 2.6, SHADE, 0.7, svg.blur(1.2))
     # wire from the hook to the jar's lid
     p.line([(33, 18), (31.2, 24), (30, 28)], LINE, 1.2, 0.8)
@@ -231,8 +249,15 @@ def chime_tube(svg: Svg, tube_len: float, string_len: float, paper: bool) -> Par
                         (cx - 2.6, y0 + tube_len - 0.4), (cx - 4.4, y0 + tube_len - 2.4), (cx - 4.4, y0 + tube_len * 0.5)])
     clip = svg.clip(tube)
     p.path(tube, svg.lin(cx - 5, 0, cx + 5, 0, [(0, SHADE), (0.3, LIT), (0.55, LIT), (1, SHADE)]))
+    # glaze: lighter toward the top, a soft drip line, two pressed rings
+    p.path(tube, svg.lin(0, y0, 0, y0 + tube_len, [(0, DETAIL, 0.0), (1, SHADE, 0.25)]))
     p.line([(cx - 1.6, y0 + 4), (cx - 1.8, y0 + tube_len - 5)], LIT, 1.4, 0.8, svg.blur(0.4), clip)
-    p.ellipse(cx, y0 + 1.6, 4.0, 1.2, SHADE, 0.6, clip=clip)
+    for t in (0.14, 0.86):
+        yy = y0 + tube_len * t
+        p.path(smooth_path([(cx - 5, yy - 0.6), (cx, yy + 0.4), (cx + 5, yy - 0.6)], closed=False), "none", 0.55,
+               None, SHADE, 1.1, clip)
+    p.ellipse(cx, y0 + 1.4, 2.6, 0.9, LINE, 0.55, clip=clip)
+    p.ellipse(cx, y0 + 1.6, 4.0, 1.2, SHADE, 0.45, clip=clip)
     if paper:
         yp = y0 + tube_len
         p.line([(cx, yp), (cx, yp + 4)], LINE, 0.8, 0.7)
@@ -373,9 +398,10 @@ PARTS = [
     ("pinwheel_b", pinwheel_b, "pinwheel_b", 0.0, 1),
     ("pinwheel_stick", pinwheel_stick, "wood_cut", 0.0, 0),
     ("pebble_0", lambda s: pebble_flat(s, 241, 58, 23, False), "stone_cool", 0.0, 1),
-    ("pebble_1", lambda s: pebble_flat(s, 242, 50, 21, True), "pebble_alt", 0.0, 1),
-    ("pebble_2", lambda s: pebble_flat(s, 243, 46, 19, False), "stone_warm", 0.0, 1),
-    ("pebble_3", lambda s: pebble_flat(s, 244, 42, 18, False), "stone_cool", 0.0, 1),
+    ("pebble_1", lambda s: pebble_flat(s, 242, 50, 21, True), "stone_cool", 0.0, 1),
+    # (moss caps need stone_cool: its detail tone is the moss, Art Bible §3.8)
+    ("pebble_2", lambda s: pebble_flat(s, 243, 46, 19, False), "pebble_alt", 0.0, 1),
+    ("pebble_3", lambda s: pebble_flat(s, 244, 42, 18, False), "stone_warm", 0.0, 1),
     ("pebble_4", lambda s: pebble_flat(s, 245, 38, 16, True), "stone_cool", 0.0, 0),
     ("pebble_5", lambda s: pebble_flat(s, 246, 34, 15, False), "pebble_alt", 0.0, 0),
     ("stream_stone", stream_stone, "stone_cool", 0.0, 1),
@@ -408,8 +434,8 @@ LAYOUT = {
     "chime_parts": ["chime_paper", "chime_mid", "chime_long", "chime_short"],
     "cairn_parts": ["pebble_0", "pebble_1", "pebble_2", "pebble_3", "pebble_4", "pebble_5"],
     "basket_frame": [140, 116],
-    "set_scale": {"leaf_pinwheel": 1.1, "pebble_cairn": 1.0, "toadstool_seat": 1.25, "stream_stones": 1.0,
-                  "firefly_lantern": 1.0, "wind_chime": 1.0},
+    "set_scale": {"leaf_pinwheel": 1.3, "pebble_cairn": 1.0, "toadstool_seat": 1.25, "stream_stones": 0.82,
+                  "firefly_lantern": 1.0, "wind_chime": 1.35},
     "toadstool_cap_dy": -20.0,
     "jar_centre_dy": 28.0,
     "toadstool_ring": {"centre": [345.6, 825.6], "radii": [72.0, 34.0], "motes": 6},
@@ -419,9 +445,9 @@ LAYOUT = {
                    "shiny_pebble": "gift_shiny_pebble", "seed_pouch": "gift_seed_pouch",
                    "moon_drop": "gift_moon_drop"},
     # Gift slots peeking over the rim and dew-drop slots in the opening (basket frame px).
-    "gift_slots": [[50, 47], [88, 46], [70, 44]],
-    "dew_slots": [[36, 47], [104, 47], [60, 49], [80, 49], [46, 45], [94, 45], [70, 50], [28, 48],
-                  [112, 48], [56, 44], [84, 44], [70, 46]],
+    "gift_slots": [[48, 44], [92, 43], [70, 41]],
+    "dew_slots": [[34, 46], [106, 46], [58, 48], [82, 48], [44, 43], [96, 43], [70, 49], [26, 47],
+                  [114, 47], [56, 41], [84, 41], [70, 44]],
 }
 
 

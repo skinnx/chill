@@ -24,6 +24,9 @@ const CLOUDS: Array[Array] = [
 	[1330.0, 470.0, 0.80, 5.0, 0.90, 0.7, 0.0],
 	[380.0, 520.0, 1.15, 17.0, 1.0, 0.8, 1.0],
 	[1080.0, 60.0, 1.25, 23.0, 1.0, 0.6, 1.0],
+	# High, small and faint: only tall phones see them (the sky above y 0 stays mostly calm).
+	[420.0, -250.0, 0.55, 29.0, 0.55, 0.5, 0.0],
+	[1650.0, -140.0, 0.45, 31.0, 0.5, 0.45, 0.0],
 ]
 const QUAD := Vector2(600.0, 220.0)
 

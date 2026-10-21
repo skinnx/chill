@@ -24,7 +24,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from tonekit import DETAIL, LIT, SHADE, Part, Svg, blob, blob_pts, f, rot_pts, smooth_path, write_atlas  # noqa: E402
+from tonekit import DETAIL, LINE, LIT, SHADE, Part, Svg, blob, blob_pts, f, rot_pts, smooth_path, write_atlas  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[3]
 OUT_SVG = ROOT / "art/flora/flora_atlas.svg"
@@ -347,15 +347,17 @@ def cotyledon(svg: Svg) -> Part:
 # --------------------------------------------------------------------------------------------- #
 
 def soil_mound(svg: Svg) -> Part:
-    """A small tended soil mound (soil row): lit crown, shade skirt, a few pale grains (B)."""
-    p = Part(svg, 36, 14, (0.5, 0.86))
+    """A small tended soil mound (soil row): a soft rounded dome, lit crown, shade skirt, a few
+    pale grains (B) and darker crumbs; low and round so it never reads as a dry dirt stamp."""
+    p = Part(svg, 34, 13, (0.5, 0.88))
     rng = random.Random(101)
-    d = smooth_path([(1, 12), (5, 7), (12, 3.4), (18, 2.4), (25, 3.4), (31, 7), (35, 12), (26, 13.6), (18, 13.8),
-                     (10, 13.6)])
+    d = smooth_path([(1.5, 11.6), (4, 7.4), (10, 4.0), (17, 3.0), (24, 4.0), (30, 7.4), (32.5, 11.6), (24, 12.8),
+                     (17, 13.0), (10, 12.8)])
     clip = svg.clip(d)
-    p.path(d, svg.lin(0, 2, 0, 14, [(0, LIT), (0.45, LIT), (1, SHADE)]))
-    p.speckles(rng, (6, 5, 30, 12), 9, (0.5, 1.0), DETAIL, (0.5, 0.9), clip)
-    p.speckles(rng, (6, 5, 30, 12), 10, (0.4, 0.9), SHADE, (0.3, 0.6), clip)
+    p.path(d, svg.lin(0, 2.5, 0, 13, [(0, LIT), (0.5, LIT), (1, SHADE)]))
+    p.ellipse(15, 5.6, 7, 1.6, DETAIL, 0.45, svg.blur(0.8), clip)
+    p.speckles(rng, (6, 5, 28, 11), 8, (0.45, 0.9), DETAIL, (0.5, 0.9), clip)
+    p.speckles(rng, (6, 6, 28, 12), 10, (0.4, 0.8), SHADE, (0.3, 0.6), clip)
     return p
 
 
@@ -450,6 +452,25 @@ def seed_glow(svg: Svg) -> Part:
     return p
 
 
+def wing(svg: Svg) -> Part:
+    """Butterfly wing pair (one side): a rounded forewing over a smaller hindwing, hinged at the
+    body (pivot, left); petal tones (shade at the hinge), pale spots (B); the body edge is the
+    colour-line tone."""
+    p = Part(svg, 16, 16, (0.04, 0.5))
+    rng = random.Random(141)
+    fore = smooth_path([(0.6, 7.6), (3, 3.6), (8, 0.8), (13.4, 1.2), (15.4, 4.4), (13.6, 7.6), (7, 8.4)])
+    hind = smooth_path([(0.6, 8.2), (5, 8.6), (10.4, 10.4), (11.4, 13.4), (8, 15.4), (3.6, 14.2), (1.2, 11)])
+    for d in (hind, fore):
+        clip = svg.clip(d)
+        p.path(d, svg.lin(0, 0, 16, 0, [(0, SHADE), (0.45, LIT), (1, LIT)]))
+        p.path(d, svg.lin(0, 0, 0, 16, [(0, SHADE, 0.0), (0.6, SHADE, 0.0), (1, SHADE, 0.35)]), clip=clip)
+    p.ellipse(11.2, 3.6, 1.6, 1.2, DETAIL, 0.95)
+    p.ellipse(7.6, 12.2, 1.2, 1.0, DETAIL, 0.9)
+    p.ellipse(13.6, 2.6, 0.8, 0.7, DETAIL, 0.8)
+    p.line([(0.4, 2.0), (0.6, 14.0)], LINE, 1.6)
+    return p
+
+
 STAMPS = [
     ("petal_round", petal_round), ("daisy_center", daisy_center), ("clover_head", clover_head),
     ("petal_cup", petal_cup), ("forget_bloom", forget_bloom), ("bell", bell), ("petal_heart", petal_heart),
@@ -458,7 +479,7 @@ STAMPS = [
     ("leaf_strap", leaf_strap), ("leaf_trifoliate", leaf_trifoliate), ("leaf_lobed", leaf_lobed),
     ("leaf_rosette", leaf_rosette), ("leaf_toothed", leaf_toothed), ("leaf_broad", leaf_broad),
     ("cotyledon", cotyledon), ("soil_mound", soil_mound), ("foliage_tuft", foliage_tuft), ("moss_pad", moss_pad),
-    ("bed_shadow", bed_shadow),
+    ("bed_shadow", bed_shadow), ("wing", wing),
     ("stem", stem), ("sparkle", sparkle), ("glint", glint), ("seed_glow", seed_glow),
 ]
 
@@ -478,7 +499,7 @@ FORMS = {
                    {"stamp": "leaf_trifoliate", "at": 0.14, "side": -1, "angle": 62, "scale": 0.85, "petiole": 10},
                    {"stamp": "leaf_trifoliate", "at": 0.05, "side": 1, "angle": 75, "scale": 0.8, "petiole": 8}],
         "head": {"kind": "globe", "stamp": "clover_head", "scale": 0.96},
-        "bud": {"stamp": "bud_round", "scale": 0.95},
+        "bud": {"stamp": "bud_round", "scale": 1.45},
     },
     "daisy": {
         "stem_len": 90, "stem_w": [3.6, 2.2], "lean_deg": 8, "s_curve": 0.15, "base": "foliage_tuft",
@@ -488,7 +509,7 @@ FORMS = {
                    {"stamp": "leaf_spoon", "at": 0.08, "side": 1, "angle": 72, "scale": 0.9}],
         "head": {"kind": "radial", "petal": "petal_round", "count": 13, "radius": 3.0, "petal_scale": 0.82,
                  "squash": 0.84, "centre": "daisy_center", "centre_scale": 0.92},
-        "bud": {"stamp": "bud_round", "scale": 1.05},
+        "bud": {"stamp": "bud_round", "scale": 1.55},
     },
     "cup": {
         "stem_len": 95, "stem_w": [3.6, 2.2], "lean_deg": 9, "s_curve": 0.18, "base": "foliage_tuft",
@@ -498,7 +519,7 @@ FORMS = {
                    {"stamp": "leaf_lobed", "at": 0.08, "side": 1, "angle": 70, "scale": 0.85, "petiole": 8}],
         "head": {"kind": "cup", "petal": "petal_cup", "petal_scale": 1.0,
                  "petals": [[-24, 0.92, 0], [24, 0.92, 0], [-46, 1.0, 1], [46, 1.0, 1], [0, 1.05, 1]]},
-        "bud": {"stamp": "bud_round", "scale": 1.0},
+        "bud": {"stamp": "bud_round", "scale": 1.5},
     },
     "cluster": {
         "stem_len": 75, "stem_w": [3.2, 2.0], "lean_deg": 10, "s_curve": 0.2, "base": "foliage_tuft",
@@ -506,9 +527,9 @@ FORMS = {
         "leaves": [{"stamp": "leaf_lance", "at": 0.18, "side": 1, "angle": 55, "scale": 1.0},
                    {"stamp": "leaf_lance", "at": 0.4, "side": -1, "angle": 50, "scale": 0.9},
                    {"stamp": "leaf_lance", "at": 0.06, "side": -1, "angle": 70, "scale": 0.9}],
-        "head": {"kind": "cluster", "stamp": "forget_bloom", "count": 7, "curl_r": 9.0, "bloom_scale": [0.58, 0.72],
+        "head": {"kind": "cluster", "stamp": "forget_bloom", "count": 8, "curl_r": 8.5, "bloom_scale": [0.66, 0.84],
                  "buds": 2, "bud_stamp": "bud_round", "bud_scale": 0.42},
-        "bud": {"stamp": "bud_round", "scale": 0.85},
+        "bud": {"stamp": "bud_round", "scale": 1.25},
     },
     "bell": {
         "stem_len": 105, "stem_w": [3.4, 2.0], "lean_deg": 4, "s_curve": 0.0, "arch": 0.42, "base": "foliage_tuft",
@@ -516,7 +537,7 @@ FORMS = {
         "rosette": [{"stamp": "leaf_strap", "angle": -24, "scale": 0.9}, {"stamp": "leaf_strap", "angle": 22, "scale": 0.85},
                     {"stamp": "leaf_strap", "angle": -8, "scale": 0.7}],
         "head": {"kind": "bells", "stamp": "bell", "count": [4, 6], "from": 0.52, "bell_scale": [1.0, 1.2]},
-        "bud": {"stamp": "bud_long", "scale": 0.9},
+        "bud": {"stamp": "bud_long", "scale": 1.25},
     },
     "primrose": {
         "stem_len": 45, "stem_w": [2.8, 2.0], "lean_deg": 14, "s_curve": 0.1, "base": "foliage_tuft",
@@ -526,7 +547,7 @@ FORMS = {
                     {"stamp": "leaf_rosette", "angle": 2, "scale": 0.7}],
         "head": {"kind": "primrose", "petal": "petal_heart", "flowers": [3, 5], "petal_scale": 0.9, "spread_deg": 34,
                  "pedicel": [0.62, 1.0], "squash": 0.9, "centre": "eye_center", "centre_scale": 1.0},
-        "bud": {"stamp": "bud_round", "scale": 0.9},
+        "bud": {"stamp": "bud_round", "scale": 1.35},
     },
     "puff": {
         "stem_len": 120, "stem_w": [3.0, 1.8], "lean_deg": 7, "s_curve": 0.16, "base": "foliage_tuft",
@@ -534,7 +555,7 @@ FORMS = {
         "rosette": [{"stamp": "leaf_toothed", "angle": -68, "scale": 0.9}, {"stamp": "leaf_toothed", "angle": 70, "scale": 0.85},
                     {"stamp": "leaf_toothed", "angle": -40, "scale": 0.7}, {"stamp": "leaf_toothed", "angle": 44, "scale": 0.72}],
         "head": {"kind": "puff", "stamp": "seed_puff", "scale": 0.96},
-        "bud": {"stamp": "bud_long", "scale": 1.0},
+        "bud": {"stamp": "bud_long", "scale": 1.3},
     },
     "lily": {
         "stem_len": 110, "stem_w": [3.8, 2.4], "lean_deg": 6, "s_curve": 0.12, "base": "foliage_tuft",

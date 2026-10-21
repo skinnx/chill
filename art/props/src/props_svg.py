@@ -17,6 +17,8 @@ Layout fields per part (read by scripts/world/props_layer.gd):
   emission  optional detail emission x g_lights (glow mushrooms 0.55)
   rim       0 to skip the rim read for small pieces (< 40 px, §4.9 step 3)
   ground    0..1 ground-cover shade (moss, clover, ferns take the meadow's shade, never stickers)
+  focal     0..1 the focal's lit top plane catches the key (the sun stone)
+  debug     1 = not placed by default (props_layer --debug-lamps stamps)
 """
 from __future__ import annotations
 
@@ -754,7 +756,7 @@ PARTS = [
     ("stump_front", stump_front, "stump", (0, 0), 86, "wood_bark", {}),
     ("stump_moss", stump_moss, "stump", (26, -1), 87, "moss", {"ground": 0.5}),
     ("basket", basket, "basket", (0, -4), 48, "wicker", {"shadow": [58, 10, 1.0, 52]}),
-    ("sun_stone", sun_stone, "sun_stone_rock", (0, 0), -52, "stone_warm", {"shadow": [126, 16, 1.2, 56]}),
+    ("sun_stone", sun_stone, "sun_stone_rock", (0, 0), -52, "stone_warm", {"shadow": [126, 16, 1.2, 56], "focal": 1.0}),
     ("stone_moss", stone_moss, "sun_stone_rock", (0, 50), 58, "moss", {"rim": 0, "ground": 1.0}),
     ("spring_rock", spring_rock, "spring_rock", (0, 0), -10, "stone_cool", {"shadow": [84, 12, 1.0, 56]}),
     # Art dressing (absolute design px).

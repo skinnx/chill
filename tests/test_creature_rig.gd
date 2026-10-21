@@ -114,8 +114,10 @@ func _mossling(id: StringName) -> Mossling:
 
 func _run(m: Mossling, seconds: float) -> void:
 	var t := 0.0
+	var fx: MosslingFx = m.get("_fx")
 	while t < seconds:
 		m._process(DT)
+		fx._process(DT)
 		t += DT
 
 
@@ -200,3 +202,73 @@ func test_nap_switches_breathing_without_a_phase_jump() -> void:
 	var ph1 := fposmod(g * k1 / 600.0 + m.seed01 + off1, 1.0)
 	assert_between(600.0 / k1, 5.0, 6.0, "asleep period")
 	assert_almost_eq(ph1, ph0, 1e-4, "breath phase continues across the switch")
+
+
+func test_eye_ink_is_lifted_so_eyes_never_outrank_the_focal() -> void:
+	var base := Color.html(String(content.palettes["creatures"]["tokens"]["cr_eye"]))
+	var ink: Dictionary = rig.view()["eye_ink"]
+	for id: StringName in _ids():
+		var eye: Color = rig.static_params(id, 0.3)[MosslingRig.I_EYE]
+		assert_gte(eye.ok_hsl_l, float(ink["ok_l"]) - 1e-3, "%s eye ink lifted" % id)
+		assert_lt(eye.ok_hsl_l, 0.45, "%s eyes stay dark enough to read" % id)
+	var pp: Color = rig.static_params(&"pebblepaw", 0.3)[MosslingRig.I_EYE]
+	assert_gt(pp.ok_hsl_l, base.ok_hsl_l + 0.05, "pebblepaw (frontmost) has the softest eyes")
+
+
+func test_lamp_light_reaches_a_creature_near_a_lantern() -> void:
+	LampRegistry.clear()
+	var cfg: Dictionary = rig.view()["lamp"]
+	assert_eq(Mossling.lamp_light(Vector2(500, 1500), cfg), Vector4.ZERO, "no lamps, no light")
+	LampRegistry.set_lamp(&"t_lamp", Vector2(700, 1500), 150.0, 1.0)
+	var near := Mossling.lamp_light(Vector2(600, 1500), cfg)
+	var far := Mossling.lamp_light(Vector2(380, 1500), cfg)
+	var out := Mossling.lamp_light(Vector2(100, 1500), cfg)
+	assert_gt(near.z, far.z, "weight falls off with distance")
+	assert_gt(far.z, 0.0, "a body catches a lantern beyond its ground pool (reach x2.2)")
+	assert_eq(out.z, 0.0, "out of reach")
+	assert_almost_eq(near.x, 1.0, 1e-4, "direction points at the lamp (+x)")
+	assert_almost_eq(near.y, 0.0, 1e-4, "local y is up")
+	LampRegistry.clear()
+
+
+func test_nestle_is_off_on_props_and_while_hopping() -> void:
+	assert_eq(rig.nestle_at(&"sun_stone"), 0.0, "sitting on the sun stone: no grass in front")
+	assert_eq(rig.nestle_at(&"stream_bend"), 1.0, "on the meadow: nestled")
+	var m := _mossling(&"pebblepaw")
+	m.perform(&"sit_by_stream", &"stream_bend")
+	m._process(DT)
+	var misc: Vector4 = m.get("_u_misc")
+	assert_almost_eq(misc.y, 1.0, 1e-4, "i_misc.y nestle on the meadow")
+	m.set("_hop_h", 20.0)
+	assert_almost_eq(float(m.call("_nestle_now")), 0.0, 1e-4, "no grass while in the air")
+
+
+func test_umbrella_is_held_behind_the_body_and_rooted_at_the_paw() -> void:
+	var m := _mossling(&"buttonbud")
+	m.set_rain(true, false, true)
+	_run(m, 0.6)
+	var back: Node2D = m.get("_umbrella_back")
+	var body: Node2D = m.get("_body")
+	assert_lt(back.get_index(), body.get_index(), "umbrella draws before (behind) the body")
+	var fx: MosslingFx = m.get("_fx")
+	assert_true(fx.umbrella_visible(), "umbrella fades in in rain")
+	var pivot := back.get_child(0) as Node2D
+	assert_lt(pivot.position.y, 0.0, "stem foot above the feet (the paw)")
+	assert_almost_eq(absf(pivot.rotation), deg_to_rad(float(rig.behaviour()["umbrella_tilt_deg"])), 0.15,
+		"tilted ~12 degrees in over the head")
+	m.set_rain(true, false, false)
+	_run(m, 0.6)
+	assert_false(fx.umbrella_visible(), "rain lovers hold no umbrella")
+
+
+func test_zzz_starts_beside_the_head_not_above_it() -> void:
+	var m := _mossling(&"puffmoss")
+	m.debug_pose(&"asleep")
+	m.set_still(true)
+	_run(m, 3.5)
+	var fx: MosslingFx = m.get("_fx")
+	assert_gt(fx.zzz_alive(), 0, "a z rises while napping")
+	var w := rig.body_px(&"puffmoss") * rig.body_width_bu(&"puffmoss")
+	for s: MosslingFx.Stamp in fx.get("_zs"):
+		if s.active:
+			assert_gt(absf(s.from.x), w * 0.3, "z starts at the side of the head")

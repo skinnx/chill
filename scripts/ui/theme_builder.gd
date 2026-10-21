@@ -130,6 +130,11 @@ static func build(palettes: Dictionary, text_scale: float = 1.0, vietnamese: boo
 	sec_p.bg_color = primary_tint
 	t.set_stylebox(&"pressed", &"SecondaryButton", sec_p)
 	t.set_stylebox(&"hover_pressed", &"SecondaryButton", sec_p)
+	# Quiet "done" state (All planted): surface fill, hairline, no elevation; ink text stays 12:1.
+	var sec_d := _box(surface, pill, [], ink, BUTTON_PAD_X)
+	sec_d.border_color = Color(ink, HAIRLINE_ALPHA)
+	sec_d.set_border_width_all(HAIRLINE_PX)
+	t.set_stylebox(&"disabled", &"SecondaryButton", sec_d)
 	for c: StringName in [&"font_color", &"font_hover_color", &"font_pressed_color", &"font_hover_pressed_color",
 			&"font_focus_color", &"font_disabled_color"]:
 		t.set_color(c, &"SecondaryButton", ink)

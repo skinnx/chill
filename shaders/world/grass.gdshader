@@ -100,7 +100,6 @@ void fragment() {
 	vec2 p_design = v_canvas - g_world_offset;
 	float depth_t = smoothstep(760.0, 1500.0, p_design.y);
 	vec3 ground = mix(ground_back_lit.rgb, ground_front_lit.rgb, depth_t);
-	vec3 shade_tint = g_shadow.rgb * SHADE_K;
 	float fw = max(fwidth(p.x) + fwidth(p.y), 0.35);
 	float fuzz = (vnoise(p * 0.85 + seed * 41.0) - 0.5) * fringe_px;
 
@@ -153,12 +152,12 @@ void fragment() {
 		// Blade volume: the side facing the light catches it, the other turns to the tint.
 		vec2 perp_side = vec2(bs, -0.35);
 		float lit = dot(normalize(perp_side), kl);
-		col = mix(col, col * shade_tint, clamp(-lit, 0.0, 1.0) * 0.28);
+		col = mix(col, shade_of(col), clamp(-lit, 0.0, 1.0) * 0.28);
 		col += g_key.rgb * clamp(lit, 0.0, 1.0) * 0.08 * (0.4 + g_ground_light * 3.0);
 		// Overlap: alternate blades a touch darker so the clump reads as a felted mass.
 		col *= 1.0 - 0.07 * mod(bi, 2.0);
 		// Soft occlusion only at the very root, and a contre-jour rim on the tip edges.
-		col = mix(col, col * shade_tint, (1.0 - smoothstep(0.0, 0.25, bt)) * 0.18);
+		col = mix(col, shade_of(col), (1.0 - smoothstep(0.0, 0.25, bt)) * 0.18);
 		float edge = smoothstep(-2.2 * fw, 0.0, d);
 		col += g_key.rgb * g_backlight * g_rim * (0.03 + 0.32 * edge) * bt * bt;
 	} else if (kind == KIND_CLOVER) {
@@ -200,10 +199,10 @@ void fragment() {
 		// Clover reads a little cooler and lighter than the meadow, each leaflet domed.
 		vec3 leaf = mix(ground, grass_tip.rgb, 0.35) * vec3(0.94, 1.04, 1.02) * 1.06;
 		col = leaf;
-		col = mix(col, col * shade_tint, clamp(-lit_n, 0.0, 1.0) * 0.28);
+		col = mix(col, shade_of(col), clamp(-lit_n, 0.0, 1.0) * 0.28);
 		col += g_key.rgb * clamp(lit_n, 0.0, 1.0) * 0.10;
 		col = mix(col, mix(col, vec3(1.0), 0.35), chev * 0.6);
-		col = mix(col, col * shade_tint, step(ds, d + 0.01) * 0.25 + edge_n * 0.22);
+		col = mix(col, shade_of(col), step(ds, d + 0.01) * 0.25 + edge_n * 0.22);
 	} else if (kind == KIND_MOSS) {
 		vec2 r = vec2(mix(14.0, 20.0, hs(seed, 0.0, 21.0)), mix(7.5, 10.5, hs(seed, 0.0, 22.0)) * hk);
 		vec2 c = vec2(0.0, -r.y * 0.62);
@@ -217,7 +216,7 @@ void fragment() {
 		float lit = dot(nrm, kl) * 0.7 + dot(m.gb * 2.0 - 1.0, kl) * 0.5;
 		vec3 moss = mix(grass_tip.rgb, ground, 0.35) * 1.04;
 		col = moss;
-		col = mix(col, col * shade_tint, clamp(-lit, 0.0, 1.0) * 0.30 + smoothstep(0.1, 1.0, q.y) * 0.28);
+		col = mix(col, shade_of(col), clamp(-lit, 0.0, 1.0) * 0.30 + smoothstep(0.1, 1.0, q.y) * 0.28);
 		col += (g_key.rgb * 0.6 + col * 0.4) * clamp(lit, 0.0, 1.0) * 0.22;
 		col *= 1.0 + (m.a - 0.5) * 0.14;
 		col += g_key.rgb * g_backlight * g_rim * 0.22 * smoothstep(0.2, -0.9, q.y);
@@ -269,14 +268,14 @@ void fragment() {
 		vec3 leaf = mix(mix(grass_root.rgb, ground, 0.4), grass_tip.rgb, smoothstep(0.0, 0.8, lt));
 		vec3 petal = pick < 0.34 ? petal_a.rgb : (pick < 0.58 ? petal_b.rgb : (pick < 0.8 ? petal_c.rgb : petal_d.rgb));
 		petal = light_object(petal, 1.0 - pr * 0.5, 0.0);
-		petal = mix(petal, petal * shade_tint, smoothstep(0.4, 1.0, pr) * 0.25);
+		petal = mix(petal, shade_of(petal), smoothstep(0.4, 1.0, pr) * 0.25);
 		vec3 eye = light_object(flower_eye.rgb, 1.0, 0.0);
 		col = mix(leaf, petal, a_pet);
 		col = mix(col, eye, a_eye * a_pet);
 		a = max(a_leaf, a_pet);
 	}
 	if (g_cloud_shadow > 0.001) {
-		col = mix(col, col * shade_tint, cloud_shadow(p_design) * 1.6);
+		col = mix(col, shade_of(col), cloud_shadow(p_design) * 1.6);
 	}
 	if (g_lights > 0.001) {
 		col = apply_lamp(col, lamp_weight(p_design) * 0.8);
@@ -287,7 +286,7 @@ void fragment() {
 	if (out_a < 0.004) {
 		discard;
 	}
-	vec3 sh_c = ground * shade_tint;
+	vec3 sh_c = shade_of(ground);
 	vec3 rgb = (col * a + sh_c * sh_a * (1.0 - a)) / out_a;
 	COLOR = vec4(rgb, out_a);
 }

@@ -24,6 +24,8 @@ const HEART_HALF_PX := 22.0
 const Z_HALF_PX := 15.0
 const SPARKLE_HALF_PX := 12.0
 const UMBRELLA_HALF_PX := 92.0
+## Stem foot below the quad centre, in half sizes (creature_fx.gdshader petiole end, -0.95).
+const UMBRELLA_STEM_FOOT := 0.95
 const SPARKLE_LIFE_S := 0.45
 const SPARKLE_RADIUS_PX := 70.0
 ## Heart x offsets and sideways sway (px) so three hearts read as a little bouquet.
@@ -55,6 +57,7 @@ var _zs: Array[Stamp] = []
 var _sparkles: Array[Stamp] = []
 var _ring: SdfQuad
 var _umbrella: SdfQuad
+var _umbrella_pivot: Node2D
 var _ring_alpha: float = 0.0
 var _ring_target: float = 0.0
 var _ring_progress: float = 0.0
@@ -73,7 +76,8 @@ var _ring_fade_s: float = 0.2
 
 
 ## [param materials]: MosslingRig.make_fx_materials() (shared by every mossling).
-func setup(rig: MosslingRig, materials: Dictionary) -> void:
+## [param umbrella_parent]: where the umbrella quad lives (behind the body); null = this node.
+func setup(rig: MosslingRig, materials: Dictionary, umbrella_parent: Node2D = null) -> void:
 	var b := rig.behaviour()
 	var sleep: Dictionary = (rig.content.motion.get("creature", {}) as Dictionary).get("sleep", {})
 	_heart_rise_px = float(b.get("heart_rise_px", _heart_rise_px))
@@ -87,8 +91,18 @@ func setup(rig: MosslingRig, materials: Dictionary) -> void:
 	_umbrella_fade_s = float(b.get("umbrella_fade_ms", 400.0)) * MS
 	_umbrella_tilt = deg_to_rad(float(b.get("umbrella_tilt_deg", 12.0)))
 	_ring_fade_s = float((rig.content.motion.get("durations_ms", {}) as Dictionary).get("short", 200.0)) * MS
-	# the umbrella first, so hearts and z's draw over it
+	# a pivot at the stem's foot (the paw), so tilt and sway turn about it; the quad (centred on
+	# the leaf, the shader's petiole ends at -0.95 half) hangs above it
+	_umbrella_pivot = Node2D.new()
+	_umbrella_pivot.name = "Umbrella"
+	if umbrella_parent != null:
+		umbrella_parent.add_child(_umbrella_pivot)
+	else:
+		add_child(_umbrella_pivot)
 	_umbrella = _make_quad(materials[KIND_UMBRELLA], UMBRELLA_HALF_PX)
+	remove_child(_umbrella)
+	_umbrella_pivot.add_child(_umbrella)
+	_umbrella.position = Vector2(0.0, -UMBRELLA_HALF_PX * UMBRELLA_STEM_FOOT)
 	for i in HEART_POOL:
 		_hearts.append(_make_stamp(materials[KIND_HEART], KIND_HEART, HEART_HALF_PX))
 	for i in Z_POOL:
@@ -114,10 +128,12 @@ func hearts(head: Vector2, count: int, stagger_s: float) -> void:
 
 
 ## One sleepy "z" (rises and drifts right over zzz_life_s; at most Z_POOL alive).
-func zzz(head: Vector2) -> bool:
+## [param drift_px] overrides the sideways drift (signed; NAN = zzz_drift_px to the right).
+func zzz(at: Vector2, drift_px: float = NAN) -> bool:
+	var drift := _zzz_drift_px if is_nan(drift_px) else drift_px
 	for s: Stamp in _zs:
 		if not s.active:
-			_start(s, head, Vector2(_zzz_drift_px, -_zzz_rise_px), _zzz_life_s, 0.0, _zzz_scale.x, _zzz_scale.y,
+			_start(s, at, Vector2(drift, -_zzz_rise_px), _zzz_life_s, 0.0, _zzz_scale.x, _zzz_scale.y,
 				_zzz_alpha)
 			return true
 	return false
@@ -160,11 +176,14 @@ func set_ring(center: Vector2, radius: float, progress: float, visible_on: bool)
 	_ring.self_modulate = Color(_ring_progress, 1.0, 1.0, _ring_alpha)
 
 
-## Rain leaf umbrella over the head (fades over umbrella_fade_ms; sways with [param sway] rad).
-func set_umbrella(on: bool, head: Vector2, sway: float) -> void:
+## Rain leaf umbrella held at [param paw] (local px, the stem's foot), tilted umbrella_tilt_deg
+## in over the head on the [param side] it is held, swaying with [param sway] rad (follow spring);
+## fades over umbrella_fade_ms. [param size_k] scales it with the body.
+func set_umbrella(on: bool, paw: Vector2, sway: float, side: float = 1.0, size_k: float = 1.0) -> void:
 	_umbrella_target = 1.0 if on else 0.0
-	_umbrella.position = head + Vector2(0.0, -UMBRELLA_HALF_PX * 0.4)
-	_umbrella.rotation = -_umbrella_tilt + sway
+	_umbrella_pivot.position = paw
+	_umbrella_pivot.rotation = -side * _umbrella_tilt + sway
+	_umbrella_pivot.scale = Vector2.ONE * clampf(size_k, 0.6, 1.4)
 
 
 func umbrella_visible() -> bool:

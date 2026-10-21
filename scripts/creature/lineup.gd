@@ -28,6 +28,7 @@ const LABEL_GAP_PX := 18.0
 
 var _rig: MosslingRig
 var _mosslings: Array[Mossling] = []
+var _feed := PaletteFeed.new()
 
 
 func _ready() -> void:
@@ -71,6 +72,9 @@ func _ready() -> void:
 	var fit := minf(cell.y * FILL / maxf(tallest, 1.0), cell.x * 0.7 / (_rig.body_px(&"puddlewump") * 1.4))
 	var k := user_scale if user_scale > 0.0 else fit
 	var fur := _rig.make_fur_material()
+	MosslingRig.bind_palette(fur, _feed)
+	_feed.apply(TimeOfDay.colors)
+	TimeOfDay.globals_updated.connect(func(_v: Dictionary) -> void: _feed.apply(TimeOfDay.colors))
 	var shadow := _rig.make_shadow_material()
 	var fx := _rig.make_fx_materials()
 	for pi in poses.size():

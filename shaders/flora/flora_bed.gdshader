@@ -56,6 +56,8 @@ uniform float line_k = 0.72;
 uniform float backlight_k = 0.34;
 uniform float translucency_k = 0.55;
 uniform float rim_k = 0.9;
+// Leaves and foliage clumps take a softer rim than petals (petals are the backlit stars).
+uniform float leaf_rim = 0.55;
 uniform float fringe_k = 0.55;
 uniform float lamp_fill_k = 1.1;
 uniform float gust_lean = 0.55;
@@ -188,7 +190,8 @@ void fragment() {
 		// Thin petals and leaves glow when the light is behind them, strongest at their edges.
 		bool thin = kind == PART_PETAL || kind == PART_BELL || kind == PART_LEAF || kind == PART_STAMEN;
 		float glow = g_backlight * g_rim * (thin ? translucency_k * (0.35 + 0.65 * m.r) : 0.0);
-		c += g_key.rgb * (glow * 0.35 + rim_k * g_rim * g_backlight * edge) * alb;
+		float rim_part = (kind == PART_FOLIAGE || kind == PART_LEAF) ? leaf_rim : 1.0;
+		c += g_key.rgb * (glow * 0.35 + rim_k * rim_part * g_rim * g_backlight * edge) * alb;
 		vec2 p_design = v_canvas - g_world_offset;
 		if (g_cloud_shadow > 0.001) {
 			c = mix(c, c * g_shadow.rgb * SHADE_K, cloud_shadow(p_design));
