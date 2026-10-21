@@ -122,14 +122,18 @@ float cloud_shadow(vec2 p_design) {
 // toward a gold-green at its own luminance, toward peach in the broad low-sun pool around the focal
 // and on the crest glow; the pool is lifted, and a luminance floor keeps every terrain pixel above
 // ~L* 40 (the darkness lives in the L5 corners). Weight g_backlight, off at night.
-const vec3 GOLDEN_MOSS = vec3(0.690, 0.680, 0.440);
-const vec3 GOLDEN_PEACH = vec3(0.937, 0.733, 0.553);
-const float GOLDEN_HUE_K = 0.38;
-const float GOLDEN_PEACH_K = 0.62;
-const float GOLDEN_POOL_GAIN = 0.20;
-const float GOLDEN_FLOOR = 0.12;
-const vec2 GOLDEN_POOL_C = vec2(540.0, 1123.0);
-const vec2 GOLDEN_POOL_R = vec2(560.0, 360.0);
+// Round 5b (QA: the first r5 grade still read khaki / dusty): the open moss is a sunlit gold-green,
+// the low-sun pool and the crest glow a luminous peach-apricot; the glow comes from value (pool
+// gain), and chroma is trimmed a touch so the lit moss stays inside the V2 calm budget (HSV S 0.45).
+const vec3 GOLDEN_MOSS = vec3(0.640, 0.700, 0.430);
+const vec3 GOLDEN_PEACH = vec3(0.985, 0.720, 0.500);
+const float GOLDEN_HUE_K = 0.46;
+const float GOLDEN_PEACH_K = 0.78;
+const float GOLDEN_POOL_GAIN = 0.22;
+const float GOLDEN_CHROMA_K = -0.04;
+const float GOLDEN_FLOOR = 0.13;
+const vec2 GOLDEN_POOL_C = vec2(540.0, 1080.0);
+const vec2 GOLDEN_POOL_R = vec2(640.0, 420.0);
 
 vec3 golden_grade(vec3 c, vec2 p_design, float extra_peach) {
 	float gk = g_backlight * (1.0 - g_lights);
@@ -137,12 +141,13 @@ vec3 golden_grade(vec3 c, vec2 p_design, float extra_peach) {
 		return c;
 	}
 	vec2 gd = (p_design - GOLDEN_POOL_C) / GOLDEN_POOL_R;
-	float gpool = exp(-dot(gd, gd) * 1.2);
+	float gpool = exp(-dot(gd, gd) * 1.1);
 	float gl = wl_luma(c);
 	vec3 moss = GOLDEN_MOSS / wl_luma(GOLDEN_MOSS) * gl;
 	vec3 peach = GOLDEN_PEACH / wl_luma(GOLDEN_PEACH) * gl;
 	vec3 hue = mix(moss, peach, clamp(GOLDEN_PEACH_K * (gpool + extra_peach), 0.0, 1.0));
 	c = mix(c, hue, GOLDEN_HUE_K * gk);
+	c = max(mix(vec3(wl_luma(c)), c, 1.0 + GOLDEN_CHROMA_K * gk), vec3(0.0));
 	c *= 1.0 + GOLDEN_POOL_GAIN * gpool * gk;
 	float l2 = wl_luma(c);
 	return c * max(l2, GOLDEN_FLOOR * gk) / max(l2, 1e-3);

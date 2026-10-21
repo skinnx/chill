@@ -77,12 +77,15 @@ const LANTERN_RISE_S := 0.2
 const LANTERN_HOLD_S := 2.0
 const LANTERN_FALL_S := 1.2
 ## Art Bible §8.3: lantern pools r 150 px; base pool intensity leaves room for the brighten.
-const LANTERN_POOL_R := 150.0
-const LANTERN_POOL_I := 0.6
+## Round 5 (QA r4: five lanterns on the bank merged into one flat strip): the pools are a little
+## tighter and brighter, so each lantern keeps its own warm island with a darker gap between.
+const LANTERN_POOL_R := 122.0
+const LANTERN_POOL_I := 0.8
 const LANTERN_POOL_DY := -8.0
 ## Round 4 (QA r3 c7: the lantern tap was barely visible): at the top of the brighten the pool
-## grows 150 -> 190 px and the glass halo blooms 1.35x, and the touch ring is warm and stronger.
-const LANTERN_POOL_R_BOOST := 190.0
+## grows (round 5: 122 -> 160 px) and the glass halo blooms 1.35x, and the touch ring is warm and
+## stronger.
+const LANTERN_POOL_R_BOOST := 160.0
 const LANTERN_HALO_POP := 0.5
 ## Touch ring alpha on décor (motion_tokens ui.ring is 0.35 on the busy meadow: too faint there).
 const RING_ALPHA := 0.6

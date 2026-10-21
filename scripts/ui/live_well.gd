@@ -15,6 +15,9 @@ const SHADER := "res://shaders/ui/well.gdshader"
 const GROUND_BACK_MID := 0.2
 const GROUND_BACK_HAZE := 0.06
 ## Palette slots copied to the well's u_st_<slot> uniforms.
+## Product sweep tokens (palettes.json creatures.tokens): the felt cushion and the tint fallback.
+const PRODUCT_FELT := "cr_fern"
+const PRODUCT_TINT_FALLBACK := "cr_rose"
 const STUDIO_SLOTS: Array[String] = ["sky_top", "sky_mid", "sky_horizon", "glow", "far", "key", "shadow"]
 
 
@@ -41,7 +44,27 @@ static func wrap(content: Control, min_size: Vector2, radius: float) -> LiveWell
 	content.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	if content is CreaturePortrait:
 		w.set_studio(true)
+		w.set_product((content as CreaturePortrait).species)
 	return w
+
+
+## Product sweep (round 5, studio owner: the friends are premium plush toys): the well becomes a
+## toy-shop product backdrop, a warm paper cyclorama tinted toward the friend's accent colour
+## (palettes.json creatures.species_resolved.<id>.accent) with a stitched felt moss cushion.
+func set_product(sp: StringName) -> void:
+	var mat := material as ShaderMaterial
+	var cr: Dictionary = ContentRegistry.palettes().get("creatures", {})
+	var tokens: Dictionary = cr.get("tokens", {})
+	var res: Dictionary = (cr.get("species_resolved", {}) as Dictionary).get(String(sp), {})
+	mat.set_shader_parameter(&"u_product", 1.0)
+	mat.set_shader_parameter(&"u_pr_paper", UiTokens.color(&"surface_hi"))
+	var accent := String(res.get("accent", tokens.get(PRODUCT_TINT_FALLBACK, "#EE9FA6")))
+	mat.set_shader_parameter(&"u_pr_tint", Color.html(accent))
+	mat.set_shader_parameter(&"u_pr_felt", Color.html(String(tokens.get(PRODUCT_FELT, "#A7CB93"))))
+	var st: Dictionary = (ContentRegistry.content.creature_rig.get("view", {}) as Dictionary).get("studio", {})
+	var kd: Array = st.get("key_dir", [])
+	if kd.size() == 2:
+		mat.set_shader_parameter(&"u_pr_key", Vector2(float(kd[0]), float(kd[1])))
 
 
 ## Studio window (round 4): the well paints the portrait's fixed studio phase (creature_rig.json

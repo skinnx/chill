@@ -82,6 +82,27 @@ uniform float calm_flat = 0.28;
 uniform float root_ao = 0.9;
 // Felt fringe and rim: blurred-alpha mip level (a 1-2 design px band inside every edge).
 uniform float edge_lod = 2.0;
+// Round 5 (studio direction: a plush play-set, not vector stickers). Every stamp is a little
+// stuffed felt/minky piece: the blurred alpha is its inflation height (thin at the seams, full in
+// the middle), lit from the scene key (key_dir), with a pillowy core, a rolled-off edge, a soft
+// fabric sheen on the lit rim and a fine directional pile anchored to the stamp (smooth value
+// noise, faded out below 1 screen px per fibre so it never aliases into blocks).
+// Inflation sample offset along the key, canvas px, and how strongly the slope lights / shades.
+uniform float puff_px = 2.2;
+uniform float puff_gain = 2.6;
+uniform float puff_light = 0.20;
+uniform float puff_roll = 0.26;
+uniform float puff_core = 0.06;
+uniform float sheen_k = 0.30;
+// Pile: fibre frequency along / across (cycles per design px) and luminance amplitude.
+uniform vec2 pile_freq = vec2(0.55, 1.7);
+uniform float pile_k = 0.055;
+// Fibres just outside the cut edge (fuzzy halo: the felt is never knife-cut).
+uniform float fuzz_out_k = 0.55;
+// The bed cushion (PART_MOSS, the blurred bed_shadow stamp) is a contact shade, not a plush piece:
+// it takes the ground's tinted shadow instead of the moss hue (round 5: it read as a cyan halo by day).
+uniform float cushion_shade = 0.6;
+uniform float cushion_alpha = 0.75;
 
 varying flat vec3 v_lit;
 varying flat vec3 v_shade;
@@ -177,22 +198,44 @@ void vertex() {
 
 void fragment() {
 	vec4 m = texture(TEXTURE, UV);
-	float cover = m.a * v_alpha;
+	float b1 = textureLod(TEXTURE, UV, 1.0).a;
+	vec2 texel = UV / TEXTURE_PIXEL_SIZE;
+	// Fuzzy fibres reach ~1 design px past the cut edge (b1 is the 1-mip blurred coverage).
+	float fuzz = vnoise(texel * 0.85 + vec2(v_phase * 7.0, 0.0));
+	int kind = int(v_kind + 0.5);
+	float fuzz_k = (kind == PART_MOSS || kind == PART_SPARKLE || kind == PART_GLINT) ? 0.0 : fuzz_out_k;
+	float cover = max(m.a, max(b1 - m.a, 0.0) * fuzz_k * fuzz) * v_alpha;
 	if (cover < 0.004) {
 		discard;
 	}
-	int kind = int(v_kind + 0.5);
 	float o = clamp(1.0 - (m.r + m.g + m.b), 0.0, 1.0);
 	vec3 alb = m.r * v_lit + m.g * v_shade + m.b * v_detail + o * v_shade * line_k;
-	alb *= 1.0 + jitter_l * v_jitter;
-	if (kind == PART_PETAL || kind == PART_BELL || kind == PART_CENTRE || kind == PART_STAMEN) {
-		alb = mix(alb, 0.5 * (v_lit + v_shade), calm_flat * v_calm);
-	}
-	alb = mix(alb, vec3(wl_luma(alb)), calm_desat * v_calm) * (1.0 - calm_dark * v_calm);
-	vec3 c;
+		vec3 c;
 	float blurred = textureLod(TEXTURE, UV, edge_lod).a;
 	float edge = clamp(m.a - blurred, 0.0, 1.0);
-	if (kind == PART_SPARKLE || kind == PART_GLINT) {
+	bool fx_part = kind == PART_SPARKLE || kind == PART_GLINT;
+	bool plush = !fx_part && kind != PART_MOSS;
+	// Plush volume (see puff_*): the slope of the inflation height along the key direction, mapped
+	// from canvas px to atlas UV with the (exact, affine) per-triangle derivatives.
+	float facing = 0.0;
+	float vol = 1.0;
+	if (plush) {
+		mat2 jc = mat2(dFdx(v_canvas), dFdy(v_canvas));
+		mat2 ju = mat2(dFdx(UV), dFdy(UV));
+		float det = determinant(jc);
+		vec2 du = abs(det) > 1e-6 ? ju * (inverse(jc) * key_dir(v_canvas)) : vec2(0.0);
+		float hp = textureLod(TEXTURE, UV + du * puff_px, edge_lod).a;
+		float hm = textureLod(TEXTURE, UV - du * puff_px, edge_lod).a;
+		facing = clamp((hm - hp) * puff_gain, -1.0, 1.0);
+		vol = smoothstep(0.05, 0.9, blurred);
+		// Fine directional pile in design px, faded where a fibre would be under ~1 screen px.
+		vec2 p_design_px = texel / atlas_scale;
+		float px_per_design = 1.0 / max(length(dFdx(p_design_px)), 1e-4);
+		float pile_fade = smoothstep(0.6, 1.4, px_per_design / pile_freq.y);
+		float pile = fbm2(p_design_px * pile_freq + vec2(v_phase * 3.0, v_jitter * 5.0)) - 0.5;
+		alb *= 1.0 + pile * 2.0 * pile_k * pile_fade;
+	}
+	if (fx_part) {
 		// Emissive specks, dimmed by the ambient at night so they never outshine the lamps.
 		c = mix(alb * g_ambient.rgb, alb, 0.6);
 		if (kind == PART_GLINT) {
@@ -205,8 +248,23 @@ void fragment() {
 		float ao = (kind == PART_FOLIAGE || kind == PART_SOIL || kind == PART_MOSS) ? 0.55
 				: (kind == PART_STEM ? 1.0 - smoothstep(0.0, 0.25, v_h) : 0.3 * (1.0 - smoothstep(0.0, 0.3, v_h)));
 		c = light_object(alb, v_h, ao * root_ao);
+		if (kind == PART_MOSS) {
+			c = mix(c, vec3(wl_luma(c)), 0.35);
+			c = mix(c, c * shadow_tint() * SHADE_K, cushion_shade);
+			cover *= cushion_alpha;
+		}
 		// Contre-jour: the side we see is the shaded one (golden, dusk) [J, Art Bible §8.1].
 		c = mix(c, c * g_shadow.rgb * SHADE_K, backlight_k * g_backlight);
+		// Stuffed volume: lit slope brighter, far slope and rolled edge into the tinted shade, a soft
+		// pillowy core; stems are thin cords and take half of it.
+		float pk = kind == PART_STEM ? 0.5 : (plush ? 1.0 : 0.0);
+		float lift = puff_light * facing + puff_core * (vol - 0.5);
+		c *= 1.0 + pk * lift;
+		// The roll is on the side away from the key only: the lit silhouette takes the sheen instead,
+		// so small leaves never get a dark outline all round.
+		c = mix(c, c * shadow_tint() * SHADE_K, pk * puff_roll * (1.0 - vol) * (0.15 + 0.85 * max(-facing, 0.0)));
+		// Minky sheen: the lit-side rim catches the light along the pile.
+		c += g_key.rgb * alb * sheen_k * pk * max(facing, 0.0) * (1.0 - vol) * (1.0 - 0.5 * g_rain);
 		// Thin petals and leaves glow when the light is behind them, strongest at their edges.
 		bool thin = kind == PART_PETAL || kind == PART_BELL || kind == PART_LEAF || kind == PART_STAMEN;
 		float glow = g_backlight * g_rim * (thin ? translucency_k * (0.35 + 0.65 * m.r) : 0.0);
@@ -224,10 +282,9 @@ void fragment() {
 		c = mix(c, alb * 1.08, clamp(em, 0.0, 1.0));
 	}
 	c += vec3(tap_tint) * i_bed.z;
-	// Felted fringe: fibres thin the outermost px of every edge (anchored to the stamp).
-	vec2 texel = UV / TEXTURE_PIXEL_SIZE;
-	float fib = h12(floor(texel * 0.5));
-	float a = cover * (1.0 - fringe_k * edge * fib);
+	// Felted fringe: smooth fibres thin the outermost px of every edge (anchored to the stamp).
+	float a = cover * (1.0 - fringe_k * edge * fuzz);
 	vec2 uv_dp = texel / (atlas_scale * PX_PER_DP);
-	COLOR = vec4(finish(c, uv_dp, FRAGCOORD.xy, GRAIN_OBJECT), clamp(a, 0.0, 1.0));
+	// The pile above is the object grain; finish adds only the screen dither.
+	COLOR = vec4(finish(c, uv_dp, FRAGCOORD.xy, fx_part ? GRAIN_OBJECT : 0.0), clamp(a, 0.0, 1.0));
 }

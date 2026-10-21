@@ -247,7 +247,9 @@ def _leaf(svg: Svg, w: float, h: float, outline: list, midrib: list, shade_below
     p.path(d, svg.lin(0, 0, w, 0, [(0, SHADE), (0.12, LIT), (1, LIT)]))
     p.path(d, svg.lin(0, 0, 0, h, [(0, SHADE, 0.0), (0.6, SHADE, 0.0), (1, SHADE, shade_below)]))
     p.ellipse(w * 0.6, h * 0.3, w * 0.28, h * 0.12, DETAIL, 0.22, svg.blur(h * 0.08))
-    p.line(midrib, DETAIL, max(0.9, h * 0.07), 0.75, None, clip)
+    # Plush felt leaf (round 5): the midrib is an embroidered running stitch in a pressed groove.
+    sw = max(0.75, h * 0.065)
+    p.stitch(midrib, sw, sw * 2.4, sw * 1.7, clip, opacity=0.8, groove=0.35)
     for i in range(veins):
         t = (i + 1) / (veins + 1)
         x = w * (0.12 + 0.75 * t)
@@ -365,10 +367,13 @@ def foliage_tuft(svg: Svg) -> Part:
     """Leafy clump at a stem's foot (leaf triple): three rows of rounded leaves fanning from the
     base, back rows in shade, the front row lit with a soft sheen; neighbouring clumps overlap into
     one lush mound the flowers grow out of. Pivot at the bottom centre."""
-    p = Part(svg, 48, 26, (0.5, 0.88))
+    # 4 px of headroom below the foot so the tucked shade's blur is never cut by the atlas cell
+    # (round 5: the clipped blur drew a hard horizontal bar under every clump).
+    p = Part(svg, 48, 30, (0.5, 22.88 / 30))
     rng = random.Random(111)
     cx, base = 24, 23.5
-    rows = [(9, 7.6, 0.55, 0.62), (8, 8.2, 0.78, 0.82), (7, 8.8, 1.0, 1.0)]  # n, leaf len, reach, light
+    # Round 5 (plush play-set): fewer, chunkier felt leaves (the shader puffs each one up).
+    rows = [(7, 9.0, 0.55, 0.62), (6, 9.8, 0.78, 0.82), (5, 10.6, 1.0, 1.0)]  # n, leaf len, reach, light
     for ri, (n, ln, reach, light) in enumerate(rows):
         for i in range(n):
             t = (i + 0.5) / n
@@ -386,14 +391,16 @@ def foliage_tuft(svg: Svg) -> Part:
             if light > 0.7:
                 p.ellipse(lx - math.cos(a) * 1.2, ly - lw * 0.18, lw * 0.3, lw * 0.11, DETAIL, 0.4 * light,
                           svg.blur(0.5), rot=rot)
-    p.path(smooth_path([(3, 23), (24, 25.6), (45, 23), (24, 20.5)]), SHADE, 0.8, svg.blur(1.3))
+    # A soft tucked-under shade (no hard bar along the foot).
+    p.ellipse(24, 23.2, 17, 2.4, SHADE, 0.45, svg.blur(1.8))
     return p
 
 
 def bed_shadow(svg: Svg) -> Part:
     """Soft contact shade under a planted bed (moss row, shade tone): grounds the clumps."""
-    p = Part(svg, 70, 26, (0.5, 0.6))
-    p.ellipse(35, 14, 30, 8.5, SHADE, 0.75, svg.blur(4.5))
+    # The cell holds the whole blur (round 5: a cut blur drew straight edges under the beds).
+    p = Part(svg, 84, 38, (0.5, 21.6 / 38))
+    p.ellipse(42, 20, 30, 8.5, SHADE, 0.75, svg.blur(4.5))
     return p
 
 
@@ -470,6 +477,13 @@ def wing(svg: Svg) -> Part:
     p.line([(0.4, 2.0), (0.6, 14.0)], LINE, 1.6)
     return p
 
+
+# Round 5: every stamp but the tiling stem strip, the wing
+# (hinged at its edge) and the FX gets STAMP_MARGIN design px of empty atlas around it, so no tip or
+# blur is cut flat by its cell (the plush shading reads the blurred alpha right up to the edge).
+STAMP_MARGIN = 1.5
+UNPADDED = {"stem", "wing", "sparkle", "glint", "seed_glow"}
+MARGIN_OVERRIDE = {"foliage_tuft": 4.5}
 
 STAMPS = [
     ("petal_round", petal_round), ("daisy_center", daisy_center), ("clover_head", clover_head),
@@ -571,7 +585,7 @@ FORMS = {
 # Bed-wide size multipliers on top of the §6.3 sizes: at the beds' depth (0.74-0.91) the §6.3
 # sizes read as sprinkles from arm's length; these keep the drawn proportions and give the beds
 # the lush mass the Director asked for (R2 directive 6) [J].
-BED_SCALE = {"stem": 1.25, "head": 1.3, "leaf": 1.35, "base": 1.7, "stem_w": 1.25}
+BED_SCALE = {"stem": 1.25, "head": 1.34, "leaf": 1.35, "base": 1.7, "stem_w": 1.55}
 
 GROWTH = {
     "doc": "Art Bible §6.2: sprout stem 30->60 % with 2 cotyledons; bud: all leaves, stem 85->100 %, bud 0.6->1.0.",
@@ -585,6 +599,9 @@ GROWTH = {
 def main() -> int:
     svg = Svg(ATLAS_W, 16)
     parts = [(sid, b(svg)) for sid, b in STAMPS]
+    for sid, part in parts:
+        if sid not in UNPADDED:
+            part.margin = MARGIN_OVERRIDE.get(sid, STAMP_MARGIN)
     stamps = write_atlas(svg, parts, SCALE, ATLAS_W, PAD)
     OUT_SVG.write_text(svg.to_string())
     doc = {"schema": 1, "doc": __doc__.strip().splitlines()[0], "atlas": "res://art/flora/flora_atlas.svg",

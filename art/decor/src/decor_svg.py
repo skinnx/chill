@@ -56,8 +56,9 @@ def _blade(p: Part, svg: Svg, cx: float, cy: float, deg: float, r: float) -> Non
     p.path(d, svg.lin(cx - nx * w * 0.2, cy - ny * w * 0.2, cx + nx * w, cy + ny * w,
                       [(0, SHADE, 0.0), (0.45, SHADE, 0.0), (1, SHADE, 0.55)]))
     # midrib and two side veins (detail)
-    p.line([(cx + ux * 3, cy + uy * 3), (cx + ux * r * 0.55 + nx * w * 0.12, cy + uy * r * 0.55 + ny * w * 0.12),
-            (ex - ux * 3, ey - uy * 3)], DETAIL, 1.2, 0.8, None, clip)
+    # Plush felt blade (round 5): the midrib is a running stitch in a pressed seam.
+    p.stitch([(cx + ux * 4, cy + uy * 4), (cx + ux * r * 0.55 + nx * w * 0.12, cy + uy * r * 0.55 + ny * w * 0.12),
+              (ex - ux * 4, ey - uy * 4)], 1.5, 3.2, 2.4, clip, opacity=0.85, groove=0.4)
     for t in (0.42, 0.66):
         bx, by = cx + ux * r * t, cy + uy * r * t
         p.line([(bx, by), (bx + ux * r * 0.14 + nx * w * 0.55, by + uy * r * 0.14 + ny * w * 0.55)], DETAIL, 0.8,
@@ -162,6 +163,9 @@ def toadstool_cap(svg: Svg) -> Part:
                       (31, 18.4, 2.0)):
         p.path(blob(cx, cy, r, r * 0.8, 9, 0.12, rng), DETAIL, 0.95, clip=clip)
     p.ellipse(18, 7, 8, 2.6, LIT, 0.55, svg.blur(1.2), clip)
+    # Plush toy seam (round 5): cream running stitch where the cap's felt meets its underside.
+    p.stitch([(5.2, 19.6), (12, 22.4), (25, 23.4), (38, 22.4), (44.8, 19.6)], 1.6, 3.0, 2.3, clip, opacity=0.95,
+             groove=0.45)
     return p
 
 
@@ -321,6 +325,7 @@ def seed_pouch(svg: Svg) -> Part:
     p.path(smooth_path([(5.6, 8.6), (9, 2.6), (12.4, 8.6), (9, 9.6)]), LIT)
     p.path(smooth_path([(4.6, 9.4), (9, 8.2), (13.4, 9.4), (9, 10.6)]), SHADE, 0.9)
     p.path(blob(13.6, 5.6, 3.4, 1.8, 8, 0.05, random.Random(232), math.radians(-30)), DETAIL)
+    p.stitch([(3.6, 15.4), (9, 18.0), (14.4, 15.4)], 0.8, 1.7, 1.3, svg.clip(body), opacity=0.9, groove=0.35)
     return p
 
 
@@ -370,7 +375,7 @@ def leaf_boat(svg: Svg) -> Part:
     p.path(hull, svg.lin(0, 4, 0, 21, [(0, LIT), (0.55, LIT), (1, SHADE)]))
     p.path(smooth_path([(4, 7.4), (14, 11.4), (25, 12.6), (36, 11.4), (46, 6.4), (36, 14.4), (25, 15.6), (14, 14.4)]),
            SHADE, 0.75, clip=clip)
-    p.line([(6, 12), (25, 17.2), (44, 11.4)], DETAIL, 1.2, 0.8, None, clip)
+    p.stitch([(7, 12.4), (25, 17.2), (43, 11.8)], 1.5, 3.0, 2.2, clip, opacity=0.85, groove=0.4)
     for x in (14, 22, 30, 37):
         p.line([(x, 16.4), (x + 3, 13)], DETAIL, 0.7, 0.5, None, clip)
     return p

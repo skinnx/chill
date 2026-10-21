@@ -463,18 +463,14 @@ func _postcard_row(pc: Dictionary) -> Control:
 	var plate := Control.new()
 	plate.custom_minimum_size = Vector2(120.0, 120.0)
 	plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	UiSurface.attach_to(plate, UiSurface.make(UiTokens.sc(&"coral_tint"), UiSurface.PILL))
 	if sp != &"" and Game.sim.is_met(sp):
+		# the stamp is a tiny product shot too (round 5 plush direction), cut round in the bake
 		var stamp := BakedWell.create("stamp|%s" % sp, Vector2(120.0, 120.0), 60.0, func(_sz: Vector2) -> Control:
-			var bg := UiSurface.make(UiTokens.sc(&"coral_tint"), 0.0)
-			var p := CreaturePortrait.new()
-			p.setup(sp, true, &"happy", false)
-			bg.add_child(p)
-			p.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-			return bg)
+			return portrait_cell(sp, true, &"happy"))
 		stamp.size = Vector2(120.0, 120.0)
 		plate.add_child(stamp)
 	else:
+		UiSurface.attach_to(plate, UiSurface.make(UiTokens.sc(&"coral_tint"), UiSurface.PILL))
 		var ic := Icons.rect(&"postcard", 72.0)
 		ic.position = Vector2(24.0, 24.0)
 		plate.add_child(ic)

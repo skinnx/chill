@@ -36,6 +36,24 @@ uniform vec4 u_st_key : source_color = vec4(1.0, 0.945, 0.761, 1.0);
 uniform vec4 u_st_shadow : source_color = vec4(0.231, 0.424, 0.549, 1.0);
 uniform float u_st_rim = 0.5;
 uniform float u_studio_tint = 0.2;
+// Round 5 product sweep (studio owner: the friends are premium plush toys, the Album is a toy-shop
+// product shot): a seamless paper cyclorama instead of the meadow diorama. A warm cream wall tinted
+// toward the friend's accent colour bends into the floor with no horizon line, a soft key pool
+// sits up-left behind the toy (creature_rig.json view.studio.key_dir: light from the upper left),
+// and the toy sits on a little stitched felt moss cushion whose soft shadow falls down-right, the
+// same way every shadow in the hollow falls.
+uniform float u_product = 0.0;
+uniform vec4 u_pr_tint : source_color = vec4(0.93, 0.62, 0.65, 1.0);
+uniform vec4 u_pr_paper : source_color = vec4(0.976, 0.953, 0.918, 1.0);
+uniform vec4 u_pr_felt : source_color = vec4(0.655, 0.796, 0.576, 1.0);
+uniform float u_pr_tint_k = 0.22;       // how much of the accent the wall takes
+uniform float u_pr_sweep = 0.64;        // where the wall bends into the floor (fraction of height)
+uniform vec2 u_pr_key = vec2(-0.55, 0.83);
+uniform vec2 u_pr_pad = vec2(0.33, 0.075); // felt cushion radii (fractions of width, height)
+uniform float u_pr_stitch_dp = 5.0;     // stitch dash period along the cushion rim, dp
+uniform float u_pr_ao_w = 0.22;
+uniform float u_pr_wide = 1.35;        // a wide (detail) well's cushion: a little roomier
+uniform float u_pr_thick = 0.04;        // the cushion's stuffed side band (fraction of height)         // the toy's contact occlusion on the cushion (x width)
 
 varying vec2 v_local;
 
@@ -46,6 +64,67 @@ void vertex() {
 float sd_round_box(vec2 p, vec2 b, float r) {
 	vec2 q = abs(p) - b + r;
 	return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
+}
+
+// The product sweep (see u_product). uv is 0..1 in the well, y down.
+mediump vec3 product_sweep(vec2 uv, float aspect) {
+	mediump vec3 paper = u_pr_paper.rgb;
+	// the cushion keeps the toy's footprint in a wide well (its width is in height units)
+	vec2 pad = vec2(u_pr_pad.x / max(aspect, 1.0) * mix(1.0, u_pr_wide, step(1.2, aspect)), u_pr_pad.y);
+	mediump vec3 tint = mix(paper, u_pr_tint.rgb, u_pr_tint_k);
+	// wall: a touch deeper at the top, the sweep bend the lightest (the light pools there), the floor
+	// falling off gently toward the camera; one smooth curve, never a line
+	float bend = smoothstep(u_pr_sweep - 0.22, u_pr_sweep + 0.10, uv.y);
+	mediump vec3 wall = mix(tint * 0.955, tint, smoothstep(0.0, u_pr_sweep, uv.y));
+	mediump vec3 floor_c = mix(mix(tint, paper, 0.35), tint * 0.965, smoothstep(u_pr_sweep, 1.05, uv.y));
+	mediump vec3 c = mix(wall, floor_c, bend);
+	// soft key pool behind the toy, offset toward the light (upper left)
+	vec2 key = normalize(u_pr_key);
+	vec2 kc = vec2(0.5 + key.x * 0.22, 0.42 - key.y * 0.12);
+	float kd = length((uv - kc) * vec2(aspect, 1.0) / vec2(0.62, 0.52));
+	c = mix(c, mix(c, vec3(1.0, 0.992, 0.965), 0.85), (1.0 - smoothstep(0.0, 1.0, kd)) * 0.5);
+	// felt moss cushion: an ellipse whose top face is lit from the key side, a darker rim below
+	vec2 pc = vec2(0.5, u_ground_y);
+	vec2 pq = (uv - pc) * vec2(1.0, 1.0) / pad;
+	float pr = length(pq);
+	float px_w = 1.5 / max(u_size.y * pad.y, 1.0);
+	// its cast shadow first: a soft ellipse pushed down-right, away from the key
+	vec2 sq = (uv - pc - vec2(-key.x * 0.06, u_pr_thick + 0.02)) / (pad * vec2(1.15, 1.35));
+	float sh = (1.0 - smoothstep(0.45, 1.15, length(sq))) * 0.30;
+	// lavender-tinted, never grey (Art Bible shadow rule)
+	c = mix(c, c * vec3(0.78, 0.76, 0.88), sh);
+	// the stuffed side band: the same ellipse swept down by the cushion's thickness, a little
+	// darker and rounder toward its bottom edge (a pouf, not a flat coaster)
+	vec2 sp = uv - pc - vec2(0.0, clamp(uv.y - pc.y, 0.0, u_pr_thick));
+	float side_r = length(sp / pad);
+	float side_m = 1.0 - smoothstep(1.0 - px_w, 1.0 + px_w, side_r);
+	float side_t = clamp((uv.y - pc.y) / max(u_pr_thick + pad.y, 1e-3), 0.0, 1.0);
+	mediump vec3 side = mix(u_pr_felt.rgb, paper, 0.1) * mix(0.86, 0.70, side_t);
+	// the key side of the band catches a little light
+	side *= 1.0 + clamp(-sp.x / pad.x * key.x, -1.0, 1.0) * 0.06;
+	c = mix(c, side, side_m);
+	float pad_m = 1.0 - smoothstep(1.0 - px_w, 1.0 + px_w, pr);
+	mediump vec3 felt = mix(u_pr_felt.rgb, paper, 0.18);
+	// pillowy: lighter toward the key-side top, rolling off at the rim (stuffed volume), with a
+	// soft lit lip along the far edge where the cushion's top face turns over
+	float lit = clamp(0.55 - pq.y * 0.35 + pq.x * key.x * 0.18, 0.0, 1.0);
+	felt *= mix(0.86, 1.05, lit) * mix(1.0, 0.84, smoothstep(0.6, 1.0, pr) * step(0.0, pq.y));
+	felt = mix(felt, felt * 1.12, smoothstep(0.7, 0.95, pr) * smoothstep(0.0, -0.6, pq.y) * 0.6);
+	// one running stitch just inside the rim: short cream dashes along the ellipse
+	float ang = atan(pq.y, pq.x);
+	float rim_len = 3.14159 * (pad.x * u_size.x + pad.y * u_size.y) / PX_PER_DP;
+	float dash_t = fract(ang / 6.28318 * rim_len / u_pr_stitch_dp);
+	float dash = smoothstep(0.08, 0.16, dash_t) * (1.0 - smoothstep(0.52, 0.6, dash_t));
+	float ring_px = abs(pr - 0.82) * u_size.y * pad.y;
+	float ring = 1.0 - smoothstep(0.6, 1.6, ring_px);
+	felt = mix(felt, vec3(1.0, 0.975, 0.92), ring * dash * 0.7);
+	// the toy presses into the cushion: a soft occlusion right under it
+	vec2 aq = (uv - pc - vec2(0.0, -0.012)) / vec2(u_pr_ao_w * pad.x / u_pr_pad.x, pad.y * 0.55);
+	felt *= 1.0 - (1.0 - smoothstep(0.2, 1.0, length(aq))) * 0.28;
+	c = mix(c, felt, pad_m);
+	// a whisper of vignette: the sweep has depth
+	float vig = smoothstep(0.5, 1.15, length((uv - vec2(0.5, 0.45)) * vec2(aspect, 1.0) * 1.3));
+	return c * (1.0 - vig * 0.06);
 }
 
 void fragment() {
@@ -108,6 +187,9 @@ void fragment() {
 	c *= 1.0 - vig * 0.08;
 	// studio: the hour shows only as a soft tint toward the live sky
 	c = mix(c, c * mix(vec3(1.0), g_sky_mid.rgb * 1.6, 0.5), st * u_studio_tint * g_lights);
-	c = finish(c, v_local / PX_PER_DP, FRAGCOORD.xy, GRAIN_OBJECT);
+	if (u_product > 0.5) {
+		c = product_sweep(uv, aspect);
+	}
+	c = finish(c, v_local / PX_PER_DP, FRAGCOORD.xy, mix(GRAIN_OBJECT, GRAIN_SKY, u_product));
 	COLOR = vec4(c, cov * COLOR.a);
 }

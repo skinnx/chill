@@ -726,7 +726,9 @@ def fg_left(svg: Svg) -> Part:
         _blade(inner, svg, (bx, h + 20), (bx + rng.uniform(40, 150), h + 20 - ht), rng.uniform(18, 26),
                rng.uniform(-20, 20))
     _frond(inner, svg, (70, h), -1.42, 440, 1.45, 48, 11)
-    _flower_head(inner, svg, 395, 300, 50, 12, (350, h), rng)
+    # Round 5b (QA: the blurred daisy heads read as brown mushrooms): a second, shorter frond
+    # arching inward instead; flowers live in the in-focus near bank.
+    _frond(inner, svg, (300, h), -1.05, 300, 0.95, 36, 10)
     inner.path(blob(120, h - 40, 170, 110, 12, 0.08, rng), svg.rad(120, h - 120, 200, [(0, LIT), (1, SHADE)]))
     _leaf(inner, svg, 170, h - 70, 340, 150, -0.55)
     _leaf(inner, svg, 330, h - 40, 300, 120, -0.2)
@@ -756,7 +758,7 @@ def fg_right(svg: Svg) -> Part:
         inner.path(smooth_path([(x + rng.uniform(-10, 10), h + 10), (x, y + s_ * 0.4)], closed=False), "none", 1.0,
                    stroke=SHADE, sw=7)
         _trefoil(inner, svg, x, y, s_, rng.uniform(0, math.tau))
-    _flower_head(inner, svg, 260, 250, 40, 14, (290, h), rng)
+    _frond(inner, svg, (330, h), -2.05, 280, -0.9, 34, 10)
     _leaf(inner, svg, w - 150, h - 60, 320, 140, -2.55)
     _leaf(inner, svg, w - 330, h - 30, 260, 100, -2.95)
     p.group(inner.items, filt=svg.blur(FG_BLUR_NEAR))

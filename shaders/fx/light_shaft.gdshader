@@ -14,6 +14,9 @@ uniform float sway_deg = 2.0;
 uniform float cloud_k = 0.8;
 uniform float streak_k = 0.45;
 uniform float streak_cells = 6.0;
+// Round 5b (QA: golden air read milky): the shafts are warm key-tinted light, not a white veil.
+uniform float key_tint_k = 0.45;
+uniform float shaft_gain = 0.8;
 
 varying vec4 v_data;
 varying vec2 v_design;
@@ -37,6 +40,6 @@ void fragment() {
 	// Rays within the ray: soft lengthwise streaks so a shaft reads as lit air, never a flat band.
 	float rays = 1.0 - streak_k + streak_k * smoothstep(0.2, 0.8, vnoise(vec2(UV.x * streak_cells + v_data.b * 17.0, along * 0.8)));
 	float a = v_data.r * g_shafts * (1.0 - cloud_k * g_cloud) * (1.0 - g_rain) * g_celestial.x;
-	vec3 c = g_glow.rgb * a * shape * dapple * rays;
+	vec3 c = mix(g_glow.rgb, g_key.rgb, key_tint_k) * (a * shaft_gain) * shape * dapple * rays;
 	COLOR = vec4(max(c + tpdf(FRAGCOORD.xy), vec3(0.0)), 1.0);
 }

@@ -24,3 +24,10 @@ gradients only between pure channels; filled, rounded shapes; no `<text>`; `feGa
 no dark ink outlines (the felt look comes from the shader's fibre fringe). Import settings:
 lossless, mipmaps on (the shader's rim and fringe read a blurred mip), fix alpha border,
 `svg/scale = 1.0`. This folder has a `.gdignore`, so Godot never imports or exports the generator.
+
+Round 5 (plush play-set): `Part.stitch()` draws an embroidered running stitch in a pressed groove
+(leaf midribs here; toadstool cap seam, pinwheel blades, leaf boat and seed pouch in the décor
+atlas), and every stamp except the tiling `stem` strip and the hinged `wing` gets `STAMP_MARGIN`
+design px of empty atlas around it (`write_atlas` remaps size + pivot, so placement is unchanged):
+the shaders inflate each stamp from its blurred alpha, which must never be cut flat by the cell
+(`tests/test_garden_flora.gd::test_stamps_are_not_cut_by_their_atlas_cell`).

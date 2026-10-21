@@ -12,6 +12,10 @@ extends TextureRect
 # such conversion, so only that warning is silenced in this file (docs/ARCHITECTURE.md §10).
 @warning_ignore_start("unsafe_call_argument")
 
+const MASK_SHADER := "res://shaders/ui/well_mask.gdshader"
+## The mask draws above everything in the cell (the rig lifts its parts by a few z steps).
+const MASK_Z := 64
+
 var key: String = ""
 var radius_px: float = ThemeBuilder.R_M
 var _make: Callable
@@ -69,6 +73,24 @@ func _cell(sz: Vector2) -> Control:
 	var c: Control = _make.call(sz)
 	if c is LiveWell:
 		((c as LiveWell).material as ShaderMaterial).set_shader_parameter(&"u_radius", radius_px)
+		# the subject's contact shadow is cut to the rounded window too (bake-time only; QA r5:
+		# a square shadow strip at the bottom corners)
+		c.add_child(_corner_mask(sz))
 	elif c is UiSurface:
 		(c as UiSurface).radius = radius_px
 	return c
+
+
+func _corner_mask(sz: Vector2) -> ColorRect:
+	var m := ColorRect.new()
+	m.name = "CornerMask"
+	m.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	m.color = Color.WHITE
+	m.z_index = MASK_Z
+	var mat := ShaderMaterial.new()
+	mat.shader = load(MASK_SHADER) as Shader
+	mat.set_shader_parameter(&"u_size", sz)
+	mat.set_shader_parameter(&"u_radius", radius_px)
+	m.material = mat
+	m.size = sz
+	return m

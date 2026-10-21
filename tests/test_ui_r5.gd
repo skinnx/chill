@@ -219,3 +219,38 @@ func test_recap_visit_line_is_a_whole_sentence() -> void:
 	var t := I18n.fmt(OverlayHost.RECAP_ONE_VISITED_HI, {"name": "Pip"})
 	assert_true(t.begins_with("Pip"), "names the friend")
 	assert_gt(t.split(" ").size(), 3, "a whole sentence, not 'Pip dropped by'")
+
+
+# ------------------------------------------------------------------ plush product shots (r5 owner)
+func test_portrait_well_is_a_product_sweep_tinted_by_the_friend() -> void:
+	var sp: StringName = &"puffmoss"
+	var cell := AlbumSheet.portrait_cell(sp, true, &"awake")
+	add_child_autofree(cell)
+	assert_true(cell is LiveWell, "a met friend's cell is a well")
+	var mat := (cell as LiveWell).material as ShaderMaterial
+	assert_eq(float(mat.get_shader_parameter(&"u_product")), 1.0, "portrait wells use the product sweep")
+	var res: Dictionary = (c.palettes.get("creatures", {}) as Dictionary).get("species_resolved", {})
+	var accent := Color.html(String((res.get(String(sp), {}) as Dictionary).get("accent", "#000000")))
+	var tint: Color = mat.get_shader_parameter(&"u_pr_tint")
+	assert_true(tint.is_equal_approx(accent), "the sweep takes the friend's accent colour")
+
+
+func test_portrait_hides_the_world_cast_shadow() -> void:
+	var p := CreaturePortrait.new()
+	p.setup(&"puffmoss", true, &"awake", false)
+	p.size = Vector2(300, 300)
+	add_child_autofree(p)
+	await get_tree().process_frame
+	var cast := p.mossling.get_node_or_null(^"Visual/Shadow") as CanvasItem
+	assert_not_null(cast)
+	if cast != null:
+		assert_false(cast.visible, "the studio well paints the toy's own contact shadow")
+
+
+func test_an_open_sheets_tab_never_looks_asleep() -> void:
+	var b := RoundButton.new()
+	add_child_autofree(b)
+	b.asleep = true
+	assert_true(b.looks_asleep())
+	b.active = true
+	assert_false(b.looks_asleep(), "the selected tab under its own sheet is fully awake")

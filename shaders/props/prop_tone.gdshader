@@ -41,9 +41,10 @@ uniform float focal_back_k = 0.12;
 // Round 5 (QA r4: the stone top was the value of the haze-washed ground): at golden the focal's lit
 // top warms toward a sun-warmed stone (#DCB998) and lifts, with a stronger key rim on its sun edge.
 uniform vec3 focal_golden = vec3(0.863, 0.725, 0.596);
-uniform float focal_golden_k = 0.8;
+uniform float focal_golden_k = 0.9;
 uniform float focal_golden_lift = 1.12;
 uniform float focal_rim_boost = 1.8;
+uniform float focal_golden_cap = 1.14;
 
 varying vec2 v_canvas;
 varying vec2 v_size;
@@ -84,7 +85,10 @@ void fragment() {
 	// Round 3 (QA r2: the stone barely separated from the meadow): the focal's front / shade faces
 	// sink toward the tinted shadow, so its lit top reads as the highest local contrast.
 	float fg_w = i_focal.x * m.r * g_backlight * (1.0 - g_lights);
-	vec3 warm_top = focal_golden / wl_luma(focal_golden) * max(wl_luma(c) * focal_golden_lift, wl_luma(focal_golden));
+	// Round 5b: the lift is capped near the target value, so the top reads as sun-warmed peach stone,
+	// not a pale white slab under the creatures (their fur must out-value it).
+	float lfg = wl_luma(focal_golden);
+	vec3 warm_top = focal_golden / lfg * clamp(wl_luma(c) * focal_golden_lift, lfg, lfg * focal_golden_cap);
 	c = mix(c, min(warm_top, vec3(1.0)), fg_w * focal_golden_k);
 	vec3 front_t = mix(focal_front_tint, shadow_tint() * SHADE_K, 0.35);
 	c = mix(c, c * front_t, i_focal.x * clamp(m.g + 0.5 * smoothstep(0.45, 0.9, v_luv.y), 0.0, 1.0) * focal_front_k);

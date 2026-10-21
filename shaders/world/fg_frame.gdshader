@@ -25,6 +25,14 @@ uniform float rim_px = 12.0;
 uniform float glow_k = 0.10;
 uniform float max_alpha = 0.96;
 uniform float lavender_k = 0.55;
+// Round 5b (QA: the corners read as brown blobs): lit phases keep a little more of the frame's
+// value and leaf volume, and the backlit rim is a peach-lavender glow, not orange on mauve (brown).
+uniform float fg_dark_backlit = 0.74;
+uniform float lit_volume_k = 0.30;
+uniform float rim_sky_k = 0.40;
+// Value floor (encoded luma): the frame is the darkest value, never a crushed black (V2 night
+// L* >= 6, Art Bible §1.2 "never below the night floor").
+uniform float fg_floor = 0.085;
 
 varying vec2 v_luv;
 varying vec2 v_canvas;
@@ -53,10 +61,13 @@ void fragment() {
 	vec3 lav = mix(g_shadow.rgb, g_sky_mid.rgb, 0.25);
 	c = mix(c, lav / max(wl_luma(lav), 1e-3) * wl_luma(c), lavender_k * g_backlight * (1.0 - g_lights));
 	// Lit tone reads a little lighter (leaf volume survives the blur).
-	c *= (0.92 + 0.16 * w.r) * fg_dark;
+	float bl = g_backlight * (1.0 - g_lights);
+	c *= mix(0.92 + 0.16 * w.r, 1.0 - lit_volume_k * 0.5 + lit_volume_k * w.r, bl) * mix(fg_dark, fg_dark_backlit, bl);
+	float fl = wl_luma(c);
+	c *= max(fl, fg_floor) / max(fl, 1e-4);
 	vec2 kd = key_dir(v_canvas);
 	float ahead = texture(TEXTURE, UV + kd * rim_px * TEXTURE_PIXEL_SIZE).a;
 	float rim = clamp(m.a - ahead, 0.0, 1.0);
-	c += g_key.rgb * (g_rim * rim_k * rim + g_backlight * glow_k * w.r * m.a);
+	c += mix(g_key.rgb, g_sky_mid.rgb, rim_sky_k * bl) * (g_rim * rim_k * rim + g_backlight * glow_k * w.r * m.a);
 	COLOR = vec4(finish(c, v_luv / TEXTURE_PIXEL_SIZE * i_region.zw / PX_PER_DP, FRAGCOORD.xy, GRAIN_OBJECT), m.a * max_alpha);
 }

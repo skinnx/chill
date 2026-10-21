@@ -6,6 +6,7 @@ extends Node2D
 ##
 ##   tools/qa/capture.sh still --scene=res://scenes/creatures/lineup.tscn --size=1080x1920 --tod=0.6 \
 ##       --seed=7 --out=qa/out/lineup_golden.png
+## Plush product close-up (round 5): --size=1080x1080 --lineup-only=puffmoss,honeyhum --lineup-labels=0
 ## User args: --lineup-pose=both|awake|asleep|happy   --lineup-only=<id,id,...>
 ##   --lineup-scale=<f> (creature scale, default fits the cell)   --lineup-live (blinks/fidgets on)
 ##   --lineup-labels=0 (hide species names)
@@ -25,8 +26,8 @@ const COLUMNS := 4
 ## Fraction of a cell the tallest creature may fill.
 const FILL := 0.7
 const LABEL_GAP_PX := 18.0
-const LABEL_SCALE := 0.78
-const LABEL_MAX_W := 0.7
+const LABEL_SCALE := 0.6
+const LABEL_MAX_W := 0.5
 ## Tallest cell height as a multiple of its width (keeps close-ups large and centred).
 const MAX_CELL_ASPECT := 1.5
 ## Fraction of a cell the widest creature (body + tail / ears allowance) may fill.
@@ -34,6 +35,8 @@ const FILL_W := 0.92
 const WIDTH_PAD_BU := 0.35
 ## Cast-shadow offset cap as a fraction of the cell height (ends above the next row's friend).
 const CAST_MAX_CELL := 0.16
+## Feet line inside a cell (fraction of its height); the backdrop sweep curves into the floor here.
+const FEET_ROW := 0.78
 
 var _rig: MosslingRig
 var _mosslings: Array[Mossling] = []
@@ -65,7 +68,6 @@ func _ready() -> void:
 		if only.is_empty() or only.has(String(id)):
 			ids.append(id)
 	var size := get_viewport().get_visible_rect().size
-	_backdrop(size)
 	var poses: Array[String] = []
 	if pose == "both":
 		poses = ["awake", "asleep"]
@@ -86,6 +88,7 @@ func _ready() -> void:
 		widest = maxf(widest, _rig.body_px(id) * (_rig.body_width_bu(id) + WIDTH_PAD_BU))
 	var fit := minf(cell.y * FILL / maxf(tallest, 1.0), cell.x * FILL_W / maxf(widest, 1.0))
 	var k := user_scale if user_scale > 0.0 else fit
+	_backdrop(size, Vector4(top, cell.y, cell.x, FEET_ROW))
 	var fur := _rig.make_fur_material()
 	MosslingRig.bind_palette(fur, _feed)
 	_feed.apply(TimeOfDay.colors)
@@ -100,7 +103,7 @@ func _ready() -> void:
 			var id := ids[i]
 			var col := i % cols
 			var row := pi * rows_per + int(float(i) / float(cols))
-			var feet := Vector2((float(col) + 0.5) * cell.x, top + (float(row) + 0.78) * cell.y)
+			var feet := Vector2((float(col) + 0.5) * cell.x, top + (float(row) + FEET_ROW) * cell.y)
 			var m := Mossling.new()
 			add_child(m)
 			m.setup(_rig, id, fposmod(float(i) * 0.618 + 0.13, 1.0), fur, shadow, fx)
@@ -119,13 +122,14 @@ func _ready() -> void:
 				_label(content, id, feet, cell)
 
 
-func _backdrop(size: Vector2) -> void:
+func _backdrop(size: Vector2, grid: Vector4) -> void:
 	var quad := SdfQuad.new()
 	quad.name = "Backdrop"
 	quad.rect = Rect2(Vector2.ZERO, size)
 	var mat := ShaderMaterial.new()
 	mat.shader = load(BACKDROP_SHADER) as Shader
 	mat.set_shader_parameter(&"u_size", size)
+	mat.set_shader_parameter(&"u_grid", grid)
 	quad.material = mat
 	quad.z_index = -10
 	add_child(quad)

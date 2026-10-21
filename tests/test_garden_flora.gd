@@ -225,3 +225,29 @@ func test_depth_scale_matches_the_art_bible() -> void:
 	assert_almost_eq(PlotsLayer.depth_scale(760.0), 0.62, 1e-4)
 	assert_almost_eq(PlotsLayer.depth_scale(1500.0), 1.0, 1e-4)
 	assert_almost_eq(PlotsLayer.depth_scale(1325.0), 0.62 + 0.38 * 565.0 / 740.0, 1e-4)
+
+
+## Round 5 (plush play-set): the shader puffs every stamp up from its blurred alpha, so no stamp
+## may be cut flat by its atlas cell (the clipped blurs drew hard bars under the clumps in round 4).
+## Only the tiling stem strip and the butterfly wing (hinged at its cell edge) touch their edges.
+func test_stamps_are_not_cut_by_their_atlas_cell() -> void:
+	var tex := load(String(doc["atlas"])) as Texture2D
+	var img := tex.get_image()
+	if img.is_compressed():
+		img.decompress()
+	var exempt: Array[String] = ["stem", "wing"]
+	var stamps: Dictionary = doc["stamps"]
+	for id: String in stamps:
+		if id in exempt:
+			continue
+		var r: Array = (stamps[id] as Dictionary)["region"]
+		var x0 := int(r[0])
+		var y0 := int(r[1])
+		var w := int(r[2])
+		var h := int(r[3])
+		var worst := 0.0
+		for i in w:
+			worst = maxf(worst, maxf(img.get_pixel(x0 + i, y0).a, img.get_pixel(x0 + i, y0 + h - 1).a))
+		for j in h:
+			worst = maxf(worst, maxf(img.get_pixel(x0, y0 + j).a, img.get_pixel(x0 + w - 1, y0 + j).a))
+		assert_true(worst < 0.08, "stamp %s stays inside its cell (edge alpha %.2f)" % [id, worst])

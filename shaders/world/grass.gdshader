@@ -52,6 +52,12 @@ uniform float halo_alpha = 0.42;
 uniform float drift_k = 0.07;
 uniform float shadow_alpha = 0.30;
 uniform float tint_l = 0.05;
+// Round 5b (Director: "soft out-of-focus ferns / clover / flowers below the brook"): a shallow
+// depth of field on the near bank. Below dof_band.x the dressing's edges widen up to dof_px (an
+// out-of-focus disc, never a hard sticker) and its local contrast relaxes toward the ground.
+uniform vec2 dof_band = vec2(1700.0, 1990.0);
+uniform float dof_px = 4.5;
+uniform float dof_flatten = 0.22;
 
 const int KIND_CLUMP = 0;
 const int KIND_CLOVER = 1;
@@ -117,7 +123,8 @@ void fragment() {
 	vec2 p_design = v_canvas - g_world_offset;
 	float depth_t = smoothstep(760.0, 1500.0, p_design.y);
 	vec3 ground = mix(ground_back_lit.rgb, ground_front_lit.rgb, depth_t);
-	float fw = max(fwidth(p.x) + fwidth(p.y), 0.35);
+	float dof = smoothstep(dof_band.x, dof_band.y, p_design.y);
+	float fw = max(fwidth(p.x) + fwidth(p.y), 0.35) + dof_px * dof;
 	float fuzz = (vnoise(p * 0.85 + seed * 41.0) - 0.5) * fringe_px;
 
 	vec3 col = vec3(0.0);
@@ -333,6 +340,7 @@ void fragment() {
 	if (g_lights > 0.001) {
 		col = apply_lamp(col, lamp_weight(p_design) * 0.8);
 	}
+	col = mix(col, golden_grade(ground, p_design, 0.0), dof_flatten * dof);
 	col = finish(col, p / PX_PER_DP + seed * 13.0, FRAGCOORD.xy, GRAIN_TERRAIN);
 	// Composite the dressing over its contact shadow.
 	float out_a = a + sh_a * (1.0 - a);

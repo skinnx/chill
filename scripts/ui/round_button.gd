@@ -43,6 +43,7 @@ var active: bool = false:
 			active = v
 			_refresh_icon()
 			_refresh_label_color()
+			_refresh_alpha()
 			_changed()
 var asleep: bool = false:
 	set(v):
@@ -155,10 +156,10 @@ func _sync_plate() -> void:
 	_plate.size = Vector2(r, r) * 2.0
 	_plate.radius = UiSurface.PILL
 	var fill := UiTokens.sc(&"primary_tint") if active or looks_pressed() else UiTokens.sc(fill_token)
-	if asleep:
+	if looks_asleep():
 		fill.a *= ASLEEP_ALPHA
 	_plate.color = fill
-	_plate.elevation = UiTokens.E0 if asleep else elevation
+	_plate.elevation = UiTokens.E0 if looks_asleep() else elevation
 
 
 func center() -> Vector2:
@@ -179,9 +180,9 @@ func draw_plate_at(canvas: CanvasItem, c: Vector2, k: float) -> void:
 	# Pressed (touch-down, same frame): the plate takes primary_tint, a visible state on a white
 	# plate where a +6 L* lift cannot show (Art Bible §10.3 "instant" tint).
 	var fill := UiTokens.color(&"primary_tint") if active or looks_pressed() else UiTokens.color(fill_token)
-	if asleep:
+	if looks_asleep():
 		fill.a *= ASLEEP_ALPHA
-	_box = UiTokens.fill_box(fill, r, UiTokens.E0 if asleep else elevation)
+	_box = UiTokens.fill_box(fill, r, UiTokens.E0 if looks_asleep() else elevation)
 	canvas.draw_style_box(_box, Rect2(c - Vector2(r, r), Vector2(r, r) * 2.0))
 	if active:
 		var w := RING_DP * UiTokens.PX_PER_DP * k
@@ -202,9 +203,15 @@ func _refresh_icon() -> void:
 
 func _refresh_alpha() -> void:
 	if _icon != null:
-		_icon.modulate.a = ASLEEP_ALPHA if asleep else 1.0
+		_icon.modulate.a = ASLEEP_ALPHA if looks_asleep() else 1.0
 	if label != null:
-		label.modulate.a = ASLEEP_ALPHA if asleep else 1.0
+		label.modulate.a = ASLEEP_ALPHA if looks_asleep() else 1.0
+
+
+## Onboarding sleep never dims the control whose sheet is open (QA r5: the selected Garden tab
+## read as disabled under its own sheet).
+func looks_asleep() -> bool:
+	return asleep and not active
 
 
 func _refresh_label_color() -> void:

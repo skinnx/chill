@@ -131,6 +131,9 @@ class Part:
         self.h = h
         self.pivot = pivot
         self.items: list[str] = []
+        # Empty design px added around the part in the atlas (write_atlas grows the cell and remaps
+        # size + pivot, so placement is unchanged): keeps tips and blurs from being cut by the cell.
+        self.margin = 0.0
 
     def path(self, d: str, fill: str = LIT, opacity: float = 1.0, filt: str | None = None,
              stroke: str | None = None, sw: float = 0.0, clip: str | None = None, extra: str = "") -> "Part":
@@ -162,8 +165,17 @@ class Part:
         return self
 
     def line(self, pts: list[tuple[float, float]], color: str, width: float, opacity: float = 1.0,
-             filt: str | None = None, clip: str | None = None) -> "Part":
-        return self.path(smooth_path(pts, closed=False), "none", opacity, filt, color, width, clip)
+             filt: str | None = None, clip: str | None = None, dash: tuple[float, float] | None = None) -> "Part":
+        """An open smooth stroke; `dash` = (stitch, gap) draws it as a running stitch (round caps)."""
+        extra = f' stroke-dasharray="{f(dash[0])} {f(dash[1])}"' if dash else ""
+        return self.path(smooth_path(pts, closed=False), "none", opacity, filt, color, width, clip, extra)
+
+    def stitch(self, pts: list[tuple[float, float]], width: float, stitch: float, gap: float,
+               clip: str | None = None, color: str = DETAIL, opacity: float = 0.9, groove: float = 0.4) -> "Part":
+        """Plush seam (round 5): a soft pressed groove (shade, blurred) under a running stitch."""
+        if groove > 0:
+            self.line(pts, SHADE, width * 1.9, groove, self.svg.blur(width * 0.45), clip)
+        return self.line(pts, color, width, opacity, None, clip, (stitch, gap))
 
     def group(self, inner: list[str], clip: str | None = None, opacity: float = 1.0, filt: str | None = None,
               transform: str = "") -> "Part":
@@ -221,14 +233,17 @@ def pack(sizes: list[tuple[int, int]], atlas_w: int, pad: int) -> tuple[list[tup
 
 def write_atlas(svg: Svg, parts: list[tuple[str, Part]], scale: int, atlas_w: int, pad: int) -> dict:
     """Packs parts into svg (at scale x) and returns {id: {region, size, pivot}}."""
-    sizes = [(math.ceil(p.w * scale), math.ceil(p.h * scale)) for _, p in parts]
+    sizes = [(math.ceil((p.w + 2 * p.margin) * scale), math.ceil((p.h + 2 * p.margin) * scale)) for _, p in parts]
     pos, height = pack(sizes, atlas_w, pad)
     svg.h = (height + 63) // 64 * 64
     out = {}
     for (pid, p), (x, y), (w, h) in zip(parts, pos, sizes):
+        m = p.margin
         cell = svg.clip(f"M{x - 1},{y - 1}h{w + 2}v{h + 2}h{-(w + 2)}Z")
-        svg.body.append(f'<g clip-path="{cell}"><g transform="translate({x},{y}) scale({scale})">'
+        inner = f" translate({f(m)},{f(m)})" if m else ""
+        svg.body.append(f'<g clip-path="{cell}"><g transform="translate({x},{y}) scale({scale}){inner}">'
                         + "".join(p.items) + "</g></g>")
-        out[pid] = {"region": [x, y, w, h], "size": [round(p.w, 2), round(p.h, 2)],
-                    "pivot": [round(p.pivot[0], 4), round(p.pivot[1], 4)]}
+        mw, mh = p.w + 2 * m, p.h + 2 * m
+        out[pid] = {"region": [x, y, w, h], "size": [round(mw, 2), round(mh, 2)],
+                    "pivot": [round((p.pivot[0] * p.w + m) / mw, 4), round((p.pivot[1] * p.h + m) / mh, 4)]}
     return out

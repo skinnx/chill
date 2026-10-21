@@ -13,6 +13,7 @@ extends GutTest
 
 const DT := 1.0 / 60.0
 const SHADOW_SHADER := "res://shaders/creature/creature_shadow.gdshader"
+const PROP_SHADOW_SHADER := "res://shaders/fx/contact_shadow.gdshader"
 const FX_SHADER := "res://shaders/creature/creature_fx.gdshader"
 const SEED := 77
 ## Mossling._on_tap: the tap burst is centred this far below the head point (body units).
@@ -145,9 +146,13 @@ func test_near_creatures_stop_growing_at_near_cap() -> void:
 	assert_almost_eq(m.depth, float(ds["min"]), 1e-4, "the far ramp is unchanged")
 
 
-func test_creature_shadow_multiplies_like_prop_shadows() -> void:
+func test_creature_shadow_blends_like_prop_shadows() -> void:
 	var code := (load(SHADOW_SHADER) as Shader).code
-	assert_true(code.contains("blend_mul"), "one family of shadows: multiply")
+	# round 5: one family of shadows, the same blend as fx/contact_shadow (a tint, not a multiply)
+	var prop := (load(PROP_SHADOW_SHADER) as Shader).code
+	for mode: String in ["blend_mix", "blend_mul"]:
+		assert_eq(code.contains(mode), prop.contains(mode), "same blend as the prop shadows: " + mode)
+	assert_true(code.contains("g_sky_mid"), "lavender-leaning shade at golden, like the props")
 	assert_true(code.contains("shadow_tint()"), "same tint as fx/contact_shadow")
 	assert_true(code.contains("cast_offset_k(key_dir(origin))"), "fanned from the light like the props")
 

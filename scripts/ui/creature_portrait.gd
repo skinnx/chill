@@ -103,6 +103,12 @@ func _fit() -> void:
 		if body != null:
 			body.material = _fur_for(k)
 			_crisp_fringe(body, k)
+		# Round 5 product shot: the world's cast shadow follows the hollow's sun (a long golden
+		# streak clipped by its quad in a small well); the studio well paints the toy's own soft
+		# contact shadow on its felt cushion instead (well.gdshader product_sweep).
+		var cast := mossling.get_node_or_null(^"Visual/Shadow") as CanvasItem
+		if cast != null:
+			cast.visible = false
 	if _silhouette != null:
 		_silhouette.position = Vector2.ZERO
 		_silhouette.size = size

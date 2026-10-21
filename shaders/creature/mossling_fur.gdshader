@@ -69,13 +69,13 @@ const vec2 BODY_C = vec2(0.0, 0.5);          // §5.3: squircle centred at (0, 0
 const float INHALE = 0.4;                    // creature.breathe.inhale_fraction (I:E = 1:1.5)
 const float FRINGE_MUL = 2.5;                // creature_rig defaults.fringe_len_mul
 const float FIBRE_PITCH_PX = 3.6;            // §5.6.3: one fibre per 1.2 dp of perimeter
-const float STRAY_SHARE = 0.08;              // §5.6.3: 8 % stray fibres at 1.6x length
+const float STRAY_SHARE = 0.08;              // §5.6.3 felt (round 5 plush uses PLUSH_STRAY)
 const float STRAY_LEN = 1.45;
 const float FRINGE_ALPHA = 0.85;
 // felt grain (local px^-1): fibres ~1.2 px wide x ~4.5 px long; the felt cloud ~9 px blobs
 const vec2 FELT_GRAIN_FREQ = vec2(0.85, 0.22);
 const float FELT_CLOUD_FREQ = 0.11;
-const float FELT_GRAIN_K = 0.75;              // QA r4: grain contrast -25 % on large flat areas
+const float FELT_GRAIN_K = 0.45;              // r5 plush: smooth minky (felt grain -55 %)
 const float WOBBLE_DP = 0.6;                 // ± silhouette wobble per fuzz dp
 const float PILLOW_R = 0.42;                 // bu: depth of the felt "pillow" dome
 const float DOME_N = 0.82;                   // the top half is rounder than the seat (mochi dome)
@@ -104,7 +104,7 @@ const float BOUNCE_K = 0.16;                 // ground bounce on the lower shado
 const float SHEEN_K = 0.10;                  // the felt crown's soft key sheen on the lit side
 const float KEY_Z_DAY = 0.42;                // key elevation toward the viewer at low backlight
                                              // (0.62 lit every front face: no directional form)
-const float LOWER_DARK = 0.09;               // seat-half value drop under the top light
+const float LOWER_DARK = 0.12;               // seat-half value drop under the top light
 const float KEY_Z_BACKLIT = 0.28;            // golden: the low sun still lifts the front a little
 const float SHADE_DARK_BACKLIT = 0.9;        // backlit fronts sit in a luminous shade (L* 75-80)
 const float NIGHT_AMB_LIFT = 0.20;           // night fur stays >= L* 45 (QA r3)
@@ -122,7 +122,7 @@ const float NEAR_ALBEDO = 0.97;
 const float NEAR_RIM = 0.8;                  // r5: the front friend no longer out-glows the focal stone
 const float GLOW_FILL = 0.14;                // golden sky-glow fill on the shade side
 const float RIM_FAR = 0.2;                   // backlit rim on the flank turned away from the sun
-const float RIM_WARM_WHITE = 0.35;           // warm fur: rim colour lifted toward white
+const float RIM_WARM_WHITE = 0.2;            // warm fur: rim colour lifted toward white
 const float SUB_RIM_DARK = 0.15;             // warm fur: darker sub-rim inside the glow
 const vec2 NEAR_DEPTH = vec2(0.9, 1.0);      // depth-scale ramp; > 1.05 = lineup / UI portrait (off)
 // Focal creature (the sun-stone friend, i_light.w < 0): a stronger rim and a warm lift (§2.5).
@@ -151,6 +151,46 @@ const float NESTLE_SPAN = 0.62;              // blades cover |x| < span * w_h / 
 const float EYE_WH_CAP = 1.08;               // eye width follows w_h only up to this
 const float LID_AWAKE = 0.14;                // sleepy eye: upper-lid coverage awake (<= 15 %)
 const float LID_DROWSY = 0.42;               // ... while drifting off
+// ------------------------------------------------------------------ plush (round 5, studio owner)
+// The friends read as premium stuffed toys: a short minky / velboa pile with a directional nap,
+// a stuffed (pillowy) volume, sewn seams that pinch the stuffing, glossy safety eyes, an
+// embroidered mouth and closed eyes, and on a few species a little fabric tag or button.
+const float PLUSH_PILE = 0.62;               // minky pile: the felt fibre fringe shortened to ~62 %
+const float PLUSH_HAZE = 0.28;               // the soft pile halo just outside the outline
+const float PLUSH_STRAY = 0.0;               // no loose strands: minky is dense, not shaggy
+const float CORE_SHADE = 0.2;                // stuffed core shadow on the side turned from the key
+const float PILLOW_HI = 0.09;                // broad soft highlight on the key-facing upper dome
+const float NAP_CRUSH_FREQ = 0.045;          // local px^-1: velvet "crush" patches (~22 px)
+const float NAP_CRUSH_K = 0.045;             // value swing of the crush patches
+const vec2 NAP_MID_FREQ = vec2(0.30, 0.17);  // across x along the nap (~3 px x 6 px, soft)
+const vec2 NAP_FINE_FREQ = vec2(0.95, 0.4);  // fine pile (band-limited: fades in when resolvable)
+const float NAP_STREAK_K = 0.016;
+const float NAP_OUT = 0.55;                  // nap brushed down and out from the crown
+const float BIG_FORM = 0.65;                 // stuffed volume: whole-body ellipsoid tilt of the normal
+const float VELVET_K = 0.10;                 // fabric sheen near grazing on the lit side
+const float VELVET_WHITE = 0.2;              // sheen colour: albedo lifted toward white
+const float GUSSET_BU = 0.042;               // side-gusset seam inset from the body outline (bu)
+const float SEAM_W_PX = 2.6;                 // crease half-width (local px)
+const float SEAM_DARK = 0.14;                // crease value drop (pile parted at the seam)
+const float SEAM_PUFF = 0.12;                // stuffing bulge either side of the seam (lit / shade)
+const float SEAM_JOIN_W = 0.022;             // ear / tail join seam half-width (bu)
+const float SEAM_JOIN_K = 0.65;              // join seams: a soft tuck, never an outline
+const float BELLY_SEAM = 0.75;               // belly panel seam strength (share of SEAM_DARK)
+const float EYE_SOCKET_PX = 3.2;             // fabric pressed round a safety eye
+const float EYE_SOCKET_K = 0.16;
+const float EYE_DOME_DARK = 0.32;            // safety eye: darker crown of the dome
+const float EYE_REFLECT = 0.5;               // the fabric reflected in the lower dome
+const float EYE_GLOSS = 0.22;                // soft glossy bloom round the main highlight
+const float THREAD_FREQ = 1.7;               // embroidery satin threads (local px^-1)
+const float THREAD_K = 0.16;
+const float THREAD_HALO_PX = 2.2;            // pile pressed round embroidered lines
+const float THREAD_HALO_K = 0.12;
+const float DETAIL_CODE = 5.0;               // i_parts.y = tail id + detail / DETAIL_CODE
+const float TAG_Y = 0.2;                     // fabric tag: sewn into the side seam at the seat
+const vec2 TAG_HALF = vec2(0.05, 0.034);
+const float TAG_DROOP = 0.35;
+const float BUTTON_R = 0.058;                // sewn-on button (bu)
+const vec2 BUTTON_C = vec2(0.0, 0.17);
 
 varying vec2 v_local;
 varying flat vec3 v_key;   // xy: key direction in local space (y up); z: light elevation 0..1
@@ -251,6 +291,23 @@ float sd_vesica(vec2 p, float hl, float hw, float tr) {
 	return v - tr;
 }
 
+float sd_rbox(vec2 p, vec2 b, float r) {
+	vec2 q = abs(p) - b + r;
+	return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
+}
+
+// Minky pile (round 5 plush): object-anchored, smooth, band-limited streaks along the nap
+// direction nd (unit), so the fabric never shows quantised cells at any zoom. lp: local px,
+// k: screen px per local px. Returns about -1..1.
+float plush_pile(vec2 lp, vec2 nd, float seed, float k) {
+	vec2 q = vec2(dot(lp, vec2(nd.y, -nd.x)), dot(lp, nd));
+	float wm = smoothstep(0.7, 1.4, k / NAP_MID_FREQ.x);
+	float wf = smoothstep(0.9, 1.8, k / NAP_FINE_FREQ.x);
+	float g = (vnoise(q * NAP_MID_FREQ + seed * 19.0) - 0.5) * wm * 0.6;
+	g += (vnoise(q * NAP_FINE_FREQ + seed * 7.0 + 3.0) - 0.5) * wf * 0.4;
+	return g * 2.0;
+}
+
 float sd_ellipse(vec2 p, vec2 r) {
 	float k0 = length(p / r);
 	float k1 = length(p / (r * r));
@@ -261,6 +318,10 @@ float sd_ellipse(vec2 p, vec2 r) {
 float sd_arc(vec2 p, vec2 sc, float ra, float rb) {
 	p.x = abs(p.x);
 	return ((sc.y * p.x > sc.x * p.y) ? length(p - sc * ra) : abs(length(p) - ra)) - rb;
+}
+
+float edge_soft(float t) {
+	return 1.0 - smoothstep(0.0, 0.6, t);
 }
 
 float luma(vec3 c) {
@@ -366,6 +427,10 @@ void fragment() {
 	float halo = 0.0;              // additive bobble glow (premultiplied, alpha 0)
 	float emit_mask = 0.0;
 	float asym = (fract(seed * 7.31) - 0.5) * 0.12;   // §5.3 ears differ by ±0.06 rad
+	// plush: join seams where a sewn-on ear / tail meets the body (fabric parts only)
+	float d_ear = 1e3;
+	float d_tail = 1e3;
+	int detail_id = int(floor(fract(i_parts.y) * DETAIL_CODE + 0.5));
 
 	// ears ----------------------------------------------------------------
 	if (ear_id > 0) {
@@ -455,13 +520,16 @@ void fragment() {
 			d_e = min(d_e, de);
 		}
 		float k_e = ear_id == 4 ? 0.02 : (ear_id == 2 ? 0.03 : 0.05);
+		d_ear = (ear_id == 1 || ear_id == 3 || ear_id == 6) ? d_e : 1e3;
 		float w = clamp(0.5 + (d - d_e) / (2.0 * BLEND_BU), 0.0, 1.0);
 		alb_part = a_e;
 		w_part = w;
 		fz_part = (ear_id == 4 || ear_id == 5) ? 0.35 : 1.0;
 		fc_part = c_e;
 		fr_part = max(es, 0.08);
-		pr_part = min(PILLOW_R, es * 0.9);
+		// the bevel never exceeds a thin part's half-width: past it the normal flips at the medial
+		// line and the shading stair-steps across the part (r5: brush / leaf parts at 200 %)
+		pr_part = ear_id == 5 ? 0.07 : (ear_id == 3 ? 0.1 : (ear_id == 2 ? 0.06 : min(PILLOW_R, es * 0.9)));
 		d = smin(d, d_e, k_e);
 	}
 
@@ -523,12 +591,14 @@ void fragment() {
 			fz_t = 0.0;
 		}
 		d_t += (1.0 - tvis) * 0.3;
+		d_tail = (tail_id == 1 || tail_id == 3) ? d_t : 1e3;
 		float w = clamp(0.5 + (d - d_t) / (2.0 * BLEND_BU), 0.0, 1.0);
 		alb_part = mix(alb_part, a_t, w);
 		fz_part = mix(fz_part, fz_t, w);
 		fc_part = mix(fc_part, c_t, w);
 		fr_part = mix(fr_part, max(ts, 0.08), w);
-		pr_part = mix(pr_part, tail_id == 2 ? 0.036 : min(PILLOW_R, ts * 0.9), w);   // thin curl: round across its width
+		float pr_t = tail_id == 2 ? 0.036 : (tail_id == 3 ? 0.07 : (tail_id == 4 ? 0.06 : min(PILLOW_R, ts * 0.9)));
+		pr_part = mix(pr_part, pr_t, w);   // thin curl: round across its width
 		w_part = max(w_part, w);
 		d = smin(d, d_t, tail_id == 5 ? 0.015 : 0.04);
 	}
@@ -651,6 +721,30 @@ void fragment() {
 		d = smin(d, d_a, 0.012);
 	}
 
+	// plush detail: a little folded fabric tag sewn into the side seam (facing side, the tail sits
+	// opposite), cream ribbon with a tiny stitched mark; hidden while a turn crosses zero
+	if (detail_id == 1) {
+		float tside = facing >= 0.0 ? 1.0 : -1.0;
+		float tvis_t = smoothstep(0.05, 0.6, abs(facing));
+		vec2 anchor = vec2(tside * rb.x * 0.96, TAG_Y);
+		vec2 tq = rot(ps - anchor, tside * TAG_DROOP);
+		tq.x *= tside;
+		float d_tag = sd_rbox(tq - vec2(TAG_HALF.x * 0.75, 0.0), TAG_HALF, 0.012) + (1.0 - tvis_t) * 0.3;
+		float w = clamp(0.5 + (d - d_tag) / (2.0 * BLEND_BU), 0.0, 1.0);
+		// a fold line near the seam end and a small stitched heart-dot in the cheek colour
+		float fold = 1.0 - smoothstep(0.003, 0.009, abs(tq.x - TAG_HALF.x * 0.18));
+		float mk = 1.0 - smoothstep(0.009, 0.015, length(tq - vec2(TAG_HALF.x * 1.0, 0.0)));
+		vec3 tag_col = mix(u_shine.rgb * 0.97, u_shine.rgb * 0.84, fold);
+		tag_col = mix(tag_col, i_cheek.rgb * 0.92, mk * 0.9);
+		alb_part = mix(alb_part, tag_col, w);
+		fz_part = mix(fz_part, 0.0, w);
+		fc_part = mix(fc_part, anchor, w);
+		fr_part = mix(fr_part, 0.08, w);
+		pr_part = mix(pr_part, 0.018, w);
+		w_part = max(w_part, w);
+		d = min(d, d_tag);
+	}
+
 	// 3. derivatives (before any branch): local gradient via the chain rule (robust to y flips)
 	vec2 dpx = dFdx(p);
 	vec2 dpy = dFdy(p);
@@ -678,7 +772,7 @@ void fragment() {
 	float wob_b = vnoise_px(vec2(ang_b / TAU * n_b / 6.0, 0.5), max(floor(n_b / 6.0), 1.0));
 	float wob = (wob_b - 0.5) * 2.0 * WOBBLE_DP * PX_PER_DP * fuzz_dp * fz;
 	float d_s = d_px - wob;
-	float fringe_px = max(fuzz_dp * FRINGE_MUL * PX_PER_DP * fz, 0.01);
+	float fringe_px = max(fuzz_dp * FRINGE_MUL * PLUSH_PILE * PX_PER_DP * fz, 0.01);
 	// fibres: two anisotropic octaves in (angle * N, radius), body field and part field blended
 	float rad_k = S / 6.0;
 	float curl = (vnoise(vec2(ang_b * 3.0, d_px * 0.35)) - 0.5) * 0.9;     // fibres wave a little
@@ -687,18 +781,18 @@ void fragment() {
 	float fa_p = vnoise_px(vec2(ang_p / TAU * n_p, length(pcp) * rad_k * 0.25), n_p);
 	float fb_p = lod > 0.5 ? 0.5 : vnoise_px(vec2(ang_p / TAU * n_p * 1.7 + 11.0, length(pcp) * rad_k * 0.42), floor(n_p * 1.7));
 	float fib = mix(fa_b * 0.6 + fb_b * 0.4, fa_p * 0.6 + fb_p * 0.4, w_part);
-	fib = smoothstep(0.42, 0.82, fib);
+	fib = smoothstep(0.32, 0.9, fib);           // r5 plush: softer, denser pile (fewer distinct fibres)
 	float cid_b = floor(ang_b / TAU * n_b);
 	float cid_p = floor(ang_p / TAU * n_p);
 	float len_j = 0.55 + 0.45 * h12(vec2(mix(cid_b, cid_p + 101.0, step(0.5, w_part)), 9.0));
-	float stray = lod > 0.5 ? 0.0 : step(1.0 - STRAY_SHARE, h12(vec2(mix(cid_b, cid_p + 101.0, step(0.5, w_part)), 4.0)));
+	float stray = lod > 0.5 ? 0.0 : step(1.0 - PLUSH_STRAY, h12(vec2(mix(cid_b, cid_p + 101.0, step(0.5, w_part)), 4.0)));
 	len_j = mix(len_j, STRAY_LEN, stray);
 	float fringe_t = clamp(d_s / (fringe_px * len_j), 0.0, 1.0);
 	float core = 1.0 - smoothstep(-aa, aa, d_s);
 	float fringe_a = d_s > 0.0 ? fib * (1.0 - fringe_t) * (1.0 - fringe_t) * FRINGE_ALPHA : 0.0;
 	fringe_a *= step(0.02, fz) * mix(BOTTOM_FRINGE, 1.0, smoothstep(-0.95, -0.35, n2.y));
 	// a faint uniform haze in the fibre band reads as felt even where fibres thin out
-	fringe_a = max(fringe_a, (1.0 - smoothstep(0.0, fringe_px * 0.55, d_s)) * 0.16 * step(0.02, fz) * step(0.0, d_s));
+	fringe_a = max(fringe_a, (1.0 - smoothstep(0.0, fringe_px * 0.6, d_s)) * PLUSH_HAZE * step(0.02, fz) * step(0.0, d_s));
 	float cover = clamp(core + fringe_a * (1.0 - core), 0.0, 1.0);
 
 	vec3 halo_rgb = mix(i_accent.rgb, g_accent.rgb, 0.35) * halo;
@@ -762,8 +856,13 @@ void fragment() {
 		float big = pat_id == 1 ? 1.0 : 0.0;
 		float bsize = i_belly.a;
 		vec2 bel_r = vec2(0.62 * rb.x, 0.24) * mix(1.0, 1.0, big) * (0.55 + 0.45 * bsize);
-		float bn = (vnoise(fp * 24.0 + seed * 9.0) - 0.5) * 0.012;
-		float bel = 1.0 - smoothstep(-0.03, 0.03, sd_ellipse(fp - vec2(0.0, 0.27 * (0.8 + 0.2 * bsize)), bel_r) + bn);
+		// plush: the belly is a sewn fabric panel, so its edge is a clean curve with a seam (no
+		// felt wobble) and a much crisper colour hand-over
+		float bn = 0.0;
+		float d_bel = sd_ellipse(fp - vec2(0.0, 0.27 * (0.8 + 0.2 * bsize)), bel_r);
+		// the panel edge melts out toward the eyes (the seam is shown below the mouth only)
+		float bel_w = mix(0.016, 0.06, smoothstep(0.1, 0.42, fp.y));
+		float bel = 1.0 - smoothstep(-bel_w, bel_w, d_bel);
 		if (pat_id == 1) {
 			// big belly = a deliberate "face + tummy" mask (QA r2: a straight edge just over the eyes
 			// read as a seam): two soft lobes over the eyes with a dip between them (a hamster face),
@@ -774,8 +873,9 @@ void fragment() {
 			float d_l = min(sd_ellipse(fp - vec2(-exm * 0.95, ey_m + 0.005), lob_r),
 					sd_ellipse(fp - vec2(exm * 0.95, ey_m + 0.005), lob_r));
 			float d_t = sd_ellipse(fp - vec2(0.0, 0.22), vec2(0.66 * rb.x, 0.26));
-			float d_m = smin(d_l, d_t, 0.10) + bn * 1.5;
-			bel = 1.0 - smoothstep(-0.045, 0.045, d_m);
+			float d_m = smin(d_l, d_t, 0.10);
+			d_bel = d_m;
+			bel = 1.0 - smoothstep(-0.02, 0.02, d_m);
 		}
 		vec3 bel_col = pat_id == 1 ? i_fur2.rgb : i_belly.rgb;
 		alb = mix(alb, bel_col, bel * (pat_id == 1 ? i_fur2.a : 0.55));
@@ -854,23 +954,28 @@ void fragment() {
 			float face_mask = smoothstep(0.08, 0.2, length((fp - vec2(0.0, ey - 0.02)) / vec2(ex + ew + 0.06, 0.18)) - 0.7);
 			alb = mix(alb, i_fur2.rgb, spots * face_mask * (1.0 - bel) * i_fur2.a);
 		}
-		// felt mottling (object anchored) + a fine fibre sheen
-		vec2 dp = ps * S / PX_PER_DP;
-		float mot = (vnoise(ps * 9.0 + seed * 13.0) * 0.05 - 0.025);
-		mot += lod > 0.5 ? 0.0 : (vnoise(ps * 31.0) * 0.03 - 0.015);
-		// felt fibres: short strands whose direction drifts across the body (needle-felt, not a
-		// combed coat: QA r5 one global angle read as rain streaks), two crossing layers
-		float fdir = seed * 6.0 + (vnoise(ps * 2.6 + seed * 5.0) - 0.5) * 3.4;
-		float hair = lod > 0.5 ? 0.0 : ((vnoise(rot(dp, fdir) * vec2(1.6, 0.42)) - 0.5) * 0.6
-				+ (vnoise(rot(dp, fdir + 1.3) * vec2(2.1, 0.5) + 7.0) - 0.5) * 0.4) * 0.04;
+		// plush pile (round 5): minky / velboa with a directional nap, brushed down and out from
+		// the crown. Soft velvet "crush" patches shift the value a little (the pile catches the
+		// light differently where it lies another way), fine streaks run along the nap. All smooth
+		// value noise, band-limited by the screen magnification (never blocky at 200 %).
+		vec2 lpx = ps * S;
+		vec2 nap = normalize(vec2(pcb.x / rb.x * NAP_OUT, -1.0));
+		float crush = vnoise(lpx * NAP_CRUSH_FREQ + seed * 13.0) - 0.5;
+		crush += (vnoise(lpx * NAP_CRUSH_FREQ * 2.3 + seed * 5.0 + 9.0) - 0.5) * 0.5;
+		float mot = crush * NAP_CRUSH_K;
+		float hair = lod > 0.5 ? 0.0 : plush_pile(lpx, nap, seed, k_px) * NAP_STREAK_K;
 		float noise_k = mix(1.0, NIGHT_GRAIN, 1.0 - smoothstep(0.35, 0.8, luma(l_ambient.rgb)));
 		vec3 body_alb = alb * (1.0 + (mot + hair) * noise_k);
-		alb = mix(body_alb, alb_part * (1.0 + mot * 0.8), w_part);
+		alb = mix(body_alb, alb_part * (1.0 + (mot * 0.8 + hair * 0.6) * noise_k), w_part);
 		// fibre tips are lighter (outer band and fringe)
 		float depth_in = clamp(-d_px / (0.35 * S), 0.0, 1.0);
 		float night_k = 1.0 - smoothstep(0.35, 0.8, luma(l_ambient.rgb));
 		float tip_k = mix(1.0, NIGHT_TIP, night_k);
-		float tipband = smoothstep(0.55, 1.0, 1.0 - depth_in) * i_tip.a * smoothstep(-0.85, 0.1, n2.y) * tip_k;
+		// thin parts: n2 flips at their medial line (derivatives are per 2x2 quad, so the flip
+		// stair-steps); the up-facing weight settles to a constant toward the medial line
+		float t_med = smoothstep(0.3, 0.8, clamp(-d / mix(PILLOW_R, pr_part, w_part), 0.0, 1.0)) * w_part;
+		float up_w = mix(smoothstep(-0.85, 0.1, n2.y), 0.5, t_med);
+		float tipband = smoothstep(0.55, 1.0, 1.0 - depth_in) * i_tip.a * up_w * tip_k;
 		vec3 tip_col = mix(alb, mix(i_tip.rgb, alb, w_part * 0.6), 0.85);
 		alb = mix(alb, tip_col, tipband * fz);
 		float in_fringe = 1.0 - core;
@@ -885,8 +990,37 @@ void fragment() {
 		float pr = mix(PILLOW_R, pr_part, w_part);
 		float t = clamp(-d / pr, 0.0, 1.0);
 		float tz = 1.0 - t;
+		tz *= 1.0 - t_med;                                  // thin parts: no flip at the medial line
 		vec3 n3 = normalize(vec3(n2 * tz, sqrt(max(1.0 - tz * tz, 0.0)) + 0.02));
+		// stuffed volume (plush): the whole body bulges like a filled pillow, so the interior is not
+		// flat; the ellipsoid tilt adds a soft core-shadow gradient across the front panel
+		vec2 e_big = qb / vec2(rb.x * 1.08, rb.y * 1.12);
+		n3 = normalize(n3 + vec3(e_big * BIG_FORM * (1.0 - w_part) * (1.0 - 0.5 * edge_soft(t)), 0.0));
+		// sewn seams: the side gusset just inside the outline (upper body and flanks), the belly
+		// panel and the ear / tail joins. Each pinches the stuffing: a soft crease, and the fabric
+		// either side tilts into it (lit on one bank, shaded on the other), so it reads as sewn
+		// volume, never as a drawn line.
+		float g_px = (d_body + GUSSET_BU) * S;
+		// the gusset shows on the flanks (a pillow's pinched edge), fading out over the crown
+		// (and never under a part: it ends softly before an ear / tail / tag joins the body)
+		float seam_mask = (1.0 - w_part) * smoothstep(0.1, 0.32, ps.y) * smoothstep(0.35, 0.8, abs(n2.x))
+				* (1.0 - smoothstep(0.004, 0.04, d_body - d));
+		float s_g = g_px / SEAM_W_PX;
+		float s_b = d_bel * S / (SEAM_W_PX * 0.85);
+		float bel_on = pat_id == 1 ? 1.0 : (bsize > 0.05 ? 1.0 : 0.0);
+		float j_e = (d_body - d_ear) / SEAM_JOIN_W;
+		float j_t = (d_body - d_tail) / SEAM_JOIN_W;
+		float crease = exp(-s_g * s_g) * seam_mask;
+		// the default tummy panel's seam only shows below the mouth (never between the eyes)
+		float bel_low = pat_id == 1 ? 1.0 : smoothstep(ey - 0.1, ey - 0.2, fp.y);
+		crease = max(crease, exp(-s_b * s_b) * BELLY_SEAM * bel_on * bel_low * (1.0 - w_part));
+		crease = max(crease, exp(-j_e * j_e) * step(d, 0.0) * step(d_ear, 0.2) * SEAM_JOIN_K);
+		crease = max(crease, exp(-j_t * j_t) * step(d, 0.0) * step(d_tail, 0.2) * SEAM_JOIN_K);
+		// bank tilt: inside the gusset the panel slopes out into the seam (toward +n2)
+		float bank = -s_g * exp(-s_g * s_g) * 1.65 * seam_mask;
+		float seam_lit = bank * dot(n2, L2);
 		float diff = clamp((dot(n3, L3) + WRAP) / (1.0 + WRAP), 0.0, 1.0);
+		diff = clamp(diff + seam_lit * SEAM_PUFF * (1.0 - l_backlight * 0.5), 0.0, 1.0);
 		float up = smoothstep(0.05, 0.95, ps.y);
 		float ao = 1.0 - smoothstep(0.0, 0.25, ps.y);
 		float dark = 1.0 - smoothstep(0.35, 0.8, luma(l_ambient.rgb));
@@ -912,9 +1046,21 @@ void fragment() {
 		col += alb * l_key.rgb * SHEEN_K * diff * diff * diff * up * (1.0 - 0.7 * l_backlight) * (1.0 - dark);
 		// felt scatters light: a faint warm glow where light turns into shade
 		col += alb * l_key.rgb * amb * 0.05 * diff * (1.0 - diff) * 4.0;
+		// velvet sheen: minky pile lights up toward grazing on the lit side (the brushed nap and
+		// the crush patches modulate it), a soft fabric glow, not a plastic specular
+		float graze = 1.0 - clamp(n3.z, 0.0, 1.0);
+		float vel = graze * graze * (0.25 + 0.75 * smoothstep(-0.2, 0.8, dot(n2, L2))) * (1.0 + crush * 1.5);
+		col += mix(alb, vec3(1.0), VELVET_WHITE) * l_key.rgb * VELVET_K * vel * (1.0 - 0.5 * l_backlight) * (1.0 - dark) * core;
+		col *= 1.0 - SEAM_DARK * crease * (1.0 - 0.4 * dark);
 		col = mix(col, col * l_shadow.rgb * SHADE_K * SHADE_DARK, ao * AO_MAX * CREATURE_AO * (1.0 - 0.6 * w_feet));
 		col += l_key.rgb * KEY_TOP * up * (0.5 + 0.5 * diff) * (1.0 - 0.6 * l_backlight);
 		col *= mix(0.94, 1.03, smoothstep(0.0, 0.6, depth_in));
+		// stuffed volume, product-shot light: a soft core shadow on the far lower side of the body,
+		// a broad pillow highlight on the key-facing dome (fabric, so wide and low, never a spot)
+		float form_l = dot(e_big, L2);
+		col *= 1.0 - CORE_SHADE * smoothstep(0.15, -0.9, form_l) * (1.0 - w_part) * (1.0 - 0.5 * l_backlight) * (1.0 - 0.5 * dark);
+		vec2 hq = e_big - L2 * 0.42 - vec2(0.0, 0.12);
+		col += alb * l_key.rgb * PILLOW_HI * exp(-dot(hq, hq) * 3.0) * (1.0 - w_part) * (1.0 - dark) * (1.0 - 0.7 * l_backlight);
 		// the seat half sits in its own soft occlusion (top-lit felt, value step crown -> base)
 		col *= mix(1.0 - LOWER_DARK * (1.0 - 0.5 * dark), 1.0, smoothstep(0.05, 0.62, ps.y));
 		// backlit (golden hour): the sun is behind, so the face toward us sits in its own shade
@@ -928,7 +1074,7 @@ void fragment() {
 		// rim and backlit peach fuzz (§5.6.6); the bottom edge never lights up
 		float lam = clamp(dot(n2, L2), 0.0, 1.0);
 		float rup = smoothstep(-0.35, 0.75, n2.y);
-		float rim_w = mix(4.5, 9.0, l_backlight);
+		float rim_w = mix(4.0, 7.0, l_backlight);   // r5 plush: a shorter pile glows in a thinner band
 		// thin parts: the rim fades toward the medial line, so it never flips edge to edge
 		// crisp: the band rises steeply at the silhouette and falls off fast inside (QA r3 c3/c1)
 		float band_in = smoothstep(-rim_w, -1.0, d_s);
@@ -988,6 +1134,9 @@ void fragment() {
 		float lash = 0.0;
 		float stroke = 0.0;
 		float lw = LINE_BU * S;
+		vec2 eu = vec2(0.0);          // safety-eye local coords (unit ellipse) of the eye under p
+		float de_min = 1e3;           // px to the nearest open eye (fabric socket)
+		float d_thread = 1e3;         // px to the nearest embroidered line (pressed pile halo)
 		for (int s = -1; s <= 1; s += 2) {
 			float fs = float(s);
 			float far_k = (abs(look) > 0.5 && fs * look < 0.0) ? mix(1.0, FAR_EYE, (abs(look) - 0.5) * 2.0) : 1.0;
@@ -1006,6 +1155,7 @@ void fragment() {
 					da = sd_arc(vec2(aq.x, -aq.y), vec2(sin(1.0), cos(1.0)), ra, LINE_BU * 0.5) * S;
 				}
 				stroke = max(stroke, 1.0 - smoothstep(-aa * 0.7, aa * 0.7, da));
+				d_thread = min(d_thread, da);
 			} else {
 				float open_k = max(1.0 - lid, 0.08);
 				vec2 er = vec2(eww, eww * EYE_ASPECT);
@@ -1013,6 +1163,8 @@ void fragment() {
 				vec2 eq = vec2(ep.x, (ep.y + er.y * 0.35) / open_k - er.y * 0.35);
 				float de = sd_ellipse(eq, er) * S;
 				float e = 1.0 - smoothstep(-aa * 0.8, aa * 0.8, de);
+				if (de < de_min) { eu = eq / er; }
+				de_min = min(de_min, de);
 				// sleepy eye: the upper 40 % is a fur-coloured lid with a soft lash line
 				// relaxed lid: its edge arcs over the eye (convex up), never a flat "bored" cut
 				float ux = eq.x / er.x;
@@ -1048,12 +1200,33 @@ void fragment() {
 		}
 		float cheek_a = (i_cheek.a + 0.25 * happy) * (pat_id == 8 ? 0.55 : 1.0);
 		col = mix(col, i_cheek.rgb * l_ambient.rgb, blush * cheek_a * on_body);
-		// eyes
-		vec3 eye_col = mix(ink, mix(ink, shine_col, 0.12), lift);
+		// safety eyes (plush): the fabric is pressed into a soft socket round each eye, deeper on
+		// the side away from the light; the eye is a glossy dark dome: a darker crown, the lit
+		// fabric reflected in the lower dome, a thin bright fresnel lip at the bottom and a crisp
+		// highlight with a soft gloss bloom (below)
+		vec2 sock_off = -L2 * 0.6;
+		float sock = exp(-max(de_min, 0.0) / EYE_SOCKET_PX) * step(0.0, de_min) * (1.0 - stroke);
+		float sock_side = 0.6 + 0.4 * clamp(dot(normalize(eu + vec2(1e-4)), sock_off), -1.0, 1.0);
+		col *= 1.0 - EYE_SOCKET_K * sock * sock_side * on_body * (1.0 - 0.5 * dark);
+		float er2 = dot(eu, eu);
+		float dome_top = smoothstep(-0.2, 0.9, eu.y);
+		float refl = smoothstep(0.15, 0.85, er2) * smoothstep(0.1, -0.75, eu.y);
+		float lip = smoothstep(0.72, 0.95, er2) * (1.0 - smoothstep(0.95, 1.05, er2)) * smoothstep(-0.2, -0.8, eu.y);
+		vec3 fab = alb * amb * mix(vec3(1.0), l_key.rgb, 0.3);
+		vec3 eye_col = ink * (1.0 - EYE_DOME_DARK * dome_top);
+		eye_col = mix(eye_col, mix(ink, fab, 0.42), refl * EYE_REFLECT + lift * 0.15);
+		eye_col = mix(eye_col, mix(fab, shine_col, 0.4), lip * 0.35);
 		col = mix(col, eye_col, eyes * on_body);
 		col = mix(col, col * mix(vec3(1.0), l_shadow.rgb * SHADE_K, 0.08) * 0.9, lash * on_body);
+		// gloss bloom: a soft sheen round the main highlight (the dome is glossy, the fabric is not)
+		vec2 gq = eu - (eye_id > 0.5 ? vec2(0.25 * hl_side, 0.05) : vec2(0.3 * hl_side, 0.36));
+		float gloss = exp(-dot(gq, gq) * 5.0) * eyes * smoothstep(0.85, 0.5, lid);
+		col = mix(col, shine_col, gloss * EYE_GLOSS * on_body);
 		col = mix(col, shine_col, shine * on_body);
-		col = mix(col, ink, stroke * on_body);
+		// embroidered closed eyes: satin-stitch threads across the stroke catch the light
+		float thr = 1.0 - THREAD_K * smoothstep(1.4, 2.4, k_px)
+				* (0.5 + 0.5 * sin(dot(ps * S, vec2(0.8, 0.6)) * THREAD_FREQ * TAU / 3.0));
+		col = mix(col, ink * thr, stroke * on_body);
 		// mouth: 1 smile, 2 "w"; a happy creature opens a tiny smile
 		float mouth_id = i_face.w;
 		vec2 mp = ps - vec2(lx * 1.1, ey - 0.075);
@@ -1066,14 +1239,19 @@ void fragment() {
 		} else if (mouth_id > 1.5) {
 			float mr = 0.026;
 			vec2 mq = vec2(abs(mp.x) - mr, mp.y + mr * 0.15);
-			float dm = sd_arc(vec2(mq.x, -mq.y + mr * 0.2), vec2(sin(1.25), cos(1.25)), mr, LINE_BU * 0.4) * S;
+			float dm = sd_arc(vec2(mq.x, -mq.y + mr * 0.2), vec2(sin(1.25), cos(1.25)), mr, LINE_BU * 0.45) * S;
 			mline = 1.0 - smoothstep(-aa * 0.7, aa * 0.7, dm);
+			d_thread = min(d_thread, dm);
 		} else if (mouth_id > 0.5) {
 			float mr = 0.035;
-			float dm = sd_arc(vec2(mp.x, -mp.y + mr * 0.55), vec2(sin(0.95), cos(0.95)), mr, LINE_BU * 0.4) * S;
+			float dm = sd_arc(vec2(mp.x, -mp.y + mr * 0.55), vec2(sin(0.95), cos(0.95)), mr, LINE_BU * 0.45) * S;
 			mline = 1.0 - smoothstep(-aa * 0.7, aa * 0.7, dm);
+			d_thread = min(d_thread, dm);
 		}
-		col = mix(col, ink, mline * 0.85 * on_body);
+		// embroidered mouth: the same satin thread, and the pile pressed round every stitched line
+		col = mix(col, ink * thr, mline * 0.85 * on_body);
+		float halo_t = exp(-max(d_thread, 0.0) / THREAD_HALO_PX) * step(0.0, d_thread) * (1.0 - stroke) * (1.0 - mline);
+		col *= 1.0 - THREAD_HALO_K * halo_t * on_body * (1.0 - 0.5 * dark);
 		vec3 tongue = mix(ink, i_cheek.rgb * l_ambient.rgb, smoothstep(0.0, -0.025, mp.y));
 		col = mix(col, tongue, mfill * on_body);
 		// nibble: a little clover held in the mouth (a stem to a three-lobed leaf on the facing
@@ -1096,6 +1274,30 @@ void fragment() {
 			vec3 leaf_c = u_leaf.rgb * l_ambient.rgb * mix(1.0, 0.82, ledge);
 			leaf_c += l_key.rgb * l_ambient.rgb * 0.12 * smoothstep(0.0, 0.03, dot(ps - lc, vec2(-side, 1.0)));
 			col = mix(col, leaf_c, lcov);
+		}
+
+		// sewn-on button (detail 2): a small domed button in the accent colour, a rim, two holes
+		// and the cross of thread holding it, with a soft contact shade on the fabric under it
+		if (detail_id == 2) {
+			vec2 bq = ps - (BUTTON_C + vec2(lx * 0.8 + (fract(seed * 5.3) - 0.5) * 0.06, 0.0));
+			float db = (length(bq) - BUTTON_R) * S;
+			float bcov = (1.0 - smoothstep(-aa * 0.8, aa * 0.8, db)) * on_body;
+			float bsh = exp(-max(length(bq + L2 * BUTTON_R * 0.35) / BUTTON_R - 1.0, 0.0) * 5.0) * (1.0 - bcov);
+			col *= 1.0 - 0.16 * bsh * on_body;
+			vec2 bu = bq / BUTTON_R;
+			float bl = clamp(dot(normalize(vec3(bu, 1.2)), L3), 0.0, 1.0);
+			vec3 bcol = i_accent.rgb * amb * (0.72 + 0.4 * bl);
+			float rim_b = smoothstep(0.62, 0.78, length(bu)) * (1.0 - smoothstep(0.9, 1.0, length(bu)));
+			bcol *= 1.0 - 0.12 * (1.0 - smoothstep(0.55, 0.7, length(bu))) + 0.1 * rim_b;
+			float holes = 0.0;
+			for (int k = -1; k <= 1; k += 2) {
+				holes = max(holes, 1.0 - smoothstep(0.14, 0.2, length(bu - vec2(float(k) * 0.26, 0.0))));
+			}
+			float thread_b = (1.0 - smoothstep(0.06, 0.11, abs(bu.y))) * (1.0 - step(0.26, abs(bu.x)));
+			bcol = mix(bcol, bcol * 0.45, holes);
+			bcol = mix(bcol, u_shine.rgb * amb * 0.92, thread_b);
+			bcol += shine_col * 0.35 * exp(-dot(bu - vec2(0.3 * hl_side, 0.38), bu - vec2(0.3 * hl_side, 0.38)) * 9.0);
+			col = mix(col, bcol, bcov);
 		}
 
 		// 10. finish: grain anchored to the creature + TPDF dither; premultiplied output + halo

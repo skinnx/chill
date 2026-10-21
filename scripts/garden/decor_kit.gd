@@ -28,6 +28,15 @@ const TUBE_PARAMS: Array[StringName] = [&"i_tube0", &"i_tube1", &"i_tube2", &"i_
 	&"i_tube6", &"i_tube7", &"i_tube8", &"i_tube9"]
 ## prop_tone i_fx: x tap tint, y squash, z rim on, w ground cover.
 const FX_REST := Vector4(0.0, 1.0, 1.0, 0.0)
+## Round 5 (plush play-set): how much of the stuffed-felt look (inflation shading, pile, fuzzy
+## edge) each décor material takes in decor_stamp.gdshader. Everything is felt / minky by default;
+## glass, the lantern light and the glazed chime tubes stay smooth and crisp.
+const PLUSH_DEFAULT := 1.0
+const PLUSH_BY_MATERIAL: Dictionary = {
+	"lantern_jar": 0.2,
+	"lantern_light": 0.0,
+	"chime_ceramic": 0.4,
+}
 
 var parts: Dictionary = {}
 var layout: Dictionary = {}
@@ -80,7 +89,8 @@ func release() -> void:
 	LampRegistry.unbind_material(stamp_material)
 
 
-## decor_lut: rows 1-3 = material lit / shade / detail by column (row 0 unused).
+## decor_lut: row 0 r = plush amount (PLUSH_BY_MATERIAL), rows 1-3 = material lit / shade / detail
+## by column.
 func _build_lut() -> Image:
 	var ids: Array = _mats.keys()
 	ids.sort()
@@ -88,6 +98,8 @@ func _build_lut() -> Image:
 	for j in ids.size():
 		_mat_index[String(ids[j])] = j
 		var m: Dictionary = _mats[ids[j]]
+		var plush := float(PLUSH_BY_MATERIAL.get(String(ids[j]), PLUSH_DEFAULT))
+		img.set_pixel(j, 0, Color(plush, 0.0, 0.0, 1.0))
 		img.set_pixel(j, 1, Color.html(String(m.get("lit", "#CCCCCC"))))
 		img.set_pixel(j, 2, Color.html(String(m.get("shade", "#999999"))))
 		img.set_pixel(j, 3, Color.html(String(m.get("detail", "#EEEEEE"))))

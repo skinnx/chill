@@ -151,8 +151,9 @@ func static_params(species_id: StringName, seed01: float) -> Dictionary:
 	out[I_EYE] = eye_ink(species_id, _col(c, "eye", float(eye.get("size", defaults.get("eye_size", 0.2)))))
 	out[I_BODY] = Vector4(float(body.get("w_h", 1.0)), float(body.get("squircle_n", defaults.get("squircle_n", 2.4))),
 		body_px(species_id), float(defaults.get("bottom_flatten_n_add", 1.2)))
-	out[I_PARTS] = Vector4(float(ear.get("id", 0)), float(tail.get("id", 0)), float(ant.get("id", 0)),
-		float(pat.get("id", 0)))
+	# i_parts.y also carries the plush detail (tag / button) in its fraction: tail + detail / code
+	var tail_code := float(tail.get("id", 0)) + float(plush_detail_id(species_id)) / plush_detail_code()
+	out[I_PARTS] = Vector4(float(ear.get("id", 0)), tail_code, float(ant.get("id", 0)), float(pat.get("id", 0)))
 	out[I_PART_P] = Vector4(float(ear.get("size", 0.0)), float(ear.get("spread", 0.0)), float(tail.get("size", 0.0)),
 		float(ant.get("length", 0.0)))
 	out[I_FACE] = Vector4(float(eye.get("id", 0)), float(eye.get("spacing", defaults.get("eye_spacing", 0.4))),
@@ -176,6 +177,18 @@ func eye_ink(species_id: StringName, base: Color) -> Color:
 	var dh := wrapf(fur.ok_hsl_h - hue, -0.5, 0.5)
 	var out := Color.from_ok_hsl(wrapf(hue + dh * tint, 0.0, 1.0), base.ok_hsl_s, maxf(l, base.ok_hsl_l), base.a)
 	return out
+
+
+## Plush detail id (creature_rig.json view.plush: 0 none, 1 fabric tag, 2 sewn-on button).
+func plush_detail_id(species_id: StringName) -> int:
+	var pl: Dictionary = view().get("plush", {})
+	var details: Dictionary = pl.get("details", {})
+	var ids: Dictionary = pl.get("detail_ids", {})
+	return int(ids.get(String(details.get(String(species_id), "none")), 0))
+
+
+func plush_detail_code() -> float:
+	return maxf(float((view().get("plush", {}) as Dictionary).get("detail_code", 5.0)), 1.0)
 
 
 ## Grass nestle at a spot: 0 on props (sun stone, stump ...), 1 on the meadow.

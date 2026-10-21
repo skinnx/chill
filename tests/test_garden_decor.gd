@@ -180,3 +180,19 @@ func test_mid_garden_left_bed_is_two_masses() -> void:
 			right += 1
 	assert_eq(left + right, 8, "bed_2 is about 30 % lighter than round 3 (12)")
 	assert_true(left >= 3 and right >= 3, "two masses")
+
+
+## Round 5 (plush play-set): every décor material is stuffed felt in decor_stamp.gdshader (LUT row
+## 0) except glass, the lantern light and the glazed chime tubes, which stay smooth.
+func test_plush_amount_per_material() -> void:
+	var kit := DecorKit.new(c)
+	var lut := (kit.stamp_material.get_shader_parameter(&"decor_lut") as Texture2D).get_image()
+	var ids: Array = (c.palettes["materials"] as Dictionary).keys()
+	ids.sort()
+	for j in ids.size():
+		var id := String(ids[j])
+		var want := float(DecorKit.PLUSH_BY_MATERIAL.get(id, DecorKit.PLUSH_DEFAULT))
+		assert_almost_eq(lut.get_pixel(j, 0).r, want, 1e-3, "plush amount of %s" % id)
+	assert_true(float(DecorKit.PLUSH_BY_MATERIAL["lantern_light"]) < 0.01, "the lantern light is not felt")
+	assert_eq(DecorKit.PLUSH_DEFAULT, 1.0, "felt by default")
+	kit.release()

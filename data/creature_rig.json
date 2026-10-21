@@ -1320,6 +1320,20 @@
 			],
 			"rim": 0.5,
 			"elevation": 0.8
+		},
+		"plush": {
+			"doc": "Round 5 (studio owner): the friends read as premium stuffed toys. detail = a tasteful sewn-on extra on a few species only; the shader receives it as i_parts.y = tail id + detail_id / detail_code (keeps the 16 instance-uniform budget).",
+			"detail_ids": {
+				"none": 0,
+				"tag": 1,
+				"button": 2
+			},
+			"detail_code": 5.0,
+			"details": {
+				"puffmoss": "tag",
+				"buttonbud": "button",
+				"moonpuff": "tag"
+			}
 		}
 	}
 }

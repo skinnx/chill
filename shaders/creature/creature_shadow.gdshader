@@ -5,16 +5,17 @@
 //   2. cast ellipse pushed away from the light: offset = cast_offset_k(key) x height / 2, i.e.
 //      2.5x long toward the viewer at golden hour, darker with backlight;
 //   3. a = max(core, cast) * g_shadow_alpha * (1 - 0.6 hop) * (1 - 0.4 g_rain);
-//   4. round 4: MULTIPLIES the ground like the prop shadows (fx/contact_shadow: a luminance-
-//      normalised world_light shadow_tint(), desaturated with backlight), so a creature's shadow
-//      darkens the meadow under it and keeps its hue exactly as a stump's or a stone's does.
+//   4. round 5: a TINT like the prop shadows again (fx/contact_shadow r5: the r4 multiply made
+//      golden shadows near-black brown holes): mix(ground, shade, alpha) with the shade the shadow
+//      token leaning toward sky_mid with backlight (lavender at golden), its alpha capped, so a
+//      creature's shadow and a stump's are one soft family and never drop below ~L* 38.
 // Batching (Art Bible §4.19, <= 100 draw calls): the quad's rect is in body units (x in body
 // widths, y in body heights) and the node scale carries the body size in px; the per-shadow state
 // rides on one instance uniform and the node modulate stays white (the GLES3 canvas renderer
 // breaks a batch on any modulate change, never on instance uniforms), so every meadow shadow,
 // drawn consecutively from the layer's shadow host, shares one batch.
 shader_type canvas_item;
-render_mode blend_mul, unshaded;
+render_mode blend_mix, unshaded;
 
 #include "res://shaders/inc/world_light.gdshaderinc"
 #include "res://shaders/inc/finish.gdshaderinc"
@@ -29,10 +30,14 @@ const float OCC_W = 0.40;          // tight occlusion right under the body
 const float OCC_H = 0.05;
 const float OCC_SOFT_PX = 7.0;
 const float RAIN_FADE = 0.4;
-// fx/contact_shadow mul_luma / mul_gain / mul_max (keep in sync: one family of shadows)
-const float MUL_LUMA = 0.40;
-const float MUL_GAIN = 1.35;
-const float MUL_MAX = 0.85;
+// fx/contact_shadow shade_luma / sky_mix_backlit / mix_gain / mix_max / backlit_max (keep in
+// sync: one family of shadows)
+const float SHADE_LUMA = 0.30;
+const float SKY_MIX_BACKLIT = 0.30;
+const float MIX_GAIN = 2.1;
+const float MIX_MAX = 0.55;
+const float BACKLIT_MAX = 0.50;
+const float GROUND_REL = 0.62;     // shade luma cap relative to the palette ground (night)
 
 // Lineup only (scenes/creatures/lineup.tscn): caps the cast offset (canvas px) so a long
 // golden shadow ends inside its own cell and never reads as the next row's shadow pointing up
@@ -97,8 +102,14 @@ void fragment() {
 	if (a < 0.002) {
 		discard;
 	}
-	vec3 tint = shadow_tint();
-	vec3 target = clamp(tint / max(wl_luma(tint), 1e-3) * MUL_LUMA, 0.0, 1.0);
-	vec3 m = mix(vec3(1.0), target, clamp(a * MUL_GAIN, 0.0, MUL_MAX));
-	COLOR = vec4(m + tpdf(FRAGCOORD.xy), 1.0);
+	float bl = g_backlight * (1.0 - g_lights);
+	vec3 tint = mix(shadow_tint(), g_sky_mid.rgb, SKY_MIX_BACKLIT * bl);
+	// never lighter than the ground it falls on (the night meadow is far darker than the day
+	// shade luma: a fixed luma painted a bright blue disc under every friend at night)
+	float sl = SHADE_LUMA * mix(1.0, 1.25, bl);
+	float night = 1.0 - smoothstep(0.35, 0.8, wl_luma(g_ambient.rgb));
+	sl = mix(sl, min(sl, wl_luma(g_ground_front.rgb) * GROUND_REL), night);
+	vec3 shade = clamp(tint / max(wl_luma(tint), 1e-3) * sl, 0.0, 1.0);
+	float alpha = clamp(a * MIX_GAIN, 0.0, mix(MIX_MAX, BACKLIT_MAX, bl));
+	COLOR = vec4(shade + tpdf(FRAGCOORD.xy), clamp(alpha + tpdf(FRAGCOORD.xy + 3.1), 0.0, 1.0));
 }
