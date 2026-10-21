@@ -28,11 +28,19 @@ const DEW_TEXT_X := 120.0
 const DEW_PAD_R := 42.0
 const DEW_W_MIN := 264.0
 const DEW_W_MAX := 420.0
+## The chips are a fixed 40 dp tall: their text stops growing at 130 % (Art Bible §9.1 dock rule,
+## §8.5 HUD fallback); the numerals still scale with the setting up to that cap.
+const TEXT_SCALE_CAP := 1.3
+## The 66 px numerals fill the 120 px chip already; they may grow 15 % at most.
+const NUMERAL_SCALE_CAP := 1.15
 ## Time chip label peek: widens leftward to 408 px (x 480 at the 1080 frame).
 const PEEK_W := 408.0
 const PEEK_LABEL_PAD := 36.0
 const BADGE_PX := 48.0
 const BADGE_ICON_PX := 36.0
+const Z_BADGE := 1
+const Z_ICONS := 2
+const Z_LABELS := 3
 const PHASE_ICONS := {&"dawn": &"dawn", &"day": &"sun", &"golden": &"golden", &"dusk": &"dusk", &"night": &"moon"}
 const WEATHER_ICONS := {&"breeze": &"breeze", &"rain": &"rain"}
 const PHASE_KEYS := {&"dawn": "TIME_DAWN", &"day": "TIME_DAY", &"golden": "TIME_GOLDEN", &"dusk": "TIME_DUSK",
@@ -63,6 +71,7 @@ var _phase: StringName = &""
 var _weather: StringName = &""
 var _ambient_icon: bool = false
 var _screen: Vector2 = Vector2(1080, 1920)
+var _atlas: Dictionary = {}
 var _safe_top: float = 0.0
 
 
@@ -89,6 +98,8 @@ func _ready() -> void:
 
 
 func _notification(what: int) -> void:
+	if what == NOTIFICATION_THEME_CHANGED and _dew_label != null:
+		_cap_text.call_deferred()
 	if what == NOTIFICATION_TRANSLATION_CHANGED and _time_label != null:
 		_time_label.text = _peek_text()
 		if _dew_label != null and _dew_shown >= 0:
@@ -108,6 +119,7 @@ func layout(screen: Vector2, safe_top: float) -> void:
 	var time_w := CHIP_H + _peek_w
 	dew_chip.position = Vector2(w - SIDE - dew_w if left_handed else SIDE, y)
 	dew_chip.size = Vector2(dew_w, CHIP_H)
+	_dew_label.size = Vector2(dew_w - DEW_TEXT_X - DEW_PAD_R * 0.5, CHIP_H)
 	time_chip.position = Vector2(time_x if left_handed else time_x - _peek_w, y)
 	time_chip.size = Vector2(time_w, CHIP_H)
 	var icon_x := 0.0 if left_handed else _peek_w
@@ -129,7 +141,7 @@ func layout(screen: Vector2, safe_top: float) -> void:
 ## Ambient watch: the eye shows its closed-lid variant (Art Bible §9.3).
 func set_ambient_icon(on: bool) -> void:
 	_ambient_icon = on
-	_eye_icon.texture = Icons.texture(&"watch_closed" if on else &"watch", ICON_PX)
+	_eye_icon.texture = _icon(&"watch_closed" if on else &"watch", ICON_PX)
 
 
 ## Expands the time chip with the phase or weather label for ui label_peek_hold (QA: forever).
@@ -177,13 +189,24 @@ func _set_time(phase: StringName, weather: StringName, announce: bool) -> void:
 	_phase = phase
 	_weather = weather
 	var icon: StringName = PHASE_ICONS.get(phase, &"sun")
-	_time_icon.texture = Icons.texture(icon, ICON_PX)
+	_time_icon.texture = _icon(icon, ICON_PX)
 	var wx: StringName = WEATHER_ICONS.get(weather, &"")
 	_badge.visible = wx != &""
 	if wx != &"":
-		_badge_icon.texture = Icons.texture(wx, BADGE_ICON_PX)
+		_badge_icon.texture = _icon(wx, BADGE_ICON_PX)
 	if announce and changed and is_inside_tree():
 		peek()
+
+
+func _cap_text() -> void:
+	for pair: Array in [[_dew_label, ThemeBuilder.SIZE_HUD, NUMERAL_SCALE_CAP], [_time_label, ThemeBuilder.SIZE_LABEL,
+			TEXT_SCALE_CAP]]:
+		var l: Label = pair[0]
+		var cap := roundi(float(pair[1]) * float(pair[2]))
+		l.remove_theme_font_size_override(&"font_size")
+		if l.get_theme_font_size(&"font_size") > cap:
+			l.add_theme_font_size_override(&"font_size", cap)
+	relayout()
 
 
 # ------------------------------------------------------------------ dew counter
@@ -260,14 +283,37 @@ func dew_target_point() -> Vector2:
 
 # ------------------------------------------------------------------ build
 
+## Every top-bar icon comes from one atlas and is lifted to z 2 (glass at z 0, the weather badge
+## plate at z 1, labels at z 3), so the three glass chips cost one draw each and all icons and all
+## labels batch (Art Bible §4.19 budget).
+func _icon(name: StringName, px: float) -> Texture2D:
+	if _atlas.is_empty():
+		var entries: Array = [[&"dew", ICON_PX, false], [&"watch", ICON_PX, false], [&"watch_closed", ICON_PX, false]]
+		for k: StringName in PHASE_ICONS:
+			entries.append([PHASE_ICONS[k], ICON_PX, false])
+		for k: StringName in WEATHER_ICONS:
+			entries.append([WEATHER_ICONS[k], BADGE_ICON_PX, false])
+		_atlas = Icons.atlas(entries)
+	var t: Variant = _atlas.get(Icons.atlas_key(name, px))
+	return t if t is Texture2D else Icons.texture(name, px)
+
+
+func _icon_rect(name: StringName, px: float) -> TextureRect:
+	var r := Icons.rect(name, px)
+	r.texture = _icon(name, px)
+	r.z_index = Z_ICONS
+	return r
+
+
 func _build_dew() -> void:
 	dew_chip = GlassPanel.new()
 	dew_chip.name = "DewChip"
 	add_child(dew_chip)
-	_dew_icon = Icons.rect(&"dew", ICON_PX)
+	_dew_icon = _icon_rect(&"dew", ICON_PX)
 	_dew_icon.position = Vector2(DEW_ICON_X, (CHIP_H - ICON_PX) * 0.5)
 	dew_chip.add_child(_dew_icon)
 	_dew_label = Label.new()
+	_dew_label.z_index = Z_LABELS
 	_dew_label.theme_type_variation = &"HudNumeral"
 	_dew_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_dew_label.position = Vector2(DEW_TEXT_X, 0.0)
@@ -283,22 +329,24 @@ func _build_time() -> void:
 	time_chip.clip_contents = false
 	add_child(time_chip)
 	_time_label = Label.new()
+	_time_label.z_index = Z_LABELS
 	_time_label.theme_type_variation = &"StrongLabel"
 	_time_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_time_label.clip_text = true
 	_time_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_time_label.visible = false
 	time_chip.add_child(_time_label)
-	_time_icon = Icons.rect(&"sun", ICON_PX)
+	_time_icon = _icon_rect(&"sun", ICON_PX)
 	time_chip.add_child(_time_icon)
 	_badge = Control.new()
+	_badge.z_index = Z_BADGE
 	_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_badge.size = Vector2(BADGE_PX, BADGE_PX)
 	_badge.draw.connect(func() -> void:
 		_badge.draw_style_box(UiTokens.fill_box(UiTokens.color(&"surface_hi"), BADGE_PX * 0.5, UiTokens.E1),
 				Rect2(Vector2.ZERO, Vector2(BADGE_PX, BADGE_PX))))
 	time_chip.add_child(_badge)
-	_badge_icon = Icons.rect(&"breeze", BADGE_ICON_PX)
+	_badge_icon = _icon_rect(&"breeze", BADGE_ICON_PX)
 	_badge_icon.position = Vector2((BADGE_PX - BADGE_ICON_PX) * 0.5, (BADGE_PX - BADGE_ICON_PX) * 0.5)
 	_badge.add_child(_badge_icon)
 
@@ -312,7 +360,7 @@ func _build_eye() -> void:
 	add_child(eye)
 	_eye_glass = GlassPanel.new()
 	eye.add_child(_eye_glass)
-	_eye_icon = Icons.rect(&"watch", ICON_PX)
+	_eye_icon = _icon_rect(&"watch", ICON_PX)
 	_eye_icon.position = Vector2((CHIP_H - ICON_PX) * 0.5, (CHIP_H - ICON_PX) * 0.5)
 	_eye_glass.add_child(_eye_icon)
 	PressFeedback.attach(eye)

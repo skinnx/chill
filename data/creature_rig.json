@@ -1287,8 +1287,8 @@
 		"lamp": {
 			"doc": "round 2: lantern light on creatures (i_light) - a body stands out of the pool, so it catches a lamp up to reach_mul x the pool radius; weight = peak x intensity x (1 - q)^falloff_pow",
 			"reach_mul": 2.2,
-			"peak": 0.5,
-			"falloff_pow": 1.6
+			"peak": 0.6,
+			"falloff_pow": 1.3
 		}
 	}
 }

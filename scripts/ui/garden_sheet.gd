@@ -112,8 +112,8 @@ func _item_card(id: StringName, d: Dictionary, flower: bool) -> Control:
 	row2.add_theme_constant_override(&"separation", 18)
 	row2.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var chip := _price_chip(price, affordable or maxed)
-	if not maxed:
-		row2.add_child(chip)
+	row2.add_child(chip)
+	chip.visible = not maxed
 	if flower:
 		row2.add_child(_drops(float(d.get("dew_per_hour", 0.0))))
 	info.add_child(row2)
@@ -243,7 +243,8 @@ func _loved_line(item: StringName) -> String:
 			if l is Dictionary and String((l as Dictionary).get("item", "")) == String(item):
 				likes = true
 		for r: Variant in s.get("requires", []):
-			if (r is Dictionary and String((r as Dictionary).get("item", "")) == String(item)) or String(r) == String(item):
+			var rid: String = String((r as Dictionary).get("item", "")) if r is Dictionary else str(r)
+			if rid == String(item):
 				likes = true
 		if not likes:
 			continue

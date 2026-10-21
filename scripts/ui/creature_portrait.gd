@@ -94,6 +94,14 @@ func _fit() -> void:
 		(_silhouette.material as ShaderMaterial).set_shader_parameter(&"u_size", size)
 
 
+## Frees the shared rig and materials (HUD exit).
+static func release_shared() -> void:
+	_rig = null
+	_fur = null
+	_shadow = null
+	_fx = {}
+
+
 static func _ensure_rig() -> void:
 	if _rig != null:
 		return

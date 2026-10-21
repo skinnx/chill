@@ -17,6 +17,8 @@ uniform float u_veil_sky = 0.42;        // how much of the UI surface veils the 
 uniform float u_veil_ground = 0.3;      // ... and the meadow part
 uniform float u_horizon = 0.6;          // horizon line (fraction of the height)
 uniform float u_ground_y = 0.84;        // centre of the contact pool (fraction of the height)
+uniform float u_glow = 0.55;            // night lantern pool strength (x g_lights)
+uniform float u_glow_y = 0.58;          // its centre (fraction of the height)
 
 varying vec2 v_local;
 
@@ -48,6 +50,12 @@ void fragment() {
 	vec2 q = (uv - vec2(0.5, u_ground_y)) / vec2(0.34, 0.07);
 	float pool = (1.0 - smoothstep(0.4, 1.0, length(q))) * 0.22;
 	c = mix(c, g_shadow.rgb * c, pool);
+	// After dark the window keeps a small lantern-warm pool behind the subject (g_lights is the
+	// palette's lantern level), so a night-lit friend or flower reads as a silhouette against light
+	// instead of dark-on-dark.
+	vec2 g = (uv - vec2(0.5, u_glow_y)) / vec2(0.42, 0.36);
+	float glow = (1.0 - smoothstep(0.0, 1.0, length(g))) * g_lights * u_glow;
+	c = mix(c, g_glow.rgb, glow);
 	c = finish(c, v_local / PX_PER_DP, FRAGCOORD.xy, GRAIN_GLASS);
 	COLOR = vec4(c, cov * COLOR.a);
 }

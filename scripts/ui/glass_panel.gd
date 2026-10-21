@@ -1,8 +1,9 @@
 class_name GlassPanel
 extends Control
-## A glass surface (Art Bible §4.17, §9.2 C7): the elevation shadow (StyleBoxFlat with a clear
-## fill, drawn by this Control) plus an internal full-rect ColorRect running glass_faux (HUD chips,
-## dock, toasts) or glass_live (the one open sheet). Children added to the panel draw on top.
+## A glass surface (Art Bible §4.17, §9.2 C7): an internal ColorRect running glass_faux (HUD
+## chips, dock, toasts) or glass_live (the one open sheet), grown on every side so the same draw
+## also paints the panel's elevation shadow (e1-e3 in ink; one draw call per surface instead of a
+## StyleBoxFlat shadow + an overlay). Children added to the panel draw on top.
 ##
 ## Reduce Transparency (X1) turns every glass opaque (fill 1.0) and the live glass into faux; the
 ## live glass also falls back to faux on a degraded quality tier (FrameGovernor, §4.17 governor).
@@ -37,7 +38,6 @@ var live: bool = false:
 
 var _glass: ColorRect
 var _mat: ShaderMaterial
-var _shadow: StyleBoxFlat
 
 
 func _init() -> void:
@@ -46,7 +46,6 @@ func _init() -> void:
 	_glass.name = "Glass"
 	_glass.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_glass.color = Color.WHITE
-	_glass.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(_glass, false, Node.INTERNAL_MODE_FRONT)
 	resized.connect(_refresh_shape)
 
@@ -55,11 +54,6 @@ func _ready() -> void:
 	_refresh_material()
 	Settings.changed.connect(_on_glass_setting)
 	FrameGovernor.tier_changed.connect(func(_t: int) -> void: _refresh_material())
-
-
-func _draw() -> void:
-	if _shadow != null and elevation > UiTokens.E0:
-		draw_style_box(_shadow, Rect2(Vector2.ZERO, size))
 
 
 ## The effective corner radius in px.
@@ -103,11 +97,18 @@ func _refresh_material() -> void:
 
 func _refresh_shape() -> void:
 	var r := corner_px()
-	_shadow = UiTokens.shadow_box(r, elevation)
+	var shape := UiTokens.ELEVATION_SHAPE[clampi(elevation, 0, UiTokens.ELEVATION_SHAPE.size() - 1)]
+	var margin := ceilf(shape.x + shape.y) if elevation > UiTokens.E0 else 0.0
+	_glass.position = -Vector2(margin, margin)
+	_glass.size = size + Vector2(margin, margin) * 2.0
 	if _mat != null:
 		_mat.set_shader_parameter(&"u_size", size)
 		_mat.set_shader_parameter(&"u_radius", r)
-	queue_redraw()
+		_mat.set_shader_parameter(&"u_margin", margin)
+		_mat.set_shader_parameter(&"u_shadow_alpha",
+				UiTokens.alpha(StringName("shadow_e%d" % elevation)) if elevation > UiTokens.E0 else 0.0)
+		_mat.set_shader_parameter(&"u_shadow_blur", shape.x)
+		_mat.set_shader_parameter(&"u_shadow_dy", shape.y)
 
 
 func _on_glass_setting(key: StringName, _value: Variant) -> void:

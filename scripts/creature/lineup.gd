@@ -25,6 +25,11 @@ const COLUMNS := 4
 ## Fraction of a cell the tallest creature may fill.
 const FILL := 0.62
 const LABEL_GAP_PX := 18.0
+## Tallest cell height as a multiple of its width (keeps close-ups large and centred).
+const MAX_CELL_ASPECT := 1.5
+## Fraction of a cell the widest creature (body + tail / ears allowance) may fill.
+const FILL_W := 0.78
+const WIDTH_PAD_BU := 0.5
 
 var _rig: MosslingRig
 var _mosslings: Array[Mossling] = []
@@ -66,10 +71,16 @@ func _ready() -> void:
 	var rows_per := ceili(float(ids.size()) / float(cols))
 	var rows := rows_per * poses.size()
 	var cell := Vector2(size.x / float(cols), size.y / float(rows))
+	# few species (close-ups): square-ish cells, the grid centred vertically
+	cell.y = minf(cell.y, cell.x * MAX_CELL_ASPECT)
+	var top := (size.y - cell.y * float(rows)) * 0.5
 	var tallest := 0.0
 	for id: StringName in ids:
 		tallest = maxf(tallest, _rig.body_px(id) * (1.0 + _rig.top_extent_bu(id)))
-	var fit := minf(cell.y * FILL / maxf(tallest, 1.0), cell.x * 0.7 / (_rig.body_px(&"puddlewump") * 1.4))
+	var widest := 0.0
+	for id: StringName in ids:
+		widest = maxf(widest, _rig.body_px(id) * (_rig.body_width_bu(id) + WIDTH_PAD_BU))
+	var fit := minf(cell.y * FILL / maxf(tallest, 1.0), cell.x * FILL_W / maxf(widest, 1.0))
 	var k := user_scale if user_scale > 0.0 else fit
 	var fur := _rig.make_fur_material()
 	MosslingRig.bind_palette(fur, _feed)
@@ -82,7 +93,7 @@ func _ready() -> void:
 			var id := ids[i]
 			var col := i % cols
 			var row := pi * rows_per + int(float(i) / float(cols))
-			var feet := Vector2((float(col) + 0.5) * cell.x, (float(row) + 0.78) * cell.y)
+			var feet := Vector2((float(col) + 0.5) * cell.x, top + (float(row) + 0.78) * cell.y)
 			var m := Mossling.new()
 			add_child(m)
 			m.setup(_rig, id, fposmod(float(i) * 0.618 + 0.13, 1.0), fur, shadow, fx)

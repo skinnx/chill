@@ -75,6 +75,9 @@ var _pending_friends: Array[StringName] = []
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# Children are built now, before Main attaches the theme in its own _ready (theme propagation
+	# stops at the CanvasLayer), so the HUD takes it here first (idempotent with Main's attach).
+	UiTheme.attach(self)
 	_parse_qa()
 	sheets = SheetHost.new()
 	sheets.name = "SheetHost"
@@ -113,6 +116,14 @@ func _ready() -> void:
 	_refresh_onboarding()
 	if Game.is_ready:
 		_apply_qa.call_deferred()
+
+
+func _exit_tree() -> void:
+	# Static caches (icons, preview builders, the portrait rig) hold GPU textures: release them
+	# with the HUD so nothing is reported leaked at exit (QA smoke gate).
+	Icons.clear_cache()
+	ItemPreview.release_shared()
+	CreaturePortrait.release_shared()
 
 
 func _process(delta: float) -> void:
@@ -253,6 +264,7 @@ func _refresh_onboarding() -> void:
 	dock.set_asleep(&"garden", not garden_awake)
 	dock.set_asleep(&"basket", not (collected or not st.basket.is_empty()))
 	dock.set_asleep(&"album", Game.sim.met_count() == 0)
+	dock.set_glint(not st.basket.is_empty() and st.last_collect_t <= 0.0 and sheets.current_id != &"basket")
 	if was_asleep and garden_awake and not _garden_seen and Game.is_ready:
 		dock.set_new_dot(true)
 

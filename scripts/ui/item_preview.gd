@@ -107,6 +107,16 @@ func _fit() -> void:
 	_stage.position = size * 0.5 - _bounds.get_center() * k
 
 
+## Frees the shared builder, kit and materials (HUD exit; no RID outlives the scene).
+static func release_shared() -> void:
+	if _kit != null:
+		_kit.release()
+	_kit = null
+	_builder = null
+	_flora_mat = null
+	_flora_atlas = null
+
+
 static func _kit_has(part: String) -> bool:
 	_ensure_kit()
 	return _kit.has_part(part)

@@ -39,10 +39,16 @@ const SPARKLE_PX := 30.0
 const BRIM_PERIOD_S := 600.0 / 76.0
 const BRIM_SPARKLES := 3
 const NEW_DOT_PX := 27.0
+## Draw order lifts (see _ready): labels batch at z 1, badges and sparkles above them.
+const Z_LABELS := 1
+const Z_BADGES := 2
+## Onboarding (GDD §3.4): "the Basket button glints every 6 s" until the first collect.
+const GLINT_PERIOD_S := 6.0
 
 var left_handed: bool = false
 var buttons: Dictionary = {}
 var pill: GlassPanel
+var _plates: Control
 var _badge: Control
 var _badge_label: Label
 var _ring: ColorRect
@@ -51,6 +57,8 @@ var _new_dot: Control
 var _sparkles: Array[TextureRect] = []
 var _brim_t: float = 0.0
 var _full: bool = false
+var _glint: bool = false
+var _was_pressing: bool = false
 var _basket_slots: int = 24
 var _screen: Vector2 = Vector2(1080, 1920)
 var _safe_bottom: float = 0.0
@@ -66,16 +74,38 @@ func _ready() -> void:
 	pill = GlassPanel.new()
 	pill.name = "Pill"
 	add_child(pill)
+	# Draw-call budget (Art Bible §4.19: HUD + dock ~14): the four plates are drawn by one layer
+	# (one batch), the icons come from one atlas and sit next to each other in draw order (one
+	# batch), and the labels are lifted to z 1 so they draw together (one batch).
+	_plates = Control.new()
+	_plates.name = "Plates"
+	_plates.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_plates.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_plates.draw.connect(_draw_plates)
+	add_child(_plates)
+	_build_ring()
+	var entries: Array = []
+	for id: StringName in ORDER:
+		var px := ICON_BIG if BIG.has(id) else ICON_SMALL
+		entries.append([id, px, false])
+		entries.append([id, px, true])
+	var atlas := Icons.atlas(entries)
 	for id: StringName in ORDER:
 		var b := RoundButton.new()
 		b.name = String(id).capitalize()
 		var big := BIG.has(id)
+		b.draw_plate = false
 		b.plate_px = PLATE_BIG if big else PLATE_SMALL
 		b.icon_px = ICON_BIG if big else ICON_SMALL
+		var icons: Array[Texture2D] = [atlas[Icons.atlas_key(id, b.icon_px)] as Texture2D,
+				atlas[Icons.atlas_key(id, b.icon_px, true)] as Texture2D]
+		b.icon_textures = icons
 		b.icon_name = id
 		b.set_label(tr(String(LABEL_KEYS[id])))
+		b.label.z_index = Z_LABELS
 		PressFeedback.attach(b)
 		b.pressed.connect(func() -> void: button_pressed.emit(id))
+		b.appearance_changed.connect(_plates.queue_redraw)
 		add_child(b)
 		buttons[id] = b
 	_build_basket_extras()
@@ -87,6 +117,8 @@ func _ready() -> void:
 
 
 func _notification(what: int) -> void:
+	if what == NOTIFICATION_THEME_CHANGED and not buttons.is_empty():
+		_cap_label_sizes.call_deferred()
 	if what == NOTIFICATION_TRANSLATION_CHANGED and not buttons.is_empty():
 		for id: StringName in ORDER:
 			(buttons[id] as RoundButton).set_label(tr(String(LABEL_KEYS[id])))
@@ -107,6 +139,7 @@ func layout(screen: Vector2, safe_bottom: float) -> void:
 	var bottom := screen.y - maxf(safe_bottom, BOTTOM_MIN) - BOTTOM_GAP
 	pill.position = Vector2(PILL_SIDE, bottom - PILL_H)
 	pill.size = Vector2(screen.x - PILL_SIDE * 2.0, PILL_H)
+	_plates.queue_redraw()
 	var cy := bottom - PILL_H * 0.5
 	for i in ORDER.size():
 		var id: StringName = ORDER[ORDER.size() - 1 - i] if left_handed else ORDER[i]
@@ -143,16 +176,38 @@ func set_basket_count(n: int) -> void:
 	_ring_mat.set_shader_parameter(&"u_progress", clampf(float(n) / float(_basket_slots), 0.0, 1.0))
 	_ring.visible = n > 0
 	_place_basket_extras()
-	set_process(_full)
-	if not _full:
+	_sync_sparkles()
+
+
+## Onboarding glint on the Basket plate (a gift waits and nothing was ever collected).
+func set_glint(on: bool) -> void:
+	if _glint != on:
+		_glint = on
+		_brim_t = 0.0
+		_sync_sparkles()
+
+
+func _sync_sparkles() -> void:
+	if not (_full or _glint):
 		for s: TextureRect in _sparkles:
 			s.visible = false
 
 
 func _process(delta: float) -> void:
-	if not _full:
+	# The plate layer and the basket ring follow each button's press scale (PressFeedback).
+	var basket := buttons.get(&"basket") as RoundButton
+	var pressing := false
+	for b: Variant in buttons.values():
+		if not is_equal_approx((b as RoundButton).scale.x, 1.0):
+			pressing = true
+	if pressing or _was_pressing:
+		_plates.queue_redraw()
+		if basket != null:
+			_ring.scale = basket.scale
+	_was_pressing = pressing
+	if not (_full or _glint):
 		return
-	_brim_t = fposmod(_brim_t + delta, BRIM_PERIOD_S)
+	_brim_t = fposmod(_brim_t + delta, GLINT_PERIOD_S if _glint and not _full else BRIM_PERIOD_S)
 	var b := buttons[&"basket"] as RoundButton
 	var c := b.position + b.center()
 	for i in _sparkles.size():
@@ -166,10 +221,12 @@ func _process(delta: float) -> void:
 		s.scale = Vector2.ONE * (0.6 + 0.4 * sin(u * PI))
 
 
-func _build_basket_extras() -> void:
+func _build_ring() -> void:
 	_ring = ColorRect.new()
+	_ring.name = "BasketRing"
 	_ring.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_ring.size = Vector2(RING_PX, RING_PX)
+	_ring.pivot_offset = _ring.size * 0.5
 	_ring_mat = ShaderMaterial.new()
 	_ring_mat.shader = load(RING_SHADER) as Shader
 	_ring_mat.set_shader_parameter(&"u_size", Vector2(RING_PX, RING_PX))
@@ -177,10 +234,20 @@ func _build_basket_extras() -> void:
 	_ring_mat.set_shader_parameter(&"u_color", UiTokens.color(&"gold"))
 	_ring_mat.set_shader_parameter(&"u_track", UiTokens.color(&"gold_tint"))
 	_ring.material = _ring_mat
+	add_child(_ring)
+
+
+func _draw_plates() -> void:
+	for id: StringName in ORDER:
+		var b := buttons.get(id) as RoundButton
+		if b != null and b.visible:
+			b.draw_plate_at(_plates, b.position + b.center(), b.scale.x)
+
+
+func _build_basket_extras() -> void:
 	var basket := buttons[&"basket"] as RoundButton
-	basket.add_child(_ring)
-	basket.move_child(_ring, 0)
 	_badge = Control.new()
+	_badge.z_index = Z_BADGES
 	_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_badge.draw.connect(func() -> void:
 		_badge.draw_style_box(UiTokens.fill_box(UiTokens.color(&"coral"), _badge.size.y * 0.5, UiTokens.E1),
@@ -193,6 +260,7 @@ func _build_basket_extras() -> void:
 	_badge_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_badge.add_child(_badge_label)
 	_new_dot = Control.new()
+	_new_dot.z_index = Z_BADGES
 	_new_dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_new_dot.size = Vector2(NEW_DOT_PX, NEW_DOT_PX)
 	_new_dot.visible = false
@@ -202,6 +270,7 @@ func _build_basket_extras() -> void:
 	(buttons[&"garden"] as RoundButton).add_child(_new_dot)
 	for i in BRIM_SPARKLES:
 		var s := Icons.rect(&"sparkle", SPARKLE_PX)
+		s.z_index = Z_BADGES
 		s.pivot_offset = Vector2(SPARKLE_PX, SPARKLE_PX) * 0.5
 		s.visible = false
 		add_child(s)
@@ -212,7 +281,7 @@ func _place_basket_extras() -> void:
 	var basket := buttons[&"basket"] as RoundButton
 	var c := basket.center()
 	var icon_c := c + Vector2(0.0, -_label_h(basket) * 0.5)
-	_ring.position = icon_c - Vector2(RING_PX, RING_PX) * 0.5
+	_ring.position = basket.position + icon_c - Vector2(RING_PX, RING_PX) * 0.5
 	var lw := _badge_label.get_combined_minimum_size()
 	var bw := maxf(BADGE_MIN, lw.x + BADGE_PAD * 2.0)
 	var bh := maxf(BADGE_MIN, lw.y)
@@ -237,9 +306,11 @@ func _cap_label_sizes() -> void:
 		var b := buttons[id] as RoundButton
 		if b.label == null:
 			continue
-		var size_px := b.label.get_theme_font_size(&"font_size")
-		if size_px > cap:
+		b.label.remove_theme_font_size_override(&"font_size")
+		if b.label.get_theme_font_size(&"font_size") > cap:
 			b.label.add_theme_font_size_override(&"font_size", cap)
-		else:
-			b.label.remove_theme_font_size_override(&"font_size")
 		b.set_label(b.label.text)
+	_badge_label.remove_theme_font_size_override(&"font_size")
+	if _badge_label.get_theme_font_size(&"font_size") > cap:
+		_badge_label.add_theme_font_size_override(&"font_size", cap)
+	_place_basket_extras()

@@ -180,6 +180,23 @@ content_margin_left = 48.0
 content_margin_top = 48.0
 content_margin_right = 48.0
 content_margin_bottom = 48.0
+bg_color = Color(0.9411765, 0.93333334, 0.9137255, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.16470589, 0.15686275, 0.21960784, 0.1)
+corner_radius_top_left = 78
+corner_radius_top_right = 78
+corner_radius_bottom_right = 78
+corner_radius_bottom_left = 78
+corner_detail = 16
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ws1vc"]
+content_margin_left = 48.0
+content_margin_top = 48.0
+content_margin_right = 48.0
+content_margin_bottom = 48.0
 bg_color = Color(1, 0.99215686, 0.972549, 1)
 border_width_left = 3
 border_width_top = 3
@@ -195,7 +212,7 @@ shadow_color = Color(0.16470589, 0.15686275, 0.21960784, 0.06)
 shadow_size = 24
 shadow_offset = Vector2(0, 6)
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ws1vc"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_1ixiw"]
 content_margin_left = 48.0
 content_margin_top = 48.0
 content_margin_right = 48.0
@@ -215,7 +232,7 @@ shadow_color = Color(0.16470589, 0.15686275, 0.21960784, 0.06)
 shadow_size = 24
 shadow_offset = Vector2(0, 6)
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_1ixiw"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_li16g"]
 content_margin_left = 72.0
 content_margin_top = 72.0
 content_margin_right = 72.0
@@ -230,7 +247,7 @@ shadow_color = Color(0.16470589, 0.15686275, 0.21960784, 0.16)
 shadow_size = 72
 shadow_offset = Vector2(0, 24)
 
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_li16g"]
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_xdqed"]
 
 [resource]
 default_font = ExtResource("1_eq8ht")
@@ -304,17 +321,18 @@ SecondaryButton/colors/font_focus_color = Color(0.16470589, 0.15686275, 0.219607
 SecondaryButton/colors/font_hover_color = Color(0.16470589, 0.15686275, 0.21960784, 1)
 SecondaryButton/colors/font_hover_pressed_color = Color(0.16470589, 0.15686275, 0.21960784, 1)
 SecondaryButton/colors/font_pressed_color = Color(0.16470589, 0.15686275, 0.21960784, 1)
-SecondaryButton/styles/hover = SubResource("StyleBoxFlat_7a6ut")
-SecondaryButton/styles/hover_pressed = SubResource("StyleBoxFlat_ws1vc")
-SecondaryButton/styles/normal = SubResource("StyleBoxFlat_7a6ut")
-SecondaryButton/styles/pressed = SubResource("StyleBoxFlat_ws1vc")
+SecondaryButton/styles/disabled = SubResource("StyleBoxFlat_7a6ut")
+SecondaryButton/styles/hover = SubResource("StyleBoxFlat_ws1vc")
+SecondaryButton/styles/hover_pressed = SubResource("StyleBoxFlat_1ixiw")
+SecondaryButton/styles/normal = SubResource("StyleBoxFlat_ws1vc")
+SecondaryButton/styles/pressed = SubResource("StyleBoxFlat_1ixiw")
 SecondaryLabel/base_type = &"Label"
 SecondaryLabel/colors/font_color = Color(0.3647059, 0.34901962, 0.43137255, 1)
 SecondaryLabel/constants/line_spacing = -5
 SecondaryLabel/font_sizes/font_size = 36
 SecondaryLabel/fonts/font = ExtResource("3_rugw5")
 Sheet/base_type = &"PanelContainer"
-Sheet/styles/panel = SubResource("StyleBoxFlat_1ixiw")
+Sheet/styles/panel = SubResource("StyleBoxFlat_li16g")
 StrongLabel/base_type = &"Label"
 StrongLabel/colors/font_color = Color(0.16470589, 0.15686275, 0.21960784, 1)
 StrongLabel/constants/line_spacing = -6
@@ -328,4 +346,4 @@ TitleLabel/fonts/font = ExtResource("5_c1pcf")
 VScrollBar/styles/grabber = SubResource("StyleBoxFlat_02fn2")
 VScrollBar/styles/grabber_highlight = SubResource("StyleBoxFlat_02fn2")
 VScrollBar/styles/grabber_pressed = SubResource("StyleBoxFlat_02fn2")
-VScrollBar/styles/scroll = SubResource("StyleBoxEmpty_li16g")
+VScrollBar/styles/scroll = SubResource("StyleBoxEmpty_xdqed")

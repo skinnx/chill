@@ -20,6 +20,8 @@ const CUE_CLOSE := &"S08"
 const HEIGHT_FRAC := 0.56
 const DOCK_GAP := 24.0
 const SIDE := 24.0
+## The sheet draws above the dock's z-lifted labels (DockView.Z_LABELS) while it slides over them.
+const Z_SHEET := 2
 
 var current: UiSheet
 var current_id: StringName = &""
@@ -197,6 +199,7 @@ func _make(id: StringName) -> UiSheet:
 	s.size = r.size
 	s.position = r.position
 	s.close_requested.connect(close)
+	s.z_index = Z_SHEET
 	add_child(s)
 	current = s
 	current_id = id

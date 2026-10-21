@@ -33,6 +33,7 @@ const RECAP_ICONS := {&"RECAP_NEW_FRIEND": &"heart", &"RECAP_ONE_VISITED": &"alb
 	&"RECAP_NAPPED": &"moon", &"RECAP_BLOOMED": &"garden", &"RECAP_GIFTS": &"basket", &"RECAP_PHOTOS": &"photo",
 	&"RECAP_POSTCARD": &"postcard", &"RECAP_RAINED": &"rain"}
 const PORTRAIT := 360.0
+const Z_OVERLAY := 4
 const RECAP_BAR_H := 9.0
 ## --qa-recap holds the card with this much of the auto-continue line left.
 const RECAP_QA_LEFT := 0.62
@@ -56,6 +57,8 @@ var _recap_timer: SceneTreeTimer
 func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	set_anchors_preset(Control.PRESET_FULL_RECT)
+	# Above every z-lifted HUD layer (sheets 2, top-bar labels 3).
+	z_index = Z_OVERLAY
 
 
 func _ready() -> void:

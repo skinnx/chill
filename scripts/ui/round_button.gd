@@ -12,6 +12,9 @@ extends BaseButton
 # such conversion, so only that warning is silenced in this file (docs/ARCHITECTURE.md §10).
 @warning_ignore_start("unsafe_call_argument")
 
+## The plate's look changed (state, size): an owner that draws the plate redraws.
+signal appearance_changed
+
 const RING_DP := 3.0
 const ASLEEP_ALPHA := 0.5
 ## Gap between the icon and the in-plate label, px.
@@ -36,12 +39,12 @@ var active: bool = false:
 		if active != v:
 			active = v
 			_refresh_icon()
-			queue_redraw()
+			_changed()
 var asleep: bool = false:
 	set(v):
 		asleep = v
 		_refresh_alpha()
-		queue_redraw()
+		_changed()
 ## Plate centre inside the rect (default: the rect centre).
 var plate_center: Vector2 = Vector2(-1, -1):
 	set(v):
@@ -52,7 +55,11 @@ var plate_center: Vector2 = Vector2(-1, -1):
 var force_pressed: bool = false:
 	set(v):
 		force_pressed = v
-		queue_redraw()
+		_changed()
+## false: an owner draws the plate (the dock draws its four plates in one batch).
+var draw_plate: bool = true
+## Optional icon textures (an atlas region), normal and active: icons from one atlas batch.
+var icon_textures: Array[Texture2D] = []
 var label: Label
 var _icon: TextureRect
 var _box: StyleBoxFlat
@@ -67,8 +74,8 @@ func _init() -> void:
 	_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	add_child(_icon)
 	resized.connect(_relayout)
-	button_down.connect(queue_redraw)
-	button_up.connect(queue_redraw)
+	button_down.connect(_changed)
+	button_up.connect(_changed)
 
 
 func _ready() -> void:
@@ -96,29 +103,42 @@ func looks_pressed() -> bool:
 	return force_pressed or m == DRAW_PRESSED or m == DRAW_HOVER_PRESSED
 
 
+func _changed() -> void:
+	queue_redraw()
+	appearance_changed.emit()
+
+
 func center() -> Vector2:
 	return size * 0.5 if plate_center.x < 0.0 else plate_center
 
 
 func _draw() -> void:
-	var c := center()
-	var r := plate_px * 0.5
+	if draw_plate:
+		draw_plate_at(self, center(), 1.0)
+
+
+## Draws this button's plate on [param canvas] at [param c] (shared by the dock's plate layer).
+func draw_plate_at(canvas: CanvasItem, c: Vector2, k: float) -> void:
+	var r := plate_px * 0.5 * k
 	# Pressed (touch-down, same frame): the plate takes primary_tint, a visible state on a white
 	# plate where a +6 L* lift cannot show (Art Bible §10.3 "instant" tint).
 	var fill := UiTokens.color(&"primary_tint") if active or looks_pressed() else UiTokens.color(fill_token)
 	if asleep:
 		fill.a *= ASLEEP_ALPHA
 	_box = UiTokens.fill_box(fill, r, UiTokens.E0 if asleep else elevation)
-	draw_style_box(_box, Rect2(c - Vector2(r, r), Vector2(plate_px, plate_px)))
+	canvas.draw_style_box(_box, Rect2(c - Vector2(r, r), Vector2(r, r) * 2.0))
 	if active:
-		var w := RING_DP * UiTokens.PX_PER_DP
-		draw_arc(c, r - w * 0.5, 0.0, TAU, 96, UiTokens.color(&"primary"), w, true)
+		var w := RING_DP * UiTokens.PX_PER_DP * k
+		canvas.draw_arc(c, r - w * 0.5, 0.0, TAU, 96, UiTokens.color(&"primary"), w, true)
 
 
 func _refresh_icon() -> void:
 	if _icon == null or icon_name == &"":
 		return
-	_icon.texture = Icons.texture(icon_name, icon_px, active)
+	if icon_textures.size() == 2:
+		_icon.texture = icon_textures[1] if active else icon_textures[0]
+	else:
+		_icon.texture = Icons.texture(icon_name, icon_px, active)
 	_relayout()
 
 
@@ -144,4 +164,4 @@ func _relayout() -> void:
 		label.size = Vector2(w, lh)
 		label.position = Vector2(c.x - w * 0.5, top + icon_px + LABEL_GAP)
 	pivot_offset = c
-	queue_redraw()
+	_changed()

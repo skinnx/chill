@@ -34,6 +34,9 @@ const FADE_PX := 72.0
 ## In-card buttons: 48 dp (Art Bible §9.4 draws 132 with a hit grown into the card padding; a
 ## Button's hit is its rect, so the visual itself is the 48 dp target).
 const CARD_BUTTON_H := 144.0
+## Sheet titles sit in the fixed 180 px header band: they stop growing at 130 % (the content
+## below scales fully and reflows, Art Bible §9.1).
+const TITLE_SCALE_CAP := 1.3
 ## Minimum touch target, 48 dp (I2).
 const MIN_TARGET := 144.0
 
@@ -69,8 +72,8 @@ func _ready() -> void:
 
 
 func _notification(what: int) -> void:
-	if what == NOTIFICATION_TRANSLATION_CHANGED and _built:
-		refresh_texts()
+	if (what == NOTIFICATION_TRANSLATION_CHANGED or what == NOTIFICATION_THEME_CHANGED) and _built:
+		refresh_texts.call_deferred()
 
 
 ## Override: build the content into [member body].
@@ -82,6 +85,10 @@ func build_body() -> void:
 func refresh_texts() -> void:
 	if title != null:
 		title.text = tr(title_key)
+		title.remove_theme_font_size_override(&"font_size")
+		var cap := roundi(float(ThemeBuilder.SIZE_TITLE) * TITLE_SCALE_CAP)
+		if title.get_theme_font_size(&"font_size") > cap:
+			title.add_theme_font_size_override(&"font_size", cap)
 		_place_header_extra()
 
 
@@ -137,6 +144,7 @@ func make_scroll(top: float, separation: int = 24) -> VBoxContainer:
 	list.mouse_filter = Control.MOUSE_FILTER_PASS
 	pad.add_child(list)
 	return list
+
 
 
 func _build_chrome() -> void:

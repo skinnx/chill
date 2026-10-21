@@ -22,7 +22,7 @@ uniform float u_luma_hi = 0.45;
 const float TAP_SPREAD_PX = 9.0;
 
 void vertex() {
-	v_local = VERTEX;
+	v_local = VERTEX - vec2(u_margin);
 }
 
 void fragment() {
@@ -39,6 +39,7 @@ void fragment() {
 	float tint = mix(u_tint_max, u_tint_min, smoothstep(u_luma_lo, u_luma_hi, l));
 	vec3 c = mix(b, u_surface.rgb, tint);
 	vec4 g = glass_dress(c, 1.0, d);
-	c = finish(g.rgb, v_local / PX_PER_DP, FRAGCOORD.xy, GRAIN_GLASS);
-	COLOR = vec4(c, cov * COLOR.a);
+	vec4 o = over_shadow(g.rgb, cov, glass_shadow());
+	c = finish(o.rgb, v_local / PX_PER_DP, FRAGCOORD.xy, GRAIN_GLASS);
+	COLOR = vec4(c, o.a * COLOR.a);
 }

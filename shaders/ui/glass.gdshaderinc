@@ -15,6 +15,12 @@ uniform vec4 u_ink : source_color = vec4(0.165, 0.157, 0.22, 1.0);       // ui.i
 uniform float u_rim_tl = 0.6;                       // ui_alpha.rim_top_left
 uniform float u_rim_br = 0.1;                       // ui_alpha.rim_bottom_right
 uniform float u_inner_shadow = 0.06;                // ui_alpha.inner_bottom_shadow
+// Elevation shadow drawn in the same pass (one draw call per glass surface): the quad is grown by
+// u_margin on every side; ink at u_shadow_alpha, falling off over u_shadow_blur px, offset down.
+uniform float u_margin = 0.0;
+uniform float u_shadow_alpha = 0.0;                 // ui_alpha.shadow_e<n>
+uniform float u_shadow_blur = 48.0;
+uniform float u_shadow_dy = 18.0;
 
 const float RIM_PX = 3.0;          // 1 dp rim
 const float RIM_SOFT_PX = 1.5;
@@ -34,6 +40,22 @@ float glass_sd() {
 	vec2 half_size = u_size * 0.5;
 	float r = min(u_radius, min(half_size.x, half_size.y));
 	return sd_round_box(v_local - half_size, half_size, r);
+}
+
+// Elevation shadow alpha at v_local (StyleBoxFlat-like falloff, smoothed), in ink.
+float glass_shadow() {
+	vec2 half_size = u_size * 0.5;
+	float r = min(u_radius, min(half_size.x, half_size.y));
+	float d = sd_round_box(v_local - half_size - vec2(0.0, u_shadow_dy), half_size, r);
+	float t = clamp(1.0 - d / max(u_shadow_blur, 1.0), 0.0, 1.0);
+	return u_shadow_alpha * t * t * (3.0 - 2.0 * t);
+}
+
+// Straight-alpha "over": glass (c, a) over the shadow (ink, sa).
+vec4 over_shadow(vec3 c, float a, float sa) {
+	float out_a = a + sa * (1.0 - a);
+	vec3 rgb = (c * a + u_ink.rgb * sa * (1.0 - a)) / max(out_a, 1e-4);
+	return vec4(rgb, out_a);
 }
 
 // Applies sheen, rim and inner shadow over the base colour c (alpha a). Returns premultiplied-free
