@@ -1,9 +1,12 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://scripts/main/main.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/main/placeholder_band.gd" id="2_band"]
 [ext_resource type="Script" path="res://scripts/main/layout_debug.gd" id="3_dbg"]
 [ext_resource type="Script" path="res://scripts/ui/safe_area_container.gd" id="4_safe"]
+[ext_resource type="PackedScene" path="res://scenes/garden/plots_layer.tscn" id="5_plots"]
+[ext_resource type="PackedScene" path="res://scenes/garden/decor_layer.tscn" id="6_decor"]
+[ext_resource type="PackedScene" path="res://scenes/creatures/creature_layer.tscn" id="7_creatures"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_main")
@@ -64,11 +67,17 @@ y_sort_enabled = true
 [node name="Plots" type="Node2D" parent="World/Ground/Play"]
 y_sort_enabled = true
 
+[node name="PlotsLayer" parent="World/Ground/Play/Plots" instance=ExtResource("5_plots")]
+
 [node name="Decor" type="Node2D" parent="World/Ground/Play"]
 y_sort_enabled = true
 
+[node name="DecorLayer" parent="World/Ground/Play/Decor" instance=ExtResource("6_decor")]
+
 [node name="Creatures" type="Node2D" parent="World/Ground/Play"]
 y_sort_enabled = true
+
+[node name="CreatureLayer" parent="World/Ground/Play/Creatures" instance=ExtResource("7_creatures")]
 
 [node name="Particles" type="Node2D" parent="World/Ground"]
 
