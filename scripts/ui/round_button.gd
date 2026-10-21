@@ -48,6 +48,11 @@ var plate_center: Vector2 = Vector2(-1, -1):
 		plate_center = v
 		_relayout()
 
+## QA stills: draw the touch-down state without a touch.
+var force_pressed: bool = false:
+	set(v):
+		force_pressed = v
+		queue_redraw()
 var label: Label
 var _icon: TextureRect
 var _box: StyleBoxFlat
@@ -62,6 +67,8 @@ func _init() -> void:
 	_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	add_child(_icon)
 	resized.connect(_relayout)
+	button_down.connect(queue_redraw)
+	button_up.connect(queue_redraw)
 
 
 func _ready() -> void:
@@ -83,6 +90,12 @@ func set_label(text: String) -> void:
 	_relayout()
 
 
+## Touch-down look (also forced by QA stills: --qa-press).
+func looks_pressed() -> bool:
+	var m := get_draw_mode()
+	return force_pressed or m == DRAW_PRESSED or m == DRAW_HOVER_PRESSED
+
+
 func center() -> Vector2:
 	return size * 0.5 if plate_center.x < 0.0 else plate_center
 
@@ -90,7 +103,9 @@ func center() -> Vector2:
 func _draw() -> void:
 	var c := center()
 	var r := plate_px * 0.5
-	var fill := UiTokens.color(&"primary_tint") if active else UiTokens.color(fill_token)
+	# Pressed (touch-down, same frame): the plate takes primary_tint, a visible state on a white
+	# plate where a +6 L* lift cannot show (Art Bible §10.3 "instant" tint).
+	var fill := UiTokens.color(&"primary_tint") if active or looks_pressed() else UiTokens.color(fill_token)
 	if asleep:
 		fill.a *= ASLEEP_ALPHA
 	_box = UiTokens.fill_box(fill, r, UiTokens.E0 if asleep else elevation)

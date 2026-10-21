@@ -364,6 +364,7 @@ func _apply_qa() -> void:
 	if _qa.has(ARG_PRESS):
 		var b := dock.button(StringName(String(_qa[ARG_PRESS])))
 		if b != null:
+			b.force_pressed = true
 			PressFeedback.down(b)
 	if _qa.has(ARG_CAPTIONS):
 		overlays.show_caption(tr("CAPTION_CHIRP"), get_viewport_rect().size * Vector2(0.5, 0.55), true)
