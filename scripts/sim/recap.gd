@@ -6,9 +6,10 @@ extends RefCounted
 ## language and custom names are always current.
 ##
 ## Line = {"key": StringName, "species": StringName (or &"")}.
-## Priority: new friend -> postcard -> visitors (the GDD's "{name} napped at the {spot}" line
-## needs the creature brain's bout history and replaces this slot once that exists) -> gifts
-## waiting -> new flowers opened -> photos -> it rained.
+## Priority (GDD §13.5.3): new friend -> away-scene teaser -> cousin -> postcard -> hearts ->
+## clue -> visitors (the GDD's "{name} napped at the {spot}" line needs the creature brain's bout
+## history and replaces this slot once that exists) -> nest -> gifts waiting -> new flowers opened
+## -> photos -> it rained. The teaser names nobody and always gets a line when a scene is staged.
 
 # Data boundary: values read from JSON / Dictionaries are Variants and each one is converted
 # explicitly (int(), float(), String() ...) where it is read; the analyzer still flags every
@@ -25,13 +26,18 @@ static func should_show(content: GameContent, gap_s: float, events: Array[Dictio
 
 
 static func build(sim: WorldSim, events: Array[Dictionary], from_t: float, to_t: float) -> Array[Dictionary]:
-	var lines: Array[Dictionary] = []
 	var met: Array[StringName] = []
 	var visitors: Array[StringName] = []
 	var postcard := false
 	var gifts := false
 	var bloomed := false
 	var photos := false
+	var scene := &""
+	var cousin := &""
+	var heart_sp := &""
+	var heart_n := 0
+	var clue := false
+	var nest := &""
 	for ev: Dictionary in events:
 		match ev["type"]:
 			WorldSim.EV_MET:
@@ -48,23 +54,65 @@ static func build(sim: WorldSim, events: Array[Dictionary], from_t: float, to_t:
 				bloomed = bloomed or int(ev["stage"]) == WorldSim.STAGE_BLOOM
 			WorldSim.EV_PHOTO:
 				photos = photos or bool(ev["new"])
+			WorldSim.EV_SCENE_STAGED:
+				scene = StringName(ev["scene"])
+			WorldSim.EV_COUSIN_MET:
+				if cousin == &"":
+					cousin = StringName(ev["species"])
+			WorldSim.EV_HEARTS:
+				if int(ev["hearts"]) > heart_n:
+					heart_n = int(ev["hearts"])
+					heart_sp = StringName(ev["species"])
+			WorldSim.EV_SIGN_DUE:
+				clue = true
+			WorldSim.EV_NEST_STAGE:
+				if nest == &"":
+					nest = StringName(ev["species"])
+	# GDD §13.5.3 priority: new friend, scene teaser, cousin, postcard, hearts, clue, visitors,
+	# nest, gifts, flowers, photos, rain.
+	var cands: Array[Dictionary] = []
 	for sp: StringName in met:
-		_add(lines, &"RECAP_NEW_FRIEND", sp)
+		cands.append({"key": &"RECAP_NEW_FRIEND", "species": sp})
+	var teaser := {}
+	if scene != &"":
+		var sdef: Dictionary = sim.content.scenes_by_id.get(scene, {})
+		teaser = {"key": StringName(sdef.get("teaser_key", "")), "species": &"", "scene": scene}
+		cands.append(teaser)
+	if cousin != &"":
+		cands.append({"key": &"RECAP_COUSIN", "species": cousin})
 	if postcard:
-		_add(lines, &"RECAP_POSTCARD", &"")
+		cands.append({"key": &"RECAP_POSTCARD", "species": &""})
+	if heart_sp != &"":
+		cands.append({"key": &"RECAP_HEARTS", "species": heart_sp})
+	if clue:
+		cands.append({"key": &"RECAP_CLUE", "species": &""})
 	if visitors.size() == 1:
-		_add(lines, &"RECAP_ONE_VISITED", visitors[0])
+		cands.append({"key": &"RECAP_ONE_VISITED", "species": visitors[0]})
 	elif visitors.size() > 1:
-		_add(lines, &"RECAP_FRIENDS_VISITED", visitors[0])
+		cands.append({"key": &"RECAP_FRIENDS_VISITED", "species": visitors[0]})
+	if nest != &"":
+		cands.append({"key": &"RECAP_NEST", "species": nest})
 	if gifts and not sim.state.basket.is_empty():
-		_add(lines, &"RECAP_GIFTS", &"")
+		cands.append({"key": &"RECAP_GIFTS", "species": &""})
 	if bloomed:
-		_add(lines, &"RECAP_BLOOMED", &"")
+		cands.append({"key": &"RECAP_BLOOMED", "species": &""})
 	if photos:
-		_add(lines, &"RECAP_PHOTOS", &"")
+		cands.append({"key": &"RECAP_PHOTOS", "species": &""})
+	var lines: Array[Dictionary] = []
+	for line: Dictionary in cands:
+		_add(lines, StringName(line["key"]), StringName(line["species"]))
+	if not teaser.is_empty() and not _has_key(lines, StringName(teaser["key"])):
+		lines[lines.size() - 1] = {"key": StringName(teaser["key"]), "species": &""}  # the teaser always shows
 	if lines.size() < MAX_LINES and _rained(sim, from_t, to_t):
 		_add(lines, &"RECAP_RAINED", &"")
 	return lines
+
+
+static func _has_key(lines: Array[Dictionary], key: StringName) -> bool:
+	for l: Dictionary in lines:
+		if StringName(l["key"]) == key:
+			return true
+	return false
 
 
 static func _add(lines: Array[Dictionary], key: StringName, species: StringName) -> void:

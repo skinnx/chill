@@ -24,6 +24,13 @@ const FILES := {
 	"palettes": ["schema", "tod", "weather", "ui", "creatures", "flora"],
 	"motion_tokens": ["schema", "durations_ms", "curves", "springs", "time", "reduce_motion", "world", "ui"],
 	"creature_rig": ["schema", "catalog", "species"],
+	# Retention v1 (GDD §13.10)
+	"friendship": ["schema", "heart_unlocks", "wave_on_open", "signature_gift", "nest", "pair", "keepsake",
+		"celebration"],
+	"mysteries": ["schema", "sign_types", "anchors", "species", "variants", "max_visible", "sign_windows_s",
+		"variant_sign_windows_s", "debut_after_last_sign_s", "variant_hearts_required",
+		"variant_requires_all_met", "cousin_every_n_visits"],
+	"scenes": ["schema", "scenes", "min_absence_s", "max_per_return", "scene_chance", "linger_s", "away_sample_s"],
 }
 const SUPPORTED_SCHEMA := 1
 const KIND_FLOWER := &"flower"
@@ -68,6 +75,29 @@ var props_by_id: Dictionary = {}
 var gift_items_by_id: Dictionary = {}
 ## Event postcard trigger -> postcard record.
 var event_postcards_by_trigger: Dictionary = {}
+
+# --- Retention v1 (GDD §13; friendship.json, mysteries.json, scenes.json)
+var friendship: Dictionary = {}
+var mysteries: Dictionary = {}
+var scenes_doc: Dictionary = {}
+## economy.signature_gift_items by id (GDD §13.2.2); [method gift_item_def] looks in both lists.
+var signature_items_by_id: Dictionary = {}
+## Nest stages sorted by at_s ({id, at_s, name_key}); styles and anchors by id / species.
+var nest_stages: Array[Dictionary] = []
+var nest_styles_by_id: Dictionary = {}
+var nest_anchor_by_species: Dictionary = {}
+## mysteries.json species records by species id ({species, riddle_key, signs, onboarding, ...}).
+var mystery_species_by_id: Dictionary = {}
+## Cousins in data order; by id and by base species (one per species in the MVP).
+var variants: Array[Dictionary] = []
+var variants_by_id: Dictionary = {}
+var variants_by_species: Dictionary = {}
+## Sign anchors in data order (the anchor tie-break) and sign types by id.
+var sign_anchors: Array[Dictionary] = []
+var sign_types_by_id: Dictionary = {}
+## Away scenes in data order (the weighted pick walks this order) and by id.
+var scenes: Array[Dictionary] = []
+var scenes_by_id: Dictionary = {}
 
 
 ## Loads and indexes every file in [param dir]. Never returns null; check [member errors].
@@ -151,6 +181,33 @@ func is_decor(item_id: StringName) -> bool:
 	return item_kind.get(item_id, &"") == KIND_DECOR
 
 
+## A gift item from economy.gift_items or economy.signature_gift_items ({} if unknown).
+func gift_item_def(item_id: StringName) -> Dictionary:
+	if gift_items_by_id.has(item_id):
+		return gift_items_by_id[item_id]
+	return signature_items_by_id.get(item_id, {})
+
+
+## Album index (0-based, album_order) of a species; a large number for unknown ids.
+func album_index(species_id: StringName) -> int:
+	for i in species.size():
+		if StringName(species[i]["id"]) == species_id:
+			return i
+	return species.size()
+
+
+## True for the onboarding friends, who arrive without a mystery (mysteries.json "onboarding").
+func is_onboarding_species(species_id: StringName) -> bool:
+	var rec: Dictionary = mystery_species_by_id.get(species_id, {})
+	return bool(rec.get("onboarding", true))
+
+
+## Seconds windows [[lo, hi]...] for a mystery with [param n] signs (species or cousin table).
+func sign_windows(n: int, variant: bool) -> Array:
+	var table: Dictionary = mysteries["variant_sign_windows_s" if variant else "sign_windows_s"]
+	return table.get(str(n), [])
+
+
 ## Hearts for an affection total (GDD §5.10): thresholds passed.
 func hearts_for(affection: int) -> int:
 	var h := 0
@@ -200,6 +257,9 @@ func _index() -> void:
 	palettes = raw.get("palettes", {})
 	motion = raw.get("motion_tokens", {})
 	creature_rig = raw.get("creature_rig", {})
+	friendship = raw.get("friendship", {})
+	mysteries = raw.get("mysteries", {})
+	scenes_doc = raw.get("scenes", {})
 	if not errors.is_empty():
 		return
 
@@ -236,7 +296,95 @@ func _index() -> void:
 		gift_items_by_id[StringName(g["id"])] = g
 	for p: Dictionary in _records(economy.get("event_postcards", [])):
 		event_postcards_by_trigger[StringName(p["trigger"])] = p
+	_index_retention()
 	_check_references()
+	_check_retention()
+
+
+func _index_retention() -> void:
+	for g: Dictionary in _records(economy.get("signature_gift_items", [])):
+		signature_items_by_id[StringName(g["id"])] = g
+	var nest: Dictionary = friendship["nest"]
+	nest_stages = _sorted_records(nest["stages"], "at_s")
+	for st: Dictionary in _records(nest["styles"]):
+		nest_styles_by_id[StringName(st["id"])] = st
+	for a: Dictionary in _records(nest["anchors"]):
+		nest_anchor_by_species[StringName(a["species"])] = a
+	for m: Dictionary in _records(mysteries["species"]):
+		mystery_species_by_id[StringName(m["species"])] = m
+	variants = _records(mysteries["variants"])
+	for v: Dictionary in variants:
+		variants_by_id[StringName(v["id"])] = v
+		variants_by_species[StringName(v["species"])] = v
+	sign_anchors = _records(mysteries["anchors"])
+	for st: Dictionary in _records(mysteries["sign_types"]):
+		sign_types_by_id[StringName(st["id"])] = st
+	scenes = _records(scenes_doc["scenes"])
+	for sc: Dictionary in scenes:
+		scenes_by_id[StringName(sc["id"])] = sc
+
+
+## Cross-references of the Retention v1 data (the full lint is tools/sim/validate_content.py).
+func _check_retention() -> void:
+	for s: Dictionary in species:
+		var sid := StringName(s["id"])
+		for key: String in ["signature_gift", "nest_style", "best_friend", "postcard_heart2", "postcard_heart4",
+				"postcard_heart5"]:
+			if String(s.get(key, "")) == "":
+				errors.append("species %s: missing %s" % [sid, key])
+		if not signature_items_by_id.has(StringName(s.get("signature_gift", ""))):
+			errors.append("species %s signature gift %s missing" % [sid, s.get("signature_gift", "")])
+		if not nest_styles_by_id.has(StringName(s.get("nest_style", ""))):
+			errors.append("species %s nest style %s missing" % [sid, s.get("nest_style", "")])
+		var bf := StringName(s.get("best_friend", ""))
+		if not species_by_id.has(bf) or bf == sid:
+			errors.append("species %s best friend %s invalid" % [sid, bf])
+		elif StringName((species_by_id[bf] as Dictionary).get("best_friend", "")) != sid:
+			errors.append("species %s best friend %s is not symmetric" % [sid, bf])
+		if not nest_anchor_by_species.has(sid):
+			errors.append("species %s has no nest anchor" % sid)
+		if not mystery_species_by_id.has(sid):
+			errors.append("species %s has no mysteries.json record" % sid)
+	for m: Dictionary in mystery_species_by_id.values():
+		if not species_by_id.has(StringName(m["species"])):
+			errors.append("mysteries.json: unknown species %s" % m["species"])
+		_check_sign_list(String(m["species"]), m["signs"], false)
+	for v: Dictionary in variants:
+		if not species_by_id.has(StringName(v["species"])):
+			errors.append("variant %s: unknown species %s" % [v["id"], v["species"]])
+		var cond: Dictionary = v["condition"]
+		for r: Dictionary in cond["items"]:
+			if not item_kind.has(StringName(r["item"])):
+				errors.append("variant %s requires unknown item %s" % [v["id"], r["item"]])
+		for p: Variant in cond["arrival_phases"]:
+			if not phase_index.has(StringName(p)):
+				errors.append("variant %s: unknown phase %s" % [v["id"], p])
+		for w: Variant in cond["arrival_weather"]:
+			if not weather_by_id.has(StringName(w)):
+				errors.append("variant %s: unknown weather %s" % [v["id"], w])
+		_check_sign_list(String(v["id"]), v["signs"], true)
+	for a: Dictionary in sign_anchors:
+		for ty: Variant in a["types"]:
+			if not sign_types_by_id.has(StringName(ty)):
+				errors.append("sign anchor %s: unknown type %s" % [a["id"], ty])
+	for sc: Dictionary in scenes:
+		var cond: Dictionary = sc["conditions"]
+		for r: Dictionary in _records(cond.get("items", [])):
+			if not item_kind.has(StringName(r["item"])):
+				errors.append("scene %s requires unknown item %s" % [sc["id"], r["item"]])
+		for r: Dictionary in _records(sc["roles"]):
+			for p: Variant in r.get("prefer", []):
+				if not species_by_id.has(StringName(p)):
+					errors.append("scene %s prefers unknown species %s" % [sc["id"], p])
+
+
+func _check_sign_list(owner: String, signs: Variant, variant: bool) -> void:
+	var list: Array = signs if signs is Array else []
+	for ty: Variant in list:
+		if not sign_types_by_id.has(StringName(ty)):
+			errors.append("%s: unknown sign type %s" % [owner, ty])
+	if not list.is_empty() and sign_windows(list.size(), variant).size() != list.size():
+		errors.append("%s: no sign windows for %d signs" % [owner, list.size()])
 
 
 func _check_references() -> void:

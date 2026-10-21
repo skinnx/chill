@@ -1267,6 +1267,13 @@ All MVP checks (E1, E5, E6, pacing) still pass in the same run; the full table i
   - sign queue ≤ 3;
   - pending scene across close/reopen.
 - **Creature brain:** nest nap preference 0.7, pair bouts (§13.2.4), wave-on-open, cousins (base behaviour, leave with base), staged scene slots, and staged friends that behave as greeters.
+- **As built (P1, 2026-10-21; details in `docs/ARCHITECTURE.md` §3.1, §5.2a, §6):**
+  - Names as above, plus `EV_MYSTERY_OPENED` (`mystery_opened`) for the Clues card. Events are `sign_due`, `sign_visible`, `clue`, `nest_stage`, `scene_staged`, `scene_archived`, `cousin_met`, `cousin_arrived`, `keepsake`; `hearts` gains `from`, `gift` gains `signature` / `first_signature`.
+  - `Game` also exposes the read side for P2: `pending_scene()`, `visible_signs()`, `clue_cards()`, `clues_for(mystery)`, `heart_level()`, `unlocks()`, `unseen_hearts()` / `mark_hearts_seen()`, `nest_state()` / `nests()`, `memories()`, `keepsakes()`, `cousin_of()`, `variants_met()`, `best_buddy()`, `wave_plan()`, `can_rename()` (always true once met, ruling on Q1), and typed signals `heart_up`, `mystery_opened`, `sign_appeared`, `clue_found`, `nest_grew`, `scene_ready`, `scene_archived`, `cousin_met`, `cousin_arrived`, `keepsake_added`. Sign keys are `"<mystery>/<index>"`.
+  - Casting follows §13.4 exactly; the reference sim now applies the role `prefer` lists too, and both pick the pair scene's pair among pairs meeting `pair_hearts_min` (higher hearts first, so `pair_nap` is anchored at the ♥4 friend's nest). Re-run `--quick`: R1 28 / 29 / 30, R2 median 65.4, all checks pass.
+  - Extra save fields beyond §13.6: `retention_v` (the content-aware migration ran), `signature_gifts` (Keepsakes), `open_count` (the wave hash key), `pending_scene.phase/weather`, `present[].cousin`. A cousin rides on its base's visit record and, as in the reference, takes no economy place.
+  - Migration: an MVP `<species>_h4` card (old shared template) keeps its id; the new ♥4 story then arrives as `<species>_h4_story`.
+  - QA: `--fixture=retention_mid` has nests at all three stages (every ♥3+ friend has one, so a ♥1–5 spread means three) and writes the cousin directly although two friends are still unmet (in play a cousin needs all 12); `--qa-scene=<id>` stages any scene and implies the retention_mid world.
 
 **P2 Creatures**
 - Poses:

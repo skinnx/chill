@@ -6,7 +6,7 @@
 
 | Check (re-run with the commands in §13) | Result |
 |---|---|
-| GUT, 8 suites / 78 tests / 5,836 asserts | **all pass**, 25 s headless (re-run 2026-10-21) |
+| GUT, 25 suites / 264 tests / 34,457 asserts (Retention v1: 3 suites, 29 tests) | **all pass**, 41 s headless (re-run 2026-10-21) |
 | E5 / E6 in GDScript: 48 random + 12 reference players × 30 days, **15,908 sessions** | 0 sessions with nothing affordable, 0 with nothing new; max displayed 50,401, max price 527 (the Python sim: 51,734 / 527) |
 | `godot --headless --path . --import` on a fresh clone | 0 errors, 0 warnings |
 | Boot → main headless, `--quit-after 300` | 0 errors, 0 leaks |
@@ -46,7 +46,9 @@ scenes/main.tscn         the hollow: named composition layers + HUD placeholders
 shaders/                 Art Bible §12.1 shaders (Technical Artist); shaders/dev/ = skeleton placeholders
 scripts/
   autoload/              the 11 autoloads (§3.1)
-  sim/                   PURE world model: world_state, world_sim, tod_math, weather_plan, garden_rules, recap
+  sim/                   PURE world model: world_state, world_sim, retention_rules, retention_hash, tod_math,
+                         weather_plan, garden_rules, recap
+  qa/                    QA fixtures that touch Game (retention_fixture: --fixture=retention_mid, --qa-scene)
   core/                  PURE infrastructure: game_content, save_store, atomic_file, i18n, name_rules, nfc_table, platform
   world/                 PURE look math: palette_math (OKLab), palette_driver, weather_driver, celestial
   motion/                spring, spring_2d (analytic), cubic_bezier
@@ -94,7 +96,7 @@ On a fresh clone the editor loads both before the first import has produced the 
 | 8 | **UiTheme** | `autoload/ui_theme.gd` | Builds the Theme from tokens, sets it on the root window, rebuilds on text size, language or transparency changes | `theme`, `rebuild()`, `attach(control)` | `theme_rebuilt(theme)` |
 | 9 | **TimeOfDay** | `autoload/time_of_day.gd` | Art Bible PaletteDriver + WeatherDriver + celestial: clock → `g_day` → OKLab palettes → rain transform → shader globals | `phase`, `weather`, `g_day`, `colors`, `scalars`, `evaluate(local_s)`, `set_install_seed(seed)`, `set_world_offset(v)`, `set_overrides(g_day, weather)` | `phase_changed(phase)`, `weather_changed(w)`, `globals_updated(values)` |
 | 10 | **AudioDirector** | `autoload/audio_director.gd` | Executes `audio/manifest.json` (AUDIO_BIBLE §8): bus graph, beds, pads, Eno voices, birds, critters, gusts, cues with pitch rules, haptics, ducking, music modes, volumes | `request_preload()`, `start_world_audio()`, `play_cue(id, ctx)`, `start_purr(voice_step)`, `stop_purr()`, `set_phase(p)`, `set_weather(w)`, `set_sheet_open(open)`, `set_music_mode(m)`, `set_volume(group, v)`, `set_mono(on)`, `set_world_state(shells, awake, sleeping)`, `set_install_seed(s)`, `current_chord()`, `current_pcs()`, `debug_set_clock(p, w)`, `stop_all()`, `slider_to_db(v)` | `cue_played(id, caption_key, world_position)`, `chord_changed(chord_name)` |
-| 11 | **Game** | `autoload/game.gd` | Glue: owns `sim: WorldSim`; boot/load/catch-up; per-frame advance; player-action API; lifecycle; Back button; greeter scheduling | `boot()`, `world_now()`, `tap_seed()`, `plant(flower, bed)`, `place(decor)`, `collect_all()`, `float_boat()`, `pet(species)`, `rename(species, name)`, `read_postcard(id)`, `display_name(species)`, `notify_world_visible()`, `push_back_handler(c)`, `remove_back_handler(c)`, `handle_back()`, `leave_now()`, `quit_cleanly(code)` | `world_ready(recap)`, `sim_event(ev)`, `wallet_changed(dew)`, `basket_changed(n, dew)`, `leave_requested`, `suspended`, `resumed` |
+| 11 | **Game** | `autoload/game.gd` | Glue: owns `sim: WorldSim`; boot/load/catch-up; away-scene check on every return; per-frame advance (+ pending-scene foreground time); player-action API; lifecycle; Back button; greeter scheduling | `boot()`, `world_now()`, `tap_seed()`, `plant(flower, bed)`, `place(decor)`, `collect_all()`, `float_boat()`, `pet(species)`, `rename(species, name)`, `read_postcard(id)`, `display_name(species)`, `notify_world_visible()`, `push_back_handler(c)`, `remove_back_handler(c)`, `handle_back()`, `leave_now()`, `quit_cleanly(code)`; **Retention v1 (§5.2a):** `tap_sign(sign_key)`, `tap_scene()`, `scene_foreground_tick(dt)`, `on_background(world_t)`, `pending_scene()`, `visible_signs()`, `clue_cards()`, `clues_for(mystery)`, `heart_level(species)`, `unlocks(species)`, `unseen_hearts()`, `mark_hearts_seen(species)`, `nest_state(species)`, `nests()`, `memories()`, `keepsakes()`, `cousin_of(species)`, `variants_met()`, `best_buddy(species)`, `wave_plan()`, `can_rename(species)` | `world_ready(recap)`, `sim_event(ev)`, `wallet_changed(dew)`, `basket_changed(n, dew)`, `leave_requested`, `suspended`, `resumed`; **Retention v1:** `heart_up(species, hearts, offline)`, `mystery_opened(mystery, kind, target)`, `sign_appeared(sign)`, `clue_found(clue)`, `nest_grew(species, stage, offline)`, `scene_ready(scene)`, `scene_archived(memory)`, `cousin_met(variant, species)`, `cousin_arrived(variant, species, first)`, `keepsake_added(species)` |
 
 Rules:
 - Autoloads talk *down* the list by direct calls and *up* by signals.
@@ -190,6 +192,7 @@ Plain typed fields (GDD §5.8 persistence list), serialised by `to_dict()` and r
 | Visitors | `present[{species, arrive_t, depart_t, gift_dew, gift_item, boat_credit, pet_credit, scripted, greeter}]`, `next_candidate_t`, `scripted[{t, kind, species, stay_s, gift_dew, id, role}]` |
 | Relationships | `met{species: first_met_unix}`, `names`, `affection`, `photos{species: 5-bit mask}`, `photo_meta{"species/pose": {phase, weather, world_t}}`, `postcards[{id, template, species, received_unix, read}]`, `boats`, `last_pet_unix` |
 | Flags | `seed_planted`, `seed_tap_t`, `basket_full_seen`, `first_bloom_postcard_sent` |
+| Retention v1 (schema 2, GDD §13.6) | `retention_v` (content-aware migration done), `visit_aff_t`, `hearts_seen`, `nests{style, built_t, stage}`, `postcards_waiting`, `mysteries{kind, target, open_t, ok_t, solved_unix}`, `signs[{mystery, index, type, appear_t, anchor}]`, `clues{mystery: bitmask}`, `variants_met`, `cousin_visits`, `scene_returns`, `scenes_seen`, `scene_cast`, `pending_scene{scene, cast, phase, weather, world_t, shown_s}`, `memories[{scene, cast, phase, weather, world_t, unix}]`, `keepsakes`, `signature_gifts`, `last_bg_t`, `open_count`; `basket[].signature`, `present[].cousin` |
 
 ### 5.2 `WorldSim` — the world step
 
@@ -246,15 +249,36 @@ Between events, `advance` is O(1): it caches the next event time and only settle
 | `planted` / `placed` | stem/decor, bed, slot, index, cost, tutorial | seed arc / piece settles, S05 |
 | `boat` | count, watchers | boat at the spring rock, watchers gather |
 | `petted` | species, credited | hearts on release (the credit is never shown) |
+| `mystery_opened` | mystery, kind (species/variant), target, signs | Album › Clues card |
+| `sign_due` / `sign_visible` | key, mystery, index, sign (type), species, variant, anchor, appear_t, footprint, dropped, tint | a visible sign fades in at its anchor (600 ms); `due` alone = queued (≤ 3 visible) |
+| `clue` | sign fields + riddle_key, found, total, solved | `clue_lift` + S23, toast; a note opens the riddle |
+| `nest_stage` | species, style, stage, stage_id, built | nest built (stage 0) / grew |
+| `scene_staged` | scene, cast, phase, weather, world_t, shown_s, resumed, new_memory, first_time | stage the away scene, recap teaser, S25 |
+| `scene_archived` | scene, cast, phase, weather, world_t, unix, index | Memories; `SCENE_SAVED` toast |
+| `cousin_met` / `cousin_arrived` | variant, species (, first) | new-friend card with `NEWFRIEND_COUSIN_TITLE` / the cousin walks in with its base |
+| `keepsake` | species | Keepsakes dot |
+| `hearts` (extended) | species, hearts, from | heart-up celebrate + toast (`unseen_hearts()` for offline ones) |
+| `gift` (extended) | + signature, first_signature | `BASKET_SIGNATURE_NOTE` under the first signature gift |
 
 **Onboarding (GDD §3.4)** is scheduled at install with provisional times: Pip at 30 s, Dot at 150 s, Cobble at 210 s, the welcome postcard at 240 s, and Poisson visits from 300 s. A seed tapped at t ≤ 25 s reschedules Pip to clamp(t + 15, 20, 40) and Dot to min(t + 90 + 15, 150). The tutorial hints are view-side.
 
-**Recap (`Recap.build`)** produces up to 3 lines in GDD priority order: new friend → postcard → visitors → gifts waiting → blooms → photos → rain. It appears only when the gap is at least `welcome_back_min_gap_s` and something happened. Lines are `{key, species}`, so the UI formats names and language at display time.
+**Recap (`Recap.build`)** produces up to 3 lines in GDD §13.5.3 priority order: new friend → away-scene teaser → cousin → postcard → hearts → clue → visitors → nest → gifts waiting → blooms → photos → rain; a staged scene's teaser always gets a line. It appears only when the gap is at least `welcome_back_min_gap_s` and something happened. Lines are `{key, species}`, so the UI formats names and language at display time.
 
 **Greeter (GDD §5.6).**
 - On launch or resume, if nothing happened or nobody is present, Game marks the greeter as wanted.
 - Once the UI calls `Game.notify_world_visible()`, it waits `greeter_delay_min..max_s`, then `sim.add_greeter()`.
 - The greeter leaves when the app is backgrounded. A real arrival of the same species converts the greeter into the visit.
+
+### 5.2a Retention v1 (`RetentionRules`, `RetentionHash`; GDD §13)
+
+`WorldSim.retention` is a `RetentionRules` holding the content-derived constants and **no reference back** to the sim (no RefCounted cycle): every hook takes the sim as its first argument. It ports the retention half of the reference `Player` and is called from the one world step, so live play and offline catch-up share it.
+- **Hash.** `RetentionHash.u(seed, parts)` is §13.1 (FNV-1a 64 + splitmix64, logical shifts masked). Sign times, scene roll and pick, and wave delays use it; the world RNG stream is never touched (tested: `rng_state` is unchanged by every retention call).
+- **Hooks in the world step.** `_arrive`: `on_debut` (mystery solved, waiting ♥4 postcards sent, all met → cousin mysteries), the 20 h `visit_affection_due` rest, `gift_item_for` (signature gift from ♥2), `on_base_arrival` (cousin debut / every 3rd visit, stored as `present[].cousin`; like the reference it takes no economy place). `_add_affection`: `on_heart_level` per level (♥2/♥4/♥5 stories, ♥4 waits for an unmet buddy, ♥3 nest, ♥5 keepsake), then `after_hearts` (♥5 → cousin mystery). `_eligible`: `debut_ok_t` (onboarding −∞, not opened +∞, else last sign + 1,800 s). `check_mysteries` after every bloom, décor purchase, the last friend met, a ♥5 heart-up and the migration.
+- **Timed retention events** join `advance()` as a fifth source (`next_event_t`): a sign coming due (`sign_due`; `fill_visible` then gives it one of ≤ 3 slots at the nearest free anchor of its type, ties by anchor order) and nest stages (`nest_stage`, derived from `built_t`, never lower than stored). Tie order: scripted → growth → retention → departure → candidate.
+- **Away scenes** are not in `advance()`: Game calls `retention.on_return(sim, t_bg, t_now)` after each catch-up (boot from a save: t_bg = the saved world t; resume: `last_bg_t`, set on suspend). It needs ≥ 2 h; a pending scene is re-shown instead of a new pick; `scene_returns` = r; roll and pick by hash; absence profile sampled every 600 s; unseen-first pool; casting = prefer lists, then new faces, present first, hearts, album order; pair scenes take the best-ranked best-buddy pair meeting `pair_hearts_min`, higher hearts first. `stage_scene` never replaces a pending scene unseen. `tap_scene()` or 600 s of `foreground_tick` archives it to `memories`.
+- **Read models** for P2 (`unlock_list`, `unseen_hearts`, `nest_view`, `clue_cards`/`clue_card`, `cousin_view`, `keepsake_view`, `buddy_view`, `visible_signs`, `wave_plan`) are pure and wrapped by `Game` (§3.1).
+- **E1/G1.** `monotone_snapshot()` also covers hearts, nest stages, clues + waiting signs, mysteries, cousins, memories + pending, scenes seen, keepsakes, signature gifts and postcards + waiting.
+- **Not in the sim (creature brain, P2):** nest nap preference 0.7, pair bouts, wave-on-open poses, cousin bouts, staged-scene slots and staged friends as greeters (GDD §13.9).
 
 ### 5.3 Parity with `tools/sim/economy_sim.py`
 Rules, data and the order of operations are ported 1:1. The known differences are listed below; none of them changes any GDD rule:
@@ -262,6 +286,7 @@ Rules, data and the order of operations are ported 1:1. The known differences ar
 - **Growth tie order.** It is (time, stage, stem index) instead of the heap's (time, stage, flower index).
 - **`first_bloom` postcard.** It is sent for the first bloom of a *bought* stem, which is the GDD intent; the reference used "any bloom after the first purchase".
 - **Greeter and live tap times.** The greeter and the live seed-tap rescheduling exist only in the game; the reference knows the tap time up front.
+- **Retention (bit-exact).** All retention randomness is the stateless hash, so `tests/test_retention_parity.gd` replays the reference's scripted schedule (`python3 tools/sim/economy_sim.py --parity-export tests/fixtures/retention_parity.json`: visits, pets, garden counts, sign taps, 21 returns with fixed absence profiles, two cousin debuts) and matches affection, the rest, hearts, story postcards and waits, nests, every mystery `open_t`/`ok_t`, every sign `appear_t`, clues, cousins and every scene roll, pick and cast. Regenerate the fixture after any rule or data change. Game-only bookkeeping the reference does not model: sign anchors and visibility, nest stage events, pending scenes and linger, cousin repeat visits, signature gifts, keepsakes, `hearts_seen`, the migration.
 
 Two greeter numbers stated only in GDD prose were added to `data/economy.json` as `greeter_stay_s: 300` and `greeter_pet_cooldown_s: 3600`. `validate_content.py` still passes.
 
@@ -279,7 +304,7 @@ Behaviour bouts, spots, walking paths, hops, look-at and every other position ar
 
 **File** `user://save.json`. It is one JSON object, written by `JSON.stringify(doc, "\t", sort_keys, full_precision)`:
 ```json
-{ "format": "mossling-meadow-save", "schema": 1, "app_version": "0.1.0",
+{ "format": "mossling-meadow-save", "schema": 2, "app_version": "0.1.0",
   "saved_at_unix": 1792700000.25, "sha256": "<hex>", "world": { …WorldState.to_dict()… } }
 ```
 
@@ -299,9 +324,10 @@ A crash at any step leaves at least one complete file. Saving is synchronous and
 - **Deviation from D12's "`from_native`", for the record:** 4.7.2's `JSON.from_native` stores floats as `"f:<15 digits>"` strings. That is a much larger loss and an unreadable file, so typed `to_dict`/`from_dict` with explicit coercion is used instead. It is equally safe, because objects are never deserialised.
 
 **Schema evolution.**
-- Bump `SaveStore.SCHEMA` when `to_dict()` changes shape, and add `MIGRATIONS[old] = Callable(world) -> world`.
-- Older files are migrated forward, without checksum, before normalisation.
+- Bump `SaveStore.SCHEMA` when `to_dict()` changes shape, add the old schema to `MIGRATABLE` and a `match` arm to `SaveStore.migrate(from_schema, world)` (pure and additive: it never overwrites or removes a key).
+- Older files are migrated forward, without checksum, before normalisation; the next save writes the current schema with its checksum. The main → `.tmp` → `.bak` order is unchanged, so an old `.bak` behind a corrupt main file is migrated too.
 - Newer files are refused (`unsupported schema`) and never misread.
+- **Schema 1 → 2 (Retention v1, GDD §13.6).** `SaveStore.migrate(1, w)` adds every new field empty (`RETENTION_V1_DEFAULTS`, with `retention_v = 0`); `WorldState.from_dict` adds `basket[].signature = false` and `present[].cousin = ""`. The content-aware steps need the data, so `WorldSim._init` runs `RetentionRules.migrate_v1` once when `retention_v < RETENTION_VERSION`, at the saved world time: `hearts_seen` = hearts; nests (twigs) for ♥3+; ♥4/♥5 stories not yet delivered by template (♥4 waits for an unmet buddy; if an MVP `<species>_h4` card with the old shared template holds the id, the new story gets `<species>_h4_story`); keepsakes for ♥5; then `check_mysteries`. Affection is untouched and the 20 h rest starts empty. Tested from a real schema-1 save written by the MVP code (`tests/fixtures/save_schema1.json`).
 
 **Policy (who saves when).**
 
@@ -491,6 +517,9 @@ The contract is AUDIO_BIBLE §8; `tools/audio/mixsim.py` is its executable refer
 | `test_content_registry.gd` | All 9 data files load and validate; MVP counts; GDD §5.2 price ladders and the catalogue total of 19,461; references resolve; 80 bed slots for 80 flower copies; hearts; broken documents are reported, not crashed |
 | `test_sim_invariants.gd` | **E1** 30 days away → nothing decreases; **E1** clock rollback changes nothing; E1 across random sessions; **offline clamp** 7 d (and short gaps unclamped); **basket saturation** → photos and the brimming postcard, never more than 24, analytic 10–14 h target; cup brimming keeps the remainder; **E5/E6** over ~16 k sessions; wallet cap; onboarding (3 friends in 5 min, first at 20–40 s, clover #2 = 17); untapped seed; save/load mid-game does not change the future; greeter gives nothing; bed rules |
 | `test_save_service.gd` | Lossless round trip, including the 64-bit RNG state and Vietnamese names; .bak rotation; **corrupt main → .bak**; checksum mismatch → .bak; orphaned .tmp; garbage and missing files; future schema refused; type coercion; disabled service |
+| `test_retention_core.gd` | GDD §13: the §13.1 golden hash vectors; retention never draws from the world RNG; the 20 h visit rest; heart unlock order (♥2 story + signature gift, ♥3 nest, ♥4 waits for the buddy, ♥5 story + keepsake, multi-level jumps); nests grow offline and never wilt; signs precede the debut, never expire and are still collectable after 30 days; ≤ 3 visible at distinct, type-valid anchors; cousin conditions and every-3rd visit; scenes: ≥ 2 h, one per return, pending re-shown, deterministic per seed, unseen first, profile conditions, cast rules, pending across close + 600 s linger; 30 days away nothing decreases; live = one catch-up; recap teaser; view models; `retention_mid` and every `--qa-scene` |
+| `test_retention_save.gd` | Schema 1 → 2 from a real MVP save: every v1 value kept, new fields added, content-aware steps (hearts_seen, nests, keepsakes, stories, mysteries), runs once, plays on and round-trips; old `.bak` migrated behind a corrupt main; `migrate` only adds; coercion of the new fields |
+| `test_retention_parity.gd` | Bit-level parity with `economy_sim.py` on the exported scripted schedule (§5.3) |
 | `test_palette.gd` | **Palette interpolation:** keys exact, midpoints equal to the engine's OKLab Gradient; OKLab round trip; scalars; clock → `g_day` (crossfades, midnight, continuity over 24 h); rain transform; 30 s weather crossfade; celestial; every declared global has a writer |
 | `test_clock.gd` | **Frame clock** (QA captures): replays identically, ignores real time, `--now`/override mid-run and clear; the system-clock mode is unchanged |
 | `test_spring.gd` | **Spring helper converges** for all 5 tokens, with analytic overshoot and envelope settle times; frame-rate independence (30 vs 120 fps); stability through hitches; retarget keeps velocity; critically and over-damped never overshoot; Reduce Motion ζ ≥ 1; Spring2D; bézier tokens; duration tokens; the loop table meets V5 (integer k, breathing 3.5–4.5 / 5–6 s, ≤ 3 firefly glows/s); `Motion` springs take the token rest epsilon |
@@ -585,3 +614,4 @@ User args (after `--`):
 - `--no-governor`
 - `--debug-layout`, `--debug-hud`, `--log-events`
 - `--audio-seed=N`
+- `--fixture=retention_mid` (garden_mid + hearts 1–5, nests at all 3 stages, 2 open mysteries with 1 visible sign each, a cousin met, memories, a pending `pair_nap`) and `--qa-scene=<scene id>` (that scene pending; implies the retention_mid world): `RetentionFixture`, called from `GardenFixture.apply_from_args`

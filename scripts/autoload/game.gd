@@ -27,6 +27,27 @@ signal leave_requested
 signal suspended
 signal resumed
 
+# --- Retention v1 (GDD §13; docs/ARCHITECTURE.md §3.1). Fired from the sim events in order, after
+# sim_event; catch-up (offline) events carry offline = true. Payloads are the event dictionaries.
+## A friend reached a new heart level (live: celebrate + toast; offline: recap line, toasts later).
+signal heart_up(species: StringName, hearts: int, offline: bool)
+## A mystery opened for an unmet friend or a cousin (Album › Clues gains a card).
+signal mystery_opened(mystery: StringName, kind: StringName, target: StringName)
+## A sign took a visible slot at its anchor (fade in 600 ms; at most 3 at once).
+signal sign_appeared(sign: Dictionary)
+## A visible sign was tapped: clue_lift + S23, toast; a note opens the riddle reader.
+signal clue_found(clue: Dictionary)
+## A nest was built (stage 0) or grew a stage.
+signal nest_grew(species: StringName, stage: int, offline: bool)
+## A staged scene is waiting in the world (new or re-shown after a close).
+signal scene_ready(scene: Dictionary)
+## The pending scene was archived to Album › Memories (tap or linger_s of foreground time).
+signal scene_archived(memory: Dictionary)
+signal cousin_met(variant: StringName, species: StringName)
+## A cousin came along with its base friend (first visit or every 3rd arrival).
+signal cousin_arrived(variant: StringName, species: StringName, first: bool)
+signal keepsake_added(species: StringName)
+
 const ARG_SEED := "--seed="
 const QUIT_SETTLE_FRAMES := 2
 ## Wall-clock time the audio mix thread gets to free stopped playbacks before quitting. Frames are
@@ -84,12 +105,15 @@ func boot() -> void:
 	if res["ok"]:
 		var world: Dictionary = res["world"]
 		sim = WorldSim.new(content, WorldState.from_dict(world))
+		var t_bg := sim.state.t  # the world was last running when it was saved
 		catch = sim.catch_up(now, tz, float(res["saved_at_unix"]))
+		sim.retention.on_return(sim, t_bg, sim.state.t)  # GDD §13.4: an away scene may be staged
 		resumed_save = true
 	else:
 		if SaveService.has_save():
 			SaveService.quarantine()
 		sim = WorldSim.new_game(content, _new_install_seed(), now, tz)
+	sim.state.open_count += 1  # the wave-on-open hash key (GDD §13.2.2)
 	_session_rng.seed = hash([sim.state.install_seed, now])
 	TimeOfDay.set_install_seed(sim.state.install_seed)
 	AudioDirector.set_install_seed(sim.state.install_seed)
@@ -112,6 +136,8 @@ func _process(delta: float) -> void:
 	if not is_ready or is_suspended:
 		return
 	sim.advance(world_now())
+	if not sim.state.pending_scene.is_empty():
+		sim.retention.foreground_tick(sim, delta)  # archived after linger_s of foreground time
 	if sim.has_events():
 		_dispatch(sim.drain_events(), false)
 	if _greeter_left_s >= 0.0:
@@ -202,6 +228,128 @@ func read_postcard(id: String) -> void:
 	SaveService.request_save()
 
 
+# ================================================================= Retention v1 API (GDD §13.9)
+
+## Taps a visible sign ([code]sign["key"][/code] from [method visible_signs] / [signal sign_appeared]).
+## Returns false if it is not visible (nothing changes).
+func tap_sign(sign_key: String) -> bool:
+	_sync()
+	var ok := sim.retention.tap_sign(sim, sign_key)
+	_after_action()
+	return ok
+
+
+## Taps the staged scene (a participant or prop): it is archived to Memories. False if none.
+func tap_scene() -> bool:
+	_sync()
+	var ok := sim.retention.tap_scene(sim)
+	_after_action()
+	return ok
+
+
+## Foreground seconds while a scene is shown (Game calls this every frame; exposed for tests/QA).
+func scene_foreground_tick(dt: float) -> void:
+	sim.retention.foreground_tick(sim, dt)
+	if sim.has_events():
+		_dispatch(sim.drain_events(), false)
+
+
+## Records the background moment for the 2 h scene rule (Game calls it on suspend).
+func on_background(world_t: float) -> void:
+	sim.state.last_bg_t = world_t
+
+
+## {scene, cast: Array[String], phase, weather, world_t, shown_s} or {} if nothing is staged.
+func pending_scene() -> Dictionary:
+	return sim.state.pending_scene.duplicate(true)
+
+
+## Signs on screen now (<= 3): {key, mystery, index, sign, species, variant, anchor, appear_t,
+## footprint, dropped, tint}.
+func visible_signs() -> Array[Dictionary]:
+	return sim.retention.visible_signs(sim)
+
+
+## Album › Clues cards in display order (RetentionRules.clue_cards).
+func clue_cards() -> Array[Dictionary]:
+	return sim.retention.clue_cards(sim)
+
+
+## The clue card of one mystery: a species id (unmet friend) or a variant id (cousin).
+func clues_for(mystery: StringName) -> Dictionary:
+	return sim.retention.clue_card(sim, String(mystery))
+
+
+func heart_level(species: StringName) -> int:
+	return sim.hearts_of(species)
+
+
+## Friend card unlock lines: [{heart, reached, album_key, toast_key, unlocks}] (no points shown).
+func unlocks(species: StringName) -> Array[Dictionary]:
+	return sim.retention.unlock_list(sim, species)
+
+
+## Heart-ups not yet celebrated ([{species, hearts, seen}]); the UI toasts them after the recap.
+func unseen_hearts() -> Array[Dictionary]:
+	return sim.retention.unseen_hearts(sim)
+
+
+func mark_hearts_seen(species: StringName) -> void:
+	sim.retention.mark_hearts_seen(sim, species)
+	SaveService.request_save()
+
+
+## {species, style, stage, stage_id, built_t, style_key, stage_key, x, y} or {} (no nest).
+func nest_state(species: StringName) -> Dictionary:
+	return sim.retention.nest_view(sim, species)
+
+
+## Every nest, keyed by species.
+func nests() -> Dictionary:
+	var out := {}
+	for sp: String in sim.state.nests:
+		out[StringName(sp)] = sim.retention.nest_view(sim, StringName(sp))
+	return out
+
+
+## Album › Memories (moments), oldest first: {scene, cast, phase, weather, world_t, unix}.
+func memories() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for m: Dictionary in sim.state.memories:
+		out.append(m.duplicate(true))
+	return out
+
+
+## Album › Keepsakes: {portraits, signature_gifts, cousins}.
+func keepsakes() -> Dictionary:
+	return sim.retention.keepsake_view(sim)
+
+
+## The cousin row of a friend card ({} if the species has no cousin).
+func cousin_of(species: StringName) -> Dictionary:
+	return sim.retention.cousin_view(sim, species)
+
+
+## variant id -> unix time met.
+func variants_met() -> Dictionary:
+	return sim.state.variants_met.duplicate()
+
+
+## {friend, met, active}: the best-buddy pair is active once both are met and either is at ♥4.
+func best_buddy(species: StringName) -> Dictionary:
+	return sim.retention.buddy_view(sim, species)
+
+
+## Who waves when the hollow opens (after the recap closes): [{species, delay_s, pose}].
+func wave_plan() -> Array[Dictionary]:
+	return sim.retention.wave_plan(sim, sim.state.open_count)
+
+
+## Renaming stays available from the first meeting (Director ruling on GDD §13.11 Q1).
+func can_rename(species: StringName) -> bool:
+	return sim.is_met(species)
+
+
 ## Custom name, else the default name in the current language.
 func display_name(species: StringName) -> String:
 	var custom: String = sim.state.names.get(String(species), "")
@@ -279,6 +427,7 @@ func _dispatch(events: Array[Dictionary], catch_up: bool) -> void:
 		if catch_up:
 			ev["catch_up"] = true
 		sim_event.emit(ev)
+		_emit_retention(ev, catch_up)
 	if not events.is_empty():
 		_push_audio_state()
 	var dew := sim.state.dew
@@ -289,6 +438,31 @@ func _dispatch(events: Array[Dictionary], catch_up: bool) -> void:
 	if n != _last_basket:
 		_last_basket = n
 		basket_changed.emit(n, sim.basket_dew())
+
+
+## Typed Retention v1 signals for P2 views (the same events also went out as sim_event).
+func _emit_retention(ev: Dictionary, offline: bool) -> void:
+	match StringName(ev["type"]):
+		WorldSim.EV_HEARTS:
+			heart_up.emit(StringName(ev["species"]), int(ev["hearts"]), offline)
+		WorldSim.EV_MYSTERY_OPENED:
+			mystery_opened.emit(StringName(ev["mystery"]), StringName(ev["kind"]), StringName(ev["target"]))
+		WorldSim.EV_SIGN_VISIBLE:
+			sign_appeared.emit(ev)
+		WorldSim.EV_CLUE:
+			clue_found.emit(ev)
+		WorldSim.EV_NEST_STAGE:
+			nest_grew.emit(StringName(ev["species"]), int(ev["stage"]), offline)
+		WorldSim.EV_SCENE_STAGED:
+			scene_ready.emit(ev)
+		WorldSim.EV_SCENE_ARCHIVED:
+			scene_archived.emit(ev)
+		WorldSim.EV_COUSIN_MET:
+			cousin_met.emit(StringName(ev["variant"]), StringName(ev["species"]))
+		WorldSim.EV_COUSIN_ARRIVED:
+			cousin_arrived.emit(StringName(ev["variant"]), StringName(ev["species"]), bool(ev["first"]))
+		WorldSim.EV_KEEPSAKE:
+			keepsake_added.emit(StringName(ev["species"]))
 
 
 ## The creature layer reports who is napping (view-side state, ARCHITECTURE §5.4): sleepers
@@ -334,6 +508,7 @@ func _suspend() -> void:
 	if sim.has_events():
 		_dispatch(sim.drain_events(), false)
 	_suspended_at_unix = Clock.now_unix()
+	on_background(sim.state.t)
 	sim.set_anchor(sim.state.t, _suspended_at_unix, Clock.tz_offset_s())
 	is_suspended = true
 	SaveService.save_now(&"paused")
@@ -344,6 +519,8 @@ func _resume() -> void:
 	if not is_suspended:
 		return
 	var catch := sim.catch_up(Clock.now_unix(), Clock.tz_offset_s(), _suspended_at_unix)
+	sim.retention.on_return(sim, sim.state.last_bg_t, sim.state.t)  # GDD §13.4
+	sim.state.open_count += 1
 	last_catch_up = catch
 	_rebase()
 	var events := sim.drain_events()

@@ -19,14 +19,23 @@ extends RefCounted
 
 const FORMAT := "mossling-meadow-save"
 ## Bump when WorldState.to_dict() changes shape; add a migration from the previous schema.
-const SCHEMA := 1
+## 1: MVP. 2: Retention v1 (GDD §13.6), additive fields only.
+const SCHEMA := 2
 const SOURCE_MAIN := &"main"
 const SOURCE_TMP := &"tmp"
 const SOURCE_BACKUP := &"backup"
 const SOURCE_NONE := &"none"
 
-## schema N -> Callable(world: Dictionary) -> Dictionary returning schema N + 1 data.
-const MIGRATIONS := {}
+## Schemas that have a forward migration to N + 1 ([method migrate]).
+const MIGRATABLE: Array[int] = [1]
+## Retention v1 fields a schema-1 world gains, all empty (GDD §13.6). Kept literal here, not read
+## from WorldState, so this migration keeps meaning "1 -> 2" after later schemas change the state.
+const RETENTION_V1_DEFAULTS := {
+	"retention_v": 0, "visit_aff_t": {}, "hearts_seen": {}, "nests": {}, "postcards_waiting": [],
+	"mysteries": {}, "signs": [], "clues": {}, "variants_met": {}, "cousin_visits": {}, "scene_returns": 0,
+	"scenes_seen": {}, "scene_cast": {}, "pending_scene": {}, "memories": [], "keepsakes": {},
+	"signature_gifts": {}, "last_bg_t": -1.0, "open_count": 0,
+}
 
 var path: String
 ## Optional Callable(world: Dictionary) -> Dictionary: re-normalises parsed data (e.g.
@@ -120,10 +129,10 @@ func decode(text: String) -> Dictionary:
 		w = normal
 	else:
 		while schema < SCHEMA:
-			if not MIGRATIONS.has(schema):
+			if not MIGRATABLE.has(schema):
 				out["error"] = "no migration from schema %d" % schema
 				return out
-			w = (MIGRATIONS[schema] as Callable).call(w)
+			w = migrate(schema, w)
 			schema += 1
 		w = _normalize(w)
 	out["ok"] = true
@@ -134,6 +143,27 @@ func decode(text: String) -> Dictionary:
 	out["saved_at_unix"] = saved_at
 	out["app_version"] = version
 	return out
+
+
+## Forward migration of a world payload from [param from_schema] to from_schema + 1. Only adds
+## keys (never removes or lowers a value, G1); unknown schemas return the data unchanged.
+static func migrate(from_schema: int, world: Dictionary) -> Dictionary:
+	var w := world.duplicate(true)
+	match from_schema:
+		1:
+			# Retention v1 (GDD §13.6): every new field empty and retention_v 0, so WorldSim runs
+			# the content-aware steps (hearts_seen, nests, keepsakes, earned ♥4/♥5 postcards,
+			# mysteries) once at load. Basket entries gain signature = false via WorldState.
+			for key: String in RETENTION_V1_DEFAULTS:
+				if not w.has(key):
+					var def: Variant = RETENTION_V1_DEFAULTS[key]
+					if def is Dictionary:
+						w[key] = (def as Dictionary).duplicate(true)
+					elif def is Array:
+						w[key] = (def as Array).duplicate(true)
+					else:
+						w[key] = def
+	return w
 
 
 static func checksum(world: Dictionary) -> String:

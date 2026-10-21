@@ -86,6 +86,9 @@ static func requested() -> String:
 
 ## QA hook (idempotent): applies --fixture=<name> to Game.sim once per run.
 static func apply_from_args(content: GameContent) -> void:
+	if RetentionFixture.wanted():  # --fixture=retention_mid / --qa-scene=<id> (Gameplay, GDD §13.9)
+		RetentionFixture.apply_from_args(content)
+		return
 	var name := requested()
 	if name == "" or applied == name or Game.sim == null:
 		return

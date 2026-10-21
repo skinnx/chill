@@ -37,6 +37,17 @@ const EV_PLANTED := &"planted"            ## {stem, flower, bed, slot, tutorial,
 const EV_PLACED := &"placed"              ## {decor, index, cost, t}
 const EV_BOAT := &"boat"                  ## {count, watchers, t}
 const EV_PETTED := &"petted"              ## {species, credited, t}
+# Retention v1 (GDD §13.9; RetentionRules emits these)
+const EV_MYSTERY_OPENED := &"mystery_opened"  ## {mystery, kind, target, signs, t}
+const EV_SIGN_DUE := &"sign_due"          ## {key, mystery, index, sign, species, variant, anchor, appear_t, ...}
+const EV_SIGN_VISIBLE := &"sign_visible"  ## same fields; anchor set (at most max_visible at once)
+const EV_CLUE := &"clue"                  ## sign fields + {riddle_key, found, total, solved}
+const EV_NEST_STAGE := &"nest_stage"      ## {species, style, stage, stage_id, built}
+const EV_SCENE_STAGED := &"scene_staged"  ## {scene, cast, phase, weather, world_t, shown_s, resumed, ...}
+const EV_SCENE_ARCHIVED := &"scene_archived"  ## memory {scene, cast, phase, weather, world_t, unix, index}
+const EV_COUSIN_MET := &"cousin_met"      ## {variant, species}
+const EV_COUSIN_ARRIVED := &"cousin_arrived"  ## {variant, species, first}
+const EV_KEEPSAKE := &"keepsake"          ## {species}
 
 const STAGE_SEED := 0
 const STAGE_SPROUT := 1
@@ -50,6 +61,8 @@ const KIND_POSTCARD := "postcard"
 
 var content: GameContent
 var state: WorldState
+## Retention v1 rules (GDD §13): mysteries, signs, nests, cousins, scenes. Holds no reference back.
+var retention: RetentionRules
 
 var _eco: Dictionary
 var _ob: Dictionary
@@ -81,7 +94,10 @@ func _init(p_content: GameContent, p_state: WorldState) -> void:
 	_lmin = float(_eco["lambda_min_per_h"]) / TodMath.SECONDS_PER_HOUR
 	_lmax = float(_eco["lambda_max_per_h"]) / TodMath.SECONDS_PER_HOUR
 	_lhalf = float(_eco["snug_half"])
+	retention = RetentionRules.new(content)
 	_rebuild_caches()
+	if state.retention_v < WorldState.RETENTION_VERSION:
+		retention.migrate_v1(self)  # a schema-1 save (GDD §13.6); events reach the next drain
 
 
 ## A fresh install: world clock 0 at [param now_unix], onboarding scheduled (GDD §3.4).
@@ -95,6 +111,7 @@ static func new_game(p_content: GameContent, install_seed: int, now_unix: float,
 	var seeder := RandomNumberGenerator.new()
 	seeder.seed = install_seed
 	st.rng_state = seeder.state
+	st.retention_v = WorldState.RETENTION_VERSION
 	var sim := WorldSim.new(p_content, st)
 	sim._start_onboarding()
 	return sim
@@ -165,11 +182,13 @@ func advance(to_t: float) -> int:
 		var dep := _next_departure()
 		var t_dep: float = dep[0]
 		var t_can := state.next_candidate_t
-		var t_next := minf(minf(t_scr, t_gro), minf(t_dep, t_can))
+		var t_ret := retention.next_event_t(self, state.t)
+		var t_next := minf(minf(minf(t_scr, t_gro), minf(t_dep, t_can)), t_ret)
 		if t_next > to_t:
 			_next_t = t_next
 			_dirty = false
 			break
+		var prev_t := state.t
 		state.t = maxf(state.t, t_next)
 		n += 1
 		if t_next == t_scr:
@@ -181,6 +200,8 @@ func advance(to_t: float) -> int:
 		elif t_next == t_gro:
 			_grow(int(gro[1]), t_next)
 			_growth_dirty = true
+		elif t_next == t_ret:
+			retention.process(self, prev_t, t_next)
 		elif t_next == t_dep:
 			_depart(int(dep[1]), t_next)
 		else:
@@ -272,6 +293,7 @@ func buy_decor(decor_id: StringName) -> bool:
 	_emit(EV_PLACED, {"decor": decor_id, "index": index, "cost": cost})
 	if first_ever:
 		_send_event_postcard(&"first_decor", state.t)
+	retention.check_mysteries(self, state.t)
 	_dirty = true
 	return true
 
@@ -361,7 +383,7 @@ func add_greeter(at_t: float) -> StringName:
 	state.rng_state = _rng.state
 	state.present.append({"species": String(species), "arrive_t": at_t,
 		"depart_t": at_t + float(_eco["greeter_stay_s"]), "gift_dew": 0, "gift_item": "",
-		"boat_credit": true, "pet_credit": false, "scripted": false, "greeter": true})
+		"boat_credit": true, "pet_credit": false, "scripted": false, "greeter": true, "cousin": ""})
 	_emit(EV_GREETER_ARRIVED, {"species": species})
 	_dirty = true
 	return species
@@ -556,7 +578,35 @@ func monotone_snapshot() -> Dictionary:
 		"basket_items": state.basket.size(), "stems": state.stems.size(), "growth_stages": stages,
 		"decor": total_decor_owned(), "met": met_count(), "photos": photo_count(),
 		"postcards": state.postcards.size(), "affection": state.affection.duplicate(), "boats": state.boats,
-		"owned": state.owned.duplicate(), "t": state.t}
+		"owned": state.owned.duplicate(), "t": state.t,
+		# Retention v1 (G1): hearts, nest stages, clues + waiting signs, cousins, memories, keepsakes
+		"hearts": _hearts_map(), "nest_stages": _nest_stage_map(), "clues_and_signs": _clue_total() + state.signs.size(),
+		"mysteries": state.mysteries.size(), "cousins": state.variants_met.size(),
+		"memories_and_pending": state.memories.size() + (0 if state.pending_scene.is_empty() else 1),
+		"scenes_seen": state.scenes_seen.duplicate(), "keepsakes": state.keepsakes.size(),
+		"signature_gifts": state.signature_gifts.size(),
+		"postcards_and_waiting": state.postcards.size() + state.postcards_waiting.size()}
+
+
+func _hearts_map() -> Dictionary:
+	var out := {}
+	for s: Dictionary in content.species:
+		out[String(s["id"])] = hearts_of(StringName(s["id"]))
+	return out
+
+
+func _nest_stage_map() -> Dictionary:
+	var out := {}
+	for sp: String in state.nests:
+		out[sp] = int((state.nests[sp] as Dictionary)["stage"])
+	return out
+
+
+func _clue_total() -> int:
+	var n := 0
+	for m: String in state.clues:
+		n += retention.clue_count(self, m)
+	return n
 
 
 # ================================================================= internals: events
@@ -649,6 +699,8 @@ func _grow(i: int, t: float) -> void:
 	if stage == STAGE_BLOOM and not stem["tutorial"] and not state.first_bloom_postcard_sent:
 		state.first_bloom_postcard_sent = true
 		_send_event_postcard(&"first_bloom_by_purchase", t)
+	if stage == STAGE_BLOOM:
+		retention.check_mysteries(self, t)
 
 
 func _candidate(t: float) -> void:
@@ -687,6 +739,8 @@ func _eligible(id: StringName, ph: StringName, t: float) -> bool:
 
 
 func _eligible_ignoring_presence(id: StringName, ph: StringName, t: float) -> bool:
+	if not is_met(id) and t < retention.debut_ok_t(self, id):
+		return false  # GDD §13.3.1: an unmet friend debuts only after its signs are out
 	var s: Dictionary = content.species_by_id[id]
 	var phases: Array = s["phases"]
 	if not phases.is_empty() and not phases.has(String(ph)):
@@ -725,14 +779,16 @@ func _arrive(t: float, species: StringName, stay: float, scripted_gift: int, scr
 		_emit(EV_MET, {"species": species}, t)
 		if met_count() == content.species.size():
 			_send_event_postcard(&"all_species_met", t)
+		retention.on_debut(self, species, t)
 	if phase_at(t) == &"night":
 		_send_event_postcard(&"first_night_visit", t)
 	if weather_at(t) == WeatherPlan.RAIN:
 		_send_event_postcard(&"first_rain_visit", t)
-	_add_affection(species, int(_eco["affection_per_visit"]), t)
+	if retention.visit_affection_due(self, species, t):  # the 20 h rest (GDD §13.2.1)
+		_add_affection(species, int(_eco["affection_per_visit"]), t)
 	var sdef: Dictionary = content.species_by_id[species]
 	var gift := scripted_gift if scripted_gift > 0 else int(sdef["gift_dew"])
-	var gift_item := String(sdef["gift_item"])
+	var gift_item := retention.gift_item_for(self, species)
 	var gi := _greeter_index()
 	var from_greeter := gi >= 0 and StringName(state.present[gi]["species"]) == species
 	if real_visitor_count() >= int(_eco["max_present"]):
@@ -742,13 +798,15 @@ func _arrive(t: float, species: StringName, stay: float, scripted_gift: int, scr
 		_leave_gift(t, species, gift, gift_item)
 		return
 	var visit := {"species": String(species), "arrive_t": t, "depart_t": t + stay, "gift_dew": gift,
-		"gift_item": gift_item, "boat_credit": false, "pet_credit": false, "scripted": scripted, "greeter": false}
+		"gift_item": gift_item, "boat_credit": false, "pet_credit": false, "scripted": scripted, "greeter": false,
+		"cousin": ""}
 	if from_greeter:
 		state.present[gi] = visit
 	else:
 		state.present.append(visit)
 	_emit(EV_ARRIVED, {"species": species, "debut": debut, "peek": false, "scripted": scripted,
 		"from_greeter": from_greeter, "depart_t": t + stay}, t)
+	retention.on_base_arrival(self, species, visit, t)
 	# Room for real visitors always wins over the greeter.
 	if state.present.size() > int(_eco["max_present"]):
 		dismiss_greeter()
@@ -762,15 +820,22 @@ func _depart(i: int, t: float) -> void:
 	if p["greeter"]:
 		_emit(EV_GREETER_LEFT, {"species": species}, t)
 		return
-	_emit(EV_DEPARTED, {"species": species, "gift_dew": int(p["gift_dew"])}, t)
+	_emit(EV_DEPARTED, {"species": species, "gift_dew": int(p["gift_dew"]), "cousin": String(p.get("cousin", ""))}, t)
 	_leave_gift(t, species, int(p["gift_dew"]), String(p["gift_item"]))
 
 
-func _leave_gift(t: float, species: StringName, dew: int, gift_item: String) -> void:
+func _leave_gift(t: float, species: StringName, dew: int, visit_item: String) -> void:
 	var slots := int(_eco["basket_slots"])
 	if state.basket.size() < slots:
-		state.basket.append({"species": String(species), "gift_item": gift_item, "dew": dew})
-		_emit(EV_GIFT, {"species": species, "gift_item": gift_item, "dew": dew, "slot": state.basket.size() - 1}, t)
+		# From ♥2 the friend leaves its signature gift instead (same dew, GDD §13.2.2).
+		var gift_item := retention.gift_item_for(self, species)
+		if gift_item == "":
+			gift_item = visit_item
+		var signature := retention.is_signature_item(species, gift_item)
+		var first_signature := signature and retention.note_signature_gift(self, species, t)
+		state.basket.append({"species": String(species), "gift_item": gift_item, "dew": dew, "signature": signature})
+		_emit(EV_GIFT, {"species": species, "gift_item": gift_item, "dew": dew, "slot": state.basket.size() - 1,
+			"signature": signature, "first_signature": first_signature}, t)
 		if _u() < float(_eco["photo_chance_with_gift"]):
 			_take_photo(t, species)
 		if state.basket.size() == slots and not state.basket_full_seen:
@@ -803,33 +868,31 @@ func _add_affection(species: StringName, n: int, t: float) -> void:
 	var after := hearts_of(species)
 	if after <= before:
 		return
-	var sdef: Dictionary = content.species_by_id[species]
+	# Unlocks per level (GDD §13.2.2): stories ♥2/4/5, nest ♥3, keepsake ♥5.
 	for lvl in range(before + 1, after + 1):
-		if lvl == 2:
-			_send_postcard("%s_h2" % species, String(sdef["postcard_heart2"]), species, t)
-		elif lvl == 4:
-			_send_postcard("%s_h4" % species, String(sdef["postcard_heart4"]), species, t)
-	_emit(EV_HEARTS, {"species": species, "hearts": after}, t)
+		retention.on_heart_level(self, species, lvl, t)
+	_emit(EV_HEARTS, {"species": species, "hearts": after, "from": before}, t)
+	retention.after_hearts(self, after, t)
 
 
 func _send_event_postcard(trigger: StringName, t: float) -> void:
 	var p: Dictionary = content.event_postcards_by_trigger.get(trigger, {})
 	if not p.is_empty():
-		_send_postcard(String(p["id"]), String(p["template"]), &"", t)
+		send_postcard(String(p["id"]), String(p["template"]), &"", t)
 
 
 func _send_event_postcard_id(id: String, t: float) -> void:
 	for trig: StringName in content.event_postcards_by_trigger:
 		var p: Dictionary = content.event_postcards_by_trigger[trig]
 		if p["id"] == id:
-			_send_postcard(id, String(p["template"]), &"", t)
+			send_postcard(id, String(p["template"]), &"", t)
 			return
 
 
-func _send_postcard(id: String, template: String, species: StringName, t: float) -> void:
-	for p: Dictionary in state.postcards:
-		if p["id"] == id:
-			return
+## Delivers postcard [param id] once (a repeat id is ignored). Used by RetentionRules too.
+func send_postcard(id: String, template: String, species: StringName, t: float) -> void:
+	if has_postcard(id):
+		return
 	state.postcards.append({"id": id, "template": template, "species": String(species),
 		"received_unix": unix_at(t), "read": false})
 	_emit(EV_POSTCARD, {"id": id, "template": template, "species": species}, t)
@@ -876,6 +939,23 @@ func _greeter_index() -> int:
 		if state.present[i]["greeter"]:
 			return i
 	return -1
+
+
+func has_postcard(id: String) -> bool:
+	for p: Dictionary in state.postcards:
+		if p["id"] == id:
+			return true
+	return false
+
+
+## Appends an event to the outbox (RetentionRules emits through this).
+func emit_event(type: StringName, data: Dictionary, t: float = NAN) -> void:
+	_emit(type, data, t)
+
+
+## Retention state changed outside the event loop (new signs, a tap): recompute the next event.
+func mark_dirty() -> void:
+	_dirty = true
 
 
 func _emit(type: StringName, data: Dictionary, t: float = NAN) -> void:

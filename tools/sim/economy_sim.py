@@ -180,6 +180,7 @@ class Content:
 			c = x["conditions"]
 			self.scenes.append({
 				"id": x["id"], "weight": float(x["weight"]), "pair": bool(x["pair"]), "roles": len(x["roles"]),
+				"prefer": [[self.species_index[p] for p in r.get("prefer", [])] for r in x["roles"]],
 				"met_min": int(c.get("met_min", 0)),
 				"items": [(*self.item_index[r["item"]], int(r["min"])) for r in c.get("items", [])],
 				"boats_min": int(c.get("boats_min", 0)),
@@ -449,19 +450,21 @@ class Player:
 				return False
 		return True
 
-	def on_return(self, prev_end: float, now: float) -> None:
-		"""GDD 13.4: at most one staged scene per return after >= min_absence_s; unseen first."""
+	def on_return(self, prev_end: float, now: float, prof: dict | None = None) -> dict | None:
+		"""GDD 13.4: at most one staged scene per return after >= min_absence_s; unseen first.
+		prof (parity export only) replaces the sampled absence profile. Returns the pick or None."""
 		C = self.C
 		if now - prev_end < C.scene_min_abs:
-			return
+			return None
 		self.scene_returns += 1
 		r = self.scene_returns
 		if hash_u(self.seed, "scene_roll", r) >= C.scene_chance:
-			return
-		prof = self.away_profile(prev_end, now)
+			return {"r": r, "scene": None, "cast": []}
+		if prof is None:
+			prof = self.away_profile(prev_end, now)
 		elig = [i for i, sc in enumerate(C.scenes) if self.scene_ok(sc, prof)]
 		if not elig:
-			return
+			return {"r": r, "scene": None, "cast": []}
 		unseen = [i for i in elig if self.scene_seen[i] == 0]
 		pool = unseen if unseen else elig
 		ws = [C.scenes[i]["weight"] for i in pool]
@@ -479,10 +482,12 @@ class Player:
 		self.scene_cast[pick].update(cast)
 		self.scene_seen[pick] += 1
 		self.memories += 1  # archived on tap or after linger_s: never lost
+		return {"r": r, "scene": C.scenes[pick]["id"], "cast": [C.species[k]["id"] for k in cast]}
 
 	def cast(self, i: int) -> list:
-		"""GDD 13.4 casting: role prefer lists, then friends new to this scene (present first),
-		then the rest; ties by hearts (desc) then album order. Pair scenes take a best-friend pair."""
+		"""GDD 13.4 casting: a role's prefer list wins if one of them is met; otherwise friends new
+		to this scene first, present before absent, hearts (desc), album order. Pair scenes take the
+		best-ranked best-friend pair whose higher hearts meet pair_hearts_min, higher-hearted first."""
 		C = self.C
 		sc = C.scenes[i]
 		present = {p[0] for p in self.present}
@@ -494,17 +499,22 @@ class Player:
 			pairs = []
 			for a in met:
 				b = C.sp_best[a]
-				if a < b and self.discovered[b]:
+				if a < b and self.discovered[b] and max(self.hearts[a], self.hearts[b]) >= sc["pair_hearts_min"]:
 					pairs.append((min(rank(a), rank(b)), a, b))
 			if not pairs:
 				return []
 			pairs.sort()
-			return [pairs[0][1], pairs[0][2]]
+			_, a, b = pairs[0]
+			return [a, b] if self.hearts[a] >= self.hearts[b] else [b, a]
 		out = []
-		for k in sorted(met, key=rank):
-			if len(out) >= sc["roles"]:
+		ranked = sorted(met, key=rank)
+		for prefer in sc["prefer"]:
+			pick = next((k for k in prefer if self.discovered[k] and k not in out), None)
+			if pick is None:
+				pick = next((k for k in ranked if k not in out), None)
+			if pick is None:
 				break
-			out.append(k)
+			out.append(pick)
 		return out
 
 	def disc_snapshot(self) -> tuple:
@@ -1246,6 +1256,104 @@ def onboarding_trace() -> list:
 	return events
 
 
+# ---------------------------------------------------------------- GDScript parity export
+PARITY_SEED = 12345
+PARITY_INSTALL_LOCAL_S = 20 * HOUR
+
+
+def parity_ops() -> list:
+	"""A scripted schedule with no world-RNG draws (no Poisson visitors, explicit absence profiles
+	and cousin conditions without weather), so WorldSim must reproduce every retention number."""
+	ops: list = []
+	for t, k in ((30.0, "puffmoss"), (150.0, "buttonbud"), (210.0, "pebblepaw")):
+		ops.append({"op": "visit", "t": t, "species": k})
+	ops.append({"op": "items", "t": 1000.0, "bloomed": {"buttercup": 2, "forget_me_not": 3}, "owned": {"toadstool_seat": 5}})
+	ops.append({"op": "tap_signs", "t": 4000.0})
+	ops.append({"op": "visit", "t": 40000.0, "species": "puffmoss"})  # inside the 20 h rest: no affection
+	ops.append({"op": "visit", "t": 80000.0, "species": "puffmoss"})
+	ops.append({"op": "pet", "t": 81000.0, "species": "puffmoss", "n": 20})
+	ops.append({"op": "pet", "t": 81000.0, "species": "buttonbud", "n": 30})  # heart 4, buddy unmet: waits
+	ops.append({"op": "pet", "t": 81000.0, "species": "pebblepaw", "n": 45})
+	ops.append({"op": "tap_signs", "t": 90000.0})
+	ops.append({"op": "visit", "t": 100000.0, "species": "honeyhum"})  # releases buttonbud's chapter II
+	ops.append({"op": "items", "t": 110000.0, "boats": 10, "bloomed": {"buttercup": 2, "forget_me_not": 3,
+		"dandelion": 2, "bluebell": 3, "primrose": 3, "moonbloom": 5, "sweet_clover": 4},
+		"owned": {"toadstool_seat": 5, "stream_stones": 5, "firefly_lantern": 5, "wind_chime": 5, "pebble_cairn": 3}})
+	ops.append({"op": "tap_signs", "t": 130000.0})
+	ops.append({"op": "return", "prev_end": 140000.0, "t": 150000.0, "present": ["puffmoss"],
+		"profile": [["night", "clear", 7200.0], ["dawn", "rain", 2800.0]]})
+	ops.append({"op": "return", "prev_end": 150000.0, "t": 151000.0, "present": [], "profile": []})  # too short
+	for i, prof in enumerate(([["night", "clear", 3600.0]], [["day", "rain", 3600.0]], [["dusk", "clear", 3600.0]],
+			[["golden", "breeze", 9000.0]], [["night", "rain", 5400.0]], [["day", "clear", 8000.0]])):
+		t = 160000.0 + i * 6000.0
+		ops.append({"op": "return", "prev_end": t - 8000.0, "t": t, "present": ["honeyhum", "buttonbud"][: i % 3],
+			"profile": prof})
+	ops.append({"op": "tap_signs", "t": 199000.0})
+	for i, k in enumerate(("fernwhisk", "dandelfluff", "bellkin", "primpip", "capling", "puddlewump", "glowmote", "moonpuff")):
+		ops.append({"op": "visit", "t": 200000.0 + i * 100.0, "species": k})
+	ops.append({"op": "pet", "t": 210000.0, "species": "puffmoss", "n": 20})  # heart 5: the cousin mystery opens
+	ops.append({"op": "items", "t": 215000.0, "boats": 10, "bloomed": {"buttercup": 2, "forget_me_not": 3,
+		"dandelion": 2, "bluebell": 3, "primrose": 3, "moonbloom": 5, "sweet_clover": 4},
+		"owned": {"toadstool_seat": 5, "stream_stones": 5, "firefly_lantern": 5, "wind_chime": 5, "pebble_cairn": 10}})
+	ops.append({"op": "tap_signs", "t": 300000.0})
+	ops.append({"op": "tap_signs", "t": 345000.0})
+	ops.append({"op": "visit", "t": 5 * DAY - 10800.0, "species": "puffmoss"})  # 17:00 local: golden hour
+	ops.append({"op": "visit", "t": 5 * DAY - 3600.0, "species": "pebblepaw"})
+	for i in range(12):
+		t = 6 * DAY + i * 20000.0
+		ops.append({"op": "return", "prev_end": t - 9000.0, "t": t, "present": ["puffmoss", "glowmote", "moonpuff"][: i % 4],
+			"profile": [["night", "clear", 4000.0], ["dusk", "rain", 2000.0]] if i % 2 else [["night", "clear", 3700.0]]})
+	return ops
+
+
+def parity_trace() -> dict:
+	"""Runs parity_ops() through Player and records the retention state after every op."""
+	C = CONTENT
+	pl = Player(C, PARITY_SEED, PARITY_INSTALL_LOCAL_S, POLICIES[1])
+	ops = parity_ops()
+	steps = []
+	for op in ops:
+		kind = op["op"]
+		t = float(op["t"])
+		pl.t = max(pl.t, t)
+		result = None
+		if kind == "visit":
+			pl.arrive(t, C.species_index[op["species"]], 3600.0, 0)
+			pl.present.clear()
+		elif kind == "pet":
+			for _ in range(int(op["n"])):
+				pl.add_affection(C.species_index[op["species"]], 1, t)
+		elif kind == "items":
+			pl.bloomed = [int(op["bloomed"].get(f["id"], 0)) for f in C.flowers]
+			pl.owned_f = list(pl.bloomed)
+			pl.owned_d = [int(op["owned"].get(d["id"], 0)) for d in C.decor]
+			pl.boats = int(op.get("boats", pl.boats))
+			pl.check_mysteries(t)
+		elif kind == "tap_signs":
+			pl.tap_signs(t)
+		elif kind == "return":
+			pl.present = [[C.species_index[k], INF, True, True, 0] for k in op["present"]]
+			prof = {(C.phase_index[ph], C.weather_index[wx]): float(sec) for ph, wx, sec in op["profile"]}
+			result = pl.on_return(float(op["prev_end"]), t, prof)
+			pl.present.clear()
+		ids = [s["id"] for s in C.species]
+		steps.append({
+			"hearts": {ids[k]: pl.hearts[k] for k in range(C.ns)},
+			"affection": {ids[k]: pl.affection[k] for k in range(C.ns)},
+			"visit_aff_t": {ids[k]: pl.last_aff_visit_t[k] for k in range(C.ns) if pl.last_aff_visit_t[k] != -INF},
+			"mysteries": {**{ids[k]: [pl.myst_open_t[k], pl.debut_ok_t[k]] for k in range(C.ns) if pl.myst_open_t[k] != INF},
+				**{C.variants[v][0]: [pl.var_open_t[v], pl.var_ok_t[v]] for v in range(C.nv) if pl.var_open_t[v] != INF}},
+			"signs": [[s[1], s[2], s[0]] for s in pl.signs],
+			"clues": pl.clues,
+			"story_postcards": sorted(p for p in pl.postcards if "_h" in p),
+			"waiting": sorted(f"{ids[k]}_h4" for k in pl.h4_waiting),
+			"nests": {ids[k]: pl.nest_t[k] for k in range(C.ns) if pl.nest_t[k] != INF},
+			"cousins": {C.variants[v][0]: pl.var_met_t[v] for v in range(C.nv) if pl.var_met_t[v] != INF},
+			"scene": result,
+		})
+	return {"seed": PARITY_SEED, "install_local_s": PARITY_INSTALL_LOCAL_S, "ops": ops, "steps": steps}
+
+
 # ---------------------------------------------------------------- driver
 CONTENT: Content | None = None
 
@@ -1287,7 +1395,16 @@ def main() -> int:
 	ap.add_argument("--markdown", default="", help="also write the results table to this file")
 	ap.add_argument("--ref-days", type=int, default=REF_DAYS, help="days simulated for reference players")
 	ap.add_argument("--quick", action="store_true", help="500 random + 200 reference players (smoke run)")
+	ap.add_argument("--parity-export", default="", metavar="PATH",
+		help="write the GDScript parity trace (tests/fixtures/retention_parity.json) and exit")
 	args = ap.parse_args()
+	if args.parity_export:
+		_init(args.root, args.ref_days)
+		with open(args.parity_export, "w", encoding="utf-8") as f:
+			json.dump(parity_trace(), f, indent="\t", sort_keys=True)
+			f.write("\n")
+		print(f"parity trace written to {args.parity_export}")
+		return 0
 	if args.quick:
 		args.players, args.reference = 500, 200
 
