@@ -5,7 +5,9 @@
 //           contact shadow that grounds it (never a hay stamp);
 //   kind 1  clover patch: 2-4 trefoils of rounded leaflets with pale chevrons on thin stems;
 //   kind 2  moss mound: a small felted dome with cushion texture (art/fx/moss_tile.png);
-//   kind 3  wild micro-flowers: 2-4 tiny 5-petal heads (flora tokens) on stems over a few blades.
+//   kind 3  wild micro-flowers: 2-4 tiny 5-petal heads (flora tokens) on stems over a few blades;
+//   kind 4  pebble (round 5, near bank): a smooth domed stone (materials pebble_alt / stone_warm),
+//           key-lit top, tinted underside, a moss fleck, sitting in the ground's contact shadow.
 // Grass, clover and moss are terrain (palette slots); flower petals are objects (x g_ambient).
 // Every kind sways at k/600 Hz with the travelling gust (rooted: amplitude grows with height).
 //
@@ -32,8 +34,22 @@ uniform vec4 petal_b : source_color = vec4(1.0, 0.847, 0.467, 1.0);
 uniform vec4 petal_c : source_color = vec4(0.737, 0.831, 0.969, 1.0);
 uniform vec4 petal_d : source_color = vec4(0.957, 0.776, 0.827, 1.0);
 uniform vec4 flower_eye : source_color = vec4(1.0, 0.784, 0.431, 1.0);
+// Pebbles (palettes.json materials pebble_alt and stone_warm: lit, shade).
+uniform vec4 pebble_lit_a : source_color = vec4(0.765, 0.788, 0.847, 1.0);
+uniform vec4 pebble_shade_a : source_color = vec4(0.624, 0.639, 0.686, 1.0);
+uniform vec4 pebble_lit_b : source_color = vec4(0.863, 0.827, 0.784, 1.0);
+uniform vec4 pebble_shade_b : source_color = vec4(0.718, 0.675, 0.651, 1.0);
 uniform sampler2D moss_tex : filter_linear_mipmap, repeat_enable;
 uniform float fringe_px = 1.5;
+// Round 5 (Director: "felted, fibre fringe, soft lost edges, not flat vector stickers"): a fine
+// fibre layer (high-frequency noise across the edge), an edge that softens toward the tips and on
+// the side turned from the light, a translucent halo of loose fibres outside the silhouette (lit by
+// the key at golden), and a gentle inner value drift.
+uniform float fibre_px = 1.3;
+uniform vec2 lost_edge_px = vec2(0.4, 2.0);
+uniform float halo_px = 2.6;
+uniform float halo_alpha = 0.42;
+uniform float drift_k = 0.07;
 uniform float shadow_alpha = 0.30;
 uniform float tint_l = 0.05;
 
@@ -41,6 +57,7 @@ const int KIND_CLUMP = 0;
 const int KIND_CLOVER = 1;
 const int KIND_MOSS = 2;
 const int KIND_FLOWERS = 3;
+const int KIND_PEBBLE = 4;
 const float BLADE_H = 30.0;
 const float TIP_R = 1.9;
 const float MOSS_TEX_PX = 46.0;
@@ -107,7 +124,7 @@ void fragment() {
 	float a = 0.0;
 	// Soft contact shadow: a small ellipse under the root, pushed away from the light.
 	vec2 sh_off = vec2(-kd.x * 3.0 * v_flip, 2.0 + 2.0 * g_backlight);
-	float sh_r = kind == KIND_MOSS ? 20.0 : (kind == KIND_CLOVER ? 18.0 : 13.0);
+	float sh_r = kind == KIND_MOSS ? 20.0 : (kind == KIND_CLOVER ? 18.0 : (kind == KIND_PEBBLE ? 15.0 : 13.0));
 	float sh = 1.0 - smoothstep(0.35, 1.0, length((p - sh_off) / vec2(sh_r, sh_r * 0.32)));
 	float sh_a = sh * shadow_alpha * g_shadow_alpha / 0.3 * (1.0 - 0.5 * g_rain);
 
@@ -141,8 +158,16 @@ void fragment() {
 		if (base < d) {
 			bt = 0.0;
 		}
-		d = smin(d, base, 3.0) + fuzz;
-		a = 1.0 - smoothstep(-0.6 * fw, 0.6 * fw, d);
+		float fib = (vnoise(p * vec2(2.6, 1.4) + seed * 23.0) - 0.5) * fibre_px;
+		d = smin(d, base, 3.0) + fuzz + fib;
+		// Lost edges: soft toward the tips and on the side turned away from the light.
+		float away = clamp(-dot(normalize(vec2(bs, -0.35)), kl), 0.0, 1.0);
+		float soft = mix(lost_edge_px.x, lost_edge_px.y, bt * bt) * (0.6 + 0.7 * away);
+		a = 1.0 - smoothstep(-0.6 * fw - soft * 0.5, 0.6 * fw + soft, d);
+		// Loose fibres beyond the silhouette (felt halo).
+		float hair = smoothstep(0.52, 0.86, vnoise(p * vec2(3.4, 1.1) + seed * 31.0));
+		float halo = (1.0 - smoothstep(0.0, halo_px, d)) * step(0.0, d) * hair * halo_alpha * smoothstep(0.15, 0.6, bt);
+		a = max(a, halo);
 		float tint = 1.0 + (v_inst.r - 0.5) * 2.0 * tint_l;
 		// Felted green body: ground-coloured at the root (no dark "pot"), lighter and a touch warmer
 		// toward the tips; the key only glows on the tip edges (contre-jour), never a straw fill.
@@ -160,6 +185,9 @@ void fragment() {
 		col = mix(col, shade_of(col), (1.0 - smoothstep(0.0, 0.25, bt)) * 0.18);
 		float edge = smoothstep(-2.2 * fw, 0.0, d);
 		col += g_key.rgb * g_backlight * g_rim * (0.03 + 0.32 * edge) * bt * bt;
+		// Fibre halo picks up the light (lighter, warmer); inner value drift breaks flat fills.
+		col = mix(col, col * 1.12 + g_key.rgb * 0.10 * (0.3 + g_backlight), smoothstep(0.0, 1.0, d / halo_px + 0.5) * 0.6);
+		col *= 1.0 + (vnoise(p * 0.18 + seed * 5.0) - 0.5) * 2.0 * drift_k;
 	} else if (kind == KIND_CLOVER) {
 		float n = 2.0 + floor(hs(seed, 0.0, 11.0) * 2.99);
 		float d = 1e3;
@@ -194,14 +222,16 @@ void fragment() {
 			}
 		}
 		float ds = stem;
-		d = min(d, ds) + fuzz * 0.5;
-		a = 1.0 - smoothstep(-0.6 * fw, 0.6 * fw, d);
+		d = min(d, ds) + fuzz * 0.5 + (vnoise(p * 2.4 + seed * 19.0) - 0.5) * fibre_px * 0.8;
+		a = 1.0 - smoothstep(-0.6 * fw - 0.3, 0.6 * fw + lost_edge_px.y * 0.5 * (0.5 + edge_n), d);
 		// Clover reads a little cooler and lighter than the meadow, each leaflet domed.
-		vec3 leaf = mix(ground, grass_tip.rgb, 0.35) * vec3(0.94, 1.04, 1.02) * 1.06;
+		// Round 5: a deeper, cooler green than the moss (it read as a pale ghost on the ground), each
+		// leaflet domed by the key with a soft pale chevron.
+		vec3 leaf = mix(mix(ground, grass_root.rgb, 0.30), grass_tip.rgb, 0.12) * vec3(0.92, 1.04, 1.04);
 		col = leaf;
-		col = mix(col, shade_of(col), clamp(-lit_n, 0.0, 1.0) * 0.28);
-		col += g_key.rgb * clamp(lit_n, 0.0, 1.0) * 0.10;
-		col = mix(col, mix(col, vec3(1.0), 0.35), chev * 0.6);
+		col = mix(col, shade_of(col), clamp(-lit_n, 0.0, 1.0) * 0.32);
+		col += (g_key.rgb * 0.7 + col * 0.3) * clamp(lit_n, 0.0, 1.0) * 0.20;
+		col = mix(col, mix(col, vec3(1.0), 0.30), chev * 0.35);
 		col = mix(col, shade_of(col), step(ds, d + 0.01) * 0.25 + edge_n * 0.22);
 	} else if (kind == KIND_MOSS) {
 		vec2 r = vec2(mix(14.0, 20.0, hs(seed, 0.0, 21.0)), mix(7.5, 10.5, hs(seed, 0.0, 22.0)) * hk);
@@ -220,6 +250,24 @@ void fragment() {
 		col += (g_key.rgb * 0.6 + col * 0.4) * clamp(lit, 0.0, 1.0) * 0.22;
 		col *= 1.0 + (m.a - 0.5) * 0.14;
 		col += g_key.rgb * g_backlight * g_rim * 0.22 * smoothstep(0.2, -0.9, q.y);
+	} else if (kind == KIND_PEBBLE) {
+		vec2 r = vec2(mix(9.0, 13.5, hs(seed, 0.0, 41.0)), mix(5.0, 7.0, hs(seed, 0.0, 42.0)) * hk);
+		vec2 c = vec2(0.0, -r.y * 0.55);
+		vec2 q = (p - c) / r;
+		float d = sd_ellipse(p - c, r) + (vnoise(p * 0.9 + seed * 9.0) - 0.5) * 0.8;
+		d = max(d, p.y - 1.0);
+		a = 1.0 - smoothstep(-0.8 * fw - 0.4, 0.8 * fw + 0.6, d);
+		bool warm = hs(seed, 0.0, 43.0) > 0.55;
+		vec3 lit_c = warm ? pebble_lit_b.rgb : pebble_lit_a.rgb;
+		vec3 sh_cc = warm ? pebble_shade_b.rgb : pebble_shade_a.rgb;
+		float up = clamp(-q.y * 0.8 + 0.3, 0.0, 1.0);
+		float lit = dot(normalize(q + vec2(0.0, -0.6)), kl);
+		vec3 alb = mix(sh_cc, lit_c, smoothstep(-0.4, 0.6, lit) * 0.7 + up * 0.3);
+		col = light_object(alb, up, smoothstep(0.1, 1.0, q.y) * 0.8);
+		// Felted moss fleck on the crown of some pebbles.
+		float fleck = smoothstep(0.55, 0.75, vnoise(p * 0.5 + seed * 3.0)) * step(0.4, hs(seed, 0.0, 44.0)) * smoothstep(0.0, -0.6, q.y);
+		col = mix(col, mix(grass_tip.rgb, ground, 0.3), fleck * 0.8);
+		col += g_key.rgb * g_backlight * g_rim * 0.35 * smoothstep(0.55, 1.0, length(q)) * clamp(lit, 0.0, 1.0);
 	} else {
 		// Wild micro-flowers over a few short blades.
 		float n = 2.0 + floor(hs(seed, 0.0, 31.0) * 2.99);
@@ -270,9 +318,14 @@ void fragment() {
 		petal = light_object(petal, 1.0 - pr * 0.5, 0.0);
 		petal = mix(petal, shade_of(petal), smoothstep(0.4, 1.0, pr) * 0.25);
 		vec3 eye = light_object(flower_eye.rgb, 1.0, 0.0);
+		leaf = golden_grade(leaf, p_design, 0.0);
 		col = mix(leaf, petal, a_pet);
 		col = mix(col, eye, a_eye * a_pet);
 		a = max(a_leaf, a_pet);
+	}
+	// Round 5: the same golden grade as the meadow (no grey-green tufts on a glowing ground).
+	if (kind != KIND_FLOWERS && kind != KIND_PEBBLE) {
+		col = golden_grade(col, p_design, 0.0);
 	}
 	if (g_cloud_shadow > 0.001) {
 		col = mix(col, shade_of(col), cloud_shadow(p_design) * 1.6);
@@ -286,7 +339,7 @@ void fragment() {
 	if (out_a < 0.004) {
 		discard;
 	}
-	vec3 sh_c = shade_of(ground);
+	vec3 sh_c = shade_of(golden_grade(ground, p_design, 0.0));
 	vec3 rgb = (col * a + sh_c * sh_a * (1.0 - a)) / out_a;
 	COLOR = vec4(rgb, out_a);
 }

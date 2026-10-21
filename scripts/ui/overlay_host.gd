@@ -38,8 +38,12 @@ const PENCIL_HIT := 144.0
 ## card padding.
 const PENCIL_GUTTER := 108.0
 const PENCIL_REACH := 24.0
-const Z_OVERLAY := 4
+## Above every z-lifted HUD layer and the sheets' layered contents (SheetHost.Z_SHEET + 2 bands).
+const Z_OVERLAY := 74
+## Modal cards are batch roots (UiBatch) from here up.
+const Z_MODAL := 80
 const RECAP_BAR_H := 9.0
+const RECAP_ONE_VISITED_HI := &"RECAP_ONE_VISITED_HI"
 ## --qa-recap holds the card with this much of the auto-continue line left.
 const RECAP_QA_LEFT := 0.62
 
@@ -57,12 +61,14 @@ var _captions: Array[GlassPanel] = []
 var _screen: Vector2 = Vector2(1080, 1920)
 var _safe := Rect2(48, 72, 48, 127)
 var _recap_timer: SceneTreeTimer
+## Night chrome blend (HudController): toasts and captions are HUD chrome (night-aware glass) and
+## their labels lerp ink -> night_ink.
+var _night_k: float = 0.0
 
 
 func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	set_anchors_preset(Control.PRESET_FULL_RECT)
-	# Above every z-lifted HUD layer (sheets 2, top-bar labels 3).
 	z_index = Z_OVERLAY
 
 
@@ -77,6 +83,7 @@ func _ready() -> void:
 	add_child(_scrim)
 	_toast = GlassPanel.new()
 	_toast.name = "Toast"
+	_toast.night_aware = true
 	_toast.visible = false
 	add_child(_toast)
 	_toast_label = Label.new()
@@ -86,6 +93,20 @@ func _ready() -> void:
 	_toast_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_toast.add_child(_toast_label)
 	_modal_back = close_modal
+
+
+## Night chrome blend [param k] 0..1 for the toast and the captions (their glass follows
+## GlassPanel.night_k).
+func set_night(k: float) -> void:
+	_night_k = clampf(k, 0.0, 1.0)
+	_toast_label.add_theme_color_override(&"font_color", _chrome_ink())
+	for c: GlassPanel in _captions:
+		if is_instance_valid(c) and c.get_child_count() > 0 and c.get_child(0) is Label:
+			(c.get_child(0) as Label).add_theme_color_override(&"font_color", _chrome_ink())
+
+
+func _chrome_ink() -> Color:
+	return UiTokens.color(&"ink").lerp(UiTokens.color(&"night_ink"), _night_k)
 
 
 func layout(screen: Vector2, safe: Rect2) -> void:
@@ -154,6 +175,7 @@ func show_caption(text: String, at: Vector2, hold: bool = false) -> void:
 		if is_instance_valid(old):
 			old.queue_free()
 	var bubble := GlassPanel.new()
+	bubble.night_aware = true
 	bubble.set_meta(&"text", text)
 	add_child(bubble)
 	move_child(bubble, _scrim.get_index())
@@ -163,6 +185,7 @@ func show_caption(text: String, at: Vector2, hold: bool = false) -> void:
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	l.add_theme_color_override(&"font_color", _chrome_ink())
 	bubble.add_child(l)
 	var w := l.get_combined_minimum_size().x + CAPTION_PAD * 2.0
 	bubble.size = Vector2(w, CAPTION_H)
@@ -193,6 +216,9 @@ func _open_modal(card: Control, kind: StringName, instant: bool) -> void:
 	add_child(_modal_wrap)
 	_modal_wrap.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_modal_wrap.add_child(card)
+	if UiTokens.night_scheme:
+		card.theme = ThemeBuilder.night_theme()
+	UiBatch.adopt(card, Z_MODAL)
 	_place_modal()
 	_scrim.visible = true
 	Game.push_back_handler(_modal_back)
@@ -259,11 +285,28 @@ func _on_scrim_input(event: InputEvent) -> void:
 		_scrim.accept_event()
 
 
-static func _card_shell(sep: int = 24) -> Array:
-	var p := PanelContainer.new()
-	var box := UiTokens.fill_box(UiTokens.color(&"surface_hi"), ThemeBuilder.R_L, UiTokens.E3)
-	box.set_content_margin_all(CARD_PAD)
-	p.add_theme_stylebox_override(&"panel", box)
+## [param frosted] (the welcome-back recap, round 5 QA r4: an opaque #FAF8F2 slab read as a dated
+## modal): a faux-glass card instead of the opaque surface, in the build scheme (dim navy at night).
+static func _card_shell(sep: int = 24, frosted: bool = false) -> Array:
+	var p: PanelContainer
+	if frosted:
+		p = PanelContainer.new()
+		var box := StyleBoxEmpty.new()
+		box.set_content_margin_all(CARD_PAD)
+		p.add_theme_stylebox_override(&"panel", box)
+		var g := GlassPanel.new()
+		g.name = "Frost"
+		g.radius = ThemeBuilder.R_L
+		g.elevation = UiTokens.E3
+		g.night_surface = UiTokens.night_scheme
+		p.add_child(g, false, Node.INTERNAL_MODE_FRONT)
+		p.sort_children.connect(func() -> void:
+			g.position = Vector2.ZERO
+			g.size = p.size)
+	else:
+		p = UiSurface.panel(UiTokens.sc(&"surface_hi"), ThemeBuilder.R_L, UiTokens.E3, CARD_PAD)
+	if UiTokens.night_scheme:
+		p.theme = ThemeBuilder.night_theme()
 	p.mouse_filter = Control.MOUSE_FILTER_STOP
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override(&"separation", sep)
@@ -280,7 +323,7 @@ func sample_recap() -> Array:
 
 
 func show_recap(lines: Array, hold: bool = false) -> void:
-	var shell := _card_shell(30)
+	var shell := _card_shell(30, true)
 	var card: PanelContainer = shell[0]
 	var v: VBoxContainer = shell[1]
 	card.gui_input.connect(func(e: InputEvent) -> void:
@@ -298,7 +341,9 @@ func show_recap(lines: Array, hold: bool = false) -> void:
 		var icon: StringName = RECAP_ICONS.get(key, &"heart")
 		var plate := _icon_plate(icon)
 		row.add_child(plate)
-		var text := I18n.fmt(key, {"name": Game.display_name(sp) if sp != &"" and Game.sim != null else ""})
+		# round 5 (QA r4: "Pip dropped by" read as a truncated line): a complete, warm sentence
+		var text_key := RECAP_ONE_VISITED_HI if key == &"RECAP_ONE_VISITED" else key
+		var text := I18n.fmt(text_key, {"name": Game.display_name(sp) if sp != &"" and Game.sim != null else ""})
 		var l := UiSheet.label(text, &"BodyLabel", true)
 		l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		row.add_child(l)
@@ -309,13 +354,18 @@ func show_recap(lines: Array, hold: bool = false) -> void:
 	bar.custom_minimum_size = Vector2(0.0, RECAP_BAR_H)
 	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	bar.set_meta(&"left", 1.0)
+	UiSurface.attach_to(bar, UiSurface.make(UiTokens.sc(&"primary_tint"), UiSurface.PILL))
+	var lane := Control.new()
+	lane.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	lane.set_meta(UiSurface.META_OWNER, true)
+	bar.add_child(lane)
+	var fill := UiSurface.make(UiTokens.sc(&"primary"), UiSurface.PILL)
+	lane.add_child(fill)
 	bar.draw.connect(func() -> void:
-		var r := Rect2(Vector2.ZERO, bar.size)
-		bar.draw_style_box(UiTokens.fill_box(UiTokens.color(&"primary_tint"), RECAP_BAR_H * 0.5), r)
-		var w := r.size.x * float(bar.get_meta(&"left"))
-		if w > RECAP_BAR_H:
-			bar.draw_style_box(UiTokens.fill_box(UiTokens.color(&"primary"), RECAP_BAR_H * 0.5),
-					Rect2(r.position, Vector2(w, RECAP_BAR_H))))
+		var w := bar.size.x * float(bar.get_meta(&"left"))
+		fill.visible = w > RECAP_BAR_H
+		fill.position = Vector2.ZERO
+		fill.size = Vector2(maxf(w, RECAP_BAR_H), RECAP_BAR_H))
 	v.add_child(bar)
 	_open_modal(card, &"recap", hold)
 	AudioDirector.play_cue(CUE_RECAP)
@@ -336,9 +386,7 @@ func _icon_plate(icon: StringName) -> Control:
 	var c := Control.new()
 	c.custom_minimum_size = Vector2(RECAP_ICON + 36.0, RECAP_ICON + 36.0)
 	c.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var tint: Color = UiTokens.color(&"primary_tint")
-	c.draw.connect(func() -> void:
-		c.draw_style_box(UiTokens.fill_box(tint, c.size.y * 0.5), Rect2(Vector2.ZERO, c.size)))
+	UiSurface.attach_to(c, UiSurface.make(UiTokens.sc(&"primary_tint"), UiSurface.PILL))
 	var r := Icons.rect(icon, RECAP_ICON)
 	r.position = Vector2(18.0, 18.0)
 	c.add_child(r)
@@ -437,14 +485,7 @@ func _portrait_well(species: StringName, pose: StringName) -> Control:
 
 
 static func _pill_tag(text: String, fill: StringName) -> Control:
-	var p := PanelContainer.new()
-	var box := UiTokens.fill_box(UiTokens.color(fill), 33.0)
-	box.content_margin_left = 33
-	box.content_margin_right = 33
-	box.content_margin_top = 6
-	box.content_margin_bottom = 6
-	p.add_theme_stylebox_override(&"panel", box)
-	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var p := UiSheet.chip(fill, 33.0, Vector4(33, 6, 33, 6))
 	var l := UiSheet.label(text, &"StrongLabel")
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	p.add_child(l)
@@ -478,8 +519,7 @@ func show_postcard(pc: Dictionary, instant: bool = false) -> void:
 	if sp != &"":
 		v.add_child(_portrait_well(sp, &"happy"))
 	else:
-		var well := PanelContainer.new()
-		well.add_theme_stylebox_override(&"panel", UiTokens.fill_box(UiTokens.color(&"coral_tint"), ThemeBuilder.R_L))
+		var well := UiSheet.chip(&"coral_tint", ThemeBuilder.R_L, Vector4.ZERO)
 		well.custom_minimum_size = Vector2(0.0, PORTRAIT * 0.6)
 		var ic := Icons.rect(&"postcard", PORTRAIT * 0.4)
 		ic.set_anchors_preset(Control.PRESET_CENTER)

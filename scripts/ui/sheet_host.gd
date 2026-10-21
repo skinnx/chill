@@ -20,8 +20,9 @@ const CUE_CLOSE := &"S08"
 const HEIGHT_FRAC := 0.56
 const DOCK_GAP := 24.0
 const SIDE := 24.0
-## The sheet draws above the dock's z-lifted labels (DockView.Z_LABELS) while it slides over them.
-const Z_SHEET := 2
+## The sheet draws above the dock's z-lifted layers (DockView.Z_LABELS) while it slides over them;
+## its contents are layered from here up by kind (UiBatch: base .. base + 2 x SCROLL_BAND).
+const Z_SHEET := 10
 const OPEN_SPRING := &"pop"
 ## The glass copy also covers the open spring's overshoot above the rest position.
 const OVERSHOOT_PX := 16.0
@@ -34,6 +35,9 @@ var chrome: Control
 ## Callable(id) -> UiSheet, set by the HUD.
 var factory: Callable
 var dock_top: float = 1541.0
+## The top bar's bottom edge (screen px): a sheet never rises above it + DOCK_GAP (large text
+## grows both the top bar and the dock, round 5).
+var top_limit: float = 0.0
 ## The neutral night dim of the sheets (HudController, night_chrome.sheet_dim): rgb only, the
 ## open / close motion drives modulate.a.
 var tint: Color = Color.WHITE:
@@ -93,8 +97,8 @@ func layout(screen: Vector2, p_dock_top: float) -> void:
 
 ## The open sheet's rect in screen px.
 func sheet_rect() -> Rect2:
-	var h := roundf(HEIGHT_FRAC * _screen.y)
 	var bottom := dock_top - DOCK_GAP
+	var h := minf(roundf(HEIGHT_FRAC * _screen.y), bottom - (top_limit + DOCK_GAP))
 	return Rect2(SIDE, bottom - h, _screen.x - SIDE * 2.0, h)
 
 
@@ -172,18 +176,32 @@ func close() -> void:
 	sheet_changed.emit(&"")
 
 
+## Rebuilds the open sheet (the night scheme switched): the same sheet and tab, crossfaded.
+func rebuild(instant: bool = false) -> void:
+	if current == null:
+		return
+	var id := current_id
+	var tab := -1
+	if current.has_method(&"current_tab"):
+		tab = int(current.call(&"current_tab"))
+	_swap(id, instant, true)
+	if tab >= 0 and current != null and current.has_method(&"select_tab"):
+		current.call(&"select_tab", tab, false)
+
+
 ## Re-reads the world into the open sheet (sim events, wallet changes).
 func refresh() -> void:
 	if current != null:
 		current.refresh()
 
 
-func _swap(id: StringName, instant: bool) -> void:
+func _swap(id: StringName, instant: bool, quiet: bool = false) -> void:
 	var old := current
 	var s := _make(id)
 	if s == null:
 		return
-	AudioDirector.play_cue(CUE_OPEN)
+	if not quiet:
+		AudioDirector.play_cue(CUE_OPEN)
 	s.position = sheet_rect().position
 	if old != null:
 		var dur := Motion.duration(&"short")

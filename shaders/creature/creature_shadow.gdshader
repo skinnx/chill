@@ -34,6 +34,11 @@ const float MUL_LUMA = 0.40;
 const float MUL_GAIN = 1.35;
 const float MUL_MAX = 0.85;
 
+// Lineup only (scenes/creatures/lineup.tscn): caps the cast offset (canvas px) so a long
+// golden shadow ends inside its own cell and never reads as the next row's shadow pointing up
+// (QA r4). Direction and length law stay the world's; the world keeps the default (no cap).
+uniform float u_cast_max_px = 100000.0;
+
 // x hop 0..1 (apex = 1), y squash (1 = rest), z lean rad, w alpha (fade x shelter)
 instance uniform vec4 i_shadow = vec4(0.0, 1.0, 0.0, 1.0);
 
@@ -49,6 +54,7 @@ void vertex() {
 	// world_light: the same key direction and shadow length as every prop shadow (rubric #5)
 	vec2 origin = (MODEL_MATRIX * vec4(0.0, 0.0, 0.0, 1.0)).xy;
 	vec2 off = cast_offset_k(key_dir(origin)) * size.y * 0.5;
+	off *= min(1.0, u_cast_max_px / max(length(off), 1e-3));
 	v_size = vec4(size, off);
 	v_len = shadow_length();
 }

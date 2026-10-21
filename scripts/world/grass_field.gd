@@ -77,6 +77,13 @@ static func make_material(feed: PaletteFeed) -> ShaderMaterial:
 		mat.set_shader_parameter(names[i], Color.html(String(petal[0])))
 	var daisy: Array = flowers["fl_daisy"]["petal"]
 	mat.set_shader_parameter(&"flower_eye", Color.html(String(daisy[2])))
+	var mats: Dictionary = ContentRegistry.palettes()["materials"]
+	var pebbles: Array = [[&"pebble_lit_a", &"pebble_shade_a", "pebble_alt"],
+			[&"pebble_lit_b", &"pebble_shade_b", "stone_warm"]]
+	for pair: Array in pebbles:
+		var m: Dictionary = mats[String(pair[2])]
+		mat.set_shader_parameter(pair[0], Color.html(String(m["lit"])))
+		mat.set_shader_parameter(pair[1], Color.html(String(m["shade"])))
 	LampRegistry.bind_material(mat)
 	return mat
 

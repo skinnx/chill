@@ -63,6 +63,9 @@ uniform float corner_k = 0.30;
 // Round 3 (directive 2): the open meadow outside the focal pool sits a few L* lower so the stone
 // and the creatures carry the value peak; the pool is warmer and brighter.
 uniform float open_shade_k = 0.42;
+// Round 5 (Director: the r4 golden darkening overshot into mud): with the light behind, the open
+// meadow keeps most of its light; the value structure comes from the warm pool, not from dirt.
+uniform float open_shade_backlit_k = 0.16;
 // Round 4: the pool's light is warm (key leaning toward the accent), not a white lift (QA r3 "milky").
 uniform float pool_warm_k = 0.45;
 uniform float pool_day_lift = 0.45;
@@ -74,10 +77,7 @@ uniform float sun_veil_k = 0.10;
 uniform float day_chroma_k = 0.28;
 // Rain-washed moss is a saturated, darker green (QA r3: rain read olive-grey and foggy).
 uniform float rain_chroma_k = 0.55;
-// Golden grade (QA r3: olive / mustard ground): with the light behind, the moss's hue leans toward
-// the warm rose-brown of reference frame A (#977B73) at its own luminance.
-uniform vec4 golden_rose : source_color = vec4(0.592, 0.482, 0.451, 1.0);
-uniform float golden_rose_k = 0.42;
+// Golden grade, round 5: world_light.gdshaderinc golden_grade() (shared with the grass and cover).
 
 const vec2 FOCAL = vec2(540.0, 1123.0);
 const float T_TOP = 760.0;
@@ -175,7 +175,7 @@ vec3 meadow_color(vec2 uv, vec2 frag) {
 	// hollow is lighter than its walls, leading the eye to the stone.
 	vec2 fd = (p - FOCAL) / vec2(420.0, 260.0);
 	float pool = exp(-dot(fd, fd) * 1.4);
-	c = mix(c, shade_of(c), open_shade_k * (1.0 - pool) * (1.0 - 0.7 * night));
+	c = mix(c, shade_of(c), mix(open_shade_k, open_shade_backlit_k, g_backlight) * (1.0 - pool) * (1.0 - 0.7 * night));
 	vec3 pool_light = mix(g_key.rgb, g_accent.rgb, pool_warm_k);
 	c = mix(c, c * pool_light * 1.25, pool * focal_pool_k * 0.5 * (1.0 - night));
 	// By day the pool is mostly warmth, not lift (the stone and creatures must out-value it).
@@ -230,8 +230,7 @@ vec3 meadow_color(vec2 uv, vec2 frag) {
 	float lum = wl_luma(c);
 	float day_w = (1.0 - g_backlight) * (1.0 - night);
 	c = max(mix(vec3(lum), c, 1.0 + day_chroma_k * day_w + rain_chroma_k * g_rain * (1.0 - night)), vec3(0.0));
-	vec3 rose = golden_rose.rgb / max(wl_luma(golden_rose.rgb), 1e-3) * wl_luma(c);
-	c = mix(c, rose, golden_rose_k * g_backlight * (1.0 - night));
+	c = golden_grade(c, p, glow);
 	// Lamp pools last: they light whatever is there (skipped by day: g_lights = 0).
 	if (g_lights > 0.001) {
 		c = apply_lamp(c, lamp_weight(p));

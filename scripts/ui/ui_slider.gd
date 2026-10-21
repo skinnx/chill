@@ -22,12 +22,31 @@ const MIN_H := 144.0
 var value: int = 80
 var _dragging: bool = false
 var _press_x: float = 0.0
+## Round 5: track, fill and thumb are batched UiSurfaces.
+var _track: UiSurface
+var _fill: UiSurface
+var _thumb: UiSurface
 
 
 func _init() -> void:
 	custom_minimum_size = Vector2(0.0, MIN_H)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	focus_mode = Control.FOCUS_NONE
+	_track = UiSurface.make(Color.WHITE, UiSurface.PILL)
+	add_child(_track, false, Node.INTERNAL_MODE_FRONT)
+	set_meta(UiSurface.META_OWNER, _track)
+	var holder := Control.new()
+	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	holder.set_meta(UiSurface.META_OWNER, true)
+	add_child(holder, false, Node.INTERNAL_MODE_FRONT)
+	_fill = UiSurface.make(Color.WHITE, UiSurface.PILL)
+	holder.add_child(_fill)
+	var top := Control.new()
+	top.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	top.set_meta(UiSurface.META_OWNER, true)
+	holder.add_child(top)
+	_thumb = UiSurface.make(Color.WHITE, UiSurface.PILL, UiTokens.E1)
+	top.add_child(_thumb)
 
 
 func set_value_silent(v: int) -> void:
@@ -76,13 +95,17 @@ func _set_from_x(x: float) -> void:
 
 func _draw() -> void:
 	var tr_rect := _track_rect()
-	draw_style_box(UiTokens.fill_box(UiTokens.color(&"toggle_off_track"), TRACK_H * 0.5), tr_rect)
+	_track.color = UiTokens.sc(&"toggle_off_track")
+	_track.position = tr_rect.position
+	_track.size = tr_rect.size
 	var u := float(value) / float(MAX)
-	var fill := Rect2(tr_rect.position, Vector2(tr_rect.size.x * u, TRACK_H))
-	if fill.size.x > 0.5:
-		draw_style_box(UiTokens.fill_box(UiTokens.color(&"primary"), TRACK_H * 0.5), fill)
+	_fill.color = UiTokens.sc(&"primary")
+	_fill.position = tr_rect.position
+	_fill.size = Vector2(maxf(tr_rect.size.x * u, TRACK_H), TRACK_H)
+	_fill.visible = u > 0.0
 	var c := Vector2(tr_rect.position.x + tr_rect.size.x * u, size.y * 0.5)
-	var thumb := UiTokens.fill_box(UiTokens.color(&"surface_hi"), THUMB_D * 0.5, UiTokens.E1)
-	thumb.border_color = UiTokens.tinted(&"ink", UiTokens.alpha(&"divider"))
-	thumb.set_border_width_all(roundi(UiTokens.PX_PER_DP))
-	draw_style_box(thumb, Rect2(c - Vector2(THUMB_D, THUMB_D) * 0.5, Vector2(THUMB_D, THUMB_D)))
+	_thumb.color = UiTokens.color(&"surface_hi")
+	_thumb.border_color = UiTokens.tinted(&"ink", UiTokens.alpha(&"divider"))
+	_thumb.border_px = UiTokens.PX_PER_DP
+	_thumb.position = c - Vector2(THUMB_D, THUMB_D) * 0.5
+	_thumb.size = Vector2(THUMB_D, THUMB_D)

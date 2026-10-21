@@ -30,6 +30,26 @@ const HUD_ATLAS: Array = [
 	[&"sparkle", 30.0, false],
 ]
 
+## Round 5: every icon the sheets and modal cards draw, at its drawn size: one atlas (day and
+## night variants), so a whole sheet's icons batch into one draw call (UiBatch). [method rect]
+## takes its texture from here whenever the pair is listed.
+const UI_ATLAS: Array = [
+	[&"close", 48.0], [&"pencil", 48.0], [&"pencil", 42.0], [&"back", 42.0],
+	[&"heart", 36.0], [&"heart_empty", 36.0], [&"dew", 48.0], [&"dew", 33.0], [&"check", 36.0],
+	[&"postcard", 72.0], [&"postcard", 120.0], [&"photo", 120.0], [&"postcard", 144.0],
+	[&"motion", 60.0], [&"transparency", 60.0], [&"text_size", 60.0], [&"watch_closed", 60.0],
+	[&"watch", 60.0], [&"music", 60.0], [&"mono", 60.0], [&"haptics", 60.0], [&"hand", 60.0],
+	[&"language", 60.0], [&"minus", 42.0], [&"plus", 42.0],
+	[&"heart", 72.0], [&"paw", 72.0], [&"moon", 72.0], [&"garden", 72.0], [&"basket", 72.0],
+	[&"photo", 72.0], [&"rain", 72.0],
+]
+## Atlas rows wrap at this width (GLES3 mobile texture limits).
+const ATLAS_MAX_W := 2048.0
+
+## The top bar's icon sizes in HUD_ATLAS (scaled with its chips, TopBarView).
+const TOP_ICON_PX := 72.0
+const TOP_BADGE_PX := 36.0
+
 static var _cache: Dictionary = {}
 
 
@@ -72,7 +92,9 @@ static func atlas(entries: Array) -> Dictionary:
 	if hit is Dictionary:
 		return hit
 	var x := 0.0
-	var h := 0.0
+	var y := 0.0
+	var row_h := 0.0
+	var w := 0.0
 	var body := ""
 	var regions: Dictionary = {}
 	for i in entries.size():
@@ -85,12 +107,18 @@ static func atlas(entries: Array) -> Dictionary:
 		var src := variant_source(base.get_source(), bool(e[2]), e.size() > 3 and bool(e[3]))
 		var inner := src.substr(src.find(">") + 1)
 		inner = inner.substr(0, inner.rfind("</svg>"))
-		body += "<g transform=\"translate(%s 0) scale(%s)\">%s</g>" % [str(x), str(px / CANVAS_PX), inner]
-		regions[key_parts[i]] = Rect2(x, 0.0, px, px)
+		if x + px > ATLAS_MAX_W and x > 0.0:
+			x = 0.0
+			y += row_h + ATLAS_GAP
+			row_h = 0.0
+		body += "<g transform=\"translate(%s %s) scale(%s)\">%s</g>" % [str(x), str(y), str(px / CANVAS_PX), inner]
+		regions[key_parts[i]] = Rect2(x, y, px, px)
 		x += ceilf(px) + ATLAS_GAP
-		h = maxf(h, ceilf(px))
+		w = maxf(w, x)
+		row_h = maxf(row_h, ceilf(px))
+	var h := y + row_h
 	var svg := "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"%d\" height=\"%d\" viewBox=\"0 0 %d %d\">%s</svg>" % [
-		int(x), int(h), int(x), int(h), body]
+		int(w), int(h), int(w), int(h), body]
 	var tex := DPITexture.create_from_string(svg, 1.0)
 	var out: Dictionary = {}
 	for k: String in regions:
@@ -104,12 +132,33 @@ static func atlas(entries: Array) -> Dictionary:
 
 ## The one atlas every HUD icon comes from (top bar + dock + brim sparkles), so all HUD icons
 ## draw in one batch (round 3 draw-call budget: HUD + dock = 6 calls).
-static func hud_atlas() -> Dictionary:
+## [param top_k]: the top bar's chip scale for the Text size setting (its 72 / 36 px icons grow
+## with the chips; the dock's 84 px icons and the sparkles keep their size).
+static func hud_atlas(top_k: float = 1.0) -> Dictionary:
 	var entries: Array = []
 	for e: Array in HUD_ATLAS:
-		entries.append(e)
-		entries.append([e[0], e[1], e[2], true])
+		var px := float(e[1])
+		if not is_equal_approx(top_k, 1.0) and (is_equal_approx(px, TOP_ICON_PX) or is_equal_approx(px, TOP_BADGE_PX)):
+			px = roundf(px * top_k)
+		entries.append([e[0], px, e[2]])
+		entries.append([e[0], px, e[2], true])
 	return atlas(entries)
+
+
+## The sheet / modal icon atlas (UI_ATLAS, day and night variants).
+static func ui_atlas() -> Dictionary:
+	var entries: Array = []
+	for e: Array in UI_ATLAS:
+		entries.append([e[0], e[1], false])
+		entries.append([e[0], e[1], false, true])
+	return atlas(entries)
+
+
+## The sheet / modal icon [param name] at [param px] in the current build scheme
+## (UiTokens.night_scheme), from the UI atlas when listed, else its own texture.
+static func ui(name: StringName, px: float) -> Texture2D:
+	var t: Variant = ui_atlas().get(atlas_key(name, px, false, UiTokens.night_scheme))
+	return t if t is Texture2D else texture(name, px, false, UiTokens.night_scheme)
 
 
 static func atlas_key(name: StringName, px: float, active: bool = false, night: bool = false) -> String:
@@ -134,7 +183,7 @@ static func variant_source(src: String, active: bool, night: bool) -> String:
 ## A TextureRect showing [param name] at [param px] (mouse-transparent).
 static func rect(name: StringName, px: float, active: bool = false) -> TextureRect:
 	var r := TextureRect.new()
-	r.texture = texture(name, px, active)
+	r.texture = texture(name, px, active) if active else ui(name, px)
 	r.custom_minimum_size = Vector2(px, px)
 	r.size = Vector2(px, px)
 	r.expand_mode = TextureRect.EXPAND_IGNORE_SIZE

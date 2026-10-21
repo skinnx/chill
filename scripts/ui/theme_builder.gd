@@ -57,6 +57,9 @@ const LIP_ALPHA := 0.28
 ## the font's own ascent + descent (Nunito 1.36, Baloo 2 1.60), so it is derived from the font.
 const LINE_HEIGHT_EN := 1.25
 
+static var _night_theme: Theme
+static var _night_key: String = ""
+
 
 ## [param palettes] = data/palettes.json; [param text_scale] 1.0 .. 2.0 (X1);
 ## [param vietnamese] adds the +12 % line spacing; [param reduce_transparency] makes glass opaque.
@@ -83,7 +86,6 @@ static func build(palettes: Dictionary, text_scale: float = 1.0, vietnamese: boo
 
 	var body := load(FONT_BODY) as Font
 	var strong := load(FONT_STRONG) as Font
-	var heavy := load(FONT_HEAVY) as Font
 	var title := load(FONT_TITLE) as Font
 	var numerals := load(FONT_NUMERALS) as Font
 
@@ -122,11 +124,14 @@ static func build(palettes: Dictionary, text_scale: float = 1.0, vietnamese: boo
 	t.set_stylebox(&"hover_pressed", &"Button", _box(primary_down, pill, e1, ink, BUTTON_PAD_X))
 	t.set_stylebox(&"disabled", &"Button", _box(primary_fill, pill, [], ink, BUTTON_PAD_X))
 	t.set_stylebox(&"focus", &"Button", StyleBoxEmpty.new())
-	t.set_font(&"font", &"Button", heavy)
+	# Round 5: pill labels share the StrongLabel face (Nunito Bold 42), so every 42 px label of a
+	# sheet draws from one glyph page (one draw call; Art Bible §4.19).
+	t.set_font(&"font", &"Button", strong)
 	t.set_font_size(&"font_size", &"Button", _px(SIZE_LABEL, text_scale))
+	var on_primary := Color.html(String(uid.get("on_primary", ui["surface_hi"])))
 	for c: StringName in [&"font_color", &"font_hover_color", &"font_pressed_color", &"font_hover_pressed_color",
 			&"font_focus_color", &"font_disabled_color"]:
-		t.set_color(c, &"Button", surface_hi)
+		t.set_color(c, &"Button", on_primary)
 	t.set_type_variation(&"SecondaryButton", &"Button")
 	var sec := _box(surface_hi, pill, e1, ink, BUTTON_PAD_X)
 	sec.border_color = Color(ink, HAIRLINE_ALPHA)
@@ -176,6 +181,19 @@ static func build(palettes: Dictionary, text_scale: float = 1.0, vietnamese: boo
 		t.set_stylebox(&"grabber_highlight", bar, grab)
 		t.set_stylebox(&"grabber_pressed", bar, grab)
 	return t
+
+
+## The night sheet theme (round 5, palettes.json ui_night): the same type scale and line heights
+## as the live theme at the current Text size / language / Reduce transparency, with cream ink on
+## the dim sheet. Cached until one of those changes.
+static func night_theme() -> Theme:
+	var scale := float(Settings.get_int(Settings.TEXT_SCALE)) / 100.0
+	var key := "%.2f|%s|%s" % [scale, I18n.is_vietnamese(), Settings.get_bool(Settings.REDUCE_TRANSPARENCY)]
+	if _night_theme == null or _night_key != key:
+		_night_theme = build(UiTokens.night_palettes(), scale, I18n.is_vietnamese(),
+				Settings.get_bool(Settings.REDUCE_TRANSPARENCY))
+		_night_key = key
+	return _night_theme
 
 
 ## A type-scale size at a Text size setting (X1), for controls that size themselves.

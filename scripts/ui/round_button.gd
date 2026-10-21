@@ -67,6 +67,13 @@ var icon_textures: Array[Texture2D] = []
 ## Label box width (px; below 0 = the plate width) and the icon-to-label gap.
 var label_w: float = -1.0
 var label_gap: float = LABEL_GAP
+## Round 5 (large text, dock grid): the label sits to the right of the icon, the pair centred.
+var inline: bool = false:
+	set(v):
+		inline = v
+		_relayout()
+## Gap between the icon and an inline label, px.
+var inline_gap: float = 18.0
 ## The active label takes ACTIVE_LABEL_TOKEN (dock tabs).
 var tint_active_label: bool = false
 ## Night chrome blend (dock tabs): the label lerps toward night_ink.
@@ -83,6 +90,9 @@ var icon_z: int = 0:
 			_icon.z_index = v
 var _icon: TextureRect
 var _box: StyleBoxFlat
+## Round 5: the plate is a batched UiSurface (one draw for every surface of a sheet) whenever this
+## button draws its own plate.
+var _plate: UiSurface
 
 
 func _init() -> void:
@@ -99,6 +109,11 @@ func _init() -> void:
 
 
 func _ready() -> void:
+	if draw_plate and _plate == null:
+		_plate = UiSurface.new()
+		_plate.name = "Plate"
+		add_child(_plate, false, Node.INTERNAL_MODE_FRONT)
+		set_meta(UiSurface.META_OWNER, _plate)
 	_refresh_icon()
 	_relayout()
 
@@ -127,7 +142,23 @@ func looks_pressed() -> bool:
 
 func _changed() -> void:
 	queue_redraw()
+	_sync_plate()
 	appearance_changed.emit()
+
+
+func _sync_plate() -> void:
+	if _plate == null:
+		return
+	var c := center()
+	var r := plate_px * 0.5
+	_plate.position = c - Vector2(r, r)
+	_plate.size = Vector2(r, r) * 2.0
+	_plate.radius = UiSurface.PILL
+	var fill := UiTokens.sc(&"primary_tint") if active or looks_pressed() else UiTokens.sc(fill_token)
+	if asleep:
+		fill.a *= ASLEEP_ALPHA
+	_plate.color = fill
+	_plate.elevation = UiTokens.E0 if asleep else elevation
 
 
 func center() -> Vector2:
@@ -135,8 +166,11 @@ func center() -> Vector2:
 
 
 func _draw() -> void:
-	if draw_plate:
+	if draw_plate and _plate == null:
 		draw_plate_at(self, center(), 1.0)
+	elif draw_plate and active:
+		var w := RING_DP * UiTokens.PX_PER_DP
+		draw_arc(center(), plate_px * 0.5 - w * 0.5, 0.0, TAU, 96, UiTokens.sc(&"primary"), w, true)
 
 
 ## Draws this button's plate on [param canvas] at [param c] (shared by the dock's plate layer).
@@ -159,6 +193,8 @@ func _refresh_icon() -> void:
 		return
 	if icon_textures.size() == 2:
 		_icon.texture = icon_textures[1] if active else icon_textures[0]
+	elif draw_plate and not active:
+		_icon.texture = Icons.ui(icon_name, icon_px)
 	else:
 		_icon.texture = Icons.texture(icon_name, icon_px, active)
 	_relayout()
@@ -187,6 +223,17 @@ func _relayout() -> void:
 	if _icon == null:
 		return
 	var c := center()
+	if inline and label != null:
+		var lsz := label.get_combined_minimum_size()
+		var lw := minf(lsz.x, (plate_px if label_w < 0.0 else label_w) - icon_px - inline_gap)
+		var x0 := c.x - (icon_px + inline_gap + lw) * 0.5
+		_icon.size = Vector2(icon_px, icon_px)
+		_icon.position = Vector2(x0, c.y - icon_px * 0.5)
+		label.size = Vector2(lw, lsz.y)
+		label.position = Vector2(x0 + icon_px + inline_gap, c.y - lsz.y * 0.5)
+		pivot_offset = c
+		_changed()
+		return
 	var stack_h := icon_px
 	var lh := 0.0
 	if label != null:

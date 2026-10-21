@@ -27,6 +27,10 @@ var force_pressed: bool = false:
 		queue_redraw()
 var _t: float = 0.0
 var _tween: Tween
+## Round 5: track, thumb and check are batched leaves (UiSurface x 2 + the UI icon atlas).
+var _track: UiSurface
+var _thumb: UiSurface
+var _check: TextureRect
 
 
 func _init() -> void:
@@ -36,6 +40,27 @@ func _init() -> void:
 	toggled.connect(_on_toggled)
 	button_down.connect(queue_redraw)
 	button_up.connect(queue_redraw)
+	_track = UiSurface.new()
+	_track.name = "Track"
+	_track.radius = UiSurface.PILL
+	add_child(_track, false, Node.INTERNAL_MODE_FRONT)
+	set_meta(UiSurface.META_OWNER, _track)
+	var holder := Control.new()
+	holder.name = "ThumbLayer"
+	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	holder.set_meta(UiSurface.META_OWNER, true)
+	add_child(holder, false, Node.INTERNAL_MODE_FRONT)
+	_thumb = UiSurface.new()
+	_thumb.name = "Thumb"
+	_thumb.radius = UiSurface.PILL
+	_thumb.elevation = UiTokens.E1
+	holder.add_child(_thumb)
+	_check = TextureRect.new()
+	_check.name = "Check"
+	_check.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_check.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_check.size = Vector2(CHECK_PX, CHECK_PX)
+	holder.add_child(_check)
 
 
 func _ready() -> void:
@@ -66,26 +91,26 @@ func _set_t(v: float) -> void:
 
 func _draw() -> void:
 	var r := Rect2((size - Vector2(TRACK_W, TRACK_H)) * 0.5, Vector2(TRACK_W, TRACK_H))
-	var off := UiTokens.color(&"toggle_off_track")
-	var on := UiTokens.color(&"leaf")
-	var track := UiTokens.fill_box(off.lerp(on, _t), TRACK_H * 0.5)
-	var bw := roundi(BORDER_DP * UiTokens.PX_PER_DP * (1.0 - _t))
-	if bw > 0:
-		track.border_color = UiTokens.color(&"toggle_off_border")
-		track.set_border_width_all(bw)
-	draw_style_box(track, r)
+	# day tokens for the switch itself (the leaf track and the light thumb read on both schemes)
+	_track.color = UiTokens.sc(&"toggle_off_track").lerp(UiTokens.color(&"leaf"), _t)
+	_track.border_color = UiTokens.sc(&"toggle_off_border")
+	_track.border_px = roundf(BORDER_DP * UiTokens.PX_PER_DP * (1.0 - _t))
+	_track.position = r.position
+	_track.size = r.size
 	var d := TRACK_H - THUMB_INSET * 2.0
 	var x0 := r.position.x + THUMB_INSET + d * 0.5
 	var x1 := r.end.x - THUMB_INSET - d * 0.5
 	var c := Vector2(lerpf(x0, x1, _t), r.get_center().y)
-	var thumb := UiTokens.fill_box(UiTokens.color(&"surface_hi"), d * 0.5, UiTokens.E1)
 	var m := get_draw_mode()
 	var stretch := d * PRESS_STRETCH if force_pressed or m == DRAW_PRESSED or m == DRAW_HOVER_PRESSED else 0.0
 	# stretch toward the side the thumb will travel to
 	var sx := c.x - d * 0.5 - (stretch if _t > 0.5 else 0.0)
-	draw_style_box(thumb, Rect2(Vector2(sx, c.y - d * 0.5), Vector2(d + stretch, d)))
-	if _t > 0.5:
-		var tex := Icons.texture(&"check", CHECK_PX)
-		if tex != null:
-			var ck := Color(1, 1, 1, clampf((_t - 0.5) * 2.0, 0.0, 1.0))
-			draw_texture_rect(tex, Rect2(c - Vector2(CHECK_PX, CHECK_PX) * 0.5, Vector2(CHECK_PX, CHECK_PX)), false, ck)
+	_thumb.color = UiTokens.color(&"surface_hi")
+	_thumb.position = Vector2(sx, c.y - d * 0.5)
+	_thumb.size = Vector2(d + stretch, d)
+	if _check.texture == null:
+		var at: Variant = Icons.ui_atlas().get(Icons.atlas_key(&"check", CHECK_PX))
+		_check.texture = at if at is Texture2D else Icons.texture(&"check", CHECK_PX)
+	_check.position = c - Vector2(CHECK_PX, CHECK_PX) * 0.5
+	UiBatch.set_alpha(_check, clampf((_t - 0.5) * 2.0, 0.0, 1.0))
+	_check.visible = _t > 0.5

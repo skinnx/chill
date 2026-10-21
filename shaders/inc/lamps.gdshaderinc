@@ -22,12 +22,16 @@ const float LAMP_BREATH_K = 181.0;
 const float LAMP_BREATH_AMP = 0.05;
 // Ground-plane squash of a pool (matches the 0.62 depth foreshortening of the meadow).
 const float LAMP_POOL_SQUASH = 0.70;
-const float LAMP_PEAK_MIN = 0.30;
-const float LAMP_PEAK_MAX = 0.40;
+const float LAMP_PEAK_MIN = 0.36;
+const float LAMP_PEAK_MAX = 0.46;
 const float LAMP_CORE_Q = 0.16;
 const float LAMP_CORE_K = 0.22;
 // Pool plateau: full strength out to this fraction of the radius, then a smooth falloff to 0.
 const float LAMP_PLATEAU = 0.25;
+// Round 5 (QA r4: a row of lanterns read as one flat strip with a hard top): each pool is a soft
+// radial glow, peak * exp(-LAMP_FALLOFF q^2) faded to 0 at the rim, so neighbours keep darker gaps.
+const float LAMP_FALLOFF = 1.8;
+const float LAMP_RIM = 0.65;
 // The pool also lifts the albedo it lands on (adds light, not just a warm veil).
 const float LAMP_LIFT = 0.8;
 const float LAMP_TINT = 1.2;
@@ -53,7 +57,7 @@ float lamp_weight(vec2 p_design) {
 		}
 		float breath = 1.0 + LAMP_BREATH_AMP * sin(TAU * LAMP_BREATH_K / 600.0 * g_time + float(i) * 1.7);
 		float peak = mix(LAMP_PEAK_MIN, LAMP_PEAK_MAX, clamp(l.w, 0.0, 1.0)) + LAMP_RAIN_ADD * g_rain;
-		float f = 1.0 - smoothstep(LAMP_PLATEAU, 1.0, q);
+		float f = exp(-LAMP_FALLOFF * q * q) * (1.0 - smoothstep(LAMP_RIM, 1.0, q));
 		float core = LAMP_CORE_K * exp(-(q * q) / (LAMP_CORE_Q * LAMP_CORE_Q));
 		w = max(w, (peak * f + core) * breath);
 	}

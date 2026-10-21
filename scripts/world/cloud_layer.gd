@@ -27,6 +27,11 @@ const CLOUDS: Array[Array] = [
 	# High, small and faint: only tall phones see them (the sky above y 0 stays mostly calm).
 	[420.0, -250.0, 0.55, 29.0, 0.55, 0.5, 0.0],
 	[1650.0, -140.0, 0.45, 31.0, 0.5, 0.45, 0.0],
+	# Round 5 (Director: "the sky must carry more of the golden frame"): long, flat haze banks that
+	# only gather with the low sun (rain_only = 2: weight g_backlight), their undersides sun-lit.
+	[-60.0, -70.0, 1.45, 37.0, 0.70, 1.0, 2.0],
+	[880.0, -190.0, 1.2, 41.0, 0.62, 1.0, 2.0],
+	[470.0, 110.0, 0.95, 43.0, 0.66, 0.95, 2.0],
 ]
 const QUAD := Vector2(600.0, 220.0)
 
@@ -64,7 +69,7 @@ func _ready() -> void:
 ## Governor tier 1+: clouds 3 -> 1 (the rain clouds stay, they carry the weather).
 func _apply_tier(tier: int) -> void:
 	for i in _quads.size():
-		var rain_only := float(CLOUDS[i][6]) > 0.0
+		var rain_only := is_equal_approx(float(CLOUDS[i][6]), 1.0)
 		_quads[i].visible = tier == 0 or i == 0 or rain_only
 
 

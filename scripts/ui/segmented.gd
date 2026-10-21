@@ -28,12 +28,31 @@ var _labels: Array[Label] = []
 var _hits: Array[BaseButton] = []
 var _pill_x: float = 0.0
 var _spring: Spring
+## Round 5: the recessed track and the raised thumb are batched UiSurfaces (Art Bible §4.19).
+var _track: UiSurface
+var _thumb: UiSurface
 
 
 func _init() -> void:
 	custom_minimum_size = Vector2(0.0, HEIGHT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	resized.connect(_relayout)
+	_track = UiSurface.new()
+	_track.name = "Track"
+	_track.radius = UiSurface.PILL
+	add_child(_track, false, Node.INTERNAL_MODE_FRONT)
+	set_meta(UiSurface.META_OWNER, _track)
+	# the thumb sits one nesting level above the track (UiBatch orders surfaces by depth)
+	var holder := Control.new()
+	holder.name = "ThumbLayer"
+	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	holder.set_meta(UiSurface.META_OWNER, true)
+	add_child(holder, false, Node.INTERNAL_MODE_FRONT)
+	_thumb = UiSurface.new()
+	_thumb.name = "Thumb"
+	_thumb.radius = UiSurface.PILL
+	_thumb.elevation = UiTokens.E1
+	holder.add_child(_thumb)
 
 
 func _process(delta: float) -> void:
@@ -133,16 +152,18 @@ func _relayout() -> void:
 func _recolor() -> void:
 	for i in _labels.size():
 		_labels[i].add_theme_color_override(&"font_color",
-				UiTokens.color(&"primary_deep") if i == index else UiTokens.color(&"ink_soft"))
+				UiTokens.sc(&"primary_deep") if i == index else UiTokens.sc(&"ink_soft"))
 
 
 func _draw() -> void:
-	var track := UiTokens.fill_box(UiTokens.color(&"primary_tint"), size.y * 0.5, UiTokens.E0)
-	track.border_color = UiTokens.tinted(&"ink", UiTokens.alpha(&"divider"))
-	track.set_border_width_all(roundi(HAIRLINE_DP * UiTokens.PX_PER_DP))
-	draw_style_box(track, Rect2(Vector2.ZERO, size))
+	_track.color = UiTokens.sc(&"primary_tint")
+	_track.border_color = UiTokens.sc_tinted(&"ink", UiTokens.alpha(&"divider"))
+	_track.border_px = HAIRLINE_DP * UiTokens.PX_PER_DP
+	_track.position = Vector2.ZERO
+	_track.size = size
 	var ph := size.y - INSET * 2.0
-	var thumb := UiTokens.fill_box(UiTokens.color(&"surface_hi"), ph * 0.5, UiTokens.E1)
-	thumb.border_color = UiTokens.tinted(&"primary", THUMB_LINE_ALPHA)
-	thumb.set_border_width_all(roundi(HAIRLINE_DP * UiTokens.PX_PER_DP))
-	draw_style_box(thumb, Rect2(Vector2(_pill_x, INSET), Vector2(_seg_w(), ph)))
+	_thumb.color = UiTokens.sc(&"raised")
+	_thumb.border_color = UiTokens.sc_tinted(&"primary", THUMB_LINE_ALPHA)
+	_thumb.border_px = HAIRLINE_DP * UiTokens.PX_PER_DP
+	_thumb.position = Vector2(_pill_x, INSET)
+	_thumb.size = Vector2(_seg_w(), ph)

@@ -27,6 +27,7 @@ const CUE_NOT_YET := &"S11"
 const LEAF_BOAT := &"leaf_boat"
 ## Number of yield drops for the flowers' dew_per_hour terciles (Art Bible §9.4: 1-3 drops).
 const MAX_DROPS := 3
+const EMPTY_DROP_ALPHA := 0.25
 
 var hud: HudController
 var _tabs: Segmented
@@ -66,6 +67,11 @@ func refresh() -> void:
 		var keep := _scroll.scroll_vertical
 		_fill()
 		_scroll.set_deferred(&"scroll_vertical", keep)
+
+
+## The selected tab (a night-scheme rebuild keeps it).
+func current_tab() -> int:
+	return _tab
 
 
 func select_tab(i: int, animate: bool = true) -> void:
@@ -179,11 +185,16 @@ func _card_frame(item: StringName) -> Array:
 	h.add_theme_constant_override(&"separation", 24 if stacked else 30)
 	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	c.add_child(h)
-	var prev := ItemPreview.new()
-	var well := LiveWell.wrap(prev, Vector2(0.0, WELL_BANNER_H) if stacked else Vector2(WELL, WELL), WELL_RADIUS)
+	# the live-lit mini-render, baked once per light (BakedWell: every well of the list in one batch)
+	var key := "item|%s|%s" % [item, light_key()]
+	var well := BakedWell.create(key, Vector2(0.0, WELL_BANNER_H) if stacked else Vector2(WELL, WELL), WELL_RADIUS,
+			func(_sz: Vector2) -> Control:
+				var prev := ItemPreview.new()
+				var w := LiveWell.wrap(prev, Vector2.ZERO, 0.0)
+				prev.show_item(item)
+				return w)
 	well.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	h.add_child(well)
-	prev.show_item(item)
 	var info := VBoxContainer.new()
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	info.add_theme_constant_override(&"separation", 9)
@@ -192,15 +203,15 @@ func _card_frame(item: StringName) -> Array:
 	return [c, info]
 
 
+## The light a live-lit preview was baked in (phase, weather, lantern level): wells re-bake when it
+## changes.
+static func light_key() -> String:
+	return "%s|%s|%d|%s" % [TimeOfDay.phase, TimeOfDay.weather,
+			roundi(float(TimeOfDay.scalars.get("lights", 0.0)) * 4.0), "n" if UiTokens.night_scheme else "d"]
+
+
 func _price_chip(price: int, affordable: bool) -> Control:
-	var p := PanelContainer.new()
-	var box := UiTokens.fill_box(UiTokens.color(&"gold_tint"), 36.0)
-	box.content_margin_left = CHIP_PAD
-	box.content_margin_right = CHIP_PAD + 6
-	box.content_margin_top = 0
-	box.content_margin_bottom = 0
-	p.add_theme_stylebox_override(&"panel", box)
-	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var p := chip(&"gold_tint", 36.0, Vector4(CHIP_PAD, 0, CHIP_PAD + 6, 0))
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override(&"separation", 6)
 	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -211,22 +222,17 @@ func _price_chip(price: int, affordable: bool) -> Control:
 	var l := label(TopBarView.format_dew(price), &"PriceLabel")
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	if not affordable:
-		l.add_theme_color_override(&"font_color", UiTokens.color(&"ink_2"))
+		l.add_theme_color_override(&"font_color", UiTokens.sc(&"ink_2"))
 	h.add_child(l)
 	return p
 
 
 ## "All planted ✓": a leaf_tint pill with a check (leaf ink on leaf_tint, 5.3:1).
 func _done_chip(text: String) -> Control:
-	var p := PanelContainer.new()
-	var box := UiTokens.fill_box(UiTokens.color(&"leaf_tint"), DONE_CHIP_H * 0.5)
-	box.content_margin_left = 30
-	box.content_margin_right = 36
-	p.add_theme_stylebox_override(&"panel", box)
+	var p := chip(&"leaf_tint", UiSurface.PILL, Vector4(30, 0, 36, 0))
 	p.custom_minimum_size = Vector2(0.0, DONE_CHIP_H)
 	p.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	p.size_flags_vertical = Control.SIZE_SHRINK_END
-	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override(&"separation", 12)
 	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -236,7 +242,7 @@ func _done_chip(text: String) -> Control:
 	h.add_child(ic)
 	var l := label(text, &"StrongLabel")
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	l.add_theme_color_override(&"font_color", UiTokens.color(&"leaf"))
+	l.add_theme_color_override(&"font_color", UiTokens.sc(&"leaf"))
 	h.add_child(l)
 	return p
 
@@ -254,7 +260,7 @@ func _drops(dew_per_hour: float) -> Control:
 	for i in MAX_DROPS:
 		var r := Icons.rect(&"dew", DROP_PX)
 		r.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		r.modulate.a = 1.0 if i < n else 0.25
+		UiBatch.set_alpha(r, 1.0 if i < n else EMPTY_DROP_ALPHA)
 		h.add_child(r)
 	return h
 

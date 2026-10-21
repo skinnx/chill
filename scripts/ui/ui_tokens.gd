@@ -21,6 +21,9 @@ const E3 := 3
 const ELEVATION_SHAPE: Array[Vector2] = [Vector2.ZERO, Vector2(24, 6), Vector2(48, 18), Vector2(72, 24)]
 
 static var _curves: Dictionary = {}
+## Round 5: the scheme sheets and modal cards are BUILT in (HudController sets it with the night
+## chrome; a sheet open across the switch is rebuilt). [method sc] reads through it.
+static var night_scheme: bool = false
 
 
 static func color(token: StringName) -> Color:
@@ -31,6 +34,38 @@ static func color(token: StringName) -> Color:
 			return Color.html(String(d[String(token)]))
 	push_error("UiTokens: unknown colour token %s" % token)
 	return Color.MAGENTA
+
+
+## A sheet / modal-card colour in the current build scheme (palettes.json ui_night overrides the
+## day token of the same name after dark).
+static func sc(token: StringName) -> Color:
+	if night_scheme:
+		var n: Dictionary = ContentRegistry.palettes().get("ui_night", {})
+		if n.has(String(token)):
+			return Color.html(String(n[String(token)]))
+	return color(token)
+
+
+## [method sc] with alpha.
+static func sc_tinted(token: StringName, a: float) -> Color:
+	var c := sc(token)
+	c.a = a
+	return c
+
+
+## data/palettes.json with the ui / ui_derived tokens replaced by their ui_night values (the
+## night sheet theme is built from it).
+static func night_palettes() -> Dictionary:
+	var pal := ContentRegistry.palettes().duplicate(true)
+	var n: Dictionary = pal.get("ui_night", {})
+	# text on the primary pill stays the day cream (the pill keeps its day fill)
+	(pal["ui_derived"] as Dictionary)["on_primary"] = (pal["ui"] as Dictionary)["surface_hi"]
+	for sect: String in ["ui", "ui_derived"]:
+		var d: Dictionary = pal.get(sect, {})
+		for k: String in n:
+			if d.has(k):
+				d[k] = n[k]
+	return pal
 
 
 static func alpha(token: StringName) -> float:

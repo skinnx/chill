@@ -32,6 +32,8 @@ const MAX_CELL_ASPECT := 1.5
 ## Fraction of a cell the widest creature (body + tail / ears allowance) may fill.
 const FILL_W := 0.92
 const WIDTH_PAD_BU := 0.35
+## Cast-shadow offset cap as a fraction of the cell height (ends above the next row's friend).
+const CAST_MAX_CELL := 0.16
 
 var _rig: MosslingRig
 var _mosslings: Array[Mossling] = []
@@ -89,6 +91,9 @@ func _ready() -> void:
 	_feed.apply(TimeOfDay.colors)
 	TimeOfDay.globals_updated.connect(func(_v: Dictionary) -> void: _feed.apply(TimeOfDay.colors))
 	var shadow := _rig.make_shadow_material()
+	# the world's shadow direction and length law, capped inside the cell (QA r4: a long golden
+	# shadow ran into the next row and read as that friend's shadow pointing toward the sun)
+	shadow.set_shader_parameter(&"u_cast_max_px", cell.y * CAST_MAX_CELL)
 	var fx := _rig.make_fx_materials()
 	for pi in poses.size():
 		for i in ids.size():

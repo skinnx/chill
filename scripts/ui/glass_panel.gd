@@ -40,6 +40,9 @@ var elevation: int = UiTokens.E2:
 ## HUD chrome (top chips, dock): follows the night chrome scheme (dim glass after dark). Set
 ## before the panel enters the tree.
 var night_aware: bool = false
+## Round 5: a sheet built in the night scheme (palettes ui_night): its glass is the dim navy
+## sheet surface, never the cream one. Set before the panel enters the tree.
+var night_surface: bool = false
 ## Live glass (screen read) instead of faux. Only the open sheet sets this.
 var live: bool = false:
 	set(v):
@@ -92,6 +95,13 @@ func _refresh_material() -> void:
 			_mat.set_shader_parameter(&"u_luma_hi", float(ad.get("backdrop_luma_hi", 0.45)))
 			_mat.set_shader_parameter(&"u_night_tint", float(night_tokens().get("live_tint", 0.94)))
 			_mat.set_shader_parameter(&"u_live_night", night_k)
+			if night_surface:
+				var nt := night_tokens()
+				_mat.set_shader_parameter(&"u_surface", Color.html(String(
+						(ContentRegistry.palettes().get("ui_night", {}) as Dictionary).get("surface", "#2C304D"))))
+				_mat.set_shader_parameter(&"u_rim", UiTokens.color(&"night_glass_rim"))
+				_mat.set_shader_parameter(&"u_rim_tl", UiTokens.alpha(&"rim_top_left") * float(nt.get("rim_k", 0.5)))
+				_mat.set_shader_parameter(&"u_inner_shadow", 0.0)
 			_live_mats = _live_mats.filter(func(m: ShaderMaterial) -> bool: return is_instance_valid(m))
 			_live_mats.append(_mat)
 		_glass.material = _mat
@@ -190,7 +200,7 @@ func _refresh_shape() -> void:
 	# faux: the radius rule (pill, or a fixed px radius) and the fill pick the shared material
 	var opaque := Settings.get_bool(Settings.REDUCE_TRANSPARENCY) or live
 	var fill := UiTokens.alpha(&"reduce_transparency_fill") if opaque else UiTokens.alpha(&"glass_faux_fill")
-	var m := _faux_material(elevation, PILL if radius < 0.0 else radius, fill, night_aware)
+	var m := _faux_material(elevation, PILL if radius < 0.0 else radius, fill, night_aware or night_surface)
 	if _mat != m:
 		_mat = m
 		_glass.material = m

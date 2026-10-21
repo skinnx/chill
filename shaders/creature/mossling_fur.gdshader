@@ -72,6 +72,10 @@ const float FIBRE_PITCH_PX = 3.6;            // §5.6.3: one fibre per 1.2 dp of
 const float STRAY_SHARE = 0.08;              // §5.6.3: 8 % stray fibres at 1.6x length
 const float STRAY_LEN = 1.45;
 const float FRINGE_ALPHA = 0.85;
+// felt grain (local px^-1): fibres ~1.2 px wide x ~4.5 px long; the felt cloud ~9 px blobs
+const vec2 FELT_GRAIN_FREQ = vec2(0.85, 0.22);
+const float FELT_CLOUD_FREQ = 0.11;
+const float FELT_GRAIN_K = 0.75;              // QA r4: grain contrast -25 % on large flat areas
 const float WOBBLE_DP = 0.6;                 // ± silhouette wobble per fuzz dp
 const float PILLOW_R = 0.42;                 // bu: depth of the felt "pillow" dome
 const float DOME_N = 0.82;                   // the top half is rounder than the seat (mochi dome)
@@ -102,7 +106,7 @@ const float KEY_Z_DAY = 0.42;                // key elevation toward the viewer 
                                              // (0.62 lit every front face: no directional form)
 const float LOWER_DARK = 0.09;               // seat-half value drop under the top light
 const float KEY_Z_BACKLIT = 0.28;            // golden: the low sun still lifts the front a little
-const float SHADE_DARK_BACKLIT = 0.86;       // backlit fronts sit in a luminous shade (L* 75-80)
+const float SHADE_DARK_BACKLIT = 0.9;        // backlit fronts sit in a luminous shade (L* 75-80)
 const float NIGHT_AMB_LIFT = 0.20;           // night fur stays >= L* 45 (QA r3)
 const float GOLDEN_AMB_LIFT = 0.3;           // fur ambient lifted toward white at full backlight
 const float NIGHT_RIM = 1.4;                 // extra rim when the ambient is dark
@@ -115,7 +119,11 @@ const float NIGHT_GRAIN = 0.7;               // QA r2: felt grain -30 % at low a
 // frame and creature_rig depth_scale.near_cap, so they keep their own value (QA r3: the near
 // friend went muddy grey-mauve) and the full golden peach rim.
 const float NEAR_ALBEDO = 0.97;
-const float NEAR_RIM = 1.0;
+const float NEAR_RIM = 0.8;                  // r5: the front friend no longer out-glows the focal stone
+const float GLOW_FILL = 0.14;                // golden sky-glow fill on the shade side
+const float RIM_FAR = 0.2;                   // backlit rim on the flank turned away from the sun
+const float RIM_WARM_WHITE = 0.35;           // warm fur: rim colour lifted toward white
+const float SUB_RIM_DARK = 0.15;             // warm fur: darker sub-rim inside the glow
 const vec2 NEAR_DEPTH = vec2(0.9, 1.0);      // depth-scale ramp; > 1.05 = lineup / UI portrait (off)
 // Focal creature (the sun-stone friend, i_light.w < 0): a stronger rim and a warm lift (§2.5).
 const float FOCAL_RIM = 0.45;
@@ -170,6 +178,29 @@ vec2 rot(vec2 v, float a) {
 	float c = cos(a);
 	float s = sin(a);
 	return vec2(c * v.x + s * v.y, -s * v.x + c * v.y);   // clockwise by a (a > 0 tips +y toward +x)
+}
+
+// Felt grain (round 5, QA r4 c3: the shared finish() hashes 1 dp cells with floor(), which a
+// 2.2x close-up or a portrait magnifies into 6 px blocks). Object-anchored, smooth (value noise
+// with smoothstep interpolation, never a quantised cell), anisotropic along two crossing fibre
+// directions, and band-limited: an octave fades out before its fibres get thinner than a screen
+// pixel (no shimmer at 48 dp) and the grain softens at magnification instead of growing blocks.
+// lp: local px (pre depth-scale), k: screen px per local px. Returns -1..1.
+float felt_grain(vec2 lp, float seed, float k) {
+	vec2 q1 = rot(lp, seed * 6.0 + 0.55) * vec2(FELT_GRAIN_FREQ.x, FELT_GRAIN_FREQ.y);
+	vec2 q2 = rot(lp, seed * 6.0 - 0.95) * vec2(FELT_GRAIN_FREQ.x, FELT_GRAIN_FREQ.y) * 1.7 + 17.0;
+	float w1 = smoothstep(0.8, 1.6, k / FELT_GRAIN_FREQ.x);
+	float w2 = smoothstep(0.8, 1.6, k / (FELT_GRAIN_FREQ.x * 1.7));
+	float g = (vnoise(q1) - 0.5) * w1 * 0.62 + (vnoise(q2) - 0.5) * w2 * 0.38;
+	// a coarse, always-resolved felt cloud so a far creature still reads as felt, not plastic
+	g += (vnoise(lp * FELT_CLOUD_FREQ + seed * 31.0) - 0.5) * 0.35;
+	return g * 2.0;
+}
+
+vec3 felt_finish(vec3 c, vec2 lp, float seed, float k, vec2 frag, float grain) {
+	float l = clamp(dot(c, vec3(0.2126, 0.7152, 0.0722)), 0.0, 1.0);
+	c += felt_grain(lp, seed, k) * grain * 4.0 * l * (1.0 - l);
+	return c + tpdf(frag);
 }
 
 // Direction at angle a from vertical (a > 0 leans toward +x).
@@ -633,6 +664,8 @@ void fragment() {
 	float lod = max(u_lod, step(screen_px, LOD_PX));
 	float d_px = d * S;
 	float aa = max(bu_per_px * S, 0.6);                      // local px per screen px
+	// screen px per (density-scaled) grain px: portraits magnify k x and set u_grain_density = k
+	float k_px = 1.0 / max(bu_per_px * S * u_grain_density, 1e-4);
 
 	// 4. fuzz: wobble + fibre fringe outside the silhouette
 	float fz = mix(1.0, fz_part, w_part) * (1.0 - 0.3 * l_rain);
@@ -713,7 +746,7 @@ void fragment() {
 			nest_col = mix(mix(u_grass_root.rgb, u_ground.rgb, 0.6), u_grass_tip.rgb * 1.04, smoothstep(0.0, 0.85, best_t));
 			nest_col += l_key.rgb * l_backlight * l_rim * 0.25 * best_t * best_t;
 			nest_col = 1.0 - (1.0 - nest_col) * (1.0 - g_accent.rgb * clamp(i_light.z * l_lights * LAMP_FILL_K * 0.6, 0.0, LAMP_FILL_MAX));
-			nest_col = finish(nest_col, q * S / PX_PER_DP * u_grain_density, FRAGCOORD.xy, GRAIN_OBJECT);
+			nest_col = felt_finish(nest_col, q * S * u_grain_density, seed, k_px, FRAGCOORD.xy, GRAIN_OBJECT);
 			nest_a *= nestle;
 		}
 	}
@@ -825,7 +858,11 @@ void fragment() {
 		vec2 dp = ps * S / PX_PER_DP;
 		float mot = (vnoise(ps * 9.0 + seed * 13.0) * 0.05 - 0.025);
 		mot += lod > 0.5 ? 0.0 : (vnoise(ps * 31.0) * 0.03 - 0.015);
-		float hair = lod > 0.5 ? 0.0 : (vnoise(rot(dp, seed * 6.0) * vec2(1.6, 0.35)) - 0.5) * 0.035;
+		// felt fibres: short strands whose direction drifts across the body (needle-felt, not a
+		// combed coat: QA r5 one global angle read as rain streaks), two crossing layers
+		float fdir = seed * 6.0 + (vnoise(ps * 2.6 + seed * 5.0) - 0.5) * 3.4;
+		float hair = lod > 0.5 ? 0.0 : ((vnoise(rot(dp, fdir) * vec2(1.6, 0.42)) - 0.5) * 0.6
+				+ (vnoise(rot(dp, fdir + 1.3) * vec2(2.1, 0.5) + 7.0) - 0.5) * 0.4) * 0.04;
 		float noise_k = mix(1.0, NIGHT_GRAIN, 1.0 - smoothstep(0.35, 0.8, luma(l_ambient.rgb)));
 		vec3 body_alb = alb * (1.0 + (mot + hair) * noise_k);
 		alb = mix(body_alb, alb_part * (1.0 + mot * 0.8), w_part);
@@ -862,6 +899,9 @@ void fragment() {
 		vec3 col = mix(alb * amb, alb * amb_l, mix(HUE_KEEP_DAY, HUE_KEEP_NIGHT, dark));
 		vec3 shade = col * mix(vec3(1.0), l_shadow.rgb * SHADE_K, SHADE_MIX * (1.0 - 0.5 * dark)) * mix(SHADE_DARK, SHADE_DARK_BACKLIT, l_backlight);
 		col = mix(shade, col, 0.08 + 0.92 * diff);
+		// golden (r5 Director: glowing, never muddy): the face turned from the low sun is filled by
+		// the luminous sky glow and the sunlit moss around it, a warm lavender-peach, not mauve-grey
+		col += alb * mix(l_glow.rgb, u_ground.rgb, 0.3) * GLOW_FILL * l_backlight * (1.0 - diff) * (1.0 - st);
 		// form (QA r3 c1): lit crown -> core shadow on the turned-away side -> a little ground
 		// bounce on the lower shadow-side edge -> rim. The bounce keeps the core band the darkest
 		// value, so the body reads round at 48 dp instead of a flat pastel disc.
@@ -894,14 +934,23 @@ void fragment() {
 		float band_in = smoothstep(-rim_w, -1.0, d_s);
 		float band = band_in * band_in * (1.0 - smoothstep(0.55, 1.0, t));
 		// backlit: the whole upper and side contour catches the sun (peach fuzz), lit side strongest
-		float rim = band * mix(lam * lam, mix(rup, 1.0, 0.3) * (0.4 + 0.6 * lam), l_backlight) * l_rim
-				* smoothstep(-0.8, -0.1, n2.y);
+		// round 5 (QA r4: an even halo reads as a sticker outline): the backlit fuzz is directional,
+		// full on the crown and the sun-facing shoulder, ~0.2 on the far flank, none at the seat
+		float sun_face = mix(RIM_FAR, 1.0, smoothstep(-0.2, 0.6, dot(n2, L2)));
+		float rim = band * mix(lam * lam, mix(rup, 1.0, 0.3) * (0.4 + 0.6 * lam) * sun_face, l_backlight) * l_rim
+				* smoothstep(-0.8, -0.1, n2.y) * smoothstep(0.0, 0.35, ps.y);
 		// peach: the key warmed toward the glow of the sky around the sun
 		vec3 rim_col = mix(l_key.rgb, max(l_glow.rgb, l_key.rgb), 0.45 * l_backlight);
+		// warm / pale fur (Honeyhum, Primpip, Capling): the peach rim melts into the body, so it is
+		// lifted toward white and a thin darker sub-rim (fur x 0.85) separates it (QA r4)
+		float warm_fur = max(smoothstep(0.55, 0.7, luma(alb)), smoothstep(0.08, 0.2, alb.r - alb.b));
+		rim_col = mix(rim_col, vec3(1.0), RIM_WARM_WHITE * warm_fur);
+		float sub_band = smoothstep(-rim_w * 2.2, -rim_w * 1.1, d_s) * (1.0 - smoothstep(-rim_w * 0.9, -rim_w * 0.4, d_s));
+		col *= 1.0 - SUB_RIM_DARK * warm_fur * sub_band * l_backlight * sun_face * rup * (1.0 - dark);
 		float rim_k = mix(1.0, NEAR_RIM, v_near) * (1.0 + FOCAL_RIM * focal);
 		col += rim_col * rim * RIM_GAIN * (1.0 + RIM_BACKLIT_GAIN * l_backlight) * (1.0 - dark) * rim_k;
 		col += l_key.rgb * amb * FOCAL_LIFT * focal * up;
-		float fuzz_glow = clamp((fringe_a * in_fringe + band * 0.35 * rup) * l_backlight * rup, 0.0, 1.0) * rim_k;
+		float fuzz_glow = clamp((fringe_a * in_fringe + band * 0.35 * rup) * l_backlight * rup, 0.0, 1.0) * rim_k * sun_face;
 		col = mix(col, mix(col, rim_col, 0.85) * 1.12, fuzz_glow * smoothstep(-3.0, 0.0, d_s) + fuzz_glow * 0.35 * band);
 		// night: a thin cool moon rim on the key-facing fringe separates friends from the navy meadow
 		// masked to the moon-facing (upper-right) edges, so the moonlight has a direction
@@ -1050,7 +1099,8 @@ void fragment() {
 		}
 
 		// 10. finish: grain anchored to the creature + TPDF dither; premultiplied output + halo
-		col = finish(col, dp * u_grain_density, FRAGCOORD.xy, GRAIN_OBJECT * mix(1.0, NIGHT_GRAIN, night));
+		col = felt_finish(col, ps * S * u_grain_density, seed, k_px, FRAGCOORD.xy,
+				GRAIN_OBJECT * FELT_GRAIN_K * mix(1.0, NIGHT_GRAIN, night));
 		COLOR = vec4((col * cover + halo_rgb) * (1.0 - nest_a) + nest_col * nest_a, cover + nest_a * (1.0 - cover)) * fade;
 	}
 }

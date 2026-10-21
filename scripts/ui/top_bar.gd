@@ -28,11 +28,10 @@ const DEW_TEXT_X := 120.0
 const DEW_PAD_R := 42.0
 const DEW_W_MIN := 264.0
 const DEW_W_MAX := 420.0
-## The chips are a fixed 40 dp tall: their text stops growing at 130 % (Art Bible §9.1 dock rule,
-## §8.5 HUD fallback); the numerals still scale with the setting up to that cap.
-const TEXT_SCALE_CAP := 1.3
-## The 66 px numerals fill the 120 px chip already; they may grow 15 % at most.
-const NUMERAL_SCALE_CAP := 1.15
+## Round 5 (QA r4: at 200 % text the HUD grew ~10 %): the numerals and the peek label take the
+## FULL Text size; the chips, their icons and the eye grow with it by CHIP_GROW of the extra
+## (200 % -> chips 1.6x, 64 dp), so the text always sits inside its glass and icons never shrink.
+const CHIP_GROW := 0.6
 ## Time chip label peek: widens leftward to 408 px (x 480 at the 1080 frame).
 const PEEK_W := 408.0
 const PEEK_LABEL_PAD := 36.0
@@ -76,6 +75,8 @@ var _safe_top: float = 0.0
 ## Night chrome blend (HudController): labels lerp to night_ink, icons swap at the midpoint.
 var _night_k: float = 0.0
 var _night_icons: bool = false
+## Chip scale for the Text size setting (1.0 at 100 %).
+var _k: float = 1.0
 
 
 func _init() -> void:
@@ -118,31 +119,50 @@ func _notification(what: int) -> void:
 func layout(screen: Vector2, safe_top: float) -> void:
 	_screen = screen
 	_safe_top = safe_top
+	var k := _k
+	var ch := CHIP_H * k
+	var ic := ICON_PX * k
 	var y := maxf(safe_top, T_MIN) + TOP_GAP
 	var w := screen.x
 	var dew_w := _dew_width()
-	var eye_x := SIDE if left_handed else w - SIDE - CHIP_H
-	var time_x := SIDE + CHIP_H + GAP if left_handed else eye_x - GAP - CHIP_H
-	var time_w := CHIP_H + _peek_w
+	var eye_x := SIDE if left_handed else w - SIDE - ch
+	var time_x := SIDE + ch + GAP if left_handed else eye_x - GAP - ch
+	var time_w := ch + _peek_w
 	dew_chip.position = Vector2(w - SIDE - dew_w if left_handed else SIDE, y)
-	dew_chip.size = Vector2(dew_w, CHIP_H)
-	_dew_label.size = Vector2(dew_w - DEW_TEXT_X - DEW_PAD_R * 0.5, CHIP_H)
+	dew_chip.size = Vector2(dew_w, ch)
+	_dew_icon.size = Vector2(ic, ic)
+	_dew_icon.position = Vector2(DEW_ICON_X * k, (ch - ic) * 0.5)
+	_dew_label.position = Vector2(DEW_TEXT_X * k, 0.0)
+	_dew_label.size = Vector2(dew_w - DEW_TEXT_X * k - DEW_PAD_R * k * 0.5, ch)
 	time_chip.position = Vector2(time_x if left_handed else time_x - _peek_w, y)
-	time_chip.size = Vector2(time_w, CHIP_H)
+	time_chip.size = Vector2(time_w, ch)
 	var icon_x := 0.0 if left_handed else _peek_w
-	_time_icon.position = Vector2(icon_x + (CHIP_H - ICON_PX) * 0.5, (CHIP_H - ICON_PX) * 0.5)
-	_badge.position = Vector2(icon_x + CHIP_H - BADGE_PX * 0.8, CHIP_H - BADGE_PX * 0.8)
-	var lx := CHIP_H - PEEK_LABEL_PAD * 0.25 if left_handed else PEEK_LABEL_PAD
+	_time_icon.size = Vector2(ic, ic)
+	_time_icon.position = Vector2(icon_x + (ch - ic) * 0.5, (ch - ic) * 0.5)
+	var bp := BADGE_PX * k
+	_badge.size = Vector2(bp, bp)
+	_badge.position = Vector2(icon_x + ch - bp * 0.8, ch - bp * 0.8)
+	var bi := BADGE_ICON_PX * k
+	_badge_icon.size = Vector2(bi, bi)
+	_badge_icon.position = Vector2(bp - bi, bp - bi) * 0.5
+	var lx := ch - PEEK_LABEL_PAD * 0.25 if left_handed else PEEK_LABEL_PAD
 	_time_label.position = Vector2(lx, 0.0)
-	_time_label.size = Vector2(maxf(_peek_w - PEEK_LABEL_PAD, 0.0), CHIP_H)
+	_time_label.size = Vector2(maxf(_peek_w - PEEK_LABEL_PAD, 0.0), ch)
 	_time_label.visible = _peek_w > PEEK_LABEL_PAD
-	_time_label.modulate.a = clampf((_peek_w - PEEK_LABEL_PAD) / (PEEK_W - CHIP_H - PEEK_LABEL_PAD), 0.0, 1.0)
+	_time_label.modulate.a = clampf((_peek_w - PEEK_LABEL_PAD) / (PEEK_W * k - ch - PEEK_LABEL_PAD), 0.0, 1.0)
 	var pad := EYE_HIT_PAD_X
 	eye.position = Vector2(eye_x - pad, y)
-	eye.size = EYE_HIT
+	eye.size = Vector2(ch + pad * 2.0, maxf(EYE_HIT.y, ch + pad * 2.0))
 	_eye_glass.position = Vector2(pad, 0.0)
-	_eye_glass.size = Vector2(CHIP_H, CHIP_H)
-	eye.pivot_offset = Vector2(pad + CHIP_H * 0.5, CHIP_H * 0.5)
+	_eye_glass.size = Vector2(ch, ch)
+	_eye_icon.size = Vector2(ic, ic)
+	_eye_icon.position = Vector2((ch - ic) * 0.5, (ch - ic) * 0.5)
+	eye.pivot_offset = Vector2(pad + ch * 0.5, ch * 0.5)
+
+
+## The chips' bottom edge in screen px (sheets and toasts keep clear of it).
+func bottom() -> float:
+	return maxf(_safe_top, T_MIN) + TOP_GAP + CHIP_H * _k
 
 
 ## Ambient watch: the eye shows its closed-lid variant (Art Bible §9.3).
@@ -156,7 +176,7 @@ func peek(hold: bool = false) -> void:
 	_time_label.text = _peek_text()
 	if _peek_tween != null and _peek_tween.is_valid():
 		_peek_tween.kill()
-	var target := PEEK_W - CHIP_H
+	var target := (PEEK_W - CHIP_H) * _k
 	var font_w := _time_label.get_theme_font(&"font").get_string_size(_time_label.text, HORIZONTAL_ALIGNMENT_LEFT, -1,
 			_time_label.get_theme_font_size(&"font_size")).x
 	target = maxf(target, font_w + PEEK_LABEL_PAD * 2.0)
@@ -205,14 +225,15 @@ func _set_time(phase: StringName, weather: StringName, announce: bool) -> void:
 		peek()
 
 
+## Text size (X1): labels take the theme's full size; the chips and icons grow by CHIP_GROW.
 func _cap_text() -> void:
-	for pair: Array in [[_dew_label, ThemeBuilder.SIZE_HUD, NUMERAL_SCALE_CAP], [_time_label, ThemeBuilder.SIZE_LABEL,
-			TEXT_SCALE_CAP]]:
-		var l: Label = pair[0]
-		var cap := roundi(float(pair[1]) * float(pair[2]))
+	var ts := clampf(float(Settings.get_int(Settings.TEXT_SCALE)) / 100.0, 1.0, 2.0)
+	var k := 1.0 + (ts - 1.0) * CHIP_GROW
+	for l: Label in [_dew_label, _time_label]:
 		l.remove_theme_font_size_override(&"font_size")
-		if l.get_theme_font_size(&"font_size") > cap:
-			l.add_theme_font_size_override(&"font_size", cap)
+	if not is_equal_approx(k, _k):
+		_k = k
+		_refresh_icons()
 	relayout()
 
 
@@ -230,9 +251,9 @@ static func format_dew(n: int) -> String:
 
 func _dew_width() -> float:
 	if _dew_label == null:
-		return DEW_W_MIN
+		return DEW_W_MIN * _k
 	var tw := _dew_label.get_combined_minimum_size().x
-	return clampf(DEW_TEXT_X + tw + DEW_PAD_R, DEW_W_MIN, DEW_W_MAX)
+	return clampf(DEW_TEXT_X * _k + tw + DEW_PAD_R * _k, DEW_W_MIN * _k, DEW_W_MAX * _k)
 
 
 func _on_wallet(dew: int) -> void:
@@ -285,7 +306,7 @@ func _relayout_dew() -> void:
 
 ## Screen-space centre of the dew icon (collect-all flights land here).
 func dew_target_point() -> Vector2:
-	return dew_chip.global_position + Vector2(DEW_ICON_X + ICON_PX * 0.5, CHIP_H * 0.5)
+	return dew_chip.global_position + Vector2((DEW_ICON_X + ICON_PX * 0.5) * _k, CHIP_H * _k * 0.5)
 
 
 # ------------------------------------------------------------------ build
@@ -295,9 +316,18 @@ func dew_target_point() -> Vector2:
 ## labels batch (Art Bible §4.19 budget).
 func _icon(name: StringName, px: float) -> Texture2D:
 	if _atlas.is_empty():
-		_atlas = Icons.hud_atlas()
-	var t: Variant = _atlas.get(Icons.atlas_key(name, px, false, _night_icons))
-	return t if t is Texture2D else Icons.texture(name, px, false, _night_icons)
+		_atlas = Icons.hud_atlas(_k)
+	var t: Variant = _atlas.get(Icons.atlas_key(name, px * _k, false, _night_icons))
+	return t if t is Texture2D else Icons.texture(name, px * _k, false, _night_icons)
+
+
+## Re-takes every top-bar icon at the current chip scale (one atlas per scale).
+func _refresh_icons() -> void:
+	_atlas = {}
+	if _dew_icon != null:
+		_dew_icon.texture = _icon(&"dew", ICON_PX)
+		_set_time(_phase, _weather, false)
+		set_ambient_icon(_ambient_icon)
 
 
 ## Night chrome (palettes ui_alpha.night_chrome): the chips' glass follows GlassPanel.night_k;
@@ -368,8 +398,8 @@ func _build_time() -> void:
 	_badge.size = Vector2(BADGE_PX, BADGE_PX)
 	_badge.draw.connect(func() -> void:
 		var plate := UiTokens.color(&"surface_hi").lerp(UiTokens.color(&"night_capsule"), _night_k)
-		_badge.draw_style_box(UiTokens.fill_box(plate, BADGE_PX * 0.5, UiTokens.E1),
-				Rect2(Vector2.ZERO, Vector2(BADGE_PX, BADGE_PX))))
+		_badge.draw_style_box(UiTokens.fill_box(plate, _badge.size.x * 0.5, UiTokens.E1),
+				Rect2(Vector2.ZERO, _badge.size)))
 	time_chip.add_child(_badge)
 	_badge_icon = _icon_rect(&"breeze", BADGE_ICON_PX)
 	_badge_icon.z_index = Z_ICONS - Z_BADGE  # relative to the badge plate: absolute Z_ICONS

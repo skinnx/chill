@@ -16,6 +16,8 @@
 //   gust(x_design)                travelling gust envelope 0..1 (k 62, 1742 px spacing, §3.4)
 //   gust_at(p_design)             the same front, diagonal: lags with depth (round 4)
 //   sun_veil(p_canvas, layer_k)   additive warm veil around the sun (far 1.0, mid 0.6, meadow 0.25)
+//   golden_grade(c, p_design, k)  round 5 golden terrain grade: gold-green lit moss, peach pool and
+//                                 crest (k = extra peach weight), L* floor; identity off golden
 #ifndef MM_WORLD_LIGHT_INC
 #define MM_WORLD_LIGHT_INC
 #include "res://shaders/inc/globals.gdshaderinc"
@@ -52,9 +54,13 @@ float wl_luma(vec3 c) {
 	return dot(c, vec3(0.2126, 0.7152, 0.0722));
 }
 
-// Round 4 (QA r3: golden shadows read as a lavender wash): with the light behind (golden, dusk)
-// the shadow tint loses part of its chroma, a warm-cool grey-mauve instead of violet.
-const float SHADOW_TINT_DESAT = 0.45;
+// Round 4 desaturated the backlit shadow tint (0.45) and the golden shadows turned brown-grey;
+// round 5 (Director: "shadows SOFT and LAVENDER-TINTED, never brown-grey") keeps only a trace.
+const float SHADOW_TINT_DESAT = 0.10;
+// Round 5: with the light low and behind (golden, dawn) terrain shade is shallower (long soft
+// shadows, -12..-18 L*) and leans further toward the lavender shadow hue.
+const float TERRAIN_SHADE_DARK_BACKLIT = 0.68;
+const float TERRAIN_SHADE_TINT_BACKLIT = 0.52;
 
 vec3 shadow_tint() {
 	vec3 s = g_shadow.rgb;
@@ -62,9 +68,10 @@ vec3 shadow_tint() {
 }
 
 vec3 shade_of(vec3 c) {
-	vec3 d = c * TERRAIN_SHADE_DARK;
+	float bl = g_backlight * (1.0 - g_lights);
+	vec3 d = c * mix(TERRAIN_SHADE_DARK, TERRAIN_SHADE_DARK_BACKLIT, bl);
 	vec3 tint = shadow_tint() / max(wl_luma(g_shadow.rgb), 1e-3) * wl_luma(d);
-	return mix(d, min(tint, vec3(1.0)), TERRAIN_SHADE_TINT);
+	return mix(d, min(tint, vec3(1.0)), mix(TERRAIN_SHADE_TINT, TERRAIN_SHADE_TINT_BACKLIT, bl));
 }
 
 vec3 light_object(vec3 albedo, float up, float ao) {
@@ -108,6 +115,37 @@ float cloud_shadow(vec2 p_design) {
 	float n = (2.0 * vnoise_tiled(q, vec2(CLOUD_SHADOW_TILE_CELLS, 4096.0))
 			+ vnoise_tiled(q * 2.0 + vec2(0.0, 7.3), vec2(CLOUD_SHADOW_TILE_CELLS * 2.0, 8192.0))) / 3.0;
 	return smoothstep(CLOUD_SHADOW_EDGE.x, CLOUD_SHADOW_EDGE.y, n) * g_cloud_shadow * (0.4 + 0.6 * g_cloud);
+}
+
+// Golden grade, round 5 (Director: "a GLOWING warm-lit moss meadow, sunlit areas peach-gold-green
+// and luminous"; the r4 rose-brown grade read as mud). Terrain (meadow, grass, ground cover) leans
+// toward a gold-green at its own luminance, toward peach in the broad low-sun pool around the focal
+// and on the crest glow; the pool is lifted, and a luminance floor keeps every terrain pixel above
+// ~L* 40 (the darkness lives in the L5 corners). Weight g_backlight, off at night.
+const vec3 GOLDEN_MOSS = vec3(0.690, 0.680, 0.440);
+const vec3 GOLDEN_PEACH = vec3(0.937, 0.733, 0.553);
+const float GOLDEN_HUE_K = 0.38;
+const float GOLDEN_PEACH_K = 0.62;
+const float GOLDEN_POOL_GAIN = 0.20;
+const float GOLDEN_FLOOR = 0.12;
+const vec2 GOLDEN_POOL_C = vec2(540.0, 1123.0);
+const vec2 GOLDEN_POOL_R = vec2(560.0, 360.0);
+
+vec3 golden_grade(vec3 c, vec2 p_design, float extra_peach) {
+	float gk = g_backlight * (1.0 - g_lights);
+	if (gk < 0.001) {
+		return c;
+	}
+	vec2 gd = (p_design - GOLDEN_POOL_C) / GOLDEN_POOL_R;
+	float gpool = exp(-dot(gd, gd) * 1.2);
+	float gl = wl_luma(c);
+	vec3 moss = GOLDEN_MOSS / wl_luma(GOLDEN_MOSS) * gl;
+	vec3 peach = GOLDEN_PEACH / wl_luma(GOLDEN_PEACH) * gl;
+	vec3 hue = mix(moss, peach, clamp(GOLDEN_PEACH_K * (gpool + extra_peach), 0.0, 1.0));
+	c = mix(c, hue, GOLDEN_HUE_K * gk);
+	c *= 1.0 + GOLDEN_POOL_GAIN * gpool * gk;
+	float l2 = wl_luma(c);
+	return c * max(l2, GOLDEN_FLOOR * gk) / max(l2, 1e-3);
 }
 
 float wind_k() {

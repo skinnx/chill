@@ -106,14 +106,9 @@ func refresh() -> void:
 
 
 func _count_chip() -> Label:
-	var p := PanelContainer.new()
-	var box := UiTokens.fill_box(UiTokens.color(&"surface_hi"), 36.0, UiTokens.E1)
-	box.content_margin_left = 30
-	box.content_margin_right = 30
-	p.add_theme_stylebox_override(&"panel", box)
+	var p := chip(&"surface_hi", 36.0, Vector4(30, 0, 30, 0), UiTokens.E1)
 	p.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	p.custom_minimum_size = Vector2(168.0, 72.0)
-	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var l := label("", &"StrongLabel")
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -130,8 +125,10 @@ func _cup_widget() -> Control:
 	var well := Control.new()
 	well.custom_minimum_size = Vector2(CUP, CUP)
 	well.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	well.draw.connect(func() -> void:
-		well.draw_style_box(UiTokens.fill_box(UiTokens.color(&"gold_tint"), CUP * 0.5), Rect2(Vector2.ZERO, well.size)))
+	var cup := BakedWell.create("cup|%s" % ("n" if UiTokens.night_scheme else "d"), Vector2(CUP, CUP), CUP * 0.5,
+			func(_sz: Vector2) -> Control: return _stamp_cell(CUP_ITEM, 1.0))
+	cup.size = Vector2(CUP, CUP)
+	well.add_child(cup)
 	var ring := ColorRect.new()
 	ring.size = Vector2(CUP, CUP)
 	ring.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -143,11 +140,6 @@ func _cup_widget() -> Control:
 	_cup_ring.set_shader_parameter(&"u_track", Color(UiTokens.color(&"gold"), 0.0))
 	ring.material = _cup_ring
 	well.add_child(ring)
-	var prev := ItemPreview.new()
-	prev.size = Vector2(CUP, CUP)
-	prev.position = Vector2.ZERO
-	well.add_child(prev)
-	prev.show_item(CUP_ITEM)
 	h.add_child(well)
 	var v := VBoxContainer.new()
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -174,30 +166,39 @@ func _cup_widget() -> Control:
 	return c
 
 
+## A gift stamp's bake cell: the gift on a gold_tint plate ([param k] = the stamp's share of the
+## cell).
+static func _stamp_cell(item: StringName, k: float) -> Control:
+	var bg := UiSurface.make(UiTokens.sc(&"gold_tint"), 0.0)
+	var prev := ItemPreview.new()
+	prev.show_item(item)
+	bg.add_child(prev)
+	bg.resized.connect(func() -> void:
+		prev.size = bg.size * k
+		prev.position = bg.size * (1.0 - k) * 0.5)
+	return bg
+
+
 func _tile(gift: Dictionary) -> Control:
-	var t := Control.new()
-	t.custom_minimum_size = Vector2(TILE, TILE)
-	t.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var filled := not gift.is_empty()
-	t.draw.connect(func() -> void:
-		var r := Rect2(Vector2.ZERO, t.size)
-		if filled:
-			t.draw_style_box(UiTokens.fill_box(UiTokens.color(&"gold_tint"), ThemeBuilder.R_XS), r)
-		else:
-			var box := UiTokens.fill_box(Color(0, 0, 0, 0), ThemeBuilder.R_XS)
-			box.border_color = UiTokens.tinted(&"ink", UiTokens.alpha(&"divider"))
-			box.set_border_width_all(roundi(EMPTY_RING_DP * UiTokens.PX_PER_DP))
-			t.draw_style_box(box, r)
-			var dot_c := UiTokens.tinted(&"ink", UiTokens.alpha(&"divider"))
-			t.draw_circle(r.get_center(), EMPTY_DOT * 0.5, dot_c, true, -1.0, true))
 	if filled:
-		var prev := ItemPreview.new()
-		prev.size = Vector2(STAMP, STAMP)
-		prev.position = Vector2(TILE - STAMP, TILE - STAMP) * 0.5
-		t.add_child(prev)
-		prev.show_item(StringName(String(gift.get("gift_item", ""))))
+		var item := StringName(String(gift.get("gift_item", "")))
+		var t := BakedWell.create("gift|%s|%s" % [item, "n" if UiTokens.night_scheme else "d"], Vector2(TILE, TILE),
+				ThemeBuilder.R_XS, func(_sz: Vector2) -> Control: return _stamp_cell(item, STAMP / TILE))
 		t.set_meta(&"gift", true)
-	return t
+		return t
+	# an empty slot: a hairline ring with a dot (both batched surfaces)
+	var e := Control.new()
+	e.custom_minimum_size = Vector2(TILE, TILE)
+	e.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var ring := UiSurface.attach_to(e, UiSurface.make(Color(0, 0, 0, 0), ThemeBuilder.R_XS))
+	ring.border_px = EMPTY_RING_DP * UiTokens.PX_PER_DP
+	ring.border_color = UiTokens.sc_tinted(&"ink", UiTokens.alpha(&"divider"))
+	var dot := UiSurface.make(UiTokens.sc_tinted(&"ink", UiTokens.alpha(&"divider")), UiSurface.PILL)
+	dot.size = Vector2(EMPTY_DOT, EMPTY_DOT)
+	dot.position = Vector2(TILE - EMPTY_DOT, TILE - EMPTY_DOT) * 0.5
+	e.add_child(dot)
+	return e
 
 
 func _on_collect() -> void:
@@ -208,9 +209,7 @@ func _on_collect() -> void:
 		var t := c as Control
 		if t != null and t.has_meta(&"gift"):
 			origins.append(t.global_position + t.size * 0.5)
-			var prev := t.get_child(0) as ItemPreview
-			if prev != null:
-				prev.visible = false
+			t.self_modulate.a = 0.0
 	_flying = true
 	var target := hud.top_bar.dew_target_point() if hud != null else Vector2(120, 200)
 	var layer: Control = hud.overlays if hud != null else self

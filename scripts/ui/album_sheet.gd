@@ -18,6 +18,7 @@ const CARD_PAD := 18
 const WELL_H := 216.0
 const HEART_PX := 36.0
 const HEARTS := 5
+const EMPTY_HEART_ALPHA := 0.35
 const COLUMNS := 3
 const COLUMNS_LARGE_TEXT := 2
 const LARGE_TEXT := 150
@@ -56,19 +57,14 @@ func _init() -> void:
 
 
 func build_body() -> void:
-	var chip := PanelContainer.new()
-	var box := UiTokens.fill_box(UiTokens.color(&"surface_hi"), 36.0, UiTokens.E1)
-	box.content_margin_left = 30
-	box.content_margin_right = 30
-	chip.add_theme_stylebox_override(&"panel", box)
-	chip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	chip.custom_minimum_size = Vector2(168.0, 72.0)
-	chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var count_chip := chip(&"surface_hi", 36.0, Vector4(30, 0, 30, 0), UiTokens.E1)
+	count_chip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	count_chip.custom_minimum_size = Vector2(168.0, 72.0)
 	_count = label("", &"StrongLabel")
 	_count.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_count.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	chip.add_child(_count)
-	header_extra.add_child(chip)
+	count_chip.add_child(_count)
+	header_extra.add_child(count_chip)
 	_tabs = Segmented.new()
 	_tabs.position = Vector2(SIDE, 0.0)
 	_tabs.size = Vector2(body.size.x - SIDE * 2.0, Segmented.HEIGHT)
@@ -96,6 +92,11 @@ func refresh() -> void:
 		var keep := _scroll.scroll_vertical
 		_fill()
 		_scroll.set_deferred(&"scroll_vertical", keep)
+
+
+## The selected tab (a night-scheme rebuild keeps it).
+func current_tab() -> int:
+	return _tab
 
 
 func select_tab(i: int, animate: bool = true) -> void:
@@ -222,17 +223,28 @@ func _friend_card(sp: StringName, s: Dictionary, w: float) -> Control:
 	return b
 
 
+## A friend's well: the studio-lit portrait (or the soft silhouette of a friend not met yet),
+## baked once into the shared atlas (BakedWell), so the whole grid draws its wells in one batch.
 func _portrait_well(sp: StringName, met: bool, h: float, pose: StringName) -> Control:
+	var scheme := "n" if UiTokens.night_scheme else "d"
+	var key := "portrait|%s|%s" % [sp, pose] if met else "silhouette|%s|%s" % [sp, scheme]
+	var radius := float(ThemeBuilder.R_M)
+	return BakedWell.create(key, Vector2(0.0, h), radius, func(_sz: Vector2) -> Control:
+		return portrait_cell(sp, met, pose))
+
+
+## The cell a portrait well is baked from (also the live fallback): LiveWell + CreaturePortrait,
+## or a surface fill with the silhouette.
+static func portrait_cell(sp: StringName, met: bool, pose: StringName) -> Control:
 	var p := CreaturePortrait.new()
-	p.setup(sp, met, pose)
+	p.setup(sp, met, pose, false)
 	if met:
-		return LiveWell.wrap(p, Vector2(0.0, h), ThemeBuilder.R_M)
-	var well := PanelContainer.new()
-	well.add_theme_stylebox_override(&"panel", UiTokens.fill_box(UiTokens.color(&"surface"), ThemeBuilder.R_M))
-	well.custom_minimum_size = Vector2(0.0, h)
-	well.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	well.add_child(p)
-	return well
+		var w := LiveWell.wrap(p, Vector2.ZERO, 0.0)
+		return w
+	var fill := UiSurface.make(UiTokens.sc(&"surface"), 0.0)
+	fill.add_child(p)
+	p.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	return fill
 
 
 func _hearts(n: int, center: bool) -> Control:
@@ -241,13 +253,11 @@ func _hearts(n: int, center: bool) -> Control:
 	h.add_theme_constant_override(&"separation", 3)
 	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	h.tooltip_text = I18n.fmt(&"ALBUM_HEARTS_A11Y", {"hearts": n})
-	# both heart states come from one small atlas, so a row of hearts is one draw call
-	var atlas := Icons.atlas([[&"heart", HEART_PX, false], [&"heart_empty", HEART_PX, false]])
+	# both heart states come from the UI atlas, so every heart of the sheet is one draw call
 	for i in HEARTS:
 		var r := Icons.rect(&"heart" if i < n else &"heart_empty", HEART_PX)
-		r.texture = atlas[Icons.atlas_key(&"heart" if i < n else &"heart_empty", HEART_PX)] as Texture2D
 		if i >= n:
-			r.modulate.a = 0.35
+			UiBatch.set_alpha(r, EMPTY_HEART_ALPHA)
 		h.add_child(r)
 	return h
 
@@ -328,14 +338,10 @@ func _make_back() -> Button:
 	b.visible = _friend != &""
 	b.tooltip_text = tr("COMMON_BACK")
 	body.add_child(b)
-	var pill := PanelContainer.new()
-	var box := UiTokens.fill_box(UiTokens.color(&"surface_hi"), BACK_PILL_H * 0.5, UiTokens.E1)
-	box.border_color = UiTokens.tinted(&"ink", UiTokens.alpha(&"divider"))
-	box.set_border_width_all(roundi(UiTokens.PX_PER_DP))
-	box.content_margin_left = BACK_PAD_L
-	box.content_margin_right = BACK_PAD_R
-	pill.add_theme_stylebox_override(&"panel", box)
-	pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var pill := chip(&"surface_hi", UiSurface.PILL, Vector4(BACK_PAD_L, 0, BACK_PAD_R, 0), UiTokens.E1)
+	var ps := UiSurface.of(pill)
+	ps.border_color = UiTokens.sc_tinted(&"ink", UiTokens.alpha(&"divider"))
+	ps.border_px = UiTokens.PX_PER_DP
 	b.add_child(pill)
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override(&"separation", 12)
@@ -381,15 +387,8 @@ func _fact(head: String, value: String) -> Control:
 
 
 func _pill_tag(text: String, fill: StringName) -> Control:
-	var p := PanelContainer.new()
-	var box := UiTokens.fill_box(UiTokens.color(fill), 30.0)
-	box.content_margin_left = 30
-	box.content_margin_right = 30
-	box.content_margin_top = 6
-	box.content_margin_bottom = 6
-	p.add_theme_stylebox_override(&"panel", box)
+	var p := chip(fill, 30.0, Vector4(30, 6, 30, 6))
 	p.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	p.add_child(label(text, &"StrongLabel"))
 	return p
 
@@ -464,13 +463,17 @@ func _postcard_row(pc: Dictionary) -> Control:
 	var plate := Control.new()
 	plate.custom_minimum_size = Vector2(120.0, 120.0)
 	plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	plate.draw.connect(func() -> void:
-		plate.draw_style_box(UiTokens.fill_box(UiTokens.color(&"coral_tint"), 60.0), Rect2(Vector2.ZERO, plate.size)))
+	UiSurface.attach_to(plate, UiSurface.make(UiTokens.sc(&"coral_tint"), UiSurface.PILL))
 	if sp != &"" and Game.sim.is_met(sp):
-		var p := CreaturePortrait.new()
-		p.size = Vector2(120.0, 120.0)
-		p.setup(sp, true, &"happy", false)
-		plate.add_child(p)
+		var stamp := BakedWell.create("stamp|%s" % sp, Vector2(120.0, 120.0), 60.0, func(_sz: Vector2) -> Control:
+			var bg := UiSurface.make(UiTokens.sc(&"coral_tint"), 0.0)
+			var p := CreaturePortrait.new()
+			p.setup(sp, true, &"happy", false)
+			bg.add_child(p)
+			p.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+			return bg)
+		stamp.size = Vector2(120.0, 120.0)
+		plate.add_child(stamp)
 	else:
 		var ic := Icons.rect(&"postcard", 72.0)
 		ic.position = Vector2(24.0, 24.0)
@@ -484,13 +487,10 @@ func _postcard_row(pc: Dictionary) -> Control:
 	l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	h.add_child(l)
 	if not bool(pc.get("read", false)):
-		var dot := Control.new()
+		var dot := UiSurface.make(UiTokens.color(&"coral"), UiSurface.PILL)
 		dot.custom_minimum_size = Vector2(DOT_PX, DOT_PX)
 		dot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		dot.tooltip_text = tr("POSTCARD_NEW_A11Y")
-		dot.draw.connect(func() -> void:
-			dot.draw_circle(dot.size * 0.5, DOT_PX * 0.5, UiTokens.color(&"coral"), true, -1.0, true))
 		h.add_child(dot)
 	PressFeedback.attach(b)
 	b.pressed.connect(func() -> void:

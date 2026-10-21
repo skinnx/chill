@@ -19,11 +19,12 @@ instance uniform vec4 i_region = vec4(0.0, 0.0, 1.0, 1.0);
 
 uniform float fg_mix = 0.84;
 // The frame is the darkest value of the picture (Art Bible §1.2, §2.5 value plan).
-uniform float fg_dark = 0.72;
-uniform float rim_k = 0.55;
-uniform float rim_px = 9.0;
+uniform float fg_dark = 0.60;
+uniform float rim_k = 0.85;
+uniform float rim_px = 12.0;
 uniform float glow_k = 0.10;
 uniform float max_alpha = 0.96;
+uniform float lavender_k = 0.55;
 
 varying vec2 v_luv;
 varying vec2 v_canvas;
@@ -47,6 +48,10 @@ void fragment() {
 	float o = clamp(1.0 - (w.r + w.g + w.b), 0.0, 1.0);
 	vec3 alb = w.r * i_lit.rgb + w.g * i_shade.rgb + w.b * i_detail.rgb + o * i_shade.rgb * 0.72;
 	vec3 c = mix(alb * g_ambient.rgb, g_fg.rgb, fg_mix);
+	// Round 5: with the light behind, the out-of-focus frame leans lavender (Director: shadows and
+	// vignette cool lavender, never brown-grey): the shadow token at the frame's own luminance.
+	vec3 lav = mix(g_shadow.rgb, g_sky_mid.rgb, 0.25);
+	c = mix(c, lav / max(wl_luma(lav), 1e-3) * wl_luma(c), lavender_k * g_backlight * (1.0 - g_lights));
 	// Lit tone reads a little lighter (leaf volume survives the blur).
 	c *= (0.92 + 0.16 * w.r) * fg_dark;
 	vec2 kd = key_dir(v_canvas);

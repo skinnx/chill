@@ -38,6 +38,12 @@ uniform float focal_front_k = 0.62;
 // shadow token), so the stone reads as warm stone with a lit top and a shaded front.
 uniform vec3 focal_front_tint = vec3(0.66, 0.68, 0.76);
 uniform float focal_back_k = 0.12;
+// Round 5 (QA r4: the stone top was the value of the haze-washed ground): at golden the focal's lit
+// top warms toward a sun-warmed stone (#DCB998) and lifts, with a stronger key rim on its sun edge.
+uniform vec3 focal_golden = vec3(0.863, 0.725, 0.596);
+uniform float focal_golden_k = 0.8;
+uniform float focal_golden_lift = 1.12;
+uniform float focal_rim_boost = 1.8;
 
 varying vec2 v_canvas;
 varying vec2 v_size;
@@ -77,6 +83,9 @@ void fragment() {
 	c += (g_key.rgb * 0.75 + alb * 0.25) * i_focal.x * m.r * (focal_k + focal_back_k * g_backlight) * (1.0 - 0.6 * g_lights);
 	// Round 3 (QA r2: the stone barely separated from the meadow): the focal's front / shade faces
 	// sink toward the tinted shadow, so its lit top reads as the highest local contrast.
+	float fg_w = i_focal.x * m.r * g_backlight * (1.0 - g_lights);
+	vec3 warm_top = focal_golden / wl_luma(focal_golden) * max(wl_luma(c) * focal_golden_lift, wl_luma(focal_golden));
+	c = mix(c, min(warm_top, vec3(1.0)), fg_w * focal_golden_k);
 	vec3 front_t = mix(focal_front_tint, shadow_tint() * SHADE_K, 0.35);
 	c = mix(c, c * front_t, i_focal.x * clamp(m.g + 0.5 * smoothstep(0.45, 0.9, v_luv.y), 0.0, 1.0) * focal_front_k);
 	c = mix(c, c * shadow_tint() * SHADE_K, i_fx.w * (ground_k + ground_backlight_k * g_backlight));
@@ -85,9 +94,11 @@ void fragment() {
 		vec2 kd = key_dir(v_canvas);
 		float ahead = textureLod(TEXTURE, UV + kd * rim_px * TEXTURE_PIXEL_SIZE, 0.75).a;
 		float rim = m.a * (1.0 - ahead);
-		c += g_key.rgb * g_rim * rim_k * rim * (1.0 - o);
+		c += g_key.rgb * g_rim * rim_k * rim * (1.0 - o) * (1.0 + focal_rim_boost * i_focal.x * g_backlight);
 	}
 	vec2 p_design = v_canvas - g_world_offset;
+	// Ground cover pieces (moss, clover, ferns) take the meadow's golden grade (round 5).
+	c = mix(c, golden_grade(c, p_design, 0.0), i_fx.w);
 	if (g_cloud_shadow > 0.001) {
 		c = mix(c, c * shadow_tint() * SHADE_K, cloud_shadow(p_design));
 	}

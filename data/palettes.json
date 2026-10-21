@@ -467,7 +467,26 @@
 		"night_glass_rim": "#7A80A8",
 		"night_ink": "#EDEAF2",
 		"night_capsule": "#484E76",
-		"night_track": "#454B6E"
+		"night_track": "#454B6E",
+		"raised": "#FFFDF8"
+	},
+	"ui_night": {
+		"doc": "round 5 (QA r4 #22/#25: near-white sheets at night): after dark (the HUD's night chrome switch) the sheets, cards and modal cards are built in this scheme: a dim warm-navy glass sheet (surface, under the live veil), raised cards (surface_hi), cream ink, darker recessed tracks. Overrides ui / ui_derived tokens by name (UiTokens.sc, ThemeBuilder night theme); pill fills, toggles' leaf track, thumbs and the gold ring keep their day values.",
+		"surface": "#2C304D",
+		"surface_hi": "#3A3F62",
+		"ink": "#EDEAF2",
+		"ink_2": "#B7B4CB",
+		"ink_soft": "#D2CFE0",
+		"primary": "#9FB3F5",
+		"primary_tint": "#2B3052",
+		"primary_deep": "#DCE4FF",
+		"leaf": "#A3DEC7",
+		"leaf_tint": "#2E4C46",
+		"coral_tint": "#553E4D",
+		"gold_tint": "#4E4838",
+		"toggle_off_track": "#575C80",
+		"toggle_off_border": "#A3A1BC",
+		"raised": "#565D8C"
 	},
 	"ui_alpha": {
 		"glass_live_tint": 0.66,

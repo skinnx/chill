@@ -12,10 +12,13 @@ const MAX_LAMPS := 12
 ## shaders/inc/lamps.gdshaderinc falloff (keep in sync): ground-plane squash, peak alpha range,
 ## hot core, breath.
 const POOL_SQUASH := 0.70
-const PEAK_RANGE := Vector2(0.30, 0.40)
+const PEAK_RANGE := Vector2(0.36, 0.46)
 const CORE_Q := 0.16
 const CORE_K := 0.22
 const PLATEAU := 0.25
+## Round 5 radial falloff (lamps.gdshaderinc LAMP_FALLOFF / LAMP_RIM).
+const FALLOFF := 1.8
+const RIM := 0.65
 
 static var _lamps: Dictionary = {}
 static var _materials: Array[ShaderMaterial] = []
@@ -41,7 +44,8 @@ static func lamps() -> Array[Vector4]:
 
 
 ## Pool weight at a design position (0..~0.6 before g_lights), the same falloff as the shader's
-## lamp_weight(): the max over lamps of peak * (1 - q^2)^2 + core, q = squashed distance / radius.
+## lamp_weight(): the max over lamps of peak * exp(-1.8 q^2) (faded to 0 at the rim) + core,
+## q = squashed distance / radius.
 static func weight_at(p_design: Vector2) -> float:
 	return light_at(p_design).z
 
@@ -55,7 +59,7 @@ static func light_at(p_design: Vector2) -> Vector3:
 		var q := Vector2(d.x, d.y / POOL_SQUASH).length() / maxf(l.z, 1.0)
 		if q >= 1.0:
 			continue
-		var f := 1.0 - smoothstep(PLATEAU, 1.0, q)
+		var f := exp(-FALLOFF * q * q) * (1.0 - smoothstep(RIM, 1.0, q))
 		var w := lerpf(PEAK_RANGE.x, PEAK_RANGE.y, clampf(l.w, 0.0, 1.0)) * f + CORE_K * exp(-(q * q) / (CORE_Q * CORE_Q))
 		if w > best.z:
 			var dir := (-d).normalized() if d.length_squared() > 1.0 else Vector2(0.0, -1.0)

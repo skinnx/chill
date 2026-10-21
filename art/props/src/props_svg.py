@@ -660,61 +660,123 @@ def _leaf(p: Part, svg: Svg, cx: float, cy: float, length: float, width: float, 
         p.path(smooth_path([(x0, y0), (x1, y1)], closed=False), "none", 0.55, stroke=DETAIL, sw=3.0)
 
 
-def fg_left(svg: Svg) -> Part:
-    """Bottom-left corner: tall felted grass blades leaning in, a fern frond and two broad leaves."""
-    p = Part(svg, 540, 420)
-    rng = random.Random(61)
-    inner = Part(svg, 540, 420)
-    for i in range(14):
-        bx = rng.uniform(10, 300)
-        h = rng.uniform(170, 330) * (1.0 - bx / 700)
-        lean = rng.uniform(30, 120)
-        _blade(inner, svg, (bx, 430), (bx + lean, 430 - h), rng.uniform(9, 15), rng.uniform(-14, 14))
-    # Fern frond arching up and to the right.
+FG_BLUR_NEAR = 5.5  # round 5: the nearest corner masses sit further out of focus than the bough
+
+
+def _frond(p: Part, svg: Svg, base: tuple[float, float], ang: float, length: float, curl: float,
+           leaf: float, n: int = 13) -> None:
+    """An arching fern frond: a curved rachis with paired, tapering leaflets (lit above, shade below)."""
+    bx, by = base
     pts = []
-    for i in range(12):
-        t = i / 11
-        pts.append((60 + t * 330, 420 - math.sin(t * 2.3) * 190 - t * 40))
-    for i in range(1, 12):
+    for i in range(n):
+        t = i / (n - 1)
+        a = ang + curl * t * t
+        if i == 0:
+            pts.append((bx, by))
+        else:
+            px_, py_ = pts[-1]
+            step = length / (n - 1)
+            pts.append((px_ + math.cos(a) * step, py_ + math.sin(a) * step))
+    for i in range(1, n):
         x, y = pts[i]
         px_, py_ = pts[i - 1]
-        ang = math.atan2(y - py_, x - px_)
-        sz = 26 * (1.0 - i / 14)
+        a = math.atan2(y - py_, x - px_)
+        sz = leaf * (1.0 - (i / n) ** 1.4) + 4.0
         for side in (-1, 1):
-            a = ang + side * 1.1
-            _leaf(inner, svg, x + math.cos(a) * sz * 0.6, y + math.sin(a) * sz * 0.6, sz * 1.25, sz * 0.5, a, False)
-    inner.path(smooth_path(pts, closed=False), "none", 1.0, stroke=SHADE, sw=6)
-    _leaf(inner, svg, 120, 380, 230, 110, -0.55)
-    _leaf(inner, svg, 260, 400, 200, 90, -0.2)
-    p.group(inner.items, filt=svg.blur(FG_BLUR))
+            la = a + side * 1.05
+            _leaf(p, svg, x + math.cos(la) * sz * 0.55, y + math.sin(la) * sz * 0.55, sz * 1.3, sz * 0.46, la, False)
+    p.path(smooth_path(pts, closed=False), "none", 1.0, stroke=SHADE, sw=max(3.0, leaf * 0.22))
+
+
+def _flower_head(p: Part, svg: Svg, cx: float, cy: float, r: float, petals: int, stem_to: tuple[float, float],
+                 rng: random.Random) -> None:
+    """An out-of-focus daisy / clover-head silhouette on a stem (detail = the pale petals)."""
+    p.path(smooth_path([stem_to, ((stem_to[0] + cx) / 2 + rng.uniform(-12, 12), (stem_to[1] + cy) / 2), (cx, cy)],
+                       closed=False), "none", 1.0, stroke=SHADE, sw=max(4.0, r * 0.16))
+    rot = rng.uniform(0, math.tau)
+    for k in range(petals):
+        a = rot + k * math.tau / petals
+        p.ellipse(cx + math.cos(a) * r * 0.62, cy + math.sin(a) * r * 0.42, r * 0.5, r * 0.2, DETAIL, 0.9,
+                  rot=math.degrees(a))
+    p.ellipse(cx, cy, r * 0.3, r * 0.22, LIT, 1.0)
+
+
+def _trefoil(p: Part, svg: Svg, cx: float, cy: float, s_: float, rot: float, vein: bool = True) -> None:
+    for k in range(3):
+        a = rot + k * math.tau / 3
+        lx, ly = cx + math.cos(a) * s_ * 0.8, cy + math.sin(a) * s_ * 0.55
+        p.ellipse(lx, ly, s_, s_ * 0.78, svg.lin(lx, ly - s_, lx, ly + s_, [(0, LIT), (1, SHADE)]), 1.0,
+                  rot=math.degrees(a))
+        if vein:
+            p.ellipse(lx, ly, s_ * 0.42, s_ * 0.15, DETAIL, 0.5, rot=math.degrees(a))
+
+
+def fg_left(svg: Svg) -> Part:
+    """Bottom-left corner (round 5, Director "designed, out-of-focus foreground"): a base of broad
+    leaves, thick felted grass blades and a tall fern frond rising at the frame edge and curling
+    inward, a daisy on a tall stem and a clover drift stepping down toward the centre, so the near
+    bank stays readable. Shapes are bold (>= 40 px) so the deep blur keeps a silhouette."""
+    w, h = 640, 540
+    p = Part(svg, w, h)
+    rng = random.Random(161)
+    inner = Part(svg, w, h)
+    for k in range(8):
+        bx = 10 + k * 26 + rng.uniform(-8, 8)
+        ht = rng.uniform(300, 470) * (1.0 - k / 14)
+        _blade(inner, svg, (bx, h + 20), (bx + rng.uniform(40, 150), h + 20 - ht), rng.uniform(18, 26),
+               rng.uniform(-20, 20))
+    _frond(inner, svg, (70, h), -1.42, 440, 1.45, 48, 11)
+    _flower_head(inner, svg, 395, 300, 50, 12, (350, h), rng)
+    inner.path(blob(120, h - 40, 170, 110, 12, 0.08, rng), svg.rad(120, h - 120, 200, [(0, LIT), (1, SHADE)]))
+    _leaf(inner, svg, 170, h - 70, 340, 150, -0.55)
+    _leaf(inner, svg, 330, h - 40, 300, 120, -0.2)
+    _leaf(inner, svg, 30, h - 160, 260, 120, -1.25)
+    for x, y, s_ in ((420, h - 70, 40), (500, h - 40, 34), (580, h - 20, 30), (470, h - 120, 30)):
+        _trefoil(inner, svg, x, y, s_, rng.uniform(0, math.tau))
+    p.group(inner.items, filt=svg.blur(FG_BLUR_NEAR))
     return p
 
 
 def fg_right(svg: Svg) -> Part:
-    """Bottom-right corner: broad leaves and clover leaning in from the edge."""
-    p = Part(svg, 520, 400)
-    rng = random.Random(62)
-    inner = Part(svg, 520, 400)
-    for i in range(10):
-        bx = rng.uniform(240, 520)
-        h = rng.uniform(140, 280) * (0.5 + bx / 1040)
-        lean = -rng.uniform(30, 110)
-        _blade(inner, svg, (bx, 410), (bx + lean, 410 - h), rng.uniform(9, 14), rng.uniform(-12, 12))
-    for i in range(7):
-        cx = rng.uniform(170, 500)
-        cy = rng.uniform(150, 330) + (cx - 170) * -0.05
-        s_ = rng.uniform(34, 52)
-        rot = rng.uniform(0, math.tau)
-        inner.path(smooth_path([(cx + rng.uniform(-10, 10), 410), (cx, cy + s_ * 0.4)], closed=False), "none", 1.0,
-                   stroke=SHADE, sw=6)
-        for j in range(3):
-            a = rot + j * math.tau / 3
-            lx, ly = cx + math.cos(a) * s_ * 0.8, cy + math.sin(a) * s_ * 0.55
-            inner.ellipse(lx, ly, s_, s_ * 0.78, svg.lin(lx, ly - s_, lx, ly + s_, [(0, LIT), (1, SHADE)]), 1.0,
-                          rot=math.degrees(a))
-            inner.ellipse(lx, ly, s_ * 0.42, s_ * 0.15, DETAIL, 0.5, rot=math.degrees(a))
-    _leaf(inner, svg, 420, 370, 260, 120, -2.55)
-    p.group(inner.items, filt=svg.blur(FG_BLUR))
+    """Bottom-right corner: a clover drift and broad leaves rising to thick grass and a fern at the
+    frame edge, with one pale clover-flower head catching the light."""
+    w, h = 620, 540
+    p = Part(svg, w, h)
+    rng = random.Random(162)
+    inner = Part(svg, w, h)
+    for k in range(7):
+        bx = w - 12 - k * 28 + rng.uniform(-8, 8)
+        ht = rng.uniform(280, 440) * (1.0 - k / 13)
+        _blade(inner, svg, (bx, h + 20), (bx - rng.uniform(40, 140), h + 20 - ht), rng.uniform(18, 25),
+               rng.uniform(-18, 18))
+    _frond(inner, svg, (w - 60, h), -1.75, 420, -1.4, 46, 11)
+    inner.path(blob(w - 120, h - 40, 180, 110, 12, 0.08, rng), svg.rad(w - 120, h - 120, 200, [(0, LIT), (1, SHADE)]))
+    for x, y, s_ in ((140, h - 30, 34), (230, h - 60, 42), (320, h - 100, 46), (250, h - 140, 36), (400, h - 160, 44),
+                     (90, h - 80, 30), (360, h - 40, 40)):
+        inner.path(smooth_path([(x + rng.uniform(-10, 10), h + 10), (x, y + s_ * 0.4)], closed=False), "none", 1.0,
+                   stroke=SHADE, sw=7)
+        _trefoil(inner, svg, x, y, s_, rng.uniform(0, math.tau))
+    _flower_head(inner, svg, 260, 250, 40, 14, (290, h), rng)
+    _leaf(inner, svg, w - 150, h - 60, 320, 140, -2.55)
+    _leaf(inner, svg, w - 330, h - 30, 260, 100, -2.95)
+    p.group(inner.items, filt=svg.blur(FG_BLUR_NEAR))
+    return p
+
+
+def fg_low(svg: Svg) -> Part:
+    """The bottom edge between the corners: a low, very soft drift of thick grass tips, dense toward
+    the sides and sparse in the middle (a designed vignette, not a wall)."""
+    p = Part(svg, 1400, 170)
+    rng = random.Random(163)
+    inner = Part(svg, 1400, 170)
+    for _ in range(90):
+        x = rng.uniform(0, 1400)
+        side = abs(x - 700) / 700
+        if rng.random() > 0.2 + 0.8 * side:
+            continue
+        ht = rng.uniform(50, 130) * (0.45 + 0.75 * side)
+        _blade(inner, svg, (x, 195), (x + rng.uniform(-45, 45), 195 - ht), rng.uniform(10, 16), rng.uniform(-12, 12))
+    p.group(inner.items, filt=svg.blur(FG_BLUR_NEAR + 1.0))
     return p
 
 
@@ -820,14 +882,15 @@ def main() -> int:
 # "top" = y is measured from the VISIBLE top of the viewport (tall phones), "bottom" = design frame.
 # Every piece overscans its frame edges by >= 150 px (camera drift 86 px x parallax 1.3 + margin).
 FG_PARTS = [
-    ("fg_left", fg_left, "bottom", (-130, 1550), "willow_leaf", [5.0, 133, 0.95]),
-    ("fg_right", fg_right, "bottom", (760, 1570), "moss", [3.5, 120, 0.95]),
+    ("fg_left", fg_left, "bottom", (-170, 1400), "willow_leaf", [5.0, 133, 0.97]),
+    ("fg_right", fg_right, "bottom", (650, 1410), "moss", [3.5, 120, 0.97]),
+    ("fg_low", fg_low, "bottom", (-160, 1800), "moss", [2.5, 141, 0.98]),
     ("fg_bough", fg_bough, "top", (740, -110), "willow_leaf", [5.0, 76, 0.0]),
 ]
 
 
 def write_fg() -> None:
-    svg = Svg(1216, 16)
+    svg = Svg(1460, 16)
     x = FG_PAD
     y = FG_PAD
     shelf = 0

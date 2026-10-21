@@ -12,7 +12,7 @@ extends RefCounted
 # such conversion, so only that warning is silenced in this file (docs/ARCHITECTURE.md §10).
 @warning_ignore_start("unsafe_call_argument")
 
-enum Kind { CLUMP, CLOVER, MOSS, FLOWERS }
+enum Kind { CLUMP, CLOVER, MOSS, FLOWERS, PEBBLE }
 
 const SEED := 4242
 const COVER_SEED := 5151
@@ -46,6 +46,34 @@ const DRESSING_BLOCKERS: Array[Vector4] = [Vector4(118, 812, 60, 26), Vector4(80
 ## clover_bank and three clover patches; (x, y, kind, scale multiplier).
 const FIXED_COVER: Array[Vector4] = [Vector4(378, 1150, Kind.MOSS, 2.6), Vector4(702, 1152, Kind.CLOVER, 1.7),
 		Vector4(430, 1290, Kind.CLOVER, 1.4), Vector4(700, 1225, Kind.CLOVER, 1.3), Vector4(905, 1385, Kind.CLOVER, 1.4)]
+
+## Round 5 (Director: "fix the undesigned bottom fifth"): a hand-composed near bank below the brook,
+## built on top of the Poisson layout. A felted grass fringe follows the near bank lip in an
+## irregular rhythm (gaps of NEAR_FRINGE_STEP px, some skipped), then designed groups in odd
+## clusters: grass (x, y, cluster size), and ground cover (x, y, kind, scale) with wild flowers,
+## clover drifts, moss cushions and pebble families nestled into them. All of it lands in the
+## existing grass band / ground-cover MultiMeshes: no extra draw call.
+const NEAR_SEED := 6161
+const NEAR_FRINGE_STEP := Vector2(30.0, 74.0)
+const NEAR_FRINGE_DROP := Vector2(8.0, 26.0)
+const NEAR_FRINGE_SKIP := 0.22
+const NEAR_FRINGE_X := Vector2(-90.0, 1170.0)
+const NEAR_GRASS: Array[Vector3] = [Vector3(140, 1702, 5), Vector3(418, 1664, 3), Vector3(688, 1722, 3),
+		Vector3(905, 1642, 5), Vector3(296, 1826, 3), Vector3(826, 1834, 3), Vector3(566, 1884, 1),
+		Vector3(1040, 1760, 3), Vector3(30, 1880, 3)]
+const NEAR_COVER: Array[Vector4] = [
+	Vector4(192, 1668, Kind.FLOWERS, 2.08), Vector4(222, 1690, Kind.FLOWERS, 1.76), Vector4(168, 1712, Kind.FLOWERS, 1.6),
+	Vector4(462, 1626, Kind.FLOWERS, 1.92), Vector4(494, 1648, Kind.FLOWERS, 1.6), Vector4(440, 1660, Kind.FLOWERS, 1.44),
+	Vector4(760, 1612, Kind.FLOWERS, 1.92), Vector4(976, 1700, Kind.FLOWERS, 2.08), Vector4(1004, 1724, Kind.FLOWERS, 1.6),
+	Vector4(628, 1800, Kind.FLOWERS, 2.08), Vector4(660, 1822, Kind.FLOWERS, 1.6),
+	Vector4(332, 1742, Kind.CLOVER, 1.8), Vector4(368, 1760, Kind.CLOVER, 1.3), Vector4(702, 1682, Kind.CLOVER, 1.6),
+	Vector4(884, 1764, Kind.CLOVER, 1.7), Vector4(80, 1822, Kind.CLOVER, 1.6), Vector4(540, 1760, Kind.CLOVER, 1.2),
+	Vector4(522, 1700, Kind.MOSS, 2.0), Vector4(1012, 1622, Kind.MOSS, 1.8), Vector4(262, 1612, Kind.MOSS, 1.4),
+	Vector4(560, 1614, Kind.PEBBLE, 1.6), Vector4(590, 1626, Kind.PEBBLE, 1.12), Vector4(614, 1609, Kind.PEBBLE, 0.88),
+	Vector4(246, 1644, Kind.PEBBLE, 1.44), Vector4(270, 1655, Kind.PEBBLE, 0.96), Vector4(930, 1600, Kind.PEBBLE, 1.36),
+	Vector4(952, 1610, Kind.PEBBLE, 0.8), Vector4(382, 1784, Kind.PEBBLE, 1.2), Vector4(404, 1792, Kind.PEBBLE, 0.8),
+	Vector4(760, 1876, Kind.PEBBLE, 1.44),
+]
 
 static var _cache: Dictionary = {}
 
@@ -109,6 +137,30 @@ func _build(content: GameContent) -> void:
 		cover.append(Vector2(f.x, f.y))
 		cover_kind.append(int(f.z))
 		cover_scale.append(f.w)
+	_build_near_bank()
+
+
+## The designed near bank (NEAR_* constants), deterministic.
+func _build_near_bank() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = NEAR_SEED
+	var x := NEAR_FRINGE_X.x
+	while x < NEAR_FRINGE_X.y:
+		var p := Vector2(x, brook_y(x) + _brook_half + BROOK_CLEAR + rng.randf_range(NEAR_FRINGE_DROP.x, NEAR_FRINGE_DROP.y))
+		if rng.randf() >= NEAR_FRINGE_SKIP and allowed(p):
+			clumps.append(p)
+		x += rng.randf_range(NEAR_FRINGE_STEP.x, NEAR_FRINGE_STEP.y)
+	for g: Vector3 in NEAR_GRASS:
+		var c := Vector2(g.x, g.y)
+		if allowed(c):
+			var sizes: Array[int] = [int(g.z)]
+			clumps.append_array(_clusters(PackedVector2Array([c]), rng, sizes, CLUSTER_SPREAD_PX))
+	for f: Vector4 in NEAR_COVER:
+		var c := Vector2(f.x, f.y)
+		if allowed(c):
+			cover.append(c)
+			cover_kind.append(int(f.z))
+			cover_scale.append(f.w)
 
 
 ## Banks favour moss and flowers, the open meadow clover, the edges a mix (deterministic).

@@ -29,6 +29,7 @@ extends Control
 ##   --qa-press-t=<ms>     time after touch-down to freeze at (default 60 = the press dip near its
 ##                         peak with the ripple a sixth grown; 0..380 shows the whole ripple)
 ##   --qa-drawcalls        print "qa-drawcalls: <n>" (RENDER_TOTAL_DRAW_CALLS_IN_FRAME) every 30 frames
+##   --qa-ui-audit         with a sheet or modal open: the draw calls of each UiBatch z layer of it
 ##   --qa-captions         show a sample caption bubble (Captions on)
 ##   --qa-met=<n>          (with --no-save captures) mark the first n friends met, with hearts,
 ##                         photos and two postcards, so the Album shows a lived-in collection
@@ -50,6 +51,8 @@ const ARG_FRIEND := "--qa-friend="
 const ARG_PRESS := "--qa-press="
 const ARG_PRESS_T := "--qa-press-t="
 const ARG_DRAWCALLS := "--qa-drawcalls"
+## Round 5: with a sheet open, prints what each UiBatch layer of it costs ("qa-ui-audit:" lines).
+const ARG_UI_AUDIT := "--qa-ui-audit"
 const QA_PRESS_T_MS := 60.0
 const QA_DRAWCALL_EVERY := 30
 const ARG_CAPTIONS := "--qa-captions"
@@ -96,6 +99,9 @@ func _ready() -> void:
 	# stops at the CanvasLayer), so the HUD takes it here first (idempotent with Main's attach).
 	UiTheme.attach(self)
 	_parse_qa()
+	var baker := SnapshotBaker.new()
+	baker.name = "SnapshotBaker"
+	add_child(baker)
 	sheets = SheetHost.new()
 	sheets.name = "SheetHost"
 	sheets.factory = _make_sheet
@@ -117,6 +123,8 @@ func _ready() -> void:
 		_safe = m
 		_layout())
 	get_viewport().size_changed.connect(_layout)
+	# the dock and the top bar grow with the Text size setting (round 5)
+	UiTheme.theme_rebuilt.connect(func(_t: Theme) -> void: _layout.call_deferred())
 	Settings.changed.connect(_on_setting)
 	Game.world_ready.connect(_on_world_ready)
 	Game.sim_event.connect(_on_sim_event)
@@ -144,6 +152,8 @@ func _exit_tree() -> void:
 	ItemPreview.release_shared()
 	CreaturePortrait.release_shared()
 	GlassPanel.release_shared()
+	UiSurface.release_shared()
+	UiBatch.release_shared()
 
 
 func _process(delta: float) -> void:
@@ -213,15 +223,22 @@ func _on_globals(values: Dictionary) -> void:
 	if want != night_on or not _night_known:
 		set_night(want, not _night_known)
 		_night_known = true
-	var dim := 1.0 - float(nt.get("sheet_dim", 0.08)) * lights
+	# day-built sheets and cards dim neutrally toward dusk; night-built ones are already dim
+	var dim := 1.0 if night_on else 1.0 - float(nt.get("sheet_dim", 0.08)) * lights
 	var c := Color(dim, dim, dim)
 	sheets.tint = c
 	overlays.modulate = Color(c.r, c.g, c.b, overlays.modulate.a)
 
 
-## Switches the chrome scheme (instant at start-up and for QA stills).
+## Switches the chrome scheme (instant at start-up and for QA stills). Round 5: sheets and modal
+## cards follow it too (palettes ui_night, QA r4: near-white sheets at night); an open sheet is
+## rebuilt in the new scheme with the swap crossfade.
 func set_night(on: bool, instant: bool = false) -> void:
+	var changed := on != UiTokens.night_scheme
 	night_on = on
+	UiTokens.night_scheme = on
+	if changed and sheets != null and sheets.is_open():
+		sheets.rebuild(instant)
 	if _night_tween != null and _night_tween.is_valid():
 		_night_tween.kill()
 	var to := 1.0 if on else 0.0
@@ -240,6 +257,7 @@ func _apply_night(k: float) -> void:
 	GlassPanel.set_night(k)
 	top_bar.set_night(k)
 	dock.set_night(k)
+	overlays.set_night(k)
 
 
 func _set_chrome_input(enabled: bool) -> void:
@@ -257,6 +275,7 @@ func _layout() -> void:
 	var screen := get_viewport_rect().size
 	top_bar.layout(screen, _safe.position.y)
 	dock.layout(screen, _safe.size.y)
+	sheets.top_limit = top_bar.bottom()
 	sheets.layout(screen, dock.pill_rect().position.y)
 	overlays.layout(screen, _safe)
 
@@ -412,7 +431,8 @@ func _parse_qa() -> void:
 		for key: String in [ARG_SHEET, ARG_TAB, ARG_NEWFRIEND, ARG_FRIEND, ARG_PRESS_T, ARG_PRESS, ARG_MET]:
 			if a.begins_with(key):
 				_qa[key] = a.trim_prefix(key)
-		for flag: String in [ARG_RECAP, ARG_PEEK, ARG_AMBIENT, ARG_LEAVE, ARG_TOAST, ARG_CAPTIONS, ARG_DRAWCALLS]:
+		for flag: String in [ARG_RECAP, ARG_PEEK, ARG_AMBIENT, ARG_LEAVE, ARG_TOAST, ARG_CAPTIONS, ARG_DRAWCALLS,
+				ARG_UI_AUDIT]:
 			if a == flag:
 				_qa[flag] = true
 
@@ -450,6 +470,53 @@ func _apply_qa() -> void:
 		get_tree().process_frame.connect(_qa_press, CONNECT_ONE_SHOT)
 	if _qa.has(ARG_CAPTIONS):
 		overlays.show_caption(tr("CAPTION_CHIRP"), get_viewport_rect().size * Vector2(0.5, 0.55), true)
+	if _qa.has(ARG_UI_AUDIT):
+		_qa_ui_audit.call_deferred()
+
+
+## --qa-ui-audit: hides each absolute z layer of the open sheet / modal in turn and prints its cost
+## (draw calls averaged over a few frames, the world keeps animating).
+func _qa_ui_audit() -> void:
+	for i in 40:
+		await get_tree().process_frame
+	var root: CanvasItem = overlays if overlays.is_modal_open() else sheets.current
+	if root == null:
+		return
+	var by_z: Dictionary = {}
+	var stack: Array[Node] = [root]
+	while not stack.is_empty():
+		var n: Node = stack.pop_back()
+		var leaf := n.get_child_count(true) == 0 or n is CreaturePortrait or n is LiveWell
+		if n is CanvasItem and (n as CanvasItem).visible and leaf and n != root:
+			var z := UiBatch._parent_abs(n) + (n as CanvasItem).z_index
+			if not by_z.has(z):
+				by_z[z] = []
+			(by_z[z] as Array).append(n)
+		if not (n is CreaturePortrait or n is LiveWell):
+			for c: Node in n.get_children(true):
+				stack.append(c)
+	var avg := func() -> float:
+		var sum := 0.0
+		for k in 8:
+			await get_tree().process_frame
+			sum += Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)
+		return sum / 8.0
+	var total: float = await avg.call()
+	root.visible = false
+	var world: float = await avg.call()
+	root.visible = true
+	print("qa-ui-audit: total %.1f  without the sheet/modal %.1f  -> it costs %.1f" % [total, world, total - world])
+	var zs: Array = by_z.keys()
+	zs.sort()
+	for z: int in zs:
+		var items: Array = by_z[z]
+		for n: CanvasItem in items:
+			n.visible = false
+		var without: float = await avg.call()
+		for n: CanvasItem in items:
+			n.visible = true
+		print("qa-ui-audit: z %3d  %3d leaves  %5.1f calls  (%s %s)" % [z, items.size(), total - without,
+				(items[0] as Node).get_class(), (items[0] as Node).name])
 
 
 ## --qa-press: freeze the named target mid touch-down (see the header).

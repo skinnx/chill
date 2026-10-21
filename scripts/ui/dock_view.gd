@@ -36,8 +36,18 @@ const LABEL_PAD := 18.0
 ## Smallest label size when shrinking to fit (Caption 36 is the floor at 100 %; shrink only
 ## happens for long translations at large text).
 const LABEL_MIN_PX := 30
-## Dock labels stop growing at 130 % text size (Art Bible §9.1).
+## Up to 130 % text the dock keeps its one-row 4-tab layout (labels grow with the setting and only
+## shrink for a long translation). Round 5 (QA r4: at 200 % the labels grew ~10 % and the icons
+## shrank): from 150 % the dock becomes a 2 x 2 grid of wide tabs, icon left of a label at the
+## FULL text size, and grows taller; icons never shrink.
 const LABEL_SCALE_CAP := 1.3
+const GRID_AT := 1.5
+const GRID_COLUMNS := 2
+## Grid tab height: at least 52 dp, and the label's line plus 16 dp padding.
+const GRID_ROW_MIN := 156.0
+const GRID_ROW_PAD := 48.0
+## Line-height factor used to size a grid row (Art Bible §9.1 x the Vietnamese +12 %).
+const GRID_LINE_K := 1.4
 ## Press depth (2 x ui.press_scale's dip = 0.92) with an M3 squash.
 const PRESS_DEPTH := 2.0
 ## The press capsule under a pressed, unselected tab: primary_tint at this alpha.
@@ -76,6 +86,11 @@ var cap_x: float = 0.0:
 		cap_x = v
 		if _plates != null:
 			_plates.queue_redraw()
+var cap_y: float = 0.0:
+	set(v):
+		cap_y = v
+		if _plates != null:
+			_plates.queue_redraw()
 var cap_a: float = 0.0:
 	set(v):
 		cap_a = v
@@ -99,6 +114,8 @@ var _safe_bottom: float = 0.0
 var _tab_size: Vector2 = Vector2(252, 216)
 var _night_k: float = 0.0
 var _night_icons: bool = false
+## 2 x 2 large-text layout (text size >= GRID_AT).
+var _grid: bool = false
 
 
 func _init() -> void:
@@ -206,23 +223,43 @@ func layout(screen: Vector2, safe_bottom: float) -> void:
 	_screen = screen
 	_safe_bottom = safe_bottom
 	var bottom := screen.y - maxf(safe_bottom, BOTTOM_MIN) - BOTTOM_GAP
-	pill.position = Vector2(PILL_SIDE, bottom - PILL_H)
-	pill.size = Vector2(screen.x - PILL_SIDE * 2.0, PILL_H)
-	_tab_size = Vector2((pill.size.x - PILL_INSET * 2.0) / float(ORDER.size()), PILL_H - PILL_INSET * 2.0)
+	var ts := text_scale()
+	_grid = ts >= GRID_AT
+	var cols := GRID_COLUMNS if _grid else ORDER.size()
+	var rows := ceili(float(ORDER.size()) / float(cols))
+	var row_h := PILL_H - PILL_INSET * 2.0
+	if _grid:
+		var fs := float(ThemeBuilder.px(ThemeBuilder.SIZE_CAPTION, ts))
+		row_h = maxf(GRID_ROW_MIN, maxf(ICON_PX, fs * GRID_LINE_K) + GRID_ROW_PAD)
+	var pill_h := row_h * float(rows) + PILL_INSET * 2.0
+	pill.position = Vector2(PILL_SIDE, bottom - pill_h)
+	pill.size = Vector2(screen.x - PILL_SIDE * 2.0, pill_h)
+	_tab_size = Vector2((pill.size.x - PILL_INSET * 2.0) / float(cols), row_h)
 	for i in ORDER.size():
 		var b := buttons[_id_at(i)] as RoundButton
-		b.position = Vector2(pill.position.x + PILL_INSET + _tab_size.x * float(i), pill.position.y + PILL_INSET)
+		var col := i % cols
+		var row := i / cols
+		b.position = Vector2(pill.position.x + PILL_INSET + _tab_size.x * float(col),
+				pill.position.y + PILL_INSET + row_h * float(row))
 		b.size = _tab_size
 		b.plate_px = _tab_size.x
 		b.label_w = _tab_size.x - LABEL_PAD * 2.0
+		b.inline = _grid
 		b.set_meta(PressFeedback.META_RIPPLE_RECT, Rect2(Vector2.ZERO, _tab_size))
 		b.set_meta(PressFeedback.META_RIPPLE_RADIUS, _tab_size.y * 0.5)
 		b.pivot_offset = Vector2(_tab_size.x * 0.5, _tab_size.y)
 	if _active != &"":
 		Motion.stop_springs(self)
 		cap_x = _tab_x(_active)
+		cap_y = _tab_y(_active)
+	_fit_labels()
 	_plates.queue_redraw()
 	_place_basket_extras()
+
+
+## The Text size setting as a factor (1.0 .. 2.0).
+static func text_scale() -> float:
+	return float(Settings.get_int(Settings.TEXT_SCALE)) / 100.0
 
 
 ## The open sheet's tab (&"" = none): the capsule springs there (or fades in at it).
@@ -235,13 +272,16 @@ func set_active(id: StringName) -> void:
 		Motion.spring_to(self, "cap_a", 0.0, &"press")
 		return
 	var x := _tab_x(id)
+	var y := _tab_y(id)
 	if was == &"" or cap_a < 0.05 or Motion.reduce_motion:
 		Motion.stop_springs(self)
 		cap_x = x
+		cap_y = y
 		cap_a = 0.0 if not Motion.reduce_motion else 1.0
 		Motion.spring_to(self, "cap_a", 1.0, &"press")
 	else:
 		Motion.spring_to(self, "cap_x", x, &"move")
+		Motion.spring_to(self, "cap_y", y, &"move")
 		Motion.spring_to(self, "cap_a", 1.0, &"press")
 	FrameGovernor.hold_for(Motion.duration(&"standard"))
 
@@ -251,6 +291,7 @@ func snap_active() -> void:
 	Motion.stop_springs(self)
 	if _active != &"":
 		cap_x = _tab_x(_active)
+		cap_y = _tab_y(_active)
 		cap_a = 1.0
 	else:
 		cap_a = 0.0
@@ -303,6 +344,11 @@ func _tab_x(id: StringName) -> float:
 	return b.position.x if b != null else 0.0
 
 
+func _tab_y(id: StringName) -> float:
+	var b := buttons.get(id) as RoundButton
+	return b.position.y if b != null else 0.0
+
+
 func _process(delta: float) -> void:
 	# The capsule layer and the basket extras follow each tab's press scale (PressFeedback).
 	var pressing := false
@@ -346,10 +392,11 @@ func _build_ring() -> void:
 
 
 ## A tab's rect on screen with its press transform (scale about the baseline pivot).
-func _tab_rect(b: RoundButton, x: float) -> Rect2:
+func _tab_rect(b: RoundButton, x: float, y: float = NAN) -> Rect2:
 	var s := b.scale
-	var piv := Vector2(x, b.position.y) + b.pivot_offset
-	var p0 := Vector2(x, b.position.y)
+	var yy := b.position.y if is_nan(y) else y
+	var piv := Vector2(x, yy) + b.pivot_offset
+	var p0 := Vector2(x, yy)
 	var pos := piv + (p0 - piv) * s
 	return Rect2(pos, b.size * s)
 
@@ -368,7 +415,7 @@ func _draw_capsules() -> void:
 	if cap_a <= 0.01 or _active == &"":
 		return
 	var ab := buttons.get(_active) as RoundButton
-	var rect2 := _tab_rect(ab, cap_x)
+	var rect2 := _tab_rect(ab, cap_x, cap_y)
 	var fill := _capsule_color()
 	fill.a = clampf(cap_a, 0.0, 1.0)
 	var box := UiTokens.fill_box(fill, rect2.size.y * 0.5, UiTokens.E1)
@@ -434,8 +481,9 @@ func _place_basket_extras() -> void:
 	_new_dot.position = garden.icon_center() + NEW_DOT_OFFSET - _new_dot.size * 0.5
 
 
-## Dock labels cap at 130 % text size (§9.1) and shrink to fit the tab (long translations at
-## large text), so a label never crosses the capsule edge.
+## Labels follow the Text size setting: in the one-row dock they stop at 130 % (§9.1) and shrink
+## to fit the tab for a long translation; in the large-text grid (>= 150 %) they take the FULL
+## size (Caption 36 x the setting) beside the icon.
 func _fit_labels() -> void:
 	var cap := roundi(float(ThemeBuilder.SIZE_CAPTION) * LABEL_SCALE_CAP)
 	for id: StringName in ORDER:
@@ -443,10 +491,12 @@ func _fit_labels() -> void:
 		if b.label == null:
 			continue
 		b.label.remove_theme_font_size_override(&"font_size")
-		var fs := mini(b.label.get_theme_font_size(&"font_size"), cap)
+		var full := b.label.get_theme_font_size(&"font_size")
+		var fs := full if _grid else mini(full, cap)
 		var font := b.label.get_theme_font(&"font")
-		var max_w := (_tab_size.x - LABEL_PAD * 2.0)
-		while font != null and fs > LABEL_MIN_PX and \
+		var max_w := (_tab_size.x - LABEL_PAD * 2.0) - (ICON_PX + b.inline_gap if _grid else 0.0)
+		var floor_px := roundi(float(full) * 0.8) if _grid else LABEL_MIN_PX
+		while font != null and fs > floor_px and \
 				font.get_string_size(b.label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > max_w:
 			fs -= 1
 		b.label.add_theme_font_size_override(&"font_size", fs)

@@ -85,7 +85,7 @@ func _build() -> void:
 		_silhouette.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var mat := ShaderMaterial.new()
 		mat.shader = load(SILHOUETTE_SHADER) as Shader
-		mat.set_shader_parameter(&"u_ink", UiTokens.tinted(&"ink", SILHOUETTE_ALPHA))
+		mat.set_shader_parameter(&"u_ink", UiTokens.sc_tinted(&"ink", SILHOUETTE_ALPHA))
 		mat.set_shader_parameter(&"u_seed", float(hash(String(species)) % 997) / 997.0)
 		_silhouette.material = mat
 		add_child(_silhouette)
