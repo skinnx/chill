@@ -733,8 +733,6 @@ def fg_bough(svg: Svg) -> Part:
 PARTS = [
     # id, builder, prop, centre, sort_y, material, extras
     ("willow_trunk", willow_trunk, "willow", (-10, 94), 222, "wood_bark", {"shadow": [64, 14, 1.0, 255]}),
-    ("willow_curtains", willow_curtains, "willow", (-10, 44), 223, "willow_leaf", {"sway": [4.0, 76, 1.0]}),
-    ("willow_crown", willow_crown, "willow", (0, -141), 225, "willow_leaf", {"sway": [1.5, 47, 1.0]}),
     ("chime_branch", chime_branch, "willow", (125, 66), 226, "wood_bark", {}),
     ("mailbox_post", mailbox_post, "mailbox", (-2, 30), 62, "wood_bark", {"shadow": [24, 7, 1.0, 72], "rim": 0}),
     ("mailbox_body", mailbox_body, "mailbox", (-3, -17), 63, "wood_painted", {}),

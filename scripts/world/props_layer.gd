@@ -43,13 +43,21 @@ const MUSHROOM_LAMP := &"glow_mushrooms"
 const MUSHROOM_LAMP_POS := Vector2(490, 1166)
 const MUSHROOM_LAMP_R := 72.0
 const MUSHROOM_LAMP_I := 1.0
-## Willow fronds (Art Bible §6.4): root (design px), length px, tip bend toward the stone px.
+## Willow fronds (Art Bible §6.4): two rows hanging from the crown's lower edge, a darker back row
+## and a lighter front row (QA round 1: layered frond strips at two values instead of a curtain
+## fill); (root x, root y, length px, tip bend px), back row first. The trunk stays visible.
 const FRONDS: Array[Vector4] = [
-	Vector4(-130, 590, 200, -4), Vector4(-95, 560, 230, -4), Vector4(-42, 545, 215, -2),
-	Vector4(-20, 600, 150, 0), Vector4(12, 560, 170, 2), Vector4(66, 600, 120, 4),
-	Vector4(160, 600, 130, 8), Vector4(208, 548, 200, 12), Vector4(262, 545, 190, 16),
-	Vector4(312, 560, 150, 18), Vector4(350, 585, 110, 18),
+	Vector4(-118, 640, 190, -10), Vector4(-66, 628, 230, -6), Vector4(-14, 640, 210, -4),
+	Vector4(44, 652, 170, -2), Vector4(206, 650, 180, 4), Vector4(256, 636, 220, 8),
+	Vector4(306, 640, 200, 12), Vector4(354, 650, 160, 16),
 ]
+const FRONDS_FRONT: Array[Vector4] = [
+	Vector4(-92, 660, 150, -8), Vector4(-40, 668, 186, -6), Vector4(12, 676, 140, -3),
+	Vector4(66, 690, 96, 0), Vector4(186, 690, 104, 3), Vector4(232, 676, 160, 6),
+	Vector4(282, 664, 176, 10), Vector4(332, 668, 140, 14), Vector4(378, 676, 108, 18),
+]
+## Row values (frond shader COLOR.a): back row darker.
+const FROND_ROW_VALUE := Vector2(0.74, 1.0)
 ## Glow-mushroom cap halos (Art Bible §6.5, §8.3): design px of each cap, r0 10 px, accent, night.
 const MUSHROOM_HALOS: Array[Vector2] = [Vector2(468, 1156), Vector2(489, 1146), Vector2(509, 1161)]
 const MUSHROOM_HALO_R0 := 10.0
@@ -61,6 +69,26 @@ const FROND_STRIP_PX := 24.0
 const FROND_MAX_LEN := 260.0
 const FROND_AMP_PX := Vector2(10.0, 18.0)
 const FROND_SORT_Y := 805.0
+## The willow crown as felted canopy masses (bush.gdshader, object mode, willow_leaf): (root x, root
+## y, radius, height k) in design px, back to front; sorts at the crown's y (after the trunk).
+const CROWN_SORT_Y := 801.0
+const CROWN_MASSES: Array[Vector4] = [
+	Vector4(-36, 600, 96, 1.0), Vector4(300, 600, 88, 1.0), Vector4(96, 520, 104, 1.1),
+	Vector4(226, 512, 96, 1.05), Vector4(14, 640, 92, 0.95), Vector4(160, 618, 120, 1.0),
+	Vector4(262, 650, 82, 0.9),
+]
+## The shadowed inside of the canopy behind the fronds (darker willow shade).
+const CROWN_INNER := Vector4(130, 760, 118, 0.9)
+const CROWN_INNER_SORT_Y := 799.0
+const CROWN_INNER_DARK := 0.62
+const CROWN_SWAY_K := 47.0
+## Felted shrubs hugging the hollow's left / right edges (round-2 directive 3): (root x, y, radius,
+## height k); partly off-frame so they frame the scene without covering a spot.
+const EDGE_SHRUBS: Array[Vector4] = [
+	Vector4(-46, 992, 72, 1.0), Vector4(-36, 1334, 82, 1.05), Vector4(-24, 1704, 96, 1.0),
+	Vector4(1118, 1002, 76, 1.1), Vector4(1112, 1256, 70, 0.95), Vector4(1126, 1690, 96, 1.05),
+]
+const SHRUB_SWAY_K := Vector2(40.0, 56.0)
 
 var _atlas: Texture2D
 var _mat: ShaderMaterial
@@ -85,7 +113,9 @@ func _ready() -> void:
 			_debug_parts.append(part)
 			continue
 		_add_part(part, content, mats)
+	_build_crown(mats)
 	_build_fronds(mats, lk)
+	_build_shrubs()
 	_build_halos(lk)
 	_index_touchables(content)
 	LampRegistry.set_lamp(MUSHROOM_LAMP, MUSHROOM_LAMP_POS, MUSHROOM_LAMP_R, MUSHROOM_LAMP_I)
@@ -218,6 +248,40 @@ func _build_halos(lk: Dictionary) -> void:
 		node.add_child(h)
 
 
+func _build_crown(mats: Dictionary) -> void:
+	var leaf := Color.html(String((mats["willow_leaf"] as Dictionary)["lit"]))
+	var shade := Color.html(String((mats["willow_leaf"] as Dictionary)["shade"]))
+	var inner_node := Node2D.new()
+	inner_node.name = "willow_crown_inner"
+	inner_node.position = Vector2(0.0, CROWN_INNER_SORT_Y)
+	add_child(inner_node)
+	var dark := shade * CROWN_INNER_DARK
+	dark.a = 1.0
+	var inner := BushSprite.new().setup(CROWN_INNER.z, 0.37, 1.0, CROWN_INNER.w, false, CROWN_SWAY_K, 0.0, dark)
+	inner.position = Vector2(CROWN_INNER.x, CROWN_INNER.y - CROWN_INNER_SORT_Y)
+	inner_node.add_child(inner)
+	var node := Node2D.new()
+	node.name = "willow_crown"
+	node.position = Vector2(0.0, CROWN_SORT_Y)
+	add_child(node)
+	for i in CROWN_MASSES.size():
+		var m: Vector4 = CROWN_MASSES[i]
+		var b := BushSprite.new().setup(m.z, TerrainMath.hash01(i, 81), 1.0, m.w, false, CROWN_SWAY_K,
+				TerrainMath.hash01(i, 82) * TAU, Color(leaf.r, leaf.g, leaf.b, 1.0))
+		b.position = Vector2(m.x, m.y - CROWN_SORT_Y)
+		node.add_child(b)
+
+
+func _build_shrubs() -> void:
+	for i in EDGE_SHRUBS.size():
+		var e: Vector4 = EDGE_SHRUBS[i]
+		var b := BushSprite.new().setup(e.z, TerrainMath.hash01(i, 91), 1.0, e.w, false,
+				floorf(lerpf(SHRUB_SWAY_K.x, SHRUB_SWAY_K.y, TerrainMath.hash01(i, 92))), TerrainMath.hash01(i, 93) * TAU)
+		b.name = "edge_shrub_%d" % i
+		b.position = Vector2(e.x, e.y)
+		add_child(b)
+
+
 func _build_fronds(mats: Dictionary, lk: Dictionary) -> void:
 	var m: Dictionary = mats["willow_leaf"]
 	var mat := ShaderMaterial.new()
@@ -235,10 +299,14 @@ func _build_fronds(mats: Dictionary, lk: Dictionary) -> void:
 	var uvs := PackedVector2Array()
 	var cols := PackedColorArray()
 	var idx := PackedInt32Array()
-	for fi in FRONDS.size():
-		var fr: Vector4 = FRONDS[fi]
+	var all_fronds: Array[Vector4] = []
+	all_fronds.append_array(FRONDS)
+	all_fronds.append_array(FRONDS_FRONT)
+	for fi in all_fronds.size():
+		var fr: Vector4 = all_fronds[fi]
 		var amp := lerpf(FROND_AMP_PX.x, FROND_AMP_PX.y, TerrainMath.hash01(fi, 61)) / FROND_AMP_PX.y
-		var col := Color(TerrainMath.hash01(fi, 62), amp, fr.z / FROND_MAX_LEN, 1.0)
+		var row := FROND_ROW_VALUE.x if fi < FRONDS.size() else FROND_ROW_VALUE.y
+		var col := Color(TerrainMath.hash01(fi, 62), amp, fr.z / FROND_MAX_LEN, row)
 		var base := verts.size()
 		for s in FROND_SEGMENTS + 1:
 			var t := float(s) / FROND_SEGMENTS

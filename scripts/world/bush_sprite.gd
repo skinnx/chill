@@ -16,11 +16,13 @@ static func shared_material() -> ShaderMaterial:
 
 
 ## Root at this node's origin; radius px; seed 0..1; depth 0 (hedge) .. 1 (near shrub); height k.
+## `albedo` with a > 0 switches to object mode (lit albedo x ambient, e.g. the willow crown).
 func setup(radius: float, seed01: float, depth: float, height_k: float, p_tree: bool, sway_k: float,
-		phase: float) -> BushSprite:
+		phase: float, albedo: Color = Color(0, 0, 0, 0)) -> BushSprite:
 	radius_px = radius
 	tree = p_tree
 	material = shared_material()
+	set_instance_shader_parameter(&"i_albedo", albedo)
 	set_instance_shader_parameter(&"i_bush", Vector4(seed01, depth, 1.0 if p_tree else 0.0, height_k))
 	set_instance_shader_parameter(&"i_sway", Vector4(sway_k, BushLayer.SWAY_AMP_PX * 1.5, phase, radius))
 	# The quad is drawn in canopy units; the node's scale turns them into px (y-sort uses position).

@@ -2,7 +2,8 @@
 // chain of alternating soft lanceolate leaves on a thin stem, drawn analytically (crisp at any
 // zoom). Sway is a travelling wave (phase +1.2 rad root -> tip, 10-18 px at the tip) with gusts.
 // Mesh contract (PropsLayer.build_fronds): VERTEX design px; UV.x 0..1 across the strip;
-// UV.y 0 root .. 1 tip (strip 24 px: the 16 px frond plus leaf overhang); COLOR.r = phase 0..1, COLOR.g = tip amplitude / 18 px, COLOR.b = length / 260.
+// UV.y 0 root .. 1 tip (strip 24 px: the 16 px frond plus leaf overhang); COLOR.r = phase 0..1, COLOR.g = tip amplitude / 18 px, COLOR.b = length / 260,
+// COLOR.a = row value (back row darker).
 shader_type canvas_item;
 render_mode blend_mix, unshaded;
 
@@ -79,6 +80,7 @@ void fragment() {
 	float h = UV.y;
 	vec3 alb = mix(leaf_shade.rgb, leaf_lit.rgb, clamp(light * 0.85 + 0.1 - h * 0.15, 0.0, 1.0));
 	alb = mix(alb, leaf_detail.rgb, 0.25 * smoothstep(0.75, 1.0, light));
+	alb *= v_data.a;
 	vec3 c = light_object(alb, 1.0 - h, 0.0);
 	vec2 p_design = v_canvas - g_world_offset;
 	if (g_cloud_shadow > 0.001) {
