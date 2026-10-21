@@ -1,0 +1,272 @@
+keys,en,vi
+APP_TITLE,Mossling Meadow,Mossling Meadow
+APP_TAGLINE,A tiny hollow of fuzzy friends,Thung lũng nhỏ của những người bạn lông xù
+DOCK_GARDEN,Garden,Khu vườn
+DOCK_ALBUM,Album,Album
+DOCK_BASKET,Basket,Giỏ quà
+DOCK_SETTINGS,Settings,Cài đặt
+HUD_DEW_A11Y,{count} dew,{count} giọt sương
+HUD_WATCH_A11Y,Just watch the meadow,Chỉ ngắm đồng cỏ thôi
+UNIT_DEW,dew,sương
+COMMON_CLOSE,Close,Đóng
+COMMON_BACK,Back,Quay lại
+COMMON_DONE,Done,Xong
+COMMON_NOT_NOW,Not now,Để sau
+TIME_MINUTES,{minutes} min,{minutes} phút
+TIME_HOURS,{hours} h,{hours} giờ
+TIME_HOURS_MINUTES,{hours} h {minutes} min,{hours} giờ {minutes} phút
+BASKET_TITLE,Gift basket,Giỏ quà
+BASKET_COLLECT_ALL,Collect all,Nhận hết
+BASKET_EMPTY,The basket is ready for gifts.,Giỏ đã sẵn sàng đón quà.
+BASKET_FROM,From {name},Từ {name}
+BASKET_CUP,Dew cup,Chén sương
+BASKET_CUP_DESC,"Moss and flowers fill it, drop by drop.","Rêu và hoa rót đầy chén, từng giọt một."
+BASKET_CUP_BRIMMING,The dew cup is brimming.,Chén sương đã đầy tràn.
+BASKET_FULL_NOTE,"When the basket is full, friends leave photos for you.","Khi giỏ đầy, các bạn sẽ để lại ảnh tặng bạn."
+BASKET_NEW_PHOTOS,New photos in your album,Có ảnh mới trong album
+WALLET_BRIMMING,Your dew jar is brimming. Gifts will wait here for you.,Hũ sương của bạn đã đầy tràn. Quà sẽ nằm đây chờ bạn.
+GIFT_ACORN_CUP,Acorn cup of dew,Chén hạt dẻ đựng sương
+GIFT_PETAL_BUNDLE,Petal bundle,Bó cánh hoa
+GIFT_SHINY_PEBBLE,Shiny pebble,Viên sỏi lấp lánh
+GIFT_SEED_POUCH,Seed-pod pouch,Túi vỏ hạt
+GIFT_MOON_DROP,Moonlit dewdrop,Giọt sương ánh trăng
+GARDEN_TITLE,Garden,Khu vườn
+GARDEN_TAB_FLOWERS,Flowers,Hoa
+GARDEN_TAB_DECOR,Décor,Trang trí
+GARDEN_PLANT,Plant,Trồng
+GARDEN_PLACE,Place,Đặt
+GARDEN_OWNED,{owned} of {max},{owned}/{max}
+GARDEN_ALL_PLANTED,All planted,Đã trồng đủ
+GARDEN_ALL_PLACED,All placed,Đã đặt đủ
+GARDEN_MORE_DEW,A little more dew,Cần thêm chút sương
+GARDEN_BLOOMS_IN,Blooms in about {time},Nở sau khoảng {time}
+GARDEN_DEW_YIELD,Beads dew,Đọng sương
+GARDEN_LOVED_BY,Loved by {names},{names} rất thích
+GARDEN_LOVED_BY_SOMEONE,A friend you haven't met yet loves these,Có một bạn chưa quen rất thích món này
+GARDEN_CHOOSE_BED,Choose a bed for your {flower},Chọn luống cho {flower} nhé
+GARDEN_LEAF_BOAT,Leaf boat,Thuyền lá
+GARDEN_LEAF_BOAT_DESC,A tiny boat drifts down the stream. Friends nearby love to watch it go by.,Một chiếc thuyền nhỏ trôi theo dòng suối. Các bạn ở gần đều thích ngồi ngắm thuyền trôi.
+GARDEN_FLOAT,Float,Thả
+GARDEN_NEW,New,Mới
+BED_1_NAME,Brookside bed,Luống bên suối
+BED_2_NAME,Fern bed,Luống dương xỉ
+BED_3_NAME,Sunny bed,Luống nắng
+BED_4_NAME,Willow bed,Luống gốc liễu
+BED_5_NAME,Stump bed,Luống gốc cây
+SPOT_SUN_STONE,Sun Stone,Phiến đá nắng
+SPOT_MOSS_CUSHION,Moss Cushion,Nệm rêu
+SPOT_CLOVER_BANK,Clover Bank,Gò cỏ ba lá
+SPOT_FERN_SHADE,Fern Shade,Bóng dương xỉ
+SPOT_STREAM_BEND,Stream Bend,Khúc suối cong
+SPOT_WILLOW_ROOT,Willow Root,Gốc liễu
+SPOT_HILL_CREST,Hill Crest,Đỉnh đồi
+SPOT_STUMP_HOLLOW,Stump Hollow,Hốc gốc cây
+SPOT_MOON_ROCK,Moon Rock,Tảng đá trăng
+SPOT_TOADSTOOL_RING,Toadstool Ring,Vòng nấm
+SPOT_STREAM_STONES,Stepping Stones,Đá giữa suối
+SPOT_LANTERN_NOOK,Lantern Nook,Góc đèn
+SPOT_CAIRN_SIDE,Cairn Corner,Góc tháp sỏi
+BEHAVIOUR_NAP,Snoozing,Ngủ khì
+BEHAVIOUR_NIBBLE,Sipping dew,Nhấm nháp sương
+BEHAVIOUR_PLAY,Playing,Nô đùa
+BEHAVIOUR_WANDER,Wandering,Dạo chơi
+BEHAVIOUR_SIT_BY_STREAM,By the stream,Ngắm suối
+TIME_DAWN,Dawn,Bình minh
+TIME_DAY,Daytime,Ban ngày
+TIME_GOLDEN,Golden hour,Nắng chiều
+TIME_DUSK,Dusk,Chạng vạng
+TIME_NIGHT,Night,Đêm
+WEATHER_CLEAR,Clear skies,Trời trong
+WEATHER_BREEZE,Gentle breeze,Gió nhẹ
+WEATHER_RAIN,Soft rain,Mưa phùn
+SEASON_SPRING,Spring,Mùa xuân
+ALBUM_TITLE,Album,Album
+ALBUM_TAB_FRIENDS,Friends,Bạn bè
+ALBUM_TAB_PHOTOS,Photos,Ảnh
+ALBUM_TAB_POSTCARDS,Postcards,Bưu thiếp
+ALBUM_MET_COUNT,{met} of {total} friends met,Đã gặp {met}/{total} bạn
+ALBUM_NOT_MET,Not met yet,Chưa gặp
+ALBUM_FAVOURITE_SPOT,Favourite spot,Chỗ yêu thích
+ALBUM_SPOT_SECRET,Still a little secret,Vẫn còn là bí mật nhỏ
+ALBUM_HEARTS_A11Y,{hearts} of 5 hearts,{hearts}/5 trái tim
+ALBUM_BEST_FRIEND,Best friend,Bạn thân
+ALBUM_RENAME,Rename,Đổi tên
+ALBUM_NAME_HINT,A name for your friend,Đặt tên cho bạn nhỏ
+ALBUM_PET,Pet,Vuốt ve
+ALBUM_PHOTOS_COUNT,{count} of 5 photos,{count}/5 ảnh
+ALBUM_PHOTO_EMPTY,Not taken yet,Chưa có ảnh
+ALBUM_FIRST_MET,First met on {date},Gặp lần đầu ngày {date}
+ALBUM_LIKES,Likes,Thích
+POSTCARD_NEW_A11Y,New postcard,Bưu thiếp mới
+POSTCARD_SIGNATURE,— {name},— {name}
+POSTCARD_SIGNATURE_HOLLOW,— the hollow,— Thung lũng nhỏ
+NEWFRIEND_TITLE,A new friend!,Bạn mới nè!
+NEWFRIEND_THIS_IS,This is {name},Đây là {name}
+NEWFRIEND_SAY_HI,Say hello,Chào bạn ấy
+RECAP_TITLE,While you were away,Trong lúc bạn đi vắng
+RECAP_NEW_FRIEND,{name} visited for the first time,{name} ghé thăm lần đầu
+RECAP_ONE_VISITED,{name} dropped by,{name} đã ghé chơi
+RECAP_FRIENDS_VISITED,{name} and friends dropped by,{name} và các bạn đã ghé chơi
+RECAP_NAPPED,{name} napped at the {spot},{name} đã ngủ một giấc ở {spot}
+RECAP_BLOOMED,New flowers opened,Hoa mới đã nở
+RECAP_GIFTS,Gifts are waiting in the basket,Quà đang chờ trong giỏ
+RECAP_PHOTOS,Friends left photos for you,Các bạn để lại ảnh tặng bạn
+RECAP_POSTCARD,A postcard arrived,Có bưu thiếp mới
+RECAP_RAINED,It rained softly,Trời đã mưa phùn nhè nhẹ
+RECAP_CONTINUE_A11Y,Continue,Tiếp tục
+SETTINGS_TITLE,Settings,Cài đặt
+SET_GROUP_COMFORT,Comfort,Dễ chịu
+SET_GROUP_SOUND,Sound,Âm thanh
+SET_GROUP_TOUCH,Touch,Cảm ứng
+SET_GROUP_ABOUT,About,Thông tin
+SET_REDUCE_MOTION,Reduce motion,Giảm chuyển động
+SET_REDUCE_MOTION_DESC,"Gentler, slower movement and a still camera.","Chuyển động nhẹ và chậm hơn, khung hình đứng yên."
+SET_REDUCE_TRANSPARENCY,Reduce transparency,Giảm độ trong suốt
+SET_REDUCE_TRANSPARENCY_DESC,Solid panels instead of frosted glass.,Dùng bảng nền đặc thay cho kính mờ.
+SET_TEXT_SIZE,Text size,Cỡ chữ
+SET_TEXT_SIZE_VALUE,{percent}%,{percent}%
+SET_HAPTICS,Haptics,Rung phản hồi
+SET_HAPTICS_OFF,Off,Tắt
+SET_HAPTICS_SUBTLE,Subtle,Nhẹ
+SET_HAPTICS_FULL,Full,Đầy đủ
+SET_MUSIC,Music,Nhạc
+SET_MUSIC_ON,On,Bật
+SET_MUSIC_AMBIENCE,Nature sounds only,Chỉ tiếng thiên nhiên
+SET_MUSIC_OFF,Off,Tắt
+SET_VOLUME_MUSIC,Music volume,Âm lượng nhạc
+SET_VOLUME_AMBIENCE,Nature volume,Âm lượng thiên nhiên
+SET_VOLUME_EFFECTS,Effects volume,Âm lượng hiệu ứng
+SET_MONO,Mono audio,Âm thanh đơn kênh
+SET_CAPTIONS,Sound captions,Phụ đề âm thanh
+SET_LEFT_HANDED,Left-handed,Thuận tay trái
+SET_LEFT_HANDED_DESC,Mirrors the buttons for your left thumb.,Đảo vị trí các nút cho ngón cái tay trái.
+SET_AUTO_HIDE,Hide buttons while I watch,Ẩn nút khi mình ngắm cảnh
+SET_KEEP_AWAKE,Keep the screen on while I watch,Giữ màn hình sáng khi mình ngắm cảnh
+SET_LANGUAGE,Language,Ngôn ngữ
+SET_LANGUAGE_DEVICE,Same as device,Theo thiết bị
+LANG_EN,English,English
+LANG_VI,Tiếng Việt,Tiếng Việt
+SET_PRIVACY,Mossling Meadow plays offline and collects no data.,Mossling Meadow chơi ngoại tuyến và không thu thập bất kỳ dữ liệu nào.
+SET_CREDITS,Credits,Ghi công
+SET_CREDITS_BODY,Made with care using Godot Engine (MIT License). Fonts: Nunito and Baloo 2 (SIL Open Font License).,Được làm bằng cả tấm lòng với Godot Engine (Giấy phép MIT). Phông chữ: Nunito và Baloo 2 (Giấy phép SIL Open Font).
+SET_LICENSES,Licenses,Giấy phép
+SET_VERSION,Version {version},Phiên bản {version}
+LEAVE_TITLE,Leave the hollow for now?,Tạm rời thung lũng nhé?
+LEAVE_DESC,Everything keeps growing while you're away.,Mọi thứ vẫn tiếp tục lớn lên khi bạn đi vắng.
+LEAVE_YES,Leave for now,Tạm rời
+LEAVE_NO,Stay a while,Ở lại chút nữa
+A11Y_SEED,"A seed, ready to plant","Một hạt giống, sẵn sàng để trồng"
+A11Y_BUD,"A bud, ready to open","Một nụ hoa, sắp nở"
+A11Y_MOSSLING,"{name}, {behaviour}","{name}, {behaviour}"
+A11Y_MAILBOX,Mailbox,Hộp thư
+A11Y_STREAM,Stream,Dòng suối
+A11Y_BED,{bed},{bed}
+A11Y_HOLD_TO_PET,Touch and hold to pet,Chạm và giữ để vuốt ve
+CAPTION_PURR,soft purr,tiếng gừ gừ
+CAPTION_CHIRP,happy chirp,tiếng ríu rít
+CAPTION_SNORE,tiny snore,tiếng ngáy khe khẽ
+CAPTION_CHIME,wind chime,chuông gió leng keng
+CAPTION_SPLASH,little splash,tiếng nước tõm
+CAPTION_BLOOM,petals unfold,cánh hoa xòe nở
+CAPTION_COLLECT,dew tinkles,sương kêu lanh canh
+CAPTION_PLANT,soil pat,tiếng vỗ đất
+CAPTION_RAIN,soft rain,mưa rơi tí tách
+CAPTION_BIRDS,birdsong,chim hót
+CAPTION_BOAT,leaf boat drifting,thuyền lá trôi
+CAPTION_POSTCARD,paper rustle,giấy sột soạt
+SPECIES_PUFFMOSS_NAME,Puffmoss,Rêu Bông
+SPECIES_PUFFMOSS_DEFAULT_NAME,Pip,Bơ
+SPECIES_PUFFMOSS_DESC,"A round little sunbather. Puffmosses can nap anywhere warm, and usually do.","Một cục bông tròn mê tắm nắng. Rêu Bông ngủ được ở bất cứ chỗ nào ấm áp, và thường là ngủ thật."
+SPECIES_PUFFMOSS_HINT,Loves a warm stone in the sun.,Mê những phiến đá ấm nắng.
+SPECIES_BUTTONBUD_NAME,Buttonbud,Nụ Cúc
+SPECIES_BUTTONBUD_DEFAULT_NAME,Dot,Chấm
+SPECIES_BUTTONBUD_DESC,"Curious about everything, especially petals. Follows your taps with great interest.","Tò mò với mọi thứ, nhất là những cánh hoa. Thích dõi theo từng cú chạm của bạn."
+SPECIES_BUTTONBUD_HINT,Drawn to daisies and clover.,Hay ghé chỗ có cúc dại và cỏ ba lá.
+SPECIES_PEBBLEPAW_NAME,Pebblepaw,Sỏi Tròn
+SPECIES_PEBBLEPAW_DEFAULT_NAME,Cobble,Cuội
+SPECIES_PEBBLEPAW_DESC,Patient and calm. Can watch the stream for an entire afternoon.,Kiên nhẫn và điềm tĩnh. Có thể ngắm suối suốt cả buổi chiều.
+SPECIES_PEBBLEPAW_HINT,Fond of smooth stones and running water.,Thích sỏi nhẵn và nước chảy.
+SPECIES_HONEYHUM_NAME,Honeyhum,Mật Ngọt
+SPECIES_HONEYHUM_DEFAULT_NAME,Bumble,Vo Ve
+SPECIES_HONEYHUM_DESC,"Hums while working, and is always working. Sips dew from flower to flower.","Vừa làm vừa ngân nga, mà lúc nào cũng đang làm. Nhấm nháp sương từ hoa này sang hoa khác."
+SPECIES_HONEYHUM_HINT,Comes when a few buttercups bloom.,Sẽ ghé khi vài bông mao lương vàng nở.
+SPECIES_FERNWHISK_NAME,Fernwhisk,Lá Xoăn
+SPECIES_FERNWHISK_DEFAULT_NAME,Wisp,Xíu
+SPECIES_FERNWHISK_DESC,"Shy, gentle and very soft. Peeks out from the ferns before saying hello.","Nhút nhát, hiền lành và mềm mại. Hay nấp sau đám dương xỉ rồi mới ló ra chào."
+SPECIES_FERNWHISK_HINT,Comes when forget-me-nots bloom. Likes shady afternoons.,Sẽ ghé khi hoa lưu ly nở. Thích những buổi chiều râm mát.
+SPECIES_DANDELFLUFF_NAME,Dandelfluff,Bông Gió
+SPECIES_DANDELFLUFF_DEFAULT_NAME,Drift,Mây
+SPECIES_DANDELFLUFF_DESC,Light as a seed and twice as dreamy. Drifts wherever the breeze goes.,"Nhẹ như hạt bồ công anh, lại mơ màng gấp đôi. Gió thổi đến đâu là bay theo đến đó."
+SPECIES_DANDELFLUFF_HINT,Comes when dandelions bloom. Loves a breezy day.,Sẽ ghé khi bồ công anh nở. Rất thích những ngày có gió.
+SPECIES_BELLKIN_NAME,Bellkin,Chuông Nhỏ
+SPECIES_BELLKIN_DEFAULT_NAME,Lilt,Leng Keng
+SPECIES_BELLKIN_DESC,Musical down to the ears. Sways to any sound and hums along to wind chimes.,"Yêu âm nhạc đến từng chiếc tai. Nghe tiếng gì cũng đung đưa, nghe chuông gió là ngân nga theo."
+SPECIES_BELLKIN_HINT,Comes when bluebells bloom. Adores wind chimes.,Sẽ ghé khi hoa chuông xanh nở. Mê tiếng chuông gió.
+SPECIES_PRIMPIP_NAME,Primpip,Má Hồng
+SPECIES_PRIMPIP_DEFAULT_NAME,Tansy,Mận
+SPECIES_PRIMPIP_DESC,Tidy and polite. Blushes when petted and lines up pebbles in neat little rows.,"Gọn gàng và lễ phép. Được vuốt ve là đỏ mặt, hay xếp sỏi thành từng hàng ngay ngắn."
+SPECIES_PRIMPIP_HINT,Comes when primroses bloom. Likes a neat pebble cairn.,Sẽ ghé khi hoa anh thảo nở. Thích tháp sỏi gọn gàng.
+SPECIES_CAPLING_NAME,Capling,Nấm Lùn
+SPECIES_CAPLING_DEFAULT_NAME,Nib,Tí
+SPECIES_CAPLING_DESC,"Bouncy, bubbly and fond of puddles. Hops from toadstool to toadstool.","Nhún nhảy, hớn hở và mê vũng nước. Nhảy từ chiếc nấm này sang chiếc nấm khác."
+SPECIES_CAPLING_HINT,Visits a ring of toadstool seats. Rainy days are even better.,Ghé chơi khi có cả vòng ghế nấm. Ngày mưa lại càng thích.
+SPECIES_PUDDLEWUMP_NAME,Puddlewump,Bì Bõm
+SPECIES_PUDDLEWUMP_DEFAULT_NAME,Puddle,Bọt
+SPECIES_PUDDLEWUMP_DESC,Happiest when it rains. Splashes in the shallows and sits on stream stones.,Vui nhất là khi trời mưa. Lội bì bõm chỗ nước nông và ngồi trên đá suối.
+SPECIES_PUDDLEWUMP_HINT,Visits when the stream has plenty of stones. Loves the rain.,Ghé chơi khi suối có nhiều đá. Rất mê mưa.
+SPECIES_GLOWMOTE_NAME,Glowmote,Đốm Sáng
+SPECIES_GLOWMOTE_DEFAULT_NAME,Lumen,Đóm
+SPECIES_GLOWMOTE_DESC,Quiet and thoughtful. Its antenna glows softly as the evening settles in.,Lặng lẽ và hay suy tư. Chiếc râu nhỏ phát sáng dịu dàng khi chiều buông.
+SPECIES_GLOWMOTE_HINT,"Appears at dusk and at night, near firefly lanterns.","Xuất hiện lúc chạng vạng và về đêm, gần những chiếc đèn đom đóm."
+SPECIES_MOONPUFF_NAME,Moonpuff,Bông Trăng
+SPECIES_MOONPUFF_DEFAULT_NAME,Luna,Hằng
+SPECIES_MOONPUFF_DESC,"Arrives with the moon and naps on the moon rock until dawn. Very hard to wake, very easy to love.","Đến cùng ánh trăng và ngủ trên tảng đá trăng cho tới sáng. Rất khó đánh thức, nhưng rất dễ thương."
+SPECIES_MOONPUFF_HINT,Visits on quiet nights when moonblooms open and wind chimes ring.,"Ghé vào những đêm yên tĩnh, khi hoa quỳnh nở và chuông gió ngân vang."
+FLOWER_SWEET_CLOVER_NAME,Sweet Clover,Cỏ ba lá
+FLOWER_SWEET_CLOVER_DESC,Soft pink puffs that grow quickly. Sleepy mosslings adore them.,"Những bông tròn hồng mềm, lớn rất nhanh. Các bé rêu buồn ngủ mê lắm."
+FLOWER_BUTTON_DAISY_NAME,Button Daisy,Cúc dại
+FLOWER_BUTTON_DAISY_DESC,Cheerful white petals around a sunny middle.,Cánh trắng tươi tắn quanh nhụy vàng như nắng.
+FLOWER_BUTTERCUP_NAME,Buttercup,Mao lương vàng
+FLOWER_BUTTERCUP_DESC,Little golden cups that catch the morning dew.,Những chiếc chén vàng nhỏ xíu hứng sương sớm.
+FLOWER_FORGET_ME_NOT_NAME,Forget-me-not,Lưu ly
+FLOWER_FORGET_ME_NOT_DESC,Tiny sky-blue flowers that grow in friendly clusters.,"Những bông hoa xanh màu trời bé xíu, mọc thành từng chùm thân thiện."
+FLOWER_BLUEBELL_NAME,Bluebell,Chuông xanh
+FLOWER_BLUEBELL_DESC,Nodding bells that seem to ring when nobody is listening.,"Những chiếc chuông khẽ gật gù, như đang ngân lên khi chẳng ai để ý."
+FLOWER_PRIMROSE_NAME,Primrose,Anh thảo
+FLOWER_PRIMROSE_DESC,Pale yellow and gentle. The first to wake up in spring.,Vàng nhạt và dịu dàng. Loài hoa thức dậy đầu tiên của mùa xuân.
+FLOWER_DANDELION_NAME,Dandelion,Bồ công anh
+FLOWER_DANDELION_DESC,Sunny flowers that turn into wishes. The breeze carries the seeds around the hollow.,Hoa vàng như nắng rồi hóa thành những điều ước. Gió mang hạt bay khắp thung lũng.
+FLOWER_MOONBLOOM_NAME,Moonbloom,Hoa quỳnh
+FLOWER_MOONBLOOM_DESC,"Sleeps all day and opens at dusk, glowing faintly under the stars.","Ngủ suốt ngày, đến chạng vạng mới nở, tỏa sáng mờ mờ dưới ánh sao."
+DECOR_LEAF_PINWHEEL_NAME,Leaf Pinwheel,Chong chóng lá
+DECOR_LEAF_PINWHEEL_DESC,Spins happily whenever the wind passes by.,Quay tít mỗi khi có gió ghé qua.
+DECOR_PEBBLE_CAIRN_NAME,Pebble Cairn,Tháp sỏi
+DECOR_PEBBLE_CAIRN_DESC,A balanced stack of smooth pebbles. Each one makes it a little taller.,Một chồng sỏi tròn xếp cân bằng. Thêm viên nào là cao thêm một chút.
+DECOR_TOADSTOOL_SEAT_NAME,Toadstool Seat,Ghế nấm
+DECOR_TOADSTOOL_SEAT_DESC,"A perfect place to sit, hop, or shelter from the rain. Ten make a fairy ring.","Chỗ tuyệt vời để ngồi, để nhảy, hay để trú mưa. Đủ mười chiếc là thành một vòng nấm thần tiên."
+DECOR_STREAM_STONES_NAME,Stream Stones,Đá suối
+DECOR_STREAM_STONES_DESC,Smooth stones that make the water sing a little louder.,Những viên đá nhẵn khiến dòng nước hát to hơn một chút.
+DECOR_FIREFLY_LANTERN_NAME,Firefly Lantern,Đèn đom đóm
+DECOR_FIREFLY_LANTERN_DESC,Glows warmly from golden hour until morning. Fireflies love to visit.,Tỏa ánh sáng ấm từ lúc nắng chiều cho tới sáng. Đom đóm rất thích ghé chơi.
+DECOR_WIND_CHIME_NAME,Shell Wind Chime,Chuông gió vỏ ốc
+DECOR_WIND_CHIME_DESC,Every shell adds a new note to the breeze.,Mỗi vỏ ốc lại thêm một nốt nhạc mới vào làn gió.
+POSTCARD_FRIEND_01,"I found the warmest spot in the whole hollow, and it's right next to you. Thank you for the sunshine.","Mình tìm được chỗ ấm nhất cả thung lũng rồi, ngay cạnh bạn đó. Cảm ơn bạn vì những tia nắng nhé."
+POSTCARD_FRIEND_02,Did you see the petals open this morning? I counted every one. Twice! I think the garden likes you.,Sáng nay bạn có thấy cánh hoa nở không? Mình đếm từng cánh luôn. Đếm hai lần! Chắc khu vườn quý bạn lắm.
+POSTCARD_FRIEND_03,The stream told me a story today. It was mostly about pebbles. I listened all afternoon and thought of you.,Hôm nay con suối kể mình nghe một câu chuyện. Chủ yếu là về mấy viên sỏi thôi. Mình nghe suốt buổi chiều và nghĩ đến bạn.
+POSTCARD_FRIEND_04,"Busy, busy, happy! Every flower here tastes like a sunny morning. I saved you the sweetest drop.","Bận ơi là bận, mà vui ơi là vui! Bông hoa nào ở đây cũng ngọt như buổi sáng đầy nắng. Mình để dành cho bạn giọt sương ngọt nhất."
+POSTCARD_FRIEND_05,I'm not very good at saying hello. But I like it here. I like it a lot.,Mình không giỏi chào hỏi lắm. Nhưng mình thích ở đây. Thích nhiều lắm.
+POSTCARD_FRIEND_06,"The wind and I went all the way up the hill and back. From up there, your garden looks like a patchwork quilt.","Mình với cơn gió đã lên tận đỉnh đồi rồi quay về. Từ trên đó nhìn xuống, khu vườn của bạn trông như một tấm chăn chắp vá."
+POSTCARD_FRIEND_07,"I dreamed the whole hollow was a soft, round pillow. Then I woke up, and it was true.",Mình mơ thấy cả thung lũng là một chiếc gối tròn êm ái. Tỉnh dậy thì thấy đúng là vậy thật.
+POSTCARD_FRIEND_08,"I hopped three times around the garden today. That's how happy I am. You can hop too, if you like.","Hôm nay mình nhảy ba vòng quanh vườn. Mình vui đến thế đó. Bạn cũng nhảy thử nhé, nếu thích."
+POSTCARD_FRIEND_09,"Whenever you'd like a quiet place, the stream and I will keep a spot for you.","Bất cứ khi nào bạn muốn tìm một chỗ yên tĩnh, mình và con suối sẽ giữ cho bạn một chỗ ngồi."
+POSTCARD_FRIEND_10,"I made up a little song about your garden. It goes hmm, hmm-hmm, hmmm. It sounds even better with chimes.","Mình nghĩ ra một bài hát nho nhỏ về khu vườn của bạn. Nó như thế này: ư ư, ư-ư, ưưư. Có tiếng chuông gió thì còn hay hơn nữa."
+POSTCARD_FRIEND_11,I tidied the moss by the old stump and left a pebble there for you. It's the roundest one I could find.,Mình đã chải lại lớp rêu cạnh gốc cây cũ và để ở đó một viên sỏi cho bạn. Viên tròn nhất mà mình tìm được đấy.
+POSTCARD_FRIEND_12,"When the lanterns glow, I like to sit very still and watch the sky. Thank you for the warm little lights.","Khi những chiếc đèn sáng lên, mình thích ngồi thật yên và ngắm bầu trời. Cảm ơn bạn vì những ánh đèn nhỏ ấm áp."
+POSTCARD_EVENT_WELCOME,"Welcome to the hollow. Stay as long as you like. Everything here grows at its own pace, and so can you.","Chào mừng bạn đến thung lũng nhỏ. Cứ ở lại bao lâu tùy thích nhé. Mọi thứ ở đây đều lớn lên theo nhịp riêng của mình, và bạn cũng vậy."
+POSTCARD_EVENT_FIRST_BLOOM,"A flower you planted opened today. Somebody small noticed, and did a happy wiggle.",Hôm nay bông hoa bạn trồng đã nở. Có một bạn nhỏ trông thấy và lắc lư vui sướng.
+POSTCARD_EVENT_FIRST_DECOR,The hollow feels a little more like home now. The mosslings keep stopping to admire it.,Thung lũng giờ thấy giống nhà hơn một chút rồi. Các bé rêu cứ dừng lại ngắm mãi.
+POSTCARD_EVENT_FIRST_RAIN,"It rained softly today. Everyone shared the big leaves, and nobody minded getting a little damp.","Hôm nay trời mưa phùn nhè nhẹ. Mọi người cùng trú dưới những chiếc lá to, chẳng ai ngại bị ướt một chút."
+POSTCARD_EVENT_FIRST_NIGHT,"Someone visited while the stars were out. They left a tiny footprint in the moss, curved like a crescent moon.","Có ai đó ghé chơi lúc trời đầy sao. Bạn ấy để lại một dấu chân bé xíu trên lớp rêu, cong cong như vầng trăng khuyết."
+POSTCARD_EVENT_BRIMMING,"The basket is brimming with gifts! From now on, when it is full, friends will leave photos for you.","Giỏ đã đầy ắp quà rồi! Từ giờ, mỗi khi giỏ đầy, các bạn sẽ để lại ảnh tặng bạn."
+POSTCARD_EVENT_TEN_BOATS,"Ten little leaf boats have sailed down the stream. Somewhere far away, a duck is very puzzled and very pleased.","Đã có mười chiếc thuyền lá xuôi dòng suối. Ở đâu đó thật xa, có một chú vịt vừa ngơ ngác vừa thích thú lắm."
+POSTCARD_EVENT_ALBUM_COMPLETE,Every mossling of spring has visited your hollow. They all agree: it's the coziest place they know.,Tất cả các bé rêu mùa xuân đều đã ghé thăm thung lũng của bạn. Bạn nào cũng đồng ý: đây là nơi ấm cúng nhất mà các bạn từng biết.

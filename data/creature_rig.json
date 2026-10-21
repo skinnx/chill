@@ -1,0 +1,1016 @@
+{
+	"schema": 1,
+	"doc": "docs/ART_BIBLE.md §5. SDF part catalog for the single-quad mossling fur shader, plus each species resolved from data/species.json rig (GDD vocabulary). Regenerate when species.json changes.",
+	"units": "bu = body heights; body width = w_h bu; feet at (0,0); y up; angles in radians from vertical",
+	"defaults": {
+		"squircle_n": 2.4,
+		"bottom_flatten_n_add": 1.2,
+		"eye_size": 0.2,
+		"eye_spacing": 0.4,
+		"eye_height_from_top": 0.58,
+		"belly_size_default": 0.6,
+		"belly_strength_default": 0.55,
+		"cheek_alpha": 0.5,
+		"base_body_px": 150,
+		"fringe_len_mul": 2.5
+	},
+	"catalog": {
+		"ear": {
+			"none": {
+				"id": 0
+			},
+			"round": {
+				"id": 1,
+				"size": 0.17,
+				"spread": 0.62,
+				"smooth_k": 0.06,
+				"inner": "accent@0.35",
+				"droop_sleep": 0.0
+			},
+			"tuft": {
+				"id": 2,
+				"size": 0.22,
+				"spread": 0.3,
+				"smooth_k": 0.03,
+				"inner": null,
+				"droop_sleep": 0.26,
+				"note": "centre vesica 0.22x0.12 + two side tufts 0.14 at +-spread"
+			},
+			"pointed_soft": {
+				"id": 3,
+				"size": 0.26,
+				"spread": 0.55,
+				"smooth_k": 0.04,
+				"inner": "accent@0.40",
+				"tip_round": 0.05,
+				"droop_sleep": 0.26
+			},
+			"bell": {
+				"id": 4,
+				"size": 0.11,
+				"spread": 0.95,
+				"smooth_k": 0.03,
+				"colour": "fur_2",
+				"stalk_len": 0.2,
+				"lobes": 5,
+				"droop_sleep": 0.2
+			},
+			"leaf": {
+				"id": 5,
+				"size": 0.34,
+				"spread": 0.7,
+				"smooth_k": 0.03,
+				"colour": "fur->accent gradient",
+				"tip_round": 0.025,
+				"midrib": 0.012,
+				"droop_sleep": 0.44
+			},
+			"nub": {
+				"id": 6,
+				"size": 0.07,
+				"spread": 0.45,
+				"smooth_k": 0.04,
+				"inner": null,
+				"droop_sleep": 0.0
+			},
+			"long": {
+				"id": 7,
+				"size": 0.5,
+				"spread": 0.25,
+				"smooth_k": 0.05,
+				"inner": "accent@0.35",
+				"radius": [
+					0.075,
+					0.06
+				],
+				"droop_sleep": 1.05,
+				"reserve": true
+			}
+		},
+		"tail": {
+			"none": {
+				"id": 0
+			},
+			"puff": {
+				"id": 1,
+				"size": 0.15,
+				"anchor": [
+					0.98,
+					0.24
+				],
+				"colour": "tip"
+			},
+			"curl": {
+				"id": 2,
+				"size": 0.12,
+				"thickness": 0.06,
+				"sweep_deg": 270,
+				"anchor": [
+					1.0,
+					0.3
+				],
+				"colour": "fur_2@0.3"
+			},
+			"brush": {
+				"id": 3,
+				"size": 0.42,
+				"width": 0.22,
+				"angle": 0.9,
+				"anchor": [
+					0.92,
+					0.18
+				],
+				"fuzz_mul": 1.6,
+				"colour": "fur, tip fur_2"
+			},
+			"leaf": {
+				"id": 4,
+				"size": 0.32,
+				"width": 0.15,
+				"angle": 0.8,
+				"anchor": [
+					0.95,
+					0.22
+				],
+				"colour": "accent"
+			},
+			"sprout": {
+				"id": 5,
+				"size": 0.12,
+				"leaf": 0.1,
+				"anchor": [
+					0.8,
+					0.78
+				],
+				"colour": "cr_leaf + accent bud"
+			}
+		},
+		"antenna": {
+			"none": {
+				"id": 0
+			},
+			"sprout": {
+				"id": 1,
+				"length": 0.2,
+				"thickness": 0.022,
+				"leaf": [
+					0.13,
+					0.065
+				],
+				"bud": 0.05,
+				"colour": "cr_leaf stem/leaves, accent bud"
+			},
+			"double_bobble": {
+				"id": 2,
+				"length": 0.3,
+				"thickness": 0.02,
+				"spread": 0.3,
+				"base_dx": 0.12,
+				"bobble": 0.065,
+				"colour": "fur_2 stalk, accent bobble"
+			},
+			"fern_curl": {
+				"id": 3,
+				"length": 0.18,
+				"thickness": 0.025,
+				"curl_turns": 1.25,
+				"curl_r": 0.07,
+				"colour": "accent"
+			},
+			"dandelion_puff": {
+				"id": 4,
+				"length": 0.28,
+				"thickness": 0.016,
+				"puff_r": 0.13,
+				"filaments": 14,
+				"colour": "cr_leaf stem, tip puff",
+				"sheds_seeds_in_breeze": true
+			},
+			"glow_bobble": {
+				"id": 5,
+				"length": 0.34,
+				"thickness": 0.02,
+				"bobble": 0.075,
+				"emission": 1.0,
+				"halo_mul": 3.0,
+				"colour": "fur_2 stalk, accent bobble"
+			},
+			"single_bobble": {
+				"id": 6,
+				"length": 0.32,
+				"thickness": 0.02,
+				"bobble": 0.065,
+				"reserve": true
+			}
+		},
+		"pattern": {
+			"none": {
+				"id": 0
+			},
+			"belly": {
+				"id": 1,
+				"belly_size": 1.0,
+				"belly_strength": 0.85
+			},
+			"freckles": {
+				"id": 2,
+				"dots": 6,
+				"r": 0.018
+			},
+			"socks": {
+				"id": 3,
+				"band_y": 0.16,
+				"wave": 0.02
+			},
+			"back_stripes": {
+				"id": 4,
+				"count": 3,
+				"width": 0.05,
+				"spacing": 0.12,
+				"from_y": 0.72
+			},
+			"cap": {
+				"id": 5,
+				"edge_y": 0.7,
+				"edge_noise": 0.03
+			},
+			"cap_spots": {
+				"id": 6,
+				"edge_y": 0.66,
+				"spots": [
+					4,
+					6
+				],
+				"spot_r": [
+					0.04,
+					0.07
+				],
+				"spot_colour": "accent"
+			},
+			"spots": {
+				"id": 7,
+				"count": [
+					5,
+					8
+				],
+				"r": [
+					0.05,
+					0.09
+				]
+			},
+			"cheeks": {
+				"id": 8,
+				"r": 0.11,
+				"replaces_cheek_blush": true
+			},
+			"patch": {
+				"id": 9,
+				"r": 0.28,
+				"reserve": true
+			},
+			"stripe": {
+				"id": 10,
+				"reserve": true
+			},
+			"gradient": {
+				"id": 11,
+				"reserve": true
+			}
+		},
+		"eye": {
+			"round": {
+				"id": 0,
+				"highlights": [
+					[
+						-0.3,
+						0.38,
+						0.36
+					],
+					[
+						0.38,
+						-0.42,
+						0.14
+					]
+				]
+			},
+			"sleepy": {
+				"id": 1,
+				"lid_cover": 0.4,
+				"highlights": [
+					[
+						-0.25,
+						0.1,
+						0.22
+					]
+				]
+			},
+			"dot": {
+				"id": 2,
+				"highlights": [
+					[
+						-0.28,
+						0.34,
+						0.2
+					]
+				],
+				"reserve": true
+			}
+		},
+		"closed_eye_style": {
+			"open": 0,
+			"sleep_arc_down": 1,
+			"happy_arc_up": 2
+		},
+		"mouth": {
+			"none": 0,
+			"smile": 1,
+			"w": 2
+		}
+	},
+	"instance_uniforms": [
+		[
+			"i_fur",
+			"vec4",
+			"rgb fur; a = fuzz_dp / 2"
+		],
+		[
+			"i_fur2",
+			"vec4",
+			"rgb pattern ink (palettes species_resolved.pattern_ink); a = pattern strength"
+		],
+		[
+			"i_belly",
+			"vec4",
+			"rgb belly; a = belly size 0..1"
+		],
+		[
+			"i_accent",
+			"vec4",
+			"rgb accent; a = accent emission 0..1"
+		],
+		[
+			"i_tip",
+			"vec4",
+			"rgb fibre-tip colour; a = tip mix (0.45)"
+		],
+		[
+			"i_cheek",
+			"vec4",
+			"rgb cheek blush; a = blush alpha"
+		],
+		[
+			"i_eye",
+			"vec4",
+			"rgb eye ink; a = eye width as fraction of body width"
+		],
+		[
+			"i_body",
+			"vec4",
+			"x w/h, y squircle n, z body height px (local), w bottom flatten n add"
+		],
+		[
+			"i_parts",
+			"vec4",
+			"x ear id, y tail id, z antenna id, w pattern id"
+		],
+		[
+			"i_part_p",
+			"vec4",
+			"x ear size, y ear spread, z tail size, w antenna length"
+		],
+		[
+			"i_face",
+			"vec4",
+			"x eye id, y eye spacing, z eye height from top, w mouth id"
+		],
+		[
+			"i_anim",
+			"vec4",
+			"x squash s, y lean rad, z blink lid 0..1, w look -1..1"
+		],
+		[
+			"i_follow",
+			"vec4",
+			"x ear offset rad, y antenna offset rad, z tail offset rad, w breath k (period 600/k s)"
+		],
+		[
+			"i_state",
+			"vec4",
+			"x sleep 0..1, y happy 0..1, z facing -1|+1, w phase seed 0..1"
+		],
+		[
+			"i_light",
+			"vec4",
+			"xy direction to nearest lit lantern (unit), z lamp intensity 0..1, w cloud shadow 0..1"
+		],
+		[
+			"i_misc",
+			"vec4",
+			"x pattern seed, y pattern scale, z feet nubs 0|1, w closed-eye style (0 open, 1 sleep arc, 2 happy arc)"
+		]
+	],
+	"art_overrides": {
+		"puffmoss": {
+			"mouth": "smile",
+			"feet": 1,
+			"n": 2.6
+		},
+		"buttonbud": {
+			"mouth": "w",
+			"feet": 0,
+			"n": 2.3
+		},
+		"pebblepaw": {
+			"mouth": "smile",
+			"feet": 1,
+			"n": 2.8
+		},
+		"honeyhum": {
+			"mouth": "smile",
+			"feet": 1,
+			"n": 2.5
+		},
+		"fernwhisk": {
+			"mouth": "none",
+			"feet": 0,
+			"n": 2.2
+		},
+		"dandelfluff": {
+			"mouth": "w",
+			"feet": 0,
+			"n": 2.3
+		},
+		"bellkin": {
+			"mouth": "smile",
+			"feet": 0,
+			"n": 2.4
+		},
+		"primpip": {
+			"mouth": "w",
+			"feet": 1,
+			"n": 2.5
+		},
+		"capling": {
+			"mouth": "smile",
+			"feet": 1,
+			"n": 2.6
+		},
+		"puddlewump": {
+			"mouth": "w",
+			"feet": 1,
+			"n": 3.0
+		},
+		"glowmote": {
+			"mouth": "none",
+			"feet": 0,
+			"n": 2.2
+		},
+		"moonpuff": {
+			"mouth": "none",
+			"feet": 1,
+			"n": 2.7
+		}
+	},
+	"species": {
+		"puffmoss": {
+			"body": {
+				"w_h": 1.15,
+				"squircle_n": 2.6,
+				"size_mul": 1.0,
+				"feet_nubs": 1
+			},
+			"fuzz_dp": 1.0,
+			"fringe_dp": 2.5,
+			"ear": {
+				"type": "round",
+				"id": 1,
+				"size": 0.17,
+				"spread": 0.62
+			},
+			"tail": {
+				"type": "puff",
+				"id": 1,
+				"size": 0.15
+			},
+			"antenna": {
+				"type": "none",
+				"id": 0,
+				"length": 0.0,
+				"emission": 0.0
+			},
+			"pattern": {
+				"type": "belly",
+				"id": 1,
+				"belly_size": 1.0,
+				"belly_strength": 0.85
+			},
+			"eye": {
+				"type": "sleepy",
+				"id": 1,
+				"size": 0.2,
+				"spacing": 0.4,
+				"height_from_top": 0.58
+			},
+			"mouth": {
+				"type": "smile",
+				"id": 1
+			},
+			"colours": "data/palettes.json creatures.species_resolved.puffmoss"
+		},
+		"buttonbud": {
+			"body": {
+				"w_h": 1.0,
+				"squircle_n": 2.3,
+				"size_mul": 0.85,
+				"feet_nubs": 0
+			},
+			"fuzz_dp": 0.8,
+			"fringe_dp": 2.0,
+			"ear": {
+				"type": "tuft",
+				"id": 2,
+				"size": 0.22,
+				"spread": 0.3
+			},
+			"tail": {
+				"type": "none",
+				"id": 0,
+				"size": 0.0
+			},
+			"antenna": {
+				"type": "sprout",
+				"id": 1,
+				"length": 0.2,
+				"emission": 0.0
+			},
+			"pattern": {
+				"type": "freckles",
+				"id": 2,
+				"belly_size": 0.6,
+				"belly_strength": 0.55
+			},
+			"eye": {
+				"type": "round",
+				"id": 0,
+				"size": 0.2,
+				"spacing": 0.4,
+				"height_from_top": 0.58
+			},
+			"mouth": {
+				"type": "w",
+				"id": 2
+			},
+			"colours": "data/palettes.json creatures.species_resolved.buttonbud"
+		},
+		"pebblepaw": {
+			"body": {
+				"w_h": 1.25,
+				"squircle_n": 2.8,
+				"size_mul": 1.05,
+				"feet_nubs": 1
+			},
+			"fuzz_dp": 0.7,
+			"fringe_dp": 1.75,
+			"ear": {
+				"type": "round",
+				"id": 1,
+				"size": 0.17,
+				"spread": 0.62
+			},
+			"tail": {
+				"type": "curl",
+				"id": 2,
+				"size": 0.12
+			},
+			"antenna": {
+				"type": "none",
+				"id": 0,
+				"length": 0.0,
+				"emission": 0.0
+			},
+			"pattern": {
+				"type": "socks",
+				"id": 3,
+				"belly_size": 0.6,
+				"belly_strength": 0.55
+			},
+			"eye": {
+				"type": "round",
+				"id": 0,
+				"size": 0.2,
+				"spacing": 0.4,
+				"height_from_top": 0.58
+			},
+			"mouth": {
+				"type": "smile",
+				"id": 1
+			},
+			"colours": "data/palettes.json creatures.species_resolved.pebblepaw"
+		},
+		"honeyhum": {
+			"body": {
+				"w_h": 1.05,
+				"squircle_n": 2.5,
+				"size_mul": 0.95,
+				"feet_nubs": 1
+			},
+			"fuzz_dp": 1.1,
+			"fringe_dp": 2.75,
+			"ear": {
+				"type": "none",
+				"id": 0,
+				"size": 0.0,
+				"spread": 0.0
+			},
+			"tail": {
+				"type": "puff",
+				"id": 1,
+				"size": 0.15
+			},
+			"antenna": {
+				"type": "double_bobble",
+				"id": 2,
+				"length": 0.3,
+				"emission": 0.0
+			},
+			"pattern": {
+				"type": "back_stripes",
+				"id": 4,
+				"belly_size": 0.6,
+				"belly_strength": 0.55
+			},
+			"eye": {
+				"type": "round",
+				"id": 0,
+				"size": 0.2,
+				"spacing": 0.4,
+				"height_from_top": 0.58
+			},
+			"mouth": {
+				"type": "smile",
+				"id": 1
+			},
+			"colours": "data/palettes.json creatures.species_resolved.honeyhum"
+		},
+		"fernwhisk": {
+			"body": {
+				"w_h": 0.85,
+				"squircle_n": 2.2,
+				"size_mul": 1.0,
+				"feet_nubs": 0
+			},
+			"fuzz_dp": 1.2,
+			"fringe_dp": 3.0,
+			"ear": {
+				"type": "pointed_soft",
+				"id": 3,
+				"size": 0.26,
+				"spread": 0.55
+			},
+			"tail": {
+				"type": "brush",
+				"id": 3,
+				"size": 0.42
+			},
+			"antenna": {
+				"type": "fern_curl",
+				"id": 3,
+				"length": 0.18,
+				"emission": 0.0
+			},
+			"pattern": {
+				"type": "cap",
+				"id": 5,
+				"belly_size": 0.6,
+				"belly_strength": 0.55
+			},
+			"eye": {
+				"type": "round",
+				"id": 0,
+				"size": 0.2,
+				"spacing": 0.4,
+				"height_from_top": 0.58
+			},
+			"mouth": {
+				"type": "none",
+				"id": 0
+			},
+			"colours": "data/palettes.json creatures.species_resolved.fernwhisk"
+		},
+		"dandelfluff": {
+			"body": {
+				"w_h": 1.0,
+				"squircle_n": 2.3,
+				"size_mul": 0.9,
+				"feet_nubs": 0
+			},
+			"fuzz_dp": 1.2,
+			"fringe_dp": 3.0,
+			"ear": {
+				"type": "none",
+				"id": 0,
+				"size": 0.0,
+				"spread": 0.0
+			},
+			"tail": {
+				"type": "puff",
+				"id": 1,
+				"size": 0.15
+			},
+			"antenna": {
+				"type": "dandelion_puff",
+				"id": 4,
+				"length": 0.28,
+				"emission": 0.0
+			},
+			"pattern": {
+				"type": "none",
+				"id": 0,
+				"belly_size": 0.6,
+				"belly_strength": 0.55
+			},
+			"eye": {
+				"type": "round",
+				"id": 0,
+				"size": 0.2,
+				"spacing": 0.4,
+				"height_from_top": 0.58
+			},
+			"mouth": {
+				"type": "w",
+				"id": 2
+			},
+			"colours": "data/palettes.json creatures.species_resolved.dandelfluff"
+		},
+		"bellkin": {
+			"body": {
+				"w_h": 1.0,
+				"squircle_n": 2.4,
+				"size_mul": 0.95,
+				"feet_nubs": 0
+			},
+			"fuzz_dp": 0.9,
+			"fringe_dp": 2.25,
+			"ear": {
+				"type": "bell",
+				"id": 4,
+				"size": 0.11,
+				"spread": 0.95
+			},
+			"tail": {
+				"type": "none",
+				"id": 0,
+				"size": 0.0
+			},
+			"antenna": {
+				"type": "none",
+				"id": 0,
+				"length": 0.0,
+				"emission": 0.0
+			},
+			"pattern": {
+				"type": "belly",
+				"id": 1,
+				"belly_size": 1.0,
+				"belly_strength": 0.85
+			},
+			"eye": {
+				"type": "round",
+				"id": 0,
+				"size": 0.2,
+				"spacing": 0.4,
+				"height_from_top": 0.58
+			},
+			"mouth": {
+				"type": "smile",
+				"id": 1
+			},
+			"colours": "data/palettes.json creatures.species_resolved.bellkin"
+		},
+		"primpip": {
+			"body": {
+				"w_h": 1.1,
+				"squircle_n": 2.5,
+				"size_mul": 0.9,
+				"feet_nubs": 1
+			},
+			"fuzz_dp": 0.9,
+			"fringe_dp": 2.25,
+			"ear": {
+				"type": "leaf",
+				"id": 5,
+				"size": 0.34,
+				"spread": 0.7
+			},
+			"tail": {
+				"type": "leaf",
+				"id": 4,
+				"size": 0.32
+			},
+			"antenna": {
+				"type": "none",
+				"id": 0,
+				"length": 0.0,
+				"emission": 0.0
+			},
+			"pattern": {
+				"type": "cheeks",
+				"id": 8,
+				"belly_size": 0.6,
+				"belly_strength": 0.55
+			},
+			"eye": {
+				"type": "round",
+				"id": 0,
+				"size": 0.2,
+				"spacing": 0.4,
+				"height_from_top": 0.58
+			},
+			"mouth": {
+				"type": "w",
+				"id": 2
+			},
+			"colours": "data/palettes.json creatures.species_resolved.primpip"
+		},
+		"capling": {
+			"body": {
+				"w_h": 1.1,
+				"squircle_n": 2.6,
+				"size_mul": 0.85,
+				"feet_nubs": 1
+			},
+			"fuzz_dp": 0.8,
+			"fringe_dp": 2.0,
+			"ear": {
+				"type": "none",
+				"id": 0,
+				"size": 0.0,
+				"spread": 0.0
+			},
+			"tail": {
+				"type": "sprout",
+				"id": 5,
+				"size": 0.12
+			},
+			"antenna": {
+				"type": "none",
+				"id": 0,
+				"length": 0.0,
+				"emission": 0.0
+			},
+			"pattern": {
+				"type": "cap_spots",
+				"id": 6,
+				"belly_size": 0.6,
+				"belly_strength": 0.55
+			},
+			"eye": {
+				"type": "round",
+				"id": 0,
+				"size": 0.2,
+				"spacing": 0.4,
+				"height_from_top": 0.58
+			},
+			"mouth": {
+				"type": "smile",
+				"id": 1
+			},
+			"colours": "data/palettes.json creatures.species_resolved.capling"
+		},
+		"puddlewump": {
+			"body": {
+				"w_h": 1.3,
+				"squircle_n": 3.0,
+				"size_mul": 1.05,
+				"feet_nubs": 1
+			},
+			"fuzz_dp": 0.6,
+			"fringe_dp": 1.5,
+			"ear": {
+				"type": "nub",
+				"id": 6,
+				"size": 0.07,
+				"spread": 0.45
+			},
+			"tail": {
+				"type": "none",
+				"id": 0,
+				"size": 0.0
+			},
+			"antenna": {
+				"type": "none",
+				"id": 0,
+				"length": 0.0,
+				"emission": 0.0
+			},
+			"pattern": {
+				"type": "spots",
+				"id": 7,
+				"belly_size": 0.6,
+				"belly_strength": 0.55
+			},
+			"eye": {
+				"type": "round",
+				"id": 0,
+				"size": 0.2,
+				"spacing": 0.4,
+				"height_from_top": 0.58
+			},
+			"mouth": {
+				"type": "w",
+				"id": 2
+			},
+			"colours": "data/palettes.json creatures.species_resolved.puddlewump"
+		},
+		"glowmote": {
+			"body": {
+				"w_h": 0.95,
+				"squircle_n": 2.2,
+				"size_mul": 0.85,
+				"feet_nubs": 0
+			},
+			"fuzz_dp": 1.0,
+			"fringe_dp": 2.5,
+			"ear": {
+				"type": "pointed_soft",
+				"id": 3,
+				"size": 0.26,
+				"spread": 0.55
+			},
+			"tail": {
+				"type": "curl",
+				"id": 2,
+				"size": 0.12
+			},
+			"antenna": {
+				"type": "glow_bobble",
+				"id": 5,
+				"length": 0.34,
+				"emission": 1.0
+			},
+			"pattern": {
+				"type": "none",
+				"id": 0,
+				"belly_size": 0.6,
+				"belly_strength": 0.55
+			},
+			"eye": {
+				"type": "round",
+				"id": 0,
+				"size": 0.2,
+				"spacing": 0.4,
+				"height_from_top": 0.58
+			},
+			"mouth": {
+				"type": "none",
+				"id": 0
+			},
+			"colours": "data/palettes.json creatures.species_resolved.glowmote"
+		},
+		"moonpuff": {
+			"body": {
+				"w_h": 1.2,
+				"squircle_n": 2.7,
+				"size_mul": 1.15,
+				"feet_nubs": 1
+			},
+			"fuzz_dp": 1.2,
+			"fringe_dp": 3.0,
+			"ear": {
+				"type": "tuft",
+				"id": 2,
+				"size": 0.22,
+				"spread": 0.3
+			},
+			"tail": {
+				"type": "puff",
+				"id": 1,
+				"size": 0.15
+			},
+			"antenna": {
+				"type": "none",
+				"id": 0,
+				"length": 0.0,
+				"emission": 0.0
+			},
+			"pattern": {
+				"type": "cap",
+				"id": 5,
+				"belly_size": 0.6,
+				"belly_strength": 0.55
+			},
+			"eye": {
+				"type": "sleepy",
+				"id": 1,
+				"size": 0.2,
+				"spacing": 0.4,
+				"height_from_top": 0.58
+			},
+			"mouth": {
+				"type": "none",
+				"id": 0
+			},
+			"colours": "data/palettes.json creatures.species_resolved.moonpuff"
+		}
+	}
+}

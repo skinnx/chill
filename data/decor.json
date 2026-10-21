@@ -1,0 +1,90 @@
+{
+	"schema": 1,
+	"doc": "Decor sets. Each copy adds one piece at the next position of its anchor in data/spots.json (decor_anchors). cost(n) = floor(cost_base * cost_growth^n + 0.5). Attraction effects live in data/species.json (requires / likes_items). See docs/GDD.md section 4.3.",
+	"decor": [
+		{
+			"id": "leaf_pinwheel",
+			"name_key": "DECOR_LEAF_PINWHEEL_NAME",
+			"desc_key": "DECOR_LEAF_PINWHEEL_DESC",
+			"garden_order": 9,
+			"anchor": "leaf_pinwheel",
+			"cost_base": 70,
+			"cost_growth": 1.12,
+			"max_copies": 10,
+			"snug": 2,
+			"fx": ["spin_with_wind"],
+			"tap_fx": "spin_burst",
+			"seasons": ["spring", "summer", "autumn", "winter"]
+		},
+		{
+			"id": "pebble_cairn",
+			"name_key": "DECOR_PEBBLE_CAIRN_NAME",
+			"desc_key": "DECOR_PEBBLE_CAIRN_DESC",
+			"garden_order": 10,
+			"anchor": "pebble_cairn",
+			"cost_base": 75,
+			"cost_growth": 1.12,
+			"max_copies": 10,
+			"snug": 2,
+			"fx": ["stack_grows"],
+			"tap_fx": "",
+			"seasons": ["spring", "summer", "autumn", "winter"]
+		},
+		{
+			"id": "toadstool_seat",
+			"name_key": "DECOR_TOADSTOOL_SEAT_NAME",
+			"desc_key": "DECOR_TOADSTOOL_SEAT_DESC",
+			"garden_order": 11,
+			"anchor": "toadstool_seat",
+			"cost_base": 85,
+			"cost_growth": 1.12,
+			"max_copies": 10,
+			"snug": 3,
+			"fx": ["ring_forms", "rain_shelter"],
+			"tap_fx": "",
+			"seasons": ["spring", "summer", "autumn", "winter"]
+		},
+		{
+			"id": "stream_stones",
+			"name_key": "DECOR_STREAM_STONES_NAME",
+			"desc_key": "DECOR_STREAM_STONES_DESC",
+			"garden_order": 12,
+			"anchor": "stream_stones",
+			"cost_base": 95,
+			"cost_growth": 1.12,
+			"max_copies": 10,
+			"snug": 3,
+			"fx": ["water_riffle"],
+			"tap_fx": "",
+			"seasons": ["spring", "summer", "autumn", "winter"]
+		},
+		{
+			"id": "firefly_lantern",
+			"name_key": "DECOR_FIREFLY_LANTERN_NAME",
+			"desc_key": "DECOR_FIREFLY_LANTERN_DESC",
+			"garden_order": 13,
+			"anchor": "firefly_lantern",
+			"cost_base": 150,
+			"cost_growth": 1.12,
+			"max_copies": 10,
+			"snug": 4,
+			"fx": ["glow_golden_dusk_night", "fireflies_gather"],
+			"tap_fx": "lantern_brighten",
+			"seasons": ["spring", "summer", "autumn", "winter"]
+		},
+		{
+			"id": "wind_chime",
+			"name_key": "DECOR_WIND_CHIME_NAME",
+			"desc_key": "DECOR_WIND_CHIME_DESC",
+			"garden_order": 14,
+			"anchor": "wind_chime",
+			"cost_base": 190,
+			"cost_growth": 1.12,
+			"max_copies": 10,
+			"snug": 4,
+			"fx": ["adds_chime_note", "rings_with_wind"],
+			"tap_fx": "ring_chime",
+			"seasons": ["spring", "summer", "autumn", "winter"]
+		}
+	]
+}

@@ -1,0 +1,7 @@
+# Python tools used by CI (tools/ci/run_ci.sh); pinned for reproducible gates.
+# Audio-pipeline-only packages (scipy, pyloudnorm) live in tools/audio/requirements.txt.
+gdtoolkit==4.5.0
+numpy==2.5.3
+pillow==12.3.0
+fonttools==4.60.1
+brotli==1.2.0

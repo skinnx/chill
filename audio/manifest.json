@@ -1,0 +1,4852 @@
+{
+	"schema": 1,
+	"generator": "tools/audio/synth.py",
+	"doc": "Audio contract for the AudioDirector autoload. See docs/AUDIO_BIBLE.md. Generated: do not edit; change tools/audio/*.py and re-run.",
+	"sample_rate": 44100,
+	"seed": 20261020,
+	"loudness": {
+		"mix_lufs_i": -18.0,
+		"tolerance_lu": 1.0,
+		"ci_fail_lu": 2.0,
+		"true_peak_dbtp": -1.0,
+		"short_term_max": -14.0,
+		"long_file_lufs_i": -18.0,
+		"sfx_peak_dbfs": -6.0,
+		"metering": "BS.1770-4, mono measured dual-mono"
+	},
+	"tempo": {
+		"bpm": 70,
+		"bar_beats": 4,
+		"pad_bars": 8,
+		"samples_per_beat": 37800,
+		"pad_samples": 1209600,
+		"pad_seconds": 27.428571
+	},
+	"harmony": {
+		"key": "F Lydian",
+		"scale_pcs": [
+			5,
+			7,
+			9,
+			11,
+			0,
+			2,
+			4
+		],
+		"universal_pcs": [
+			2,
+			7,
+			9
+		],
+		"chords": [
+			{
+				"name": "Fmaj9",
+				"clip": "Fmaj9",
+				"pcs": [
+					5,
+					7,
+					9,
+					0,
+					2
+				],
+				"root_pc": 5,
+				"fifth_pc": 0,
+				"voicing_day": [
+					53,
+					60,
+					64,
+					67,
+					69
+				],
+				"voicing_night": [
+					53,
+					60,
+					64,
+					67
+				],
+				"pad_clips": {
+					"day": "pad_day_fmaj9",
+					"night": "pad_night_fmaj9"
+				}
+			},
+			{
+				"name": "G/F",
+				"clip": "GoverF",
+				"pcs": [
+					7,
+					9,
+					11,
+					2,
+					4
+				],
+				"root_pc": 7,
+				"fifth_pc": 2,
+				"voicing_day": [
+					53,
+					59,
+					62,
+					67,
+					69
+				],
+				"voicing_night": [
+					53,
+					62,
+					67,
+					71
+				],
+				"pad_clips": {
+					"day": "pad_day_goverf",
+					"night": "pad_night_goverf"
+				}
+			},
+			{
+				"name": "Dm9",
+				"clip": "Dm9",
+				"pcs": [
+					2,
+					5,
+					7,
+					9,
+					0
+				],
+				"root_pc": 2,
+				"fifth_pc": 9,
+				"voicing_day": [
+					50,
+					65,
+					69,
+					72,
+					76
+				],
+				"voicing_night": [
+					50,
+					57,
+					65,
+					72
+				],
+				"pad_clips": {
+					"day": "pad_day_dm9",
+					"night": "pad_night_dm9"
+				}
+			},
+			{
+				"name": "Am7",
+				"clip": "Am7",
+				"pcs": [
+					9,
+					0,
+					2,
+					4,
+					7
+				],
+				"root_pc": 9,
+				"fifth_pc": 4,
+				"voicing_day": [
+					57,
+					64,
+					67,
+					72,
+					74
+				],
+				"voicing_night": [
+					57,
+					64,
+					67,
+					72
+				],
+				"pad_clips": {
+					"day": "pad_day_am7",
+					"night": "pad_night_am7"
+				}
+			},
+			{
+				"name": "Cmaj7",
+				"clip": "Cmaj7",
+				"pcs": [
+					0,
+					2,
+					4,
+					7,
+					9
+				],
+				"root_pc": 0,
+				"fifth_pc": 7,
+				"voicing_day": [
+					55,
+					60,
+					64,
+					67,
+					71
+				],
+				"voicing_night": [
+					55,
+					60,
+					64,
+					71
+				],
+				"pad_clips": {
+					"day": "pad_day_cmaj7",
+					"night": "pad_night_cmaj7"
+				}
+			}
+		],
+		"shell_notes": [
+			65,
+			67,
+			69,
+			72,
+			74,
+			77,
+			79,
+			81,
+			84,
+			86
+		],
+		"pad_clip_order": [
+			"pad_day_fmaj9",
+			"pad_day_goverf",
+			"pad_day_dm9",
+			"pad_day_am7",
+			"pad_day_cmaj7",
+			"pad_night_fmaj9",
+			"pad_night_goverf",
+			"pad_night_dm9",
+			"pad_night_am7",
+			"pad_night_cmaj7"
+		]
+	},
+	"buses": [
+		{
+			"name": "Master",
+			"volume_db": 0.0,
+			"send": "",
+			"effects": [
+				{
+					"class": "AudioEffectStereoEnhance",
+					"enabled": false,
+					"props": {
+						"pan_pullout": 0.0
+					},
+					"role": "mono_toggle"
+				},
+				{
+					"class": "AudioEffectHardLimiter",
+					"enabled": true,
+					"props": {
+						"ceiling_db": -1.5
+					},
+					"role": "safety_limiter"
+				}
+			]
+		},
+		{
+			"name": "Music",
+			"volume_db": -3.0,
+			"send": "Master",
+			"effects": [
+				{
+					"class": "AudioEffectLowPassFilter",
+					"enabled": true,
+					"props": {
+						"cutoff_hz": 20000.0,
+						"resonance": 0.5
+					},
+					"role": "tone_duck"
+				}
+			]
+		},
+		{
+			"name": "Ambience",
+			"volume_db": -6.0,
+			"send": "Master",
+			"effects": []
+		},
+		{
+			"name": "SFX",
+			"volume_db": 0.0,
+			"send": "Master",
+			"effects": [
+				{
+					"class": "AudioEffectReverb",
+					"enabled": true,
+					"role": "room",
+					"props": {
+						"room_size": 0.5,
+						"damping": 0.25,
+						"spread": 0.8,
+						"hipass": 0.15,
+						"predelay_msec": 20.0,
+						"predelay_feedback": 0.0,
+						"dry": 1.0,
+						"wet": 0.15
+					}
+				}
+			]
+		},
+		{
+			"name": "UI",
+			"volume_db": -3.0,
+			"send": "Master",
+			"effects": []
+		}
+	],
+	"phases": {
+		"dawn": {
+			"audio_profile": "dawn",
+			"start_s": 18000
+		},
+		"day": {
+			"audio_profile": "day",
+			"start_s": 28800
+		},
+		"golden": {
+			"audio_profile": "day",
+			"start_s": 59400
+		},
+		"dusk": {
+			"audio_profile": "dusk",
+			"start_s": 66600
+		},
+		"night": {
+			"audio_profile": "night",
+			"start_s": 73800
+		}
+	},
+	"music_flow": {
+		"chord_hold_bars": [
+			6,
+			10
+		],
+		"crossfade_beats": 6.0,
+		"min_onset_gap_s": 4.0,
+		"motif_ioi_s": [
+			0.4286,
+			0.6429,
+			0.8571
+		],
+		"motif_ioi_weights": [
+			0.4,
+			0.4,
+			0.2
+		],
+		"motif_steps": [
+			1,
+			1,
+			2,
+			-1,
+			-2
+		],
+		"onset_jitter_s": 0.02,
+		"velocity_db": [
+			-3.0,
+			0.0
+		],
+		"base_spread": 3,
+		"rest_every_s": [
+			240.0,
+			420.0
+		],
+		"rest_len_s": [
+			45.0,
+			90.0
+		],
+		"rest_fade_s": 8.0,
+		"fatigue_after_s": 2700.0,
+		"fatigue_rest_s": 600.0,
+		"boot_bed_fade_in_s": 4.0,
+		"boot_pad_delay_s": 6.0,
+		"boot_pad_fade_in_s": 6.0,
+		"profile_crossfade_s": 90.0,
+		"weather_crossfade_s": 30.0,
+		"swell_db": 2.0,
+		"swell_up_s": 2.0,
+		"swell_down_s": 4.0,
+		"voice_hush_s": 4.0
+	},
+	"voices": {
+		"ep": {
+			"bank": "ep",
+			"period_s": 23.5,
+			"notes": 2
+		},
+		"mar": {
+			"bank": "mar",
+			"period_s": 25.875,
+			"notes": 1
+		},
+		"chime": {
+			"bank": "chime",
+			"period_s": 29.9375,
+			"notes": 3
+		}
+	},
+	"profiles": {
+		"dawn": {
+			"beds": {
+				"amb_breeze": -1.0,
+				"amb_stream": 0.0,
+				"amb_rain": null,
+				"amb_crickets": null
+			},
+			"birds": {
+				"interval_s": [
+					6.0,
+					15.0
+				],
+				"volume_db": -1.0
+			},
+			"pad_set": "day",
+			"pad_db": 1.5,
+			"voices": {
+				"chime": {
+					"base": 79,
+					"db": 1.5
+				},
+				"ep": {
+					"base": 72,
+					"db": 3.0
+				}
+			},
+			"density": 0.5,
+			"music_lpf_hz": 20000.0
+		},
+		"day": {
+			"beds": {
+				"amb_breeze": -1.0,
+				"amb_stream": 1.0,
+				"amb_rain": null,
+				"amb_crickets": null
+			},
+			"birds": {
+				"interval_s": [
+					15.0,
+					40.0
+				],
+				"volume_db": -1.0
+			},
+			"pad_set": "day",
+			"pad_db": 1.0,
+			"voices": {
+				"mar": {
+					"base": 65,
+					"db": 2.5
+				},
+				"ep": {
+					"base": 72,
+					"db": 3.0
+				}
+			},
+			"density": 0.55,
+			"music_lpf_hz": 20000.0
+		},
+		"dusk": {
+			"beds": {
+				"amb_breeze": 0.0,
+				"amb_stream": -0.5,
+				"amb_rain": null,
+				"amb_crickets": null
+			},
+			"birds": {
+				"interval_s": [
+					25.0,
+					60.0
+				],
+				"volume_db": -2.0
+			},
+			"pad_set": "day",
+			"pad_db": 1.5,
+			"voices": {
+				"ep": {
+					"base": 72,
+					"db": 3.0
+				}
+			},
+			"density": 0.4,
+			"music_lpf_hz": 12000.0
+		},
+		"night": {
+			"beds": {
+				"amb_breeze": -3.0,
+				"amb_stream": -0.5,
+				"amb_rain": null,
+				"amb_crickets": -15.0
+			},
+			"birds": null,
+			"pad_set": "night",
+			"pad_db": 1.5,
+			"voices": {
+				"ep": {
+					"base": 60,
+					"db": 2.0
+				}
+			},
+			"density": 0.25,
+			"music_lpf_hz": 3500.0
+		}
+	},
+	"weather": {
+		"clear": {
+			"bed_add_db": {},
+			"replace": {},
+			"density_add": 0.0,
+			"music_lpf_add_hz": 0.0,
+			"music_add_db": 0.0,
+			"birds_rate_mult": 1.0,
+			"birds_add_db": 0.0,
+			"crickets": true,
+			"chime_gust_s": [
+				30.0,
+				60.0
+			]
+		},
+		"breeze": {
+			"bed_add_db": {
+				"amb_breeze": 4.0,
+				"amb_stream": -1.5
+			},
+			"replace": {},
+			"density_add": 0.0,
+			"music_lpf_add_hz": 0.0,
+			"music_add_db": 0.0,
+			"birds_rate_mult": 0.8,
+			"birds_add_db": 0.0,
+			"crickets": true,
+			"chime_gust_s": [
+				8.0,
+				20.0
+			]
+		},
+		"rain": {
+			"bed_add_db": {
+				"amb_breeze": -4.0
+			},
+			"replace": {
+				"amb_stream": "amb_rain"
+			},
+			"density_add": -0.1,
+			"music_lpf_add_hz": -2000.0,
+			"music_add_db": 1.0,
+			"birds_rate_mult": 0.3,
+			"birds_add_db": -1.5,
+			"crickets": false,
+			"chime_gust_s": [
+				30.0,
+				60.0
+			]
+		}
+	},
+	"music_lpf_min_hz": 1200.0,
+	"critters": {
+		"coo_interval_s": [
+			40.0,
+			90.0
+		],
+		"coo_db": -6.0,
+		"snore_interval_s": [
+			60.0,
+			120.0
+		],
+		"snore_db": -3.0
+	},
+	"duck": {
+		"sheet_open_lpf_hz": 1200.0,
+		"focus_out_lpf_hz": 1200.0,
+		"lpf_tween_s": 0.4,
+		"web_sheet_duck_db": -6.0,
+		"web_night_music_db": -3.0
+	},
+	"settings": {
+		"volume_default": 80,
+		"volume_step": 10,
+		"volume_curve": "offset_db = 30 * log10(slider / 80); slider 0 -> bus muted",
+		"music_modes": [
+			"on",
+			"ambience",
+			"off"
+		],
+		"mode_fade_s": 3.0
+	},
+	"haptics": {
+		"modes": [
+			"off",
+			"subtle",
+			"full"
+		],
+		"default": "subtle",
+		"min_gap_ms": 60,
+		"subtle_amplitude_mult": 0.7,
+		"kinds": {
+			"TICK": {
+				"android": [
+					"CLOCK_TICK"
+				],
+				"android_gap_ms": 0,
+				"ios": [
+					[
+						12,
+						0.3
+					]
+				]
+			},
+			"DOUBLE": {
+				"android": [
+					"CLOCK_TICK",
+					"CLOCK_TICK"
+				],
+				"android_gap_ms": 70,
+				"ios": [
+					[
+						12,
+						0.42
+					],
+					[
+						12,
+						0.294
+					]
+				]
+			},
+			"MEDIUM": {
+				"android": [
+					"CONFIRM"
+				],
+				"android_fallback_below_api30": "CLOCK_TICK",
+				"ios": [
+					[
+						24,
+						0.6
+					]
+				]
+			}
+		},
+		"web": "none"
+	},
+	"banks": {
+		"bird": {
+			"bus": "Ambience",
+			"kind": "bird",
+			"variants": {
+				"1": "res://audio/ambience/birds/amb_bird_01_warbler.wav",
+				"2": "res://audio/ambience/birds/amb_bird_02_warbler.wav",
+				"3": "res://audio/ambience/birds/amb_bird_03_feebee.wav",
+				"4": "res://audio/ambience/birds/amb_bird_04_feebee.wav",
+				"5": "res://audio/ambience/birds/amb_bird_05_trill.wav",
+				"6": "res://audio/ambience/birds/amb_bird_06_trill.wav",
+				"7": "res://audio/ambience/birds/amb_bird_07_robin.wav",
+				"8": "res://audio/ambience/birds/amb_bird_08_robin.wav"
+			}
+		},
+		"ep": {
+			"bus": "Music",
+			"kind": "note",
+			"notes": {
+				"53": "res://audio/music/notes/ep_053.wav",
+				"55": "res://audio/music/notes/ep_055.wav",
+				"57": "res://audio/music/notes/ep_057.wav",
+				"59": "res://audio/music/notes/ep_059.wav",
+				"60": "res://audio/music/notes/ep_060.wav",
+				"62": "res://audio/music/notes/ep_062.wav",
+				"64": "res://audio/music/notes/ep_064.wav",
+				"65": "res://audio/music/notes/ep_065.wav",
+				"67": "res://audio/music/notes/ep_067.wav",
+				"69": "res://audio/music/notes/ep_069.wav",
+				"71": "res://audio/music/notes/ep_071.wav",
+				"72": "res://audio/music/notes/ep_072.wav",
+				"74": "res://audio/music/notes/ep_074.wav",
+				"76": "res://audio/music/notes/ep_076.wav",
+				"77": "res://audio/music/notes/ep_077.wav",
+				"79": "res://audio/music/notes/ep_079.wav",
+				"81": "res://audio/music/notes/ep_081.wav",
+				"83": "res://audio/music/notes/ep_083.wav"
+			},
+			"range": [
+				53,
+				83
+			]
+		},
+		"mar": {
+			"bus": "Music",
+			"kind": "note",
+			"notes": {
+				"53": "res://audio/music/notes/mar_053.wav",
+				"55": "res://audio/music/notes/mar_055.wav",
+				"57": "res://audio/music/notes/mar_057.wav",
+				"59": "res://audio/music/notes/mar_059.wav",
+				"60": "res://audio/music/notes/mar_060.wav",
+				"62": "res://audio/music/notes/mar_062.wav",
+				"64": "res://audio/music/notes/mar_064.wav",
+				"65": "res://audio/music/notes/mar_065.wav",
+				"67": "res://audio/music/notes/mar_067.wav",
+				"69": "res://audio/music/notes/mar_069.wav",
+				"71": "res://audio/music/notes/mar_071.wav",
+				"72": "res://audio/music/notes/mar_072.wav",
+				"74": "res://audio/music/notes/mar_074.wav",
+				"76": "res://audio/music/notes/mar_076.wav"
+			},
+			"range": [
+				53,
+				76
+			]
+		},
+		"chime": {
+			"bus": "Music",
+			"kind": "note",
+			"notes": {
+				"72": "res://audio/music/notes/chime_072.wav",
+				"74": "res://audio/music/notes/chime_074.wav",
+				"76": "res://audio/music/notes/chime_076.wav",
+				"77": "res://audio/music/notes/chime_077.wav",
+				"79": "res://audio/music/notes/chime_079.wav",
+				"81": "res://audio/music/notes/chime_081.wav",
+				"83": "res://audio/music/notes/chime_083.wav",
+				"84": "res://audio/music/notes/chime_084.wav",
+				"86": "res://audio/music/notes/chime_086.wav",
+				"88": "res://audio/music/notes/chime_088.wav",
+				"89": "res://audio/music/notes/chime_089.wav",
+				"91": "res://audio/music/notes/chime_091.wav",
+				"93": "res://audio/music/notes/chime_093.wav",
+				"95": "res://audio/music/notes/chime_095.wav"
+			},
+			"range": [
+				72,
+				95
+			]
+		},
+		"shell": {
+			"bus": "SFX",
+			"kind": "note",
+			"notes": {
+				"65": "res://audio/music/notes/shell_065.wav",
+				"67": "res://audio/music/notes/shell_067.wav",
+				"69": "res://audio/music/notes/shell_069.wav",
+				"72": "res://audio/music/notes/shell_072.wav",
+				"74": "res://audio/music/notes/shell_074.wav",
+				"77": "res://audio/music/notes/shell_077.wav",
+				"79": "res://audio/music/notes/shell_079.wav",
+				"81": "res://audio/music/notes/shell_081.wav",
+				"84": "res://audio/music/notes/shell_084.wav",
+				"86": "res://audio/music/notes/shell_086.wav"
+			},
+			"range": [
+				65,
+				86
+			]
+		},
+		"plip": {
+			"bus": "UI",
+			"kind": "sfx",
+			"notes": {
+				"71": "res://audio/sfx/s01_plip_071.wav",
+				"72": "res://audio/sfx/s01_plip_072.wav",
+				"74": "res://audio/sfx/s01_plip_074.wav",
+				"76": "res://audio/sfx/s01_plip_076.wav",
+				"77": "res://audio/sfx/s01_plip_077.wav",
+				"79": "res://audio/sfx/s01_plip_079.wav",
+				"81": "res://audio/sfx/s01_plip_081.wav",
+				"83": "res://audio/sfx/s01_plip_083.wav",
+				"84": "res://audio/sfx/s01_plip_084.wav"
+			},
+			"web_notes": {
+				"71": "res://audio/sfx_web/s01_plip_071.ogg",
+				"72": "res://audio/sfx_web/s01_plip_072.ogg",
+				"74": "res://audio/sfx_web/s01_plip_074.ogg",
+				"76": "res://audio/sfx_web/s01_plip_076.ogg",
+				"77": "res://audio/sfx_web/s01_plip_077.ogg",
+				"79": "res://audio/sfx_web/s01_plip_079.ogg",
+				"81": "res://audio/sfx_web/s01_plip_081.ogg",
+				"83": "res://audio/sfx_web/s01_plip_083.ogg",
+				"84": "res://audio/sfx_web/s01_plip_084.ogg"
+			},
+			"range": [
+				71,
+				84
+			]
+		},
+		"dew": {
+			"bus": "SFX",
+			"kind": "sfx",
+			"notes": {
+				"71": "res://audio/sfx/s02_dew_071.wav",
+				"72": "res://audio/sfx/s02_dew_072.wav",
+				"74": "res://audio/sfx/s02_dew_074.wav",
+				"76": "res://audio/sfx/s02_dew_076.wav",
+				"77": "res://audio/sfx/s02_dew_077.wav",
+				"79": "res://audio/sfx/s02_dew_079.wav",
+				"81": "res://audio/sfx/s02_dew_081.wav",
+				"83": "res://audio/sfx/s02_dew_083.wav",
+				"84": "res://audio/sfx/s02_dew_084.wav",
+				"86": "res://audio/sfx/s02_dew_086.wav",
+				"88": "res://audio/sfx/s02_dew_088.wav",
+				"89": "res://audio/sfx/s02_dew_089.wav",
+				"91": "res://audio/sfx/s02_dew_091.wav"
+			},
+			"web_notes": {
+				"71": "res://audio/sfx_web/s02_dew_071.ogg",
+				"72": "res://audio/sfx_web/s02_dew_072.ogg",
+				"74": "res://audio/sfx_web/s02_dew_074.ogg",
+				"76": "res://audio/sfx_web/s02_dew_076.ogg",
+				"77": "res://audio/sfx_web/s02_dew_077.ogg",
+				"79": "res://audio/sfx_web/s02_dew_079.ogg",
+				"81": "res://audio/sfx_web/s02_dew_081.ogg",
+				"83": "res://audio/sfx_web/s02_dew_083.ogg",
+				"84": "res://audio/sfx_web/s02_dew_084.ogg",
+				"86": "res://audio/sfx_web/s02_dew_086.ogg",
+				"88": "res://audio/sfx_web/s02_dew_088.ogg",
+				"89": "res://audio/sfx_web/s02_dew_089.ogg",
+				"91": "res://audio/sfx_web/s02_dew_091.ogg"
+			},
+			"range": [
+				71,
+				91
+			]
+		},
+		"tok": {
+			"bus": "UI",
+			"kind": "sfx",
+			"notes": {
+				"50": "res://audio/sfx/s08_tok_050.wav",
+				"52": "res://audio/sfx/s08_tok_052.wav",
+				"53": "res://audio/sfx/s08_tok_053.wav",
+				"55": "res://audio/sfx/s08_tok_055.wav",
+				"57": "res://audio/sfx/s08_tok_057.wav",
+				"59": "res://audio/sfx/s08_tok_059.wav",
+				"60": "res://audio/sfx/s08_tok_060.wav",
+				"62": "res://audio/sfx/s08_tok_062.wav",
+				"64": "res://audio/sfx/s08_tok_064.wav"
+			},
+			"range": [
+				50,
+				64
+			]
+		},
+		"coo": {
+			"bus": "SFX",
+			"kind": "sfx",
+			"notes": {
+				"62": "res://audio/sfx/s13_coo_062.wav",
+				"64": "res://audio/sfx/s13_coo_064.wav",
+				"65": "res://audio/sfx/s13_coo_065.wav",
+				"67": "res://audio/sfx/s13_coo_067.wav",
+				"69": "res://audio/sfx/s13_coo_069.wav",
+				"71": "res://audio/sfx/s13_coo_071.wav",
+				"72": "res://audio/sfx/s13_coo_072.wav",
+				"74": "res://audio/sfx/s13_coo_074.wav",
+				"76": "res://audio/sfx/s13_coo_076.wav",
+				"77": "res://audio/sfx/s13_coo_077.wav",
+				"79": "res://audio/sfx/s13_coo_079.wav",
+				"81": "res://audio/sfx/s13_coo_081.wav"
+			},
+			"web_notes": {
+				"62": "res://audio/sfx_web/s13_coo_062.ogg",
+				"64": "res://audio/sfx_web/s13_coo_064.ogg",
+				"65": "res://audio/sfx_web/s13_coo_065.ogg",
+				"67": "res://audio/sfx_web/s13_coo_067.ogg",
+				"69": "res://audio/sfx_web/s13_coo_069.ogg",
+				"71": "res://audio/sfx_web/s13_coo_071.ogg",
+				"72": "res://audio/sfx_web/s13_coo_072.ogg",
+				"74": "res://audio/sfx_web/s13_coo_074.ogg",
+				"76": "res://audio/sfx_web/s13_coo_076.ogg",
+				"77": "res://audio/sfx_web/s13_coo_077.ogg",
+				"79": "res://audio/sfx_web/s13_coo_079.ogg",
+				"81": "res://audio/sfx_web/s13_coo_081.ogg"
+			},
+			"range": [
+				62,
+				81
+			]
+		},
+		"purr": {
+			"bus": "SFX",
+			"kind": "sfx",
+			"notes": {
+				"53": "res://audio/sfx/s03_purr_053.wav",
+				"55": "res://audio/sfx/s03_purr_055.wav",
+				"57": "res://audio/sfx/s03_purr_057.wav",
+				"59": "res://audio/sfx/s03_purr_059.wav",
+				"60": "res://audio/sfx/s03_purr_060.wav",
+				"62": "res://audio/sfx/s03_purr_062.wav",
+				"64": "res://audio/sfx/s03_purr_064.wav"
+			},
+			"web_notes": {
+				"53": "res://audio/sfx_web/s03_purr_053.ogg",
+				"55": "res://audio/sfx_web/s03_purr_055.ogg",
+				"57": "res://audio/sfx_web/s03_purr_057.ogg",
+				"59": "res://audio/sfx_web/s03_purr_059.ogg",
+				"60": "res://audio/sfx_web/s03_purr_060.ogg",
+				"62": "res://audio/sfx_web/s03_purr_062.ogg",
+				"64": "res://audio/sfx_web/s03_purr_064.ogg"
+			},
+			"range": [
+				53,
+				64
+			],
+			"loop": true
+		},
+		"click": {
+			"bus": "UI",
+			"kind": "sfx",
+			"variants": {
+				"on": "res://audio/sfx/s15_click_on.wav",
+				"off": "res://audio/sfx/s15_click_off.wav"
+			}
+		},
+		"bubbles": {
+			"bus": "SFX",
+			"kind": "sfx",
+			"variants": {
+				"1": "res://audio/sfx/s06_bubbles_1.wav",
+				"2": "res://audio/sfx/s06_bubbles_2.wav",
+				"3": "res://audio/sfx/s06_bubbles_3.wav",
+				"4": "res://audio/sfx/s06_bubbles_4.wav"
+			},
+			"web_variants": {
+				"1": "res://audio/sfx_web/s06_bubbles_1.ogg",
+				"2": "res://audio/sfx_web/s06_bubbles_2.ogg",
+				"3": "res://audio/sfx_web/s06_bubbles_3.ogg",
+				"4": "res://audio/sfx_web/s06_bubbles_4.ogg"
+			}
+		},
+		"paper": {
+			"bus": "UI",
+			"kind": "sfx",
+			"variants": {
+				"1": "res://audio/sfx/s07_paper_1.wav",
+				"2": "res://audio/sfx/s07_paper_2.wav",
+				"3": "res://audio/sfx/s07_paper_3.wav"
+			}
+		},
+		"soil": {
+			"bus": "SFX",
+			"kind": "sfx",
+			"variants": {
+				"1": "res://audio/sfx/s05_soil_1.wav",
+				"2": "res://audio/sfx/s05_soil_2.wav",
+				"3": "res://audio/sfx/s05_soil_3.wav"
+			},
+			"web_variants": {
+				"1": "res://audio/sfx_web/s05_soil_1.ogg",
+				"2": "res://audio/sfx_web/s05_soil_2.ogg",
+				"3": "res://audio/sfx_web/s05_soil_3.ogg"
+			}
+		},
+		"rustle": {
+			"bus": "SFX",
+			"kind": "sfx",
+			"variants": {
+				"1": "res://audio/sfx/s18_rustle_1.wav",
+				"2": "res://audio/sfx/s18_rustle_2.wav",
+				"3": "res://audio/sfx/s18_rustle_3.wav"
+			},
+			"web_variants": {
+				"1": "res://audio/sfx_web/s18_rustle_1.ogg",
+				"2": "res://audio/sfx_web/s18_rustle_2.ogg",
+				"3": "res://audio/sfx_web/s18_rustle_3.ogg"
+			}
+		},
+		"swish": {
+			"bus": "SFX",
+			"kind": "sfx",
+			"variants": {
+				"1": "res://audio/sfx/s19_swish_1.wav",
+				"2": "res://audio/sfx/s19_swish_2.wav"
+			},
+			"web_variants": {
+				"1": "res://audio/sfx_web/s19_swish_1.ogg",
+				"2": "res://audio/sfx_web/s19_swish_2.ogg"
+			}
+		},
+		"boat": {
+			"bus": "SFX",
+			"kind": "sfx",
+			"variants": {
+				"1": "res://audio/sfx/s17_boat_1.wav",
+				"2": "res://audio/sfx/s17_boat_2.wav"
+			},
+			"web_variants": {
+				"1": "res://audio/sfx_web/s17_boat_1.ogg",
+				"2": "res://audio/sfx_web/s17_boat_2.ogg"
+			}
+		},
+		"snore": {
+			"bus": "SFX",
+			"kind": "sfx",
+			"variants": {
+				"1": "res://audio/sfx/s14_snore_1.wav",
+				"2": "res://audio/sfx/s14_snore_2.wav"
+			},
+			"web_variants": {
+				"1": "res://audio/sfx_web/s14_snore_1.ogg",
+				"2": "res://audio/sfx_web/s14_snore_2.ogg"
+			}
+		},
+		"unfurl": {
+			"bus": "SFX",
+			"kind": "sfx",
+			"clips": {
+				"Fmaj9": "res://audio/sfx/s04_unfurl_fmaj9.wav",
+				"GoverF": "res://audio/sfx/s04_unfurl_goverf.wav",
+				"Dm9": "res://audio/sfx/s04_unfurl_dm9.wav",
+				"Am7": "res://audio/sfx/s04_unfurl_am7.wav",
+				"Cmaj7": "res://audio/sfx/s04_unfurl_cmaj7.wav"
+			},
+			"web_clips": {
+				"Fmaj9": "res://audio/sfx_web/s04_unfurl_fmaj9.ogg",
+				"GoverF": "res://audio/sfx_web/s04_unfurl_goverf.ogg",
+				"Dm9": "res://audio/sfx_web/s04_unfurl_dm9.ogg",
+				"Am7": "res://audio/sfx_web/s04_unfurl_am7.ogg",
+				"Cmaj7": "res://audio/sfx_web/s04_unfurl_cmaj7.ogg"
+			}
+		},
+		"friend": {
+			"bus": "SFX",
+			"kind": "sfx",
+			"clips": {
+				"Fmaj9": "res://audio/sfx/s09_friend_fmaj9.wav",
+				"GoverF": "res://audio/sfx/s09_friend_goverf.wav",
+				"Dm9": "res://audio/sfx/s09_friend_dm9.wav",
+				"Am7": "res://audio/sfx/s09_friend_am7.wav",
+				"Cmaj7": "res://audio/sfx/s09_friend_cmaj7.wav"
+			},
+			"web_clips": {
+				"Fmaj9": "res://audio/sfx_web/s09_friend_fmaj9.ogg",
+				"GoverF": "res://audio/sfx_web/s09_friend_goverf.ogg",
+				"Dm9": "res://audio/sfx_web/s09_friend_dm9.ogg",
+				"Am7": "res://audio/sfx_web/s09_friend_am7.ogg",
+				"Cmaj7": "res://audio/sfx_web/s09_friend_cmaj7.ogg"
+			}
+		},
+		"welcome": {
+			"bus": "SFX",
+			"kind": "sfx",
+			"clips": {
+				"Fmaj9": "res://audio/sfx/s10_welcome_fmaj9.wav",
+				"GoverF": "res://audio/sfx/s10_welcome_goverf.wav",
+				"Dm9": "res://audio/sfx/s10_welcome_dm9.wav",
+				"Am7": "res://audio/sfx/s10_welcome_am7.wav",
+				"Cmaj7": "res://audio/sfx/s10_welcome_cmaj7.wav"
+			},
+			"web_clips": {
+				"Fmaj9": "res://audio/sfx_web/s10_welcome_fmaj9.ogg",
+				"GoverF": "res://audio/sfx_web/s10_welcome_goverf.ogg",
+				"Dm9": "res://audio/sfx_web/s10_welcome_dm9.ogg",
+				"Am7": "res://audio/sfx_web/s10_welcome_am7.ogg",
+				"Cmaj7": "res://audio/sfx_web/s10_welcome_cmaj7.ogg"
+			}
+		},
+		"postcard": {
+			"bus": "SFX",
+			"kind": "sfx",
+			"clips": {
+				"Fmaj9": "res://audio/sfx/s16_postcard_fmaj9.wav",
+				"GoverF": "res://audio/sfx/s16_postcard_goverf.wav",
+				"Dm9": "res://audio/sfx/s16_postcard_dm9.wav",
+				"Am7": "res://audio/sfx/s16_postcard_am7.wav",
+				"Cmaj7": "res://audio/sfx/s16_postcard_cmaj7.wav"
+			},
+			"web_clips": {
+				"Fmaj9": "res://audio/sfx_web/s16_postcard_fmaj9.ogg",
+				"GoverF": "res://audio/sfx_web/s16_postcard_goverf.ogg",
+				"Dm9": "res://audio/sfx_web/s16_postcard_dm9.ogg",
+				"Am7": "res://audio/sfx_web/s16_postcard_am7.ogg",
+				"Cmaj7": "res://audio/sfx_web/s16_postcard_cmaj7.ogg"
+			}
+		}
+	},
+	"cues": {
+		"S01": {
+			"name": "tap",
+			"event": "Any touch-down: UI control (UI bus) or world object (SFX bus)",
+			"trigger": "touch-down",
+			"bus": "UI",
+			"world_bus": "SFX",
+			"heard_lufs_m": -24.0,
+			"layers": [
+				{
+					"bank": "plip",
+					"pitch": {
+						"rule": "walk",
+						"start": 72
+					},
+					"gain_db": 0.0
+				}
+			],
+			"haptic": {
+				"subtle": null,
+				"full": "TICK"
+			},
+			"caption": null,
+			"max_voices": 2,
+			"visual_twin": "tint +6 L*, UI scale 0.96 in 80 ms / world squash 0.94"
+		},
+		"S02": {
+			"name": "collect",
+			"event": "Collect dew / a gift (each item of Collect all)",
+			"trigger": "per item as it lands on the counter",
+			"bus": "SFX",
+			"heard_lufs_m": -21.0,
+			"layers": [
+				{
+					"bank": "dew",
+					"pitch": {
+						"rule": "ladder",
+						"start": 72,
+						"cap": 7,
+						"reset_s": 1.5
+					},
+					"gain_db": 0.0
+				}
+			],
+			"haptic": {
+				"subtle": "DOUBLE",
+				"full": "DOUBLE"
+			},
+			"haptic_once_per_burst": true,
+			"caption": "CAPTION_COLLECT",
+			"max_voices": 3,
+			"visual_twin": "gifts fly to the HUD, counter rolls 600 ms"
+		},
+		"S03": {
+			"name": "pet_purr",
+			"event": "Long-press / stroke a mossling (loops while held)",
+			"trigger": "at 450 ms hold; loops; 150 ms release",
+			"bus": "SFX",
+			"heard_lufs_m": -23.0,
+			"layers": [
+				{
+					"bank": "purr",
+					"pitch": {
+						"rule": "chord_root",
+						"uses_voice_step": true
+					},
+					"gain_db": 0.0
+				}
+			],
+			"loop": true,
+			"release_s": 0.15,
+			"attack_s": 0.08,
+			"player": "dedicated",
+			"haptic": {
+				"subtle": null,
+				"full": "TICK",
+				"full_repeat_ms": 120
+			},
+			"caption": "CAPTION_PURR",
+			"max_voices": 1,
+			"visual_twin": "radial fill, squash 0.88, hearts on release"
+		},
+		"S04": {
+			"name": "bud_unfurl",
+			"event": "Tap a ready bud (600 ms unfurl)",
+			"trigger": "touch-down",
+			"bus": "SFX",
+			"heard_lufs_m": -21.0,
+			"layers": [
+				{
+					"bank": "unfurl",
+					"pitch": {
+						"rule": "chord_clip"
+					},
+					"gain_db": 0.0
+				}
+			],
+			"haptic": {
+				"subtle": null,
+				"full": "TICK",
+				"full_delay_ms": 600
+			},
+			"caption": "CAPTION_BLOOM",
+			"max_voices": 2,
+			"visual_twin": "unfurl 600 ms, 3-5 sparkles"
+		},
+		"S05": {
+			"name": "plant_place",
+			"event": "Plant a flower / place a decor piece (incl. tutorial seed)",
+			"trigger": "when the seed lands / piece settles",
+			"bus": "SFX",
+			"heard_lufs_m": -22.0,
+			"layers": [
+				{
+					"bank": "soil",
+					"pitch": {
+						"rule": "variant"
+					},
+					"heard_lufs_m": -25.5,
+					"gain_db": 0.0
+				},
+				{
+					"bank": "mar",
+					"pitch": {
+						"rule": "chord_root",
+						"range": [
+							55,
+							66
+						]
+					},
+					"heard_lufs_m": -24.5,
+					"gain_db": -3.5
+				}
+			],
+			"haptic": {
+				"subtle": null,
+				"full": "TICK"
+			},
+			"caption": "CAPTION_PLANT",
+			"max_voices": 2,
+			"visual_twin": "seed arc 320 ms, soil puff / piece settles 500 ms"
+		},
+		"S06": {
+			"name": "water",
+			"event": "Tap the stream / water ripple",
+			"trigger": "touch-down",
+			"bus": "SFX",
+			"heard_lufs_m": -24.0,
+			"layers": [
+				{
+					"bank": "bubbles",
+					"pitch": {
+						"rule": "variant"
+					},
+					"gain_db": 0.0
+				}
+			],
+			"haptic": {
+				"subtle": null,
+				"full": null
+			},
+			"caption": "CAPTION_SPLASH",
+			"max_voices": 2,
+			"visual_twin": "ripple ring to 36 dp in 380 ms"
+		},
+		"S07": {
+			"name": "sheet_open",
+			"event": "Open a sheet / panel / postcard",
+			"trigger": "as the sheet starts to rise",
+			"bus": "UI",
+			"heard_lufs_m": -28.0,
+			"layers": [
+				{
+					"bank": "paper",
+					"pitch": {
+						"rule": "variant"
+					},
+					"gain_db": 0.0
+				}
+			],
+			"haptic": {
+				"subtle": null,
+				"full": null
+			},
+			"caption": null,
+			"max_voices": 1,
+			"duck": "sheet_open",
+			"visual_twin": "sheet rises"
+		},
+		"S08": {
+			"name": "sheet_close",
+			"event": "Close / back",
+			"trigger": "touch-down on close or Back",
+			"bus": "UI",
+			"heard_lufs_m": -26.0,
+			"layers": [
+				{
+					"bank": "tok",
+					"pitch": {
+						"rule": "chord_fifth",
+						"range": [
+							55,
+							64
+						]
+					},
+					"gain_db": 0.0
+				}
+			],
+			"haptic": {
+				"subtle": null,
+				"full": null
+			},
+			"caption": null,
+			"max_voices": 1,
+			"duck": "release",
+			"visual_twin": "sheet exits"
+		},
+		"S09": {
+			"name": "new_friend",
+			"event": "New species arrives (new-friend card) / milestone",
+			"trigger": "as the card rises",
+			"bus": "SFX",
+			"heard_lufs_m": -18.0,
+			"layers": [
+				{
+					"bank": "friend",
+					"pitch": {
+						"rule": "chord_clip"
+					},
+					"gain_db": 0.0
+				}
+			],
+			"pad_swell": true,
+			"voice_hush": true,
+			"haptic": {
+				"subtle": "MEDIUM",
+				"full": "MEDIUM"
+			},
+			"caption": null,
+			"max_voices": 1,
+			"visual_twin": "new-friend card rises (emphasized 500 ms)"
+		},
+		"S10": {
+			"name": "welcome_back",
+			"event": "Welcome-back recap card",
+			"trigger": "as the recap card appears",
+			"bus": "SFX",
+			"heard_lufs_m": -19.0,
+			"layers": [
+				{
+					"bank": "welcome",
+					"pitch": {
+						"rule": "chord_clip"
+					},
+					"gain_db": 0.0
+				}
+			],
+			"pad_swell": true,
+			"voice_hush": true,
+			"haptic": {
+				"subtle": "MEDIUM",
+				"full": "MEDIUM",
+				"once": true
+			},
+			"caption": null,
+			"max_voices": 1,
+			"visual_twin": "frosted recap card"
+		},
+		"S11": {
+			"name": "not_possible",
+			"event": "Not affordable / not possible (never a buzz)",
+			"trigger": "touch-down",
+			"bus": "UI",
+			"heard_lufs_m": -28.0,
+			"layers": [
+				{
+					"bank": "tok",
+					"pitch": {
+						"rule": "below_last",
+						"of": "S08",
+						"range": [
+							50,
+							64
+						]
+					},
+					"gain_db": -2.0
+				}
+			],
+			"haptic": {
+				"subtle": null,
+				"full": null
+			},
+			"caption": null,
+			"max_voices": 1,
+			"visual_twin": "price chip pulse, +-2 dp wiggle (never red)"
+		},
+		"S12": {
+			"name": "creature_arrive_nap",
+			"event": "A mossling arrives (up a fifth) / curls up to nap (down)",
+			"trigger": "on fade-in end / on curl-up",
+			"bus": "SFX",
+			"heard_lufs_m": -25.0,
+			"nap_offset_db": -2.0,
+			"layers": [
+				{
+					"bank": "ep",
+					"heard_lufs_m": -27.5,
+					"pitch": {
+						"rule": "species",
+						"base": 67,
+						"uses_voice_step": true,
+						"second_note": {
+							"interval": 7,
+							"gap_s": 0.14
+						}
+					},
+					"gain_db": -7.5,
+					"nap_gain_db": -9.5
+				}
+			],
+			"haptic": {
+				"subtle": null,
+				"full": null
+			},
+			"caption": null,
+			"max_voices": 2,
+			"visual_twin": "fade-in 400 ms / curls up"
+		},
+		"S13": {
+			"name": "creature_chirp",
+			"event": "Tap a mossling (it turns to you and chirps)",
+			"trigger": "touch-down",
+			"bus": "SFX",
+			"heard_lufs_m": -25.0,
+			"layers": [
+				{
+					"bank": "coo",
+					"pitch": {
+						"rule": "species",
+						"base": 67,
+						"uses_voice_step": true
+					},
+					"gain_db": 0.0
+				}
+			],
+			"haptic": {
+				"subtle": null,
+				"full": "TICK"
+			},
+			"caption": "CAPTION_CHIRP",
+			"max_voices": 2,
+			"visual_twin": "look-at, chirp bubble, name tag 2 s"
+		},
+		"S14": {
+			"name": "snore",
+			"event": "Tap a napping mossling (it stays asleep) / idle snore",
+			"trigger": "touch-down",
+			"bus": "SFX",
+			"heard_lufs_m": -30.0,
+			"layers": [
+				{
+					"bank": "snore",
+					"pitch": {
+						"rule": "variant"
+					},
+					"gain_db": 0.0
+				}
+			],
+			"haptic": {
+				"subtle": null,
+				"full": null
+			},
+			"caption": "CAPTION_SNORE",
+			"max_voices": 1,
+			"visual_twin": "Zz bubble, breathing 5-6 s"
+		},
+		"S15": {
+			"name": "toggle",
+			"event": "Settings toggle / segmented choice",
+			"trigger": "touch-up (value change)",
+			"bus": "UI",
+			"heard_lufs_m": -28.0,
+			"layers": [
+				{
+					"bank": "click",
+					"pitch": {
+						"rule": "fixed",
+						"on": 81,
+						"off": 74
+					},
+					"gain_db": 0.0
+				}
+			],
+			"haptic": {
+				"subtle": null,
+				"full": "TICK"
+			},
+			"caption": null,
+			"max_voices": 1,
+			"visual_twin": "knob slides 160 ms, track tint"
+		},
+		"S16": {
+			"name": "postcard",
+			"event": "Postcard arrives (mailbox flag pops up)",
+			"trigger": "as the flag pops",
+			"bus": "SFX",
+			"heard_lufs_m": -24.0,
+			"layers": [
+				{
+					"bank": "postcard",
+					"pitch": {
+						"rule": "chord_clip"
+					},
+					"gain_db": 0.0
+				}
+			],
+			"haptic": {
+				"subtle": null,
+				"full": null
+			},
+			"caption": "CAPTION_POSTCARD",
+			"max_voices": 1,
+			"visual_twin": "mailbox flag pops up, wiggles every 8 s"
+		},
+		"S17": {
+			"name": "leaf_boat",
+			"event": "Float a leaf boat",
+			"trigger": "touch-down",
+			"bus": "SFX",
+			"heard_lufs_m": -24.0,
+			"layers": [
+				{
+					"bank": "boat",
+					"pitch": {
+						"rule": "variant"
+					},
+					"gain_db": 0.0
+				}
+			],
+			"haptic": {
+				"subtle": null,
+				"full": "TICK"
+			},
+			"caption": "CAPTION_BOAT",
+			"max_voices": 2,
+			"visual_twin": "boat launches at the spring rock"
+		},
+		"S18": {
+			"name": "bed_rustle",
+			"event": "Tap a bed with no ready buds",
+			"trigger": "touch-down",
+			"bus": "SFX",
+			"heard_lufs_m": -27.0,
+			"layers": [
+				{
+					"bank": "rustle",
+					"pitch": {
+						"rule": "variant"
+					},
+					"gain_db": 0.0
+				}
+			],
+			"haptic": {
+				"subtle": null,
+				"full": null
+			},
+			"caption": null,
+			"max_voices": 2,
+			"visual_twin": "stems sway"
+		},
+		"S19": {
+			"name": "pinwheel",
+			"event": "Tap a leaf pinwheel (spin burst)",
+			"trigger": "touch-down",
+			"bus": "SFX",
+			"heard_lufs_m": -27.0,
+			"layers": [
+				{
+					"bank": "swish",
+					"pitch": {
+						"rule": "variant"
+					},
+					"gain_db": 0.0
+				}
+			],
+			"haptic": {
+				"subtle": null,
+				"full": null
+			},
+			"caption": null,
+			"max_voices": 2,
+			"visual_twin": "pinwheel spin burst"
+		},
+		"S20": {
+			"name": "lantern",
+			"event": "Tap a firefly lantern (brighten)",
+			"trigger": "touch-down",
+			"bus": "SFX",
+			"heard_lufs_m": -26.0,
+			"layers": [
+				{
+					"bank": "chime",
+					"pitch": {
+						"rule": "fixed",
+						"midi": 81
+					},
+					"gain_db": -2.87
+				}
+			],
+			"haptic": {
+				"subtle": null,
+				"full": null
+			},
+			"caption": null,
+			"max_voices": 2,
+			"visual_twin": "lantern glow +40 % for 1.2 s, fireflies drift in"
+		},
+		"S21": {
+			"name": "wind_chime",
+			"event": "Tap the shell wind chime (falling run) / breeze gusts ring it",
+			"trigger": "touch-down / gust timer",
+			"bus": "SFX",
+			"gust_bus": "Ambience",
+			"heard_lufs_m": -23.0,
+			"gust_heard_lufs_m": -31.0,
+			"layers": [
+				{
+					"bank": "shell",
+					"heard_lufs_m": -25.5,
+					"pitch": {
+						"rule": "shell_run",
+						"tap_gap_s": 0.11,
+						"tap_gap_jitter_s": 0.015,
+						"tap_step_db": -1.5,
+						"gust_notes": [
+							1,
+							3
+						],
+						"gust_gap_s": [
+							0.18,
+							0.4
+						]
+					},
+					"gain_db": -2.06,
+					"gust_gain_db": -1.56
+				}
+			],
+			"haptic": {
+				"subtle": null,
+				"full": null
+			},
+			"caption": "CAPTION_CHIME",
+			"max_voices": 4,
+			"visual_twin": "shells swing; Bellkin sways"
+		}
+	},
+	"reward_cues": [
+		"S02",
+		"S04",
+		"S09",
+		"S10",
+		"S16"
+	],
+	"assets": [
+		{
+			"id": "pad_day_fmaj9",
+			"path": "res://audio/music/pads/pad_day_fmaj9.ogg",
+			"kind": "pad",
+			"bus": "Music",
+			"loop": true,
+			"channels": 2,
+			"base_volume_db": 0.0,
+			"length_samples": 1209600,
+			"tags": {
+				"chord": "Fmaj9",
+				"clip": "Fmaj9",
+				"pad_set": "day",
+				"time_of_day": [
+					"dawn",
+					"day",
+					"dusk"
+				],
+				"voicing": [
+					53,
+					60,
+					64,
+					67,
+					69
+				]
+			},
+			"lufs_i": -18.01,
+			"true_peak_dbtp": -7.53
+		},
+		{
+			"id": "pad_night_fmaj9",
+			"path": "res://audio/music/pads/pad_night_fmaj9.ogg",
+			"kind": "pad",
+			"bus": "Music",
+			"loop": true,
+			"channels": 2,
+			"base_volume_db": 0.0,
+			"length_samples": 1209600,
+			"tags": {
+				"chord": "Fmaj9",
+				"clip": "Fmaj9",
+				"pad_set": "night",
+				"time_of_day": [
+					"night"
+				],
+				"voicing": [
+					53,
+					60,
+					64,
+					67
+				]
+			},
+			"lufs_i": -17.99,
+			"true_peak_dbtp": -6.59
+		},
+		{
+			"id": "pad_day_goverf",
+			"path": "res://audio/music/pads/pad_day_goverf.ogg",
+			"kind": "pad",
+			"bus": "Music",
+			"loop": true,
+			"channels": 2,
+			"base_volume_db": 0.0,
+			"length_samples": 1209600,
+			"tags": {
+				"chord": "G/F",
+				"clip": "GoverF",
+				"pad_set": "day",
+				"time_of_day": [
+					"dawn",
+					"day",
+					"dusk"
+				],
+				"voicing": [
+					53,
+					59,
+					62,
+					67,
+					69
+				]
+			},
+			"lufs_i": -18.04,
+			"true_peak_dbtp": -7.45
+		},
+		{
+			"id": "pad_night_goverf",
+			"path": "res://audio/music/pads/pad_night_goverf.ogg",
+			"kind": "pad",
+			"bus": "Music",
+			"loop": true,
+			"channels": 2,
+			"base_volume_db": 0.0,
+			"length_samples": 1209600,
+			"tags": {
+				"chord": "G/F",
+				"clip": "GoverF",
+				"pad_set": "night",
+				"time_of_day": [
+					"night"
+				],
+				"voicing": [
+					53,
+					62,
+					67,
+					71
+				]
+			},
+			"lufs_i": -18.0,
+			"true_peak_dbtp": -6.22
+		},
+		{
+			"id": "pad_day_dm9",
+			"path": "res://audio/music/pads/pad_day_dm9.ogg",
+			"kind": "pad",
+			"bus": "Music",
+			"loop": true,
+			"channels": 2,
+			"base_volume_db": 0.0,
+			"length_samples": 1209600,
+			"tags": {
+				"chord": "Dm9",
+				"clip": "Dm9",
+				"pad_set": "day",
+				"time_of_day": [
+					"dawn",
+					"day",
+					"dusk"
+				],
+				"voicing": [
+					50,
+					65,
+					69,
+					72,
+					76
+				]
+			},
+			"lufs_i": -18.0,
+			"true_peak_dbtp": -6.63
+		},
+		{
+			"id": "pad_night_dm9",
+			"path": "res://audio/music/pads/pad_night_dm9.ogg",
+			"kind": "pad",
+			"bus": "Music",
+			"loop": true,
+			"channels": 2,
+			"base_volume_db": 0.0,
+			"length_samples": 1209600,
+			"tags": {
+				"chord": "Dm9",
+				"clip": "Dm9",
+				"pad_set": "night",
+				"time_of_day": [
+					"night"
+				],
+				"voicing": [
+					50,
+					57,
+					65,
+					72
+				]
+			},
+			"lufs_i": -18.01,
+			"true_peak_dbtp": -7.57
+		},
+		{
+			"id": "pad_day_am7",
+			"path": "res://audio/music/pads/pad_day_am7.ogg",
+			"kind": "pad",
+			"bus": "Music",
+			"loop": true,
+			"channels": 2,
+			"base_volume_db": 0.0,
+			"length_samples": 1209600,
+			"tags": {
+				"chord": "Am7",
+				"clip": "Am7",
+				"pad_set": "day",
+				"time_of_day": [
+					"dawn",
+					"day",
+					"dusk"
+				],
+				"voicing": [
+					57,
+					64,
+					67,
+					72,
+					74
+				]
+			},
+			"lufs_i": -18.0,
+			"true_peak_dbtp": -6.89
+		},
+		{
+			"id": "pad_night_am7",
+			"path": "res://audio/music/pads/pad_night_am7.ogg",
+			"kind": "pad",
+			"bus": "Music",
+			"loop": true,
+			"channels": 2,
+			"base_volume_db": 0.0,
+			"length_samples": 1209600,
+			"tags": {
+				"chord": "Am7",
+				"clip": "Am7",
+				"pad_set": "night",
+				"time_of_day": [
+					"night"
+				],
+				"voicing": [
+					57,
+					64,
+					67,
+					72
+				]
+			},
+			"lufs_i": -17.98,
+			"true_peak_dbtp": -6.57
+		},
+		{
+			"id": "pad_day_cmaj7",
+			"path": "res://audio/music/pads/pad_day_cmaj7.ogg",
+			"kind": "pad",
+			"bus": "Music",
+			"loop": true,
+			"channels": 2,
+			"base_volume_db": 0.0,
+			"length_samples": 1209600,
+			"tags": {
+				"chord": "Cmaj7",
+				"clip": "Cmaj7",
+				"pad_set": "day",
+				"time_of_day": [
+					"dawn",
+					"day",
+					"dusk"
+				],
+				"voicing": [
+					55,
+					60,
+					64,
+					67,
+					71
+				]
+			},
+			"lufs_i": -18.01,
+			"true_peak_dbtp": -7.66
+		},
+		{
+			"id": "pad_night_cmaj7",
+			"path": "res://audio/music/pads/pad_night_cmaj7.ogg",
+			"kind": "pad",
+			"bus": "Music",
+			"loop": true,
+			"channels": 2,
+			"base_volume_db": 0.0,
+			"length_samples": 1209600,
+			"tags": {
+				"chord": "Cmaj7",
+				"clip": "Cmaj7",
+				"pad_set": "night",
+				"time_of_day": [
+					"night"
+				],
+				"voicing": [
+					55,
+					60,
+					64,
+					71
+				]
+			},
+			"lufs_i": -17.99,
+			"true_peak_dbtp": -6.8
+		},
+		{
+			"id": "amb_breeze",
+			"path": "res://audio/ambience/amb_breeze.ogg",
+			"kind": "bed",
+			"bus": "Ambience",
+			"loop": true,
+			"channels": 2,
+			"base_volume_db": 0.0,
+			"length_samples": 2570400,
+			"tags": {
+				"layer": "wind",
+				"weather": [
+					"clear",
+					"breeze",
+					"rain"
+				],
+				"time_of_day": [
+					"dawn",
+					"day",
+					"dusk",
+					"night"
+				]
+			},
+			"lufs_i": -18.16,
+			"true_peak_dbtp": -3.96
+		},
+		{
+			"id": "amb_stream",
+			"path": "res://audio/ambience/amb_stream.ogg",
+			"kind": "bed",
+			"bus": "Ambience",
+			"loop": true,
+			"channels": 2,
+			"base_volume_db": 0.0,
+			"length_samples": 2570400,
+			"tags": {
+				"layer": "water",
+				"weather": [
+					"clear",
+					"breeze"
+				],
+				"time_of_day": [
+					"dawn",
+					"day",
+					"dusk",
+					"night"
+				]
+			},
+			"lufs_i": -18.18,
+			"true_peak_dbtp": -6.56
+		},
+		{
+			"id": "amb_rain",
+			"path": "res://audio/ambience/amb_rain.ogg",
+			"kind": "bed",
+			"bus": "Ambience",
+			"loop": true,
+			"channels": 2,
+			"base_volume_db": 0.0,
+			"length_samples": 2570400,
+			"tags": {
+				"layer": "water",
+				"weather": [
+					"rain"
+				],
+				"time_of_day": [
+					"dawn",
+					"day",
+					"dusk",
+					"night"
+				]
+			},
+			"lufs_i": -18.42,
+			"true_peak_dbtp": -1.86
+		},
+		{
+			"id": "amb_crickets",
+			"path": "res://audio/ambience/amb_crickets.ogg",
+			"kind": "bed",
+			"bus": "Ambience",
+			"loop": true,
+			"channels": 2,
+			"base_volume_db": 0.0,
+			"length_samples": 2570400,
+			"tags": {
+				"layer": "critters",
+				"weather": [
+					"clear",
+					"breeze"
+				],
+				"time_of_day": [
+					"night"
+				]
+			},
+			"lufs_i": -18.02,
+			"true_peak_dbtp": -2.92
+		},
+		{
+			"id": "amb_bird_01_warbler",
+			"path": "res://audio/ambience/birds/amb_bird_01_warbler.wav",
+			"kind": "bird",
+			"bus": "Ambience",
+			"loop": false,
+			"channels": 2,
+			"base_volume_db": 0.0,
+			"length_samples": 70483,
+			"tags": {
+				"bird": "warbler",
+				"time_of_day": [
+					"dawn",
+					"day",
+					"dusk"
+				],
+				"weather": [
+					"clear",
+					"breeze",
+					"rain"
+				]
+			},
+			"bank": "bird",
+			"variant": 1,
+			"lufs_m_max": -30.0,
+			"true_peak_dbtp": -23.31
+		},
+		{
+			"id": "amb_bird_02_warbler",
+			"path": "res://audio/ambience/birds/amb_bird_02_warbler.wav",
+			"kind": "bird",
+			"bus": "Ambience",
+			"loop": false,
+			"channels": 2,
+			"base_volume_db": 0.0,
+			"length_samples": 90774,
+			"tags": {
+				"bird": "warbler",
+				"time_of_day": [
+					"dawn",
+					"day",
+					"dusk"
+				],
+				"weather": [
+					"clear",
+					"breeze",
+					"rain"
+				]
+			},
+			"bank": "bird",
+			"variant": 2,
+			"lufs_m_max": -30.0,
+			"true_peak_dbtp": -23.91
+		},
+		{
+			"id": "amb_bird_03_feebee",
+			"path": "res://audio/ambience/birds/amb_bird_03_feebee.wav",
+			"kind": "bird",
+			"bus": "Ambience",
+			"loop": false,
+			"channels": 2,
+			"base_volume_db": 0.0,
+			"length_samples": 83163,
+			"tags": {
+				"bird": "feebee",
+				"time_of_day": [
+					"dawn",
+					"day",
+					"dusk"
+				],
+				"weather": [
+					"clear",
+					"breeze",
+					"rain"
+				]
+			},
+			"bank": "bird",
+			"variant": 3,
+			"lufs_m_max": -30.0,
+			"true_peak_dbtp": -24.88
+		},
+		{
+			"id": "amb_bird_04_feebee",
+			"path": "res://audio/ambience/birds/amb_bird_04_feebee.wav",
+			"kind": "bird",
+			"bus": "Ambience",
+			"loop": false,
+			"channels": 2,
+			"base_volume_db": 0.0,
+			"length_samples": 80850,
+			"tags": {
+				"bird": "feebee",
+				"time_of_day": [
+					"dawn",
+					"day",
+					"dusk"
+				],
+				"weather": [
+					"clear",
+					"breeze",
+					"rain"
+				]
+			},
+			"bank": "bird",
+			"variant": 4,
+			"lufs_m_max": -30.0,
+			"true_peak_dbtp": -24.05
+		},
+		{
+			"id": "amb_bird_05_trill",
+			"path": "res://audio/ambience/birds/amb_bird_05_trill.wav",
+			"kind": "bird",
+			"bus": "Ambience",
+			"loop": false,
+			"channels": 2,
+			"base_volume_db": 0.0,
+			"length_samples": 81878,
+			"tags": {
+				"bird": "trill",
+				"time_of_day": [
+					"dawn",
+					"day",
+					"dusk"
+				],
+				"weather": [
+					"clear",
+					"breeze",
+					"rain"
+				]
+			},
+			"bank": "bird",
+			"variant": 5,
+			"lufs_m_max": -30.0,
+			"true_peak_dbtp": -23.88
+		},
+		{
+			"id": "amb_bird_06_trill",
+			"path": "res://audio/ambience/birds/amb_bird_06_trill.wav",
+			"kind": "bird",
+			"bus": "Ambience",
+			"loop": false,
+			"channels": 2,
+			"base_volume_db": 0.0,
+			"length_samples": 81321,
+			"tags": {
+				"bird": "trill",
+				"time_of_day": [
+					"dawn",
+					"day",
+					"dusk"
+				],
+				"weather": [
+					"clear",
+					"breeze",
+					"rain"
+				]
+			},
+			"bank": "bird",
+			"variant": 6,
+			"lufs_m_max": -30.0,
+			"true_peak_dbtp": -22.91
+		},
+		{
+			"id": "amb_bird_07_robin",
+			"path": "res://audio/ambience/birds/amb_bird_07_robin.wav",
+			"kind": "bird",
+			"bus": "Ambience",
+			"loop": false,
+			"channels": 2,
+			"base_volume_db": 0.0,
+			"length_samples": 81019,
+			"tags": {
+				"bird": "robin",
+				"time_of_day": [
+					"dawn",
+					"day",
+					"dusk"
+				],
+				"weather": [
+					"clear",
+					"breeze",
+					"rain"
+				]
+			},
+			"bank": "bird",
+			"variant": 7,
+			"lufs_m_max": -30.0,
+			"true_peak_dbtp": -23.73
+		},
+		{
+			"id": "amb_bird_08_robin",
+			"path": "res://audio/ambience/birds/amb_bird_08_robin.wav",
+			"kind": "bird",
+			"bus": "Ambience",
+			"loop": false,
+			"channels": 2,
+			"base_volume_db": 0.0,
+			"length_samples": 80689,
+			"tags": {
+				"bird": "robin",
+				"time_of_day": [
+					"dawn",
+					"day",
+					"dusk"
+				],
+				"weather": [
+					"clear",
+					"breeze",
+					"rain"
+				]
+			},
+			"bank": "bird",
+			"variant": 8,
+			"lufs_m_max": -30.0,
+			"true_peak_dbtp": -23.73
+		},
+		{
+			"id": "ep_053",
+			"path": "res://audio/music/notes/ep_053.wav",
+			"kind": "note",
+			"bus": "Music",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 120365,
+			"tags": {
+				"note": "F3"
+			},
+			"bank": "ep",
+			"midi": 53,
+			"lufs_m_max": -20.0,
+			"true_peak_dbtp": -14.98
+		},
+		{
+			"id": "ep_055",
+			"path": "res://audio/music/notes/ep_055.wav",
+			"kind": "note",
+			"bus": "Music",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 126497,
+			"tags": {
+				"note": "G3"
+			},
+			"bank": "ep",
+			"midi": 55,
+			"lufs_m_max": -20.0,
+			"true_peak_dbtp": -17.92
+		},
+		{
+			"id": "ep_057",
+			"path": "res://audio/music/notes/ep_057.wav",
+			"kind": "note",
+			"bus": "Music",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 118481,
+			"tags": {
+				"note": "A3"
+			},
+			"bank": "ep",
+			"midi": 57,
+			"lufs_m_max": -20.0,
+			"true_peak_dbtp": -17.1
+		},
+		{
+			"id": "ep_059",
+			"path": "res://audio/music/notes/ep_059.wav",
+			"kind": "note",
+			"bus": "Music",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 128049,
+			"tags": {
+				"note": "B3"
+			},
+			"bank": "ep",
+			"midi": 59,
+			"lufs_m_max": -20.0,
+			"true_peak_dbtp": -16.84
+		},
+		{
+			"id": "ep_060",
+			"path": "res://audio/music/notes/ep_060.wav",
+			"kind": "note",
+			"bus": "Music",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 123162,
+			"tags": {
+				"note": "C4"
+			},
+			"bank": "ep",
+			"midi": 60,
+			"lufs_m_max": -20.0,
+			"true_peak_dbtp": -15.48
+		},
+		{
+			"id": "ep_062",
+			"path": "res://audio/music/notes/ep_062.wav",
+			"kind": "note",
+			"bus": "Music",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 124982,
+			"tags": {
+				"note": "D4"
+			},
+			"bank": "ep",
+			"midi": 62,
+			"lufs_m_max": -20.0,
+			"true_peak_dbtp": -15.62
+		},
+		{
+			"id": "ep_064",
+			"path": "res://audio/music/notes/ep_064.wav",
+			"kind": "note",
+			"bus": "Music",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 109576,
+			"tags": {
+				"note": "E4"
+			},
+			"bank": "ep",
+			"midi": 64,
+			"lufs_m_max": -20.0,
+			"true_peak_dbtp": -16.73
+		},
+		{
+			"id": "ep_065",
+			"path": "res://audio/music/notes/ep_065.wav",
+			"kind": "note",
+			"bus": "Music",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 123987,
+			"tags": {
+				"note": "F4"
+			},
+			"bank": "ep",
+			"midi": 65,
+			"lufs_m_max": -20.0,
+			"true_peak_dbtp": -15.45
+		},
+		{
+			"id": "ep_067",
+			"path": "res://audio/music/notes/ep_067.wav",
+			"kind": "note",
+			"bus": "Music",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 116847,
+			"tags": {
+				"note": "G4"
+			},
+			"bank": "ep",
+			"midi": 67,
+			"lufs_m_max": -20.0,
+			"true_peak_dbtp": -14.89
+		},
+		{
+			"id": "ep_069",
+			"path": "res://audio/music/notes/ep_069.wav",
+			"kind": "note",
+			"bus": "Music",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 117261,
+			"tags": {
+				"note": "A4"
+			},
+			"bank": "ep",
+			"midi": 69,
+			"lufs_m_max": -20.0,
+			"true_peak_dbtp": -14.02
+		},
+		{
+			"id": "ep_071",
+			"path": "res://audio/music/notes/ep_071.wav",
+			"kind": "note",
+			"bus": "Music",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 111007,
+			"tags": {
+				"note": "B4"
+			},
+			"bank": "ep",
+			"midi": 71,
+			"lufs_m_max": -20.0,
+			"true_peak_dbtp": -17.21
+		},
+		{
+			"id": "ep_072",
+			"path": "res://audio/music/notes/ep_072.wav",
+			"kind": "note",
+			"bus": "Music",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 110882,
+			"tags": {
+				"note": "C5"
+			},
+			"bank": "ep",
+			"midi": 72,
+			"lufs_m_max": -20.0,
+			"true_peak_dbtp": -16.29
+		},
+		{
+			"id": "ep_074",
+			"path": "res://audio/music/notes/ep_074.wav",
+			"kind": "note",
+			"bus": "Music",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 116443,
+			"tags": {
+				"note": "D5"
+			},
+			"bank": "ep",
+			"midi": 74,
+			"lufs_m_max": -20.25,
+			"true_peak_dbtp": -13.95
+		},
+		{
+			"id": "ep_076",
+			"path": "res://audio/music/notes/ep_076.wav",
+			"kind": "note",
+			"bus": "Music",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 118174,
+			"tags": {
+				"note": "E5"
+			},
+			"bank": "ep",
+			"midi": 76,
+			"lufs_m_max": -20.5,
+			"true_peak_dbtp": -17.34
+		},
+		{
+			"id": "ep_077",
+			"path": "res://audio/music/notes/ep_077.wav",
+			"kind": "note",
+			"bus": "Music",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 114313,
+			"tags": {
+				"note": "F5"
+			},
+			"bank": "ep",
+			"midi": 77,
+			"lufs_m_max": -20.63,
+			"true_peak_dbtp": -15.09
+		},
+		{
+			"id": "ep_079",
+			"path": "res://audio/music/notes/ep_079.wav",
+			"kind": "note",
+			"bus": "Music",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 104855,
+			"tags": {
+				"note": "G5"
+			},
+			"bank": "ep",
+			"midi": 79,
+			"lufs_m_max": -20.88,
+			"true_peak_dbtp": -14.64
+		},
+		{
+			"id": "ep_081",
+			"path": "res://audio/music/notes/ep_081.wav",
+			"kind": "note",
+			"bus": "Music",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 102471,
+			"tags": {
+				"note": "A5"
+			},
+			"bank": "ep",
+			"midi": 81,
+			"lufs_m_max": -21.13,
+			"true_peak_dbtp": -18.41
+		},
+		{
+			"id": "ep_083",
+			"path": "res://audio/music/notes/ep_083.wav",
+			"kind": "note",
+			"bus": "Music",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 90539,
+			"tags": {
+				"note": "B5"
+			},
+			"bank": "ep",
+			"midi": 83,
+			"lufs_m_max": -21.38,
+			"true_peak_dbtp": -15.83
+		},
+		{
+			"id": "mar_053",
+			"path": "res://audio/music/notes/mar_053.wav",
+			"kind": "note",
+			"bus": "Music",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 80584,
+			"tags": {
+				"note": "F3"
+			},
+			"bank": "mar",
+			"midi": 53,
+			"lufs_m_max": -21.0,
+			"true_peak_dbtp": -14.98
+		},
+		{
+			"id": "mar_055",
+			"path": "res://audio/music/notes/mar_055.wav",
+			"kind": "note",
+			"bus": "Music",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 80241,
+			"tags": {
+				"note": "G3"
+			},
+			"bank": "mar",
+			"midi": 55,
+			"lufs_m_max": -21.0,
+			"true_peak_dbtp": -18.75
+		},
+		{
+			"id": "mar_057",
+			"path": "res://audio/music/notes/mar_057.wav",
+			"kind": "note",
+			"bus": "Music",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 77894,
+			"tags": {
+				"note": "A3"
+			},
+			"bank": "mar",
+			"midi": 57,
+			"lufs_m_max": -21.0,
+			"true_peak_dbtp": -17.2
+		},
+		{
+			"id": "mar_059",
+			"path": "res://audio/music/notes/mar_059.wav",
+			"kind": "note",
+			"bus": "Music",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 80696,
+			"tags": {
+				"note": "B3"
+			},
+			"bank": "mar",
+			"midi": 59,
+			"lufs_m_max": -21.0,
+			"true_peak_dbtp": -17.71
+		},
+		{
+			"id": "mar_060",
+			"path": "res://audio/music/notes/mar_060.wav",
+			"kind": "note",
+			"bus": "Music",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 77717,
+			"tags": {
+				"note": "C4"
+			},
+			"bank": "mar",
+			"midi": 60,
+			"lufs_m_max": -21.0,
+			"true_peak_dbtp": -16.5
+		},
+		{
+			"id": "mar_062",
+			"path": "res://audio/music/notes/mar_062.wav",
+			"kind": "note",
+			"bus": "Music",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 81120,
+			"tags": {
+				"note": "D4"
+			},
+			"bank": "mar",
+			"midi": 62,
+			"lufs_m_max": -21.0,
+			"true_peak_dbtp": -17.54
+		},
+		{
+			"id": "mar_064",
+			"path": "res://audio/music/notes/mar_064.wav",
+			"kind": "note",
+			"bus": "Music",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 82064,
+			"tags": {
+				"note": "E4"
+			},
+			"bank": "mar",
+			"midi": 64,
+			"lufs_m_max": -21.0,
+			"true_peak_dbtp": -12.88
+		},
+		{
+			"id": "mar_065",
+			"path": "res://audio/music/notes/mar_065.wav",
+			"kind": "note",
+			"bus": "Music",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 73176,
+			"tags": {
+				"note": "F4"
+			},
+			"bank": "mar",
+			"midi": 65,
+			"lufs_m_max": -21.0,
+			"true_peak_dbtp": -17.05
+		},
+		{
+			"id": "mar_067",
+			"path": "res://audio/music/notes/mar_067.wav",
+			"kind": "note",
+			"bus": "Music",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 68582,
+			"tags": {
+				"note": "G4"
+			},
+			"bank": "mar",
+			"midi": 67,
+			"lufs_m_max": -21.0,
+			"true_peak_dbtp": -15.73
+		},
+		{
+			"id": "mar_069",
+			"path": "res://audio/music/notes/mar_069.wav",
+			"kind": "note",
+			"bus": "Music",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 75418,
+			"tags": {
+				"note": "A4"
+			},
+			"bank": "mar",
+			"midi": 69,
+			"lufs_m_max": -21.0,
+			"true_peak_dbtp": -15.42
+		},
+		{
+			"id": "mar_071",
+			"path": "res://audio/music/notes/mar_071.wav",
+			"kind": "note",
+			"bus": "Music",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 67398,
+			"tags": {
+				"note": "B4"
+			},
+			"bank": "mar",
+			"midi": 71,
+			"lufs_m_max": -21.0,
+			"true_peak_dbtp": -12.92
+		},
+		{
+			"id": "mar_072",
+			"path": "res://audio/music/notes/mar_072.wav",
+			"kind": "note",
+			"bus": "Music",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 78915,
+			"tags": {
+				"note": "C5"
+			},
+			"bank": "mar",
+			"midi": 72,
+			"lufs_m_max": -21.0,
+			"true_peak_dbtp": -17.06
+		},
+		{
+			"id": "mar_074",
+			"path": "res://audio/music/notes/mar_074.wav",
+			"kind": "note",
+			"bus": "Music",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 76267,
+			"tags": {
+				"note": "D5"
+			},
+			"bank": "mar",
+			"midi": 74,
+			"lufs_m_max": -21.25,
+			"true_peak_dbtp": -15.9
+		},
+		{
+			"id": "mar_076",
+			"path": "res://audio/music/notes/mar_076.wav",
+			"kind": "note",
+			"bus": "Music",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 71635,
+			"tags": {
+				"note": "E5"
+			},
+			"bank": "mar",
+			"midi": 76,
+			"lufs_m_max": -21.5,
+			"true_peak_dbtp": -16.51
+		},
+		{
+			"id": "chime_072",
+			"path": "res://audio/music/notes/chime_072.wav",
+			"kind": "note",
+			"bus": "Music",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 90575,
+			"tags": {
+				"note": "C5"
+			},
+			"bank": "chime",
+			"midi": 72,
+			"lufs_m_max": -22.0,
+			"true_peak_dbtp": -16.34
+		},
+		{
+			"id": "chime_074",
+			"path": "res://audio/music/notes/chime_074.wav",
+			"kind": "note",
+			"bus": "Music",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 104296,
+			"tags": {
+				"note": "D5"
+			},
+			"bank": "chime",
+			"midi": 74,
+			"lufs_m_max": -22.25,
+			"true_peak_dbtp": -18.97
+		},
+		{
+			"id": "chime_076",
+			"path": "res://audio/music/notes/chime_076.wav",
+			"kind": "note",
+			"bus": "Music",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 111705,
+			"tags": {
+				"note": "E5"
+			},
+			"bank": "chime",
+			"midi": 76,
+			"lufs_m_max": -22.5,
+			"true_peak_dbtp": -12.52
+		},
+		{
+			"id": "chime_077",
+			"path": "res://audio/music/notes/chime_077.wav",
+			"kind": "note",
+			"bus": "Music",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 103947,
+			"tags": {
+				"note": "F5"
+			},
+			"bank": "chime",
+			"midi": 77,
+			"lufs_m_max": -22.63,
+			"true_peak_dbtp": -17.93
+		},
+		{
+			"id": "chime_079",
+			"path": "res://audio/music/notes/chime_079.wav",
+			"kind": "note",
+			"bus": "Music",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 107561,
+			"tags": {
+				"note": "G5"
+			},
+			"bank": "chime",
+			"midi": 79,
+			"lufs_m_max": -22.88,
+			"true_peak_dbtp": -14.29
+		},
+		{
+			"id": "chime_081",
+			"path": "res://audio/music/notes/chime_081.wav",
+			"kind": "note",
+			"bus": "Music",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 104915,
+			"tags": {
+				"note": "A5"
+			},
+			"bank": "chime",
+			"midi": 81,
+			"lufs_m_max": -23.13,
+			"true_peak_dbtp": -16.6
+		},
+		{
+			"id": "chime_083",
+			"path": "res://audio/music/notes/chime_083.wav",
+			"kind": "note",
+			"bus": "Music",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 94569,
+			"tags": {
+				"note": "B5"
+			},
+			"bank": "chime",
+			"midi": 83,
+			"lufs_m_max": -23.38,
+			"true_peak_dbtp": -19.89
+		},
+		{
+			"id": "chime_084",
+			"path": "res://audio/music/notes/chime_084.wav",
+			"kind": "note",
+			"bus": "Music",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 103670,
+			"tags": {
+				"note": "C6"
+			},
+			"bank": "chime",
+			"midi": 84,
+			"lufs_m_max": -23.5,
+			"true_peak_dbtp": -16.82
+		},
+		{
+			"id": "chime_086",
+			"path": "res://audio/music/notes/chime_086.wav",
+			"kind": "note",
+			"bus": "Music",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 108408,
+			"tags": {
+				"note": "D6"
+			},
+			"bank": "chime",
+			"midi": 86,
+			"lufs_m_max": -23.75,
+			"true_peak_dbtp": -18.44
+		},
+		{
+			"id": "chime_088",
+			"path": "res://audio/music/notes/chime_088.wav",
+			"kind": "note",
+			"bus": "Music",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 86938,
+			"tags": {
+				"note": "E6"
+			},
+			"bank": "chime",
+			"midi": 88,
+			"lufs_m_max": -24.0,
+			"true_peak_dbtp": -19.03
+		},
+		{
+			"id": "chime_089",
+			"path": "res://audio/music/notes/chime_089.wav",
+			"kind": "note",
+			"bus": "Music",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 92364,
+			"tags": {
+				"note": "F6"
+			},
+			"bank": "chime",
+			"midi": 89,
+			"lufs_m_max": -24.13,
+			"true_peak_dbtp": -17.59
+		},
+		{
+			"id": "chime_091",
+			"path": "res://audio/music/notes/chime_091.wav",
+			"kind": "note",
+			"bus": "Music",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 81750,
+			"tags": {
+				"note": "G6"
+			},
+			"bank": "chime",
+			"midi": 91,
+			"lufs_m_max": -24.38,
+			"true_peak_dbtp": -22.14
+		},
+		{
+			"id": "chime_093",
+			"path": "res://audio/music/notes/chime_093.wav",
+			"kind": "note",
+			"bus": "Music",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 92579,
+			"tags": {
+				"note": "A6"
+			},
+			"bank": "chime",
+			"midi": 93,
+			"lufs_m_max": -24.63,
+			"true_peak_dbtp": -17.05
+		},
+		{
+			"id": "chime_095",
+			"path": "res://audio/music/notes/chime_095.wav",
+			"kind": "note",
+			"bus": "Music",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 81984,
+			"tags": {
+				"note": "B6"
+			},
+			"bank": "chime",
+			"midi": 95,
+			"lufs_m_max": -24.88,
+			"true_peak_dbtp": -24.42
+		},
+		{
+			"id": "shell_065",
+			"path": "res://audio/music/notes/shell_065.wav",
+			"kind": "note",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 78691,
+			"tags": {
+				"note": "F4"
+			},
+			"bank": "shell",
+			"midi": 65,
+			"lufs_m_max": -23.0,
+			"true_peak_dbtp": -14.93
+		},
+		{
+			"id": "shell_067",
+			"path": "res://audio/music/notes/shell_067.wav",
+			"kind": "note",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 84441,
+			"tags": {
+				"note": "G4"
+			},
+			"bank": "shell",
+			"midi": 67,
+			"lufs_m_max": -23.0,
+			"true_peak_dbtp": -17.14
+		},
+		{
+			"id": "shell_069",
+			"path": "res://audio/music/notes/shell_069.wav",
+			"kind": "note",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 90159,
+			"tags": {
+				"note": "A4"
+			},
+			"bank": "shell",
+			"midi": 69,
+			"lufs_m_max": -23.0,
+			"true_peak_dbtp": -14.17
+		},
+		{
+			"id": "shell_072",
+			"path": "res://audio/music/notes/shell_072.wav",
+			"kind": "note",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 75649,
+			"tags": {
+				"note": "C5"
+			},
+			"bank": "shell",
+			"midi": 72,
+			"lufs_m_max": -23.0,
+			"true_peak_dbtp": -18.18
+		},
+		{
+			"id": "shell_074",
+			"path": "res://audio/music/notes/shell_074.wav",
+			"kind": "note",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 69330,
+			"tags": {
+				"note": "D5"
+			},
+			"bank": "shell",
+			"midi": 74,
+			"lufs_m_max": -23.25,
+			"true_peak_dbtp": -14.68
+		},
+		{
+			"id": "shell_077",
+			"path": "res://audio/music/notes/shell_077.wav",
+			"kind": "note",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 78581,
+			"tags": {
+				"note": "F5"
+			},
+			"bank": "shell",
+			"midi": 77,
+			"lufs_m_max": -23.63,
+			"true_peak_dbtp": -19.29
+		},
+		{
+			"id": "shell_079",
+			"path": "res://audio/music/notes/shell_079.wav",
+			"kind": "note",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 82178,
+			"tags": {
+				"note": "G5"
+			},
+			"bank": "shell",
+			"midi": 79,
+			"lufs_m_max": -23.88,
+			"true_peak_dbtp": -22.98
+		},
+		{
+			"id": "shell_081",
+			"path": "res://audio/music/notes/shell_081.wav",
+			"kind": "note",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 56675,
+			"tags": {
+				"note": "A5"
+			},
+			"bank": "shell",
+			"midi": 81,
+			"lufs_m_max": -24.13,
+			"true_peak_dbtp": -18.08
+		},
+		{
+			"id": "shell_084",
+			"path": "res://audio/music/notes/shell_084.wav",
+			"kind": "note",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 61437,
+			"tags": {
+				"note": "C6"
+			},
+			"bank": "shell",
+			"midi": 84,
+			"lufs_m_max": -24.5,
+			"true_peak_dbtp": -19.86
+		},
+		{
+			"id": "shell_086",
+			"path": "res://audio/music/notes/shell_086.wav",
+			"kind": "note",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 70199,
+			"tags": {
+				"note": "D6"
+			},
+			"bank": "shell",
+			"midi": 86,
+			"lufs_m_max": -24.75,
+			"true_peak_dbtp": -15.45
+		},
+		{
+			"id": "s01_plip_071",
+			"path": "res://audio/sfx/s01_plip_071.wav",
+			"kind": "sfx",
+			"bus": "UI",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 36521,
+			"tags": {
+				"note": "B4"
+			},
+			"bank": "plip",
+			"midi": 71,
+			"cue": "S01",
+			"web_path": "res://audio/sfx_web/s01_plip_071.ogg",
+			"lufs_m_max": -21.0,
+			"true_peak_dbtp": -7.32
+		},
+		{
+			"id": "s01_plip_072",
+			"path": "res://audio/sfx/s01_plip_072.wav",
+			"kind": "sfx",
+			"bus": "UI",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 37638,
+			"tags": {
+				"note": "C5"
+			},
+			"bank": "plip",
+			"midi": 72,
+			"cue": "S01",
+			"web_path": "res://audio/sfx_web/s01_plip_072.ogg",
+			"lufs_m_max": -21.0,
+			"true_peak_dbtp": -7.24
+		},
+		{
+			"id": "s01_plip_074",
+			"path": "res://audio/sfx/s01_plip_074.wav",
+			"kind": "sfx",
+			"bus": "UI",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 37886,
+			"tags": {
+				"note": "D5"
+			},
+			"bank": "plip",
+			"midi": 74,
+			"cue": "S01",
+			"web_path": "res://audio/sfx_web/s01_plip_074.ogg",
+			"lufs_m_max": -21.0,
+			"true_peak_dbtp": -7.51
+		},
+		{
+			"id": "s01_plip_076",
+			"path": "res://audio/sfx/s01_plip_076.wav",
+			"kind": "sfx",
+			"bus": "UI",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 36760,
+			"tags": {
+				"note": "E5"
+			},
+			"bank": "plip",
+			"midi": 76,
+			"cue": "S01",
+			"web_path": "res://audio/sfx_web/s01_plip_076.ogg",
+			"lufs_m_max": -21.0,
+			"true_peak_dbtp": -7.69
+		},
+		{
+			"id": "s01_plip_077",
+			"path": "res://audio/sfx/s01_plip_077.wav",
+			"kind": "sfx",
+			"bus": "UI",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 37689,
+			"tags": {
+				"note": "F5"
+			},
+			"bank": "plip",
+			"midi": 77,
+			"cue": "S01",
+			"web_path": "res://audio/sfx_web/s01_plip_077.ogg",
+			"lufs_m_max": -21.0,
+			"true_peak_dbtp": -7.43
+		},
+		{
+			"id": "s01_plip_079",
+			"path": "res://audio/sfx/s01_plip_079.wav",
+			"kind": "sfx",
+			"bus": "UI",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 37452,
+			"tags": {
+				"note": "G5"
+			},
+			"bank": "plip",
+			"midi": 79,
+			"cue": "S01",
+			"web_path": "res://audio/sfx_web/s01_plip_079.ogg",
+			"lufs_m_max": -21.0,
+			"true_peak_dbtp": -7.56
+		},
+		{
+			"id": "s01_plip_081",
+			"path": "res://audio/sfx/s01_plip_081.wav",
+			"kind": "sfx",
+			"bus": "UI",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 36175,
+			"tags": {
+				"note": "A5"
+			},
+			"bank": "plip",
+			"midi": 81,
+			"cue": "S01",
+			"web_path": "res://audio/sfx_web/s01_plip_081.ogg",
+			"lufs_m_max": -21.0,
+			"true_peak_dbtp": -7.71
+		},
+		{
+			"id": "s01_plip_083",
+			"path": "res://audio/sfx/s01_plip_083.wav",
+			"kind": "sfx",
+			"bus": "UI",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 37222,
+			"tags": {
+				"note": "B5"
+			},
+			"bank": "plip",
+			"midi": 83,
+			"cue": "S01",
+			"web_path": "res://audio/sfx_web/s01_plip_083.ogg",
+			"lufs_m_max": -21.0,
+			"true_peak_dbtp": -7.87
+		},
+		{
+			"id": "s01_plip_084",
+			"path": "res://audio/sfx/s01_plip_084.wav",
+			"kind": "sfx",
+			"bus": "UI",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 38687,
+			"tags": {
+				"note": "C6"
+			},
+			"bank": "plip",
+			"midi": 84,
+			"cue": "S01",
+			"web_path": "res://audio/sfx_web/s01_plip_084.ogg",
+			"lufs_m_max": -21.0,
+			"true_peak_dbtp": -8.0
+		},
+		{
+			"id": "s02_dew_071",
+			"path": "res://audio/sfx/s02_dew_071.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 47559,
+			"tags": {
+				"note": "B4"
+			},
+			"bank": "dew",
+			"midi": 71,
+			"cue": "S02",
+			"web_path": "res://audio/sfx_web/s02_dew_071.ogg",
+			"lufs_m_max": -21.0,
+			"true_peak_dbtp": -8.87
+		},
+		{
+			"id": "s02_dew_072",
+			"path": "res://audio/sfx/s02_dew_072.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 47591,
+			"tags": {
+				"note": "C5"
+			},
+			"bank": "dew",
+			"midi": 72,
+			"cue": "S02",
+			"web_path": "res://audio/sfx_web/s02_dew_072.ogg",
+			"lufs_m_max": -21.0,
+			"true_peak_dbtp": -9.17
+		},
+		{
+			"id": "s02_dew_074",
+			"path": "res://audio/sfx/s02_dew_074.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 47124,
+			"tags": {
+				"note": "D5"
+			},
+			"bank": "dew",
+			"midi": 74,
+			"cue": "S02",
+			"web_path": "res://audio/sfx_web/s02_dew_074.ogg",
+			"lufs_m_max": -21.0,
+			"true_peak_dbtp": -8.8
+		},
+		{
+			"id": "s02_dew_076",
+			"path": "res://audio/sfx/s02_dew_076.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 49264,
+			"tags": {
+				"note": "E5"
+			},
+			"bank": "dew",
+			"midi": 76,
+			"cue": "S02",
+			"web_path": "res://audio/sfx_web/s02_dew_076.ogg",
+			"lufs_m_max": -21.0,
+			"true_peak_dbtp": -9.38
+		},
+		{
+			"id": "s02_dew_077",
+			"path": "res://audio/sfx/s02_dew_077.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 50445,
+			"tags": {
+				"note": "F5"
+			},
+			"bank": "dew",
+			"midi": 77,
+			"cue": "S02",
+			"web_path": "res://audio/sfx_web/s02_dew_077.ogg",
+			"lufs_m_max": -21.0,
+			"true_peak_dbtp": -9.81
+		},
+		{
+			"id": "s02_dew_079",
+			"path": "res://audio/sfx/s02_dew_079.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 48730,
+			"tags": {
+				"note": "G5"
+			},
+			"bank": "dew",
+			"midi": 79,
+			"cue": "S02",
+			"web_path": "res://audio/sfx_web/s02_dew_079.ogg",
+			"lufs_m_max": -21.0,
+			"true_peak_dbtp": -9.53
+		},
+		{
+			"id": "s02_dew_081",
+			"path": "res://audio/sfx/s02_dew_081.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 49087,
+			"tags": {
+				"note": "A5"
+			},
+			"bank": "dew",
+			"midi": 81,
+			"cue": "S02",
+			"web_path": "res://audio/sfx_web/s02_dew_081.ogg",
+			"lufs_m_max": -21.0,
+			"true_peak_dbtp": -9.56
+		},
+		{
+			"id": "s02_dew_083",
+			"path": "res://audio/sfx/s02_dew_083.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 46317,
+			"tags": {
+				"note": "B5"
+			},
+			"bank": "dew",
+			"midi": 83,
+			"cue": "S02",
+			"web_path": "res://audio/sfx_web/s02_dew_083.ogg",
+			"lufs_m_max": -21.0,
+			"true_peak_dbtp": -9.82
+		},
+		{
+			"id": "s02_dew_084",
+			"path": "res://audio/sfx/s02_dew_084.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 46535,
+			"tags": {
+				"note": "C6"
+			},
+			"bank": "dew",
+			"midi": 84,
+			"cue": "S02",
+			"web_path": "res://audio/sfx_web/s02_dew_084.ogg",
+			"lufs_m_max": -21.0,
+			"true_peak_dbtp": -9.32
+		},
+		{
+			"id": "s02_dew_086",
+			"path": "res://audio/sfx/s02_dew_086.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 47053,
+			"tags": {
+				"note": "D6"
+			},
+			"bank": "dew",
+			"midi": 86,
+			"cue": "S02",
+			"web_path": "res://audio/sfx_web/s02_dew_086.ogg",
+			"lufs_m_max": -21.0,
+			"true_peak_dbtp": -10.33
+		},
+		{
+			"id": "s02_dew_088",
+			"path": "res://audio/sfx/s02_dew_088.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 46532,
+			"tags": {
+				"note": "E6"
+			},
+			"bank": "dew",
+			"midi": 88,
+			"cue": "S02",
+			"web_path": "res://audio/sfx_web/s02_dew_088.ogg",
+			"lufs_m_max": -21.0,
+			"true_peak_dbtp": -10.73
+		},
+		{
+			"id": "s02_dew_089",
+			"path": "res://audio/sfx/s02_dew_089.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 48964,
+			"tags": {
+				"note": "F6"
+			},
+			"bank": "dew",
+			"midi": 89,
+			"cue": "S02",
+			"web_path": "res://audio/sfx_web/s02_dew_089.ogg",
+			"lufs_m_max": -21.0,
+			"true_peak_dbtp": -10.85
+		},
+		{
+			"id": "s02_dew_091",
+			"path": "res://audio/sfx/s02_dew_091.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 47881,
+			"tags": {
+				"note": "G6"
+			},
+			"bank": "dew",
+			"midi": 91,
+			"cue": "S02",
+			"web_path": "res://audio/sfx_web/s02_dew_091.ogg",
+			"lufs_m_max": -21.0,
+			"true_peak_dbtp": -10.99
+		},
+		{
+			"id": "s08_tok_050",
+			"path": "res://audio/sfx/s08_tok_050.wav",
+			"kind": "sfx",
+			"bus": "UI",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 30700,
+			"tags": {
+				"note": "D3"
+			},
+			"bank": "tok",
+			"midi": 50,
+			"cue": "S08",
+			"lufs_m_max": -23.0,
+			"true_peak_dbtp": -11.33
+		},
+		{
+			"id": "s08_tok_052",
+			"path": "res://audio/sfx/s08_tok_052.wav",
+			"kind": "sfx",
+			"bus": "UI",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 30082,
+			"tags": {
+				"note": "E3"
+			},
+			"bank": "tok",
+			"midi": 52,
+			"cue": "S08",
+			"lufs_m_max": -23.0,
+			"true_peak_dbtp": -9.29
+		},
+		{
+			"id": "s08_tok_053",
+			"path": "res://audio/sfx/s08_tok_053.wav",
+			"kind": "sfx",
+			"bus": "UI",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 25766,
+			"tags": {
+				"note": "F3"
+			},
+			"bank": "tok",
+			"midi": 53,
+			"cue": "S08",
+			"lufs_m_max": -23.0,
+			"true_peak_dbtp": -10.14
+		},
+		{
+			"id": "s08_tok_055",
+			"path": "res://audio/sfx/s08_tok_055.wav",
+			"kind": "sfx",
+			"bus": "UI",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 31569,
+			"tags": {
+				"note": "G3"
+			},
+			"bank": "tok",
+			"midi": 55,
+			"cue": "S08",
+			"lufs_m_max": -23.0,
+			"true_peak_dbtp": -10.06
+		},
+		{
+			"id": "s08_tok_057",
+			"path": "res://audio/sfx/s08_tok_057.wav",
+			"kind": "sfx",
+			"bus": "UI",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 29689,
+			"tags": {
+				"note": "A3"
+			},
+			"bank": "tok",
+			"midi": 57,
+			"cue": "S08",
+			"lufs_m_max": -23.0,
+			"true_peak_dbtp": -11.83
+		},
+		{
+			"id": "s08_tok_059",
+			"path": "res://audio/sfx/s08_tok_059.wav",
+			"kind": "sfx",
+			"bus": "UI",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 29314,
+			"tags": {
+				"note": "B3"
+			},
+			"bank": "tok",
+			"midi": 59,
+			"cue": "S08",
+			"lufs_m_max": -23.0,
+			"true_peak_dbtp": -9.04
+		},
+		{
+			"id": "s08_tok_060",
+			"path": "res://audio/sfx/s08_tok_060.wav",
+			"kind": "sfx",
+			"bus": "UI",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 29378,
+			"tags": {
+				"note": "C4"
+			},
+			"bank": "tok",
+			"midi": 60,
+			"cue": "S08",
+			"lufs_m_max": -23.0,
+			"true_peak_dbtp": -9.39
+		},
+		{
+			"id": "s08_tok_062",
+			"path": "res://audio/sfx/s08_tok_062.wav",
+			"kind": "sfx",
+			"bus": "UI",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 30546,
+			"tags": {
+				"note": "D4"
+			},
+			"bank": "tok",
+			"midi": 62,
+			"cue": "S08",
+			"lufs_m_max": -23.0,
+			"true_peak_dbtp": -9.79
+		},
+		{
+			"id": "s08_tok_064",
+			"path": "res://audio/sfx/s08_tok_064.wav",
+			"kind": "sfx",
+			"bus": "UI",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 28897,
+			"tags": {
+				"note": "E4"
+			},
+			"bank": "tok",
+			"midi": 64,
+			"cue": "S08",
+			"lufs_m_max": -23.0,
+			"true_peak_dbtp": -11.17
+		},
+		{
+			"id": "s13_coo_062",
+			"path": "res://audio/sfx/s13_coo_062.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 46821,
+			"tags": {
+				"note": "D4"
+			},
+			"bank": "coo",
+			"midi": 62,
+			"cue": "S13",
+			"web_path": "res://audio/sfx_web/s13_coo_062.ogg",
+			"lufs_m_max": -25.0,
+			"true_peak_dbtp": -18.84
+		},
+		{
+			"id": "s13_coo_064",
+			"path": "res://audio/sfx/s13_coo_064.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 46766,
+			"tags": {
+				"note": "E4"
+			},
+			"bank": "coo",
+			"midi": 64,
+			"cue": "S13",
+			"web_path": "res://audio/sfx_web/s13_coo_064.ogg",
+			"lufs_m_max": -25.0,
+			"true_peak_dbtp": -18.66
+		},
+		{
+			"id": "s13_coo_065",
+			"path": "res://audio/sfx/s13_coo_065.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 47307,
+			"tags": {
+				"note": "F4"
+			},
+			"bank": "coo",
+			"midi": 65,
+			"cue": "S13",
+			"web_path": "res://audio/sfx_web/s13_coo_065.ogg",
+			"lufs_m_max": -25.0,
+			"true_peak_dbtp": -18.84
+		},
+		{
+			"id": "s13_coo_067",
+			"path": "res://audio/sfx/s13_coo_067.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 45324,
+			"tags": {
+				"note": "G4"
+			},
+			"bank": "coo",
+			"midi": 67,
+			"cue": "S13",
+			"web_path": "res://audio/sfx_web/s13_coo_067.ogg",
+			"lufs_m_max": -25.0,
+			"true_peak_dbtp": -18.54
+		},
+		{
+			"id": "s13_coo_069",
+			"path": "res://audio/sfx/s13_coo_069.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 42453,
+			"tags": {
+				"note": "A4"
+			},
+			"bank": "coo",
+			"midi": 69,
+			"cue": "S13",
+			"web_path": "res://audio/sfx_web/s13_coo_069.ogg",
+			"lufs_m_max": -25.0,
+			"true_peak_dbtp": -19.22
+		},
+		{
+			"id": "s13_coo_071",
+			"path": "res://audio/sfx/s13_coo_071.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 45460,
+			"tags": {
+				"note": "B4"
+			},
+			"bank": "coo",
+			"midi": 71,
+			"cue": "S13",
+			"web_path": "res://audio/sfx_web/s13_coo_071.ogg",
+			"lufs_m_max": -25.0,
+			"true_peak_dbtp": -18.75
+		},
+		{
+			"id": "s13_coo_072",
+			"path": "res://audio/sfx/s13_coo_072.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 45392,
+			"tags": {
+				"note": "C5"
+			},
+			"bank": "coo",
+			"midi": 72,
+			"cue": "S13",
+			"web_path": "res://audio/sfx_web/s13_coo_072.ogg",
+			"lufs_m_max": -25.0,
+			"true_peak_dbtp": -17.46
+		},
+		{
+			"id": "s13_coo_074",
+			"path": "res://audio/sfx/s13_coo_074.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 46255,
+			"tags": {
+				"note": "D5"
+			},
+			"bank": "coo",
+			"midi": 74,
+			"cue": "S13",
+			"web_path": "res://audio/sfx_web/s13_coo_074.ogg",
+			"lufs_m_max": -25.0,
+			"true_peak_dbtp": -16.74
+		},
+		{
+			"id": "s13_coo_076",
+			"path": "res://audio/sfx/s13_coo_076.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 50666,
+			"tags": {
+				"note": "E5"
+			},
+			"bank": "coo",
+			"midi": 76,
+			"cue": "S13",
+			"web_path": "res://audio/sfx_web/s13_coo_076.ogg",
+			"lufs_m_max": -25.0,
+			"true_peak_dbtp": -18.47
+		},
+		{
+			"id": "s13_coo_077",
+			"path": "res://audio/sfx/s13_coo_077.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 48459,
+			"tags": {
+				"note": "F5"
+			},
+			"bank": "coo",
+			"midi": 77,
+			"cue": "S13",
+			"web_path": "res://audio/sfx_web/s13_coo_077.ogg",
+			"lufs_m_max": -25.0,
+			"true_peak_dbtp": -17.98
+		},
+		{
+			"id": "s13_coo_079",
+			"path": "res://audio/sfx/s13_coo_079.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 43033,
+			"tags": {
+				"note": "G5"
+			},
+			"bank": "coo",
+			"midi": 79,
+			"cue": "S13",
+			"web_path": "res://audio/sfx_web/s13_coo_079.ogg",
+			"lufs_m_max": -25.0,
+			"true_peak_dbtp": -18.23
+		},
+		{
+			"id": "s13_coo_081",
+			"path": "res://audio/sfx/s13_coo_081.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 47377,
+			"tags": {
+				"note": "A5"
+			},
+			"bank": "coo",
+			"midi": 81,
+			"cue": "S13",
+			"web_path": "res://audio/sfx_web/s13_coo_081.ogg",
+			"lufs_m_max": -25.0,
+			"true_peak_dbtp": -17.48
+		},
+		{
+			"id": "s03_purr_053",
+			"path": "res://audio/sfx/s03_purr_053.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": true,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 91729,
+			"tags": {
+				"note": "F3"
+			},
+			"bank": "purr",
+			"midi": 53,
+			"cue": "S03",
+			"web_path": "res://audio/sfx_web/s03_purr_053.ogg",
+			"lufs_m_max": -23.0,
+			"true_peak_dbtp": -19.18,
+			"loop_begin": 3528,
+			"loop_end": 91728
+		},
+		{
+			"id": "s03_purr_055",
+			"path": "res://audio/sfx/s03_purr_055.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": true,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 91729,
+			"tags": {
+				"note": "G3"
+			},
+			"bank": "purr",
+			"midi": 55,
+			"cue": "S03",
+			"web_path": "res://audio/sfx_web/s03_purr_055.ogg",
+			"lufs_m_max": -23.0,
+			"true_peak_dbtp": -19.16,
+			"loop_begin": 3528,
+			"loop_end": 91728
+		},
+		{
+			"id": "s03_purr_057",
+			"path": "res://audio/sfx/s03_purr_057.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": true,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 91729,
+			"tags": {
+				"note": "A3"
+			},
+			"bank": "purr",
+			"midi": 57,
+			"cue": "S03",
+			"web_path": "res://audio/sfx_web/s03_purr_057.ogg",
+			"lufs_m_max": -23.0,
+			"true_peak_dbtp": -19.1,
+			"loop_begin": 3528,
+			"loop_end": 91728
+		},
+		{
+			"id": "s03_purr_059",
+			"path": "res://audio/sfx/s03_purr_059.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": true,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 91729,
+			"tags": {
+				"note": "B3"
+			},
+			"bank": "purr",
+			"midi": 59,
+			"cue": "S03",
+			"web_path": "res://audio/sfx_web/s03_purr_059.ogg",
+			"lufs_m_max": -23.0,
+			"true_peak_dbtp": -19.19,
+			"loop_begin": 3528,
+			"loop_end": 91728
+		},
+		{
+			"id": "s03_purr_060",
+			"path": "res://audio/sfx/s03_purr_060.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": true,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 91729,
+			"tags": {
+				"note": "C4"
+			},
+			"bank": "purr",
+			"midi": 60,
+			"cue": "S03",
+			"web_path": "res://audio/sfx_web/s03_purr_060.ogg",
+			"lufs_m_max": -23.0,
+			"true_peak_dbtp": -18.83,
+			"loop_begin": 3528,
+			"loop_end": 91728
+		},
+		{
+			"id": "s03_purr_062",
+			"path": "res://audio/sfx/s03_purr_062.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": true,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 91729,
+			"tags": {
+				"note": "D4"
+			},
+			"bank": "purr",
+			"midi": 62,
+			"cue": "S03",
+			"web_path": "res://audio/sfx_web/s03_purr_062.ogg",
+			"lufs_m_max": -23.0,
+			"true_peak_dbtp": -18.84,
+			"loop_begin": 3528,
+			"loop_end": 91728
+		},
+		{
+			"id": "s03_purr_064",
+			"path": "res://audio/sfx/s03_purr_064.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": true,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 91729,
+			"tags": {
+				"note": "E4"
+			},
+			"bank": "purr",
+			"midi": 64,
+			"cue": "S03",
+			"web_path": "res://audio/sfx_web/s03_purr_064.ogg",
+			"lufs_m_max": -23.0,
+			"true_peak_dbtp": -18.78,
+			"loop_begin": 3528,
+			"loop_end": 91728
+		},
+		{
+			"id": "s15_click_on",
+			"path": "res://audio/sfx/s15_click_on.wav",
+			"kind": "sfx",
+			"bus": "UI",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 25544,
+			"tags": {
+				"note": "A5"
+			},
+			"bank": "click",
+			"midi": 81,
+			"variant": "on",
+			"cue": "S15",
+			"lufs_m_max": -25.0,
+			"true_peak_dbtp": -9.52
+		},
+		{
+			"id": "s15_click_off",
+			"path": "res://audio/sfx/s15_click_off.wav",
+			"kind": "sfx",
+			"bus": "UI",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 23446,
+			"tags": {
+				"note": "D5"
+			},
+			"bank": "click",
+			"midi": 74,
+			"variant": "off",
+			"cue": "S15",
+			"lufs_m_max": -25.0,
+			"true_peak_dbtp": -9.0
+		},
+		{
+			"id": "s06_bubbles_1",
+			"path": "res://audio/sfx/s06_bubbles_1.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 46833,
+			"tags": {},
+			"bank": "bubbles",
+			"variant": 1,
+			"cue": "S06",
+			"web_path": "res://audio/sfx_web/s06_bubbles_1.ogg",
+			"lufs_m_max": -24.0,
+			"true_peak_dbtp": -12.01
+		},
+		{
+			"id": "s06_bubbles_2",
+			"path": "res://audio/sfx/s06_bubbles_2.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 46467,
+			"tags": {},
+			"bank": "bubbles",
+			"variant": 2,
+			"cue": "S06",
+			"web_path": "res://audio/sfx_web/s06_bubbles_2.ogg",
+			"lufs_m_max": -24.0,
+			"true_peak_dbtp": -11.35
+		},
+		{
+			"id": "s06_bubbles_3",
+			"path": "res://audio/sfx/s06_bubbles_3.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 45360,
+			"tags": {},
+			"bank": "bubbles",
+			"variant": 3,
+			"cue": "S06",
+			"web_path": "res://audio/sfx_web/s06_bubbles_3.ogg",
+			"lufs_m_max": -24.0,
+			"true_peak_dbtp": -11.34
+		},
+		{
+			"id": "s06_bubbles_4",
+			"path": "res://audio/sfx/s06_bubbles_4.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 45429,
+			"tags": {},
+			"bank": "bubbles",
+			"variant": 4,
+			"cue": "S06",
+			"web_path": "res://audio/sfx_web/s06_bubbles_4.ogg",
+			"lufs_m_max": -24.0,
+			"true_peak_dbtp": -11.05
+		},
+		{
+			"id": "s07_paper_1",
+			"path": "res://audio/sfx/s07_paper_1.wav",
+			"kind": "sfx",
+			"bus": "UI",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 32043,
+			"tags": {},
+			"bank": "paper",
+			"variant": 1,
+			"cue": "S07",
+			"lufs_m_max": -25.0,
+			"true_peak_dbtp": -8.24
+		},
+		{
+			"id": "s07_paper_2",
+			"path": "res://audio/sfx/s07_paper_2.wav",
+			"kind": "sfx",
+			"bus": "UI",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 33625,
+			"tags": {},
+			"bank": "paper",
+			"variant": 2,
+			"cue": "S07",
+			"lufs_m_max": -25.0,
+			"true_peak_dbtp": -8.52
+		},
+		{
+			"id": "s07_paper_3",
+			"path": "res://audio/sfx/s07_paper_3.wav",
+			"kind": "sfx",
+			"bus": "UI",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 36418,
+			"tags": {},
+			"bank": "paper",
+			"variant": 3,
+			"cue": "S07",
+			"lufs_m_max": -25.0,
+			"true_peak_dbtp": -8.35
+		},
+		{
+			"id": "s05_soil_1",
+			"path": "res://audio/sfx/s05_soil_1.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 20458,
+			"tags": {},
+			"bank": "soil",
+			"variant": 1,
+			"cue": "S05",
+			"web_path": "res://audio/sfx_web/s05_soil_1.ogg",
+			"lufs_m_max": -25.5,
+			"true_peak_dbtp": -8.33
+		},
+		{
+			"id": "s05_soil_2",
+			"path": "res://audio/sfx/s05_soil_2.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 20543,
+			"tags": {},
+			"bank": "soil",
+			"variant": 2,
+			"cue": "S05",
+			"web_path": "res://audio/sfx_web/s05_soil_2.ogg",
+			"lufs_m_max": -25.5,
+			"true_peak_dbtp": -9.54
+		},
+		{
+			"id": "s05_soil_3",
+			"path": "res://audio/sfx/s05_soil_3.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 19662,
+			"tags": {},
+			"bank": "soil",
+			"variant": 3,
+			"cue": "S05",
+			"web_path": "res://audio/sfx_web/s05_soil_3.ogg",
+			"lufs_m_max": -25.5,
+			"true_peak_dbtp": -8.65
+		},
+		{
+			"id": "s18_rustle_1",
+			"path": "res://audio/sfx/s18_rustle_1.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 37373,
+			"tags": {},
+			"bank": "rustle",
+			"variant": 1,
+			"cue": "S18",
+			"web_path": "res://audio/sfx_web/s18_rustle_1.ogg",
+			"lufs_m_max": -27.0,
+			"true_peak_dbtp": -10.08
+		},
+		{
+			"id": "s18_rustle_2",
+			"path": "res://audio/sfx/s18_rustle_2.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 38798,
+			"tags": {},
+			"bank": "rustle",
+			"variant": 2,
+			"cue": "S18",
+			"web_path": "res://audio/sfx_web/s18_rustle_2.ogg",
+			"lufs_m_max": -27.0,
+			"true_peak_dbtp": -10.16
+		},
+		{
+			"id": "s18_rustle_3",
+			"path": "res://audio/sfx/s18_rustle_3.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 35583,
+			"tags": {},
+			"bank": "rustle",
+			"variant": 3,
+			"cue": "S18",
+			"web_path": "res://audio/sfx_web/s18_rustle_3.ogg",
+			"lufs_m_max": -27.0,
+			"true_peak_dbtp": -6.62
+		},
+		{
+			"id": "s19_swish_1",
+			"path": "res://audio/sfx/s19_swish_1.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 48114,
+			"tags": {},
+			"bank": "swish",
+			"variant": 1,
+			"cue": "S19",
+			"web_path": "res://audio/sfx_web/s19_swish_1.ogg",
+			"lufs_m_max": -27.0,
+			"true_peak_dbtp": -16.47
+		},
+		{
+			"id": "s19_swish_2",
+			"path": "res://audio/sfx/s19_swish_2.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 45332,
+			"tags": {},
+			"bank": "swish",
+			"variant": 2,
+			"cue": "S19",
+			"web_path": "res://audio/sfx_web/s19_swish_2.ogg",
+			"lufs_m_max": -27.0,
+			"true_peak_dbtp": -15.89
+		},
+		{
+			"id": "s17_boat_1",
+			"path": "res://audio/sfx/s17_boat_1.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 46633,
+			"tags": {},
+			"bank": "boat",
+			"variant": 1,
+			"cue": "S17",
+			"web_path": "res://audio/sfx_web/s17_boat_1.ogg",
+			"lufs_m_max": -24.0,
+			"true_peak_dbtp": -10.56
+		},
+		{
+			"id": "s17_boat_2",
+			"path": "res://audio/sfx/s17_boat_2.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 48628,
+			"tags": {},
+			"bank": "boat",
+			"variant": 2,
+			"cue": "S17",
+			"web_path": "res://audio/sfx_web/s17_boat_2.ogg",
+			"lufs_m_max": -24.0,
+			"true_peak_dbtp": -10.54
+		},
+		{
+			"id": "s14_snore_1",
+			"path": "res://audio/sfx/s14_snore_1.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 82760,
+			"tags": {},
+			"bank": "snore",
+			"variant": 1,
+			"cue": "S14",
+			"web_path": "res://audio/sfx_web/s14_snore_1.ogg",
+			"lufs_m_max": -30.0,
+			"true_peak_dbtp": -19.12
+		},
+		{
+			"id": "s14_snore_2",
+			"path": "res://audio/sfx/s14_snore_2.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 80931,
+			"tags": {},
+			"bank": "snore",
+			"variant": 2,
+			"cue": "S14",
+			"web_path": "res://audio/sfx_web/s14_snore_2.ogg",
+			"lufs_m_max": -30.0,
+			"true_peak_dbtp": -19.99
+		},
+		{
+			"id": "s04_unfurl_fmaj9",
+			"path": "res://audio/sfx/s04_unfurl_fmaj9.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 95286,
+			"tags": {
+				"chord": "Fmaj9"
+			},
+			"bank": "unfurl",
+			"clip": "Fmaj9",
+			"cue": "S04",
+			"web_path": "res://audio/sfx_web/s04_unfurl_fmaj9.ogg",
+			"lufs_m_max": -21.0,
+			"true_peak_dbtp": -13.78
+		},
+		{
+			"id": "s04_unfurl_goverf",
+			"path": "res://audio/sfx/s04_unfurl_goverf.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 84331,
+			"tags": {
+				"chord": "G/F"
+			},
+			"bank": "unfurl",
+			"clip": "GoverF",
+			"cue": "S04",
+			"web_path": "res://audio/sfx_web/s04_unfurl_goverf.ogg",
+			"lufs_m_max": -21.0,
+			"true_peak_dbtp": -12.61
+		},
+		{
+			"id": "s04_unfurl_dm9",
+			"path": "res://audio/sfx/s04_unfurl_dm9.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 91408,
+			"tags": {
+				"chord": "Dm9"
+			},
+			"bank": "unfurl",
+			"clip": "Dm9",
+			"cue": "S04",
+			"web_path": "res://audio/sfx_web/s04_unfurl_dm9.ogg",
+			"lufs_m_max": -21.0,
+			"true_peak_dbtp": -11.06
+		},
+		{
+			"id": "s04_unfurl_am7",
+			"path": "res://audio/sfx/s04_unfurl_am7.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 92597,
+			"tags": {
+				"chord": "Am7"
+			},
+			"bank": "unfurl",
+			"clip": "Am7",
+			"cue": "S04",
+			"web_path": "res://audio/sfx_web/s04_unfurl_am7.ogg",
+			"lufs_m_max": -21.0,
+			"true_peak_dbtp": -15.12
+		},
+		{
+			"id": "s04_unfurl_cmaj7",
+			"path": "res://audio/sfx/s04_unfurl_cmaj7.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 91441,
+			"tags": {
+				"chord": "Cmaj7"
+			},
+			"bank": "unfurl",
+			"clip": "Cmaj7",
+			"cue": "S04",
+			"web_path": "res://audio/sfx_web/s04_unfurl_cmaj7.ogg",
+			"lufs_m_max": -21.0,
+			"true_peak_dbtp": -13.72
+		},
+		{
+			"id": "s09_friend_fmaj9",
+			"path": "res://audio/sfx/s09_friend_fmaj9.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 148916,
+			"tags": {
+				"chord": "Fmaj9"
+			},
+			"bank": "friend",
+			"clip": "Fmaj9",
+			"cue": "S09",
+			"web_path": "res://audio/sfx_web/s09_friend_fmaj9.ogg",
+			"lufs_m_max": -18.0,
+			"true_peak_dbtp": -10.91
+		},
+		{
+			"id": "s09_friend_goverf",
+			"path": "res://audio/sfx/s09_friend_goverf.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 149759,
+			"tags": {
+				"chord": "G/F"
+			},
+			"bank": "friend",
+			"clip": "GoverF",
+			"cue": "S09",
+			"web_path": "res://audio/sfx_web/s09_friend_goverf.ogg",
+			"lufs_m_max": -18.0,
+			"true_peak_dbtp": -10.69
+		},
+		{
+			"id": "s09_friend_dm9",
+			"path": "res://audio/sfx/s09_friend_dm9.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 151061,
+			"tags": {
+				"chord": "Dm9"
+			},
+			"bank": "friend",
+			"clip": "Dm9",
+			"cue": "S09",
+			"web_path": "res://audio/sfx_web/s09_friend_dm9.ogg",
+			"lufs_m_max": -18.0,
+			"true_peak_dbtp": -10.29
+		},
+		{
+			"id": "s09_friend_am7",
+			"path": "res://audio/sfx/s09_friend_am7.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 145309,
+			"tags": {
+				"chord": "Am7"
+			},
+			"bank": "friend",
+			"clip": "Am7",
+			"cue": "S09",
+			"web_path": "res://audio/sfx_web/s09_friend_am7.ogg",
+			"lufs_m_max": -18.0,
+			"true_peak_dbtp": -10.58
+		},
+		{
+			"id": "s09_friend_cmaj7",
+			"path": "res://audio/sfx/s09_friend_cmaj7.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 148443,
+			"tags": {
+				"chord": "Cmaj7"
+			},
+			"bank": "friend",
+			"clip": "Cmaj7",
+			"cue": "S09",
+			"web_path": "res://audio/sfx_web/s09_friend_cmaj7.ogg",
+			"lufs_m_max": -18.0,
+			"true_peak_dbtp": -13.0
+		},
+		{
+			"id": "s10_welcome_fmaj9",
+			"path": "res://audio/sfx/s10_welcome_fmaj9.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 154134,
+			"tags": {
+				"chord": "Fmaj9"
+			},
+			"bank": "welcome",
+			"clip": "Fmaj9",
+			"cue": "S10",
+			"web_path": "res://audio/sfx_web/s10_welcome_fmaj9.ogg",
+			"lufs_m_max": -19.0,
+			"true_peak_dbtp": -12.24
+		},
+		{
+			"id": "s10_welcome_goverf",
+			"path": "res://audio/sfx/s10_welcome_goverf.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 152635,
+			"tags": {
+				"chord": "G/F"
+			},
+			"bank": "welcome",
+			"clip": "GoverF",
+			"cue": "S10",
+			"web_path": "res://audio/sfx_web/s10_welcome_goverf.ogg",
+			"lufs_m_max": -19.0,
+			"true_peak_dbtp": -12.98
+		},
+		{
+			"id": "s10_welcome_dm9",
+			"path": "res://audio/sfx/s10_welcome_dm9.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 155645,
+			"tags": {
+				"chord": "Dm9"
+			},
+			"bank": "welcome",
+			"clip": "Dm9",
+			"cue": "S10",
+			"web_path": "res://audio/sfx_web/s10_welcome_dm9.ogg",
+			"lufs_m_max": -19.0,
+			"true_peak_dbtp": -11.33
+		},
+		{
+			"id": "s10_welcome_am7",
+			"path": "res://audio/sfx/s10_welcome_am7.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 152273,
+			"tags": {
+				"chord": "Am7"
+			},
+			"bank": "welcome",
+			"clip": "Am7",
+			"cue": "S10",
+			"web_path": "res://audio/sfx_web/s10_welcome_am7.ogg",
+			"lufs_m_max": -19.0,
+			"true_peak_dbtp": -12.23
+		},
+		{
+			"id": "s10_welcome_cmaj7",
+			"path": "res://audio/sfx/s10_welcome_cmaj7.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 144014,
+			"tags": {
+				"chord": "Cmaj7"
+			},
+			"bank": "welcome",
+			"clip": "Cmaj7",
+			"cue": "S10",
+			"web_path": "res://audio/sfx_web/s10_welcome_cmaj7.ogg",
+			"lufs_m_max": -19.0,
+			"true_peak_dbtp": -11.91
+		},
+		{
+			"id": "s16_postcard_fmaj9",
+			"path": "res://audio/sfx/s16_postcard_fmaj9.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 92148,
+			"tags": {
+				"chord": "Fmaj9"
+			},
+			"bank": "postcard",
+			"clip": "Fmaj9",
+			"cue": "S16",
+			"web_path": "res://audio/sfx_web/s16_postcard_fmaj9.ogg",
+			"lufs_m_max": -24.0,
+			"true_peak_dbtp": -16.23
+		},
+		{
+			"id": "s16_postcard_goverf",
+			"path": "res://audio/sfx/s16_postcard_goverf.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 90657,
+			"tags": {
+				"chord": "G/F"
+			},
+			"bank": "postcard",
+			"clip": "GoverF",
+			"cue": "S16",
+			"web_path": "res://audio/sfx_web/s16_postcard_goverf.ogg",
+			"lufs_m_max": -24.0,
+			"true_peak_dbtp": -19.91
+		},
+		{
+			"id": "s16_postcard_dm9",
+			"path": "res://audio/sfx/s16_postcard_dm9.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 91186,
+			"tags": {
+				"chord": "Dm9"
+			},
+			"bank": "postcard",
+			"clip": "Dm9",
+			"cue": "S16",
+			"web_path": "res://audio/sfx_web/s16_postcard_dm9.ogg",
+			"lufs_m_max": -24.0,
+			"true_peak_dbtp": -15.62
+		},
+		{
+			"id": "s16_postcard_am7",
+			"path": "res://audio/sfx/s16_postcard_am7.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 96323,
+			"tags": {
+				"chord": "Am7"
+			},
+			"bank": "postcard",
+			"clip": "Am7",
+			"cue": "S16",
+			"web_path": "res://audio/sfx_web/s16_postcard_am7.ogg",
+			"lufs_m_max": -24.0,
+			"true_peak_dbtp": -16.2
+		},
+		{
+			"id": "s16_postcard_cmaj7",
+			"path": "res://audio/sfx/s16_postcard_cmaj7.wav",
+			"kind": "sfx",
+			"bus": "SFX",
+			"loop": false,
+			"channels": 1,
+			"base_volume_db": 0.0,
+			"length_samples": 100163,
+			"tags": {
+				"chord": "Cmaj7"
+			},
+			"bank": "postcard",
+			"clip": "Cmaj7",
+			"cue": "S16",
+			"web_path": "res://audio/sfx_web/s16_postcard_cmaj7.ogg",
+			"lufs_m_max": -24.0,
+			"true_peak_dbtp": -19.33
+		}
+	]
+}

@@ -1,0 +1,53 @@
+{
+	"schema": 1,
+	"doc": "Device-clock time of day, weather and seasons. Local time = device local clock (Time.get_datetime_dict_from_system()). Phase starts are seconds after local midnight; each phase cross-fades in over crossfade_s starting at its start time. See docs/GDD.md section 6.",
+	"phases": [
+		{"id": "dawn", "start_s": 18000, "g_day": 0.2, "audio_profile": "dawn", "name_key": "TIME_DAWN"},
+		{"id": "day", "start_s": 28800, "g_day": 0.4, "audio_profile": "day", "name_key": "TIME_DAY"},
+		{"id": "golden", "start_s": 59400, "g_day": 0.6, "audio_profile": "day", "name_key": "TIME_GOLDEN"},
+		{"id": "dusk", "start_s": 66600, "g_day": 0.8, "audio_profile": "dusk", "name_key": "TIME_DUSK"},
+		{"id": "night", "start_s": 73800, "g_day": 1.0, "audio_profile": "night", "name_key": "TIME_NIGHT"}
+	],
+	"phase_crossfade_s": 2400,
+	"audio_profile_crossfade_s": 90,
+	"g_day_wrap_note": "night is 1.0 and also 0.0: g_day jumps 1.0 -> 0.0 at 00:00, which is seamless because the palette gradient has night at both ends",
+	"weather": [
+		{
+			"id": "clear",
+			"name_key": "WEATHER_CLEAR",
+			"g_wind": 0.35,
+			"rain_particles": 0,
+			"cloud_cover": 0.15,
+			"ambient_mult": 1.0
+		},
+		{
+			"id": "breeze",
+			"name_key": "WEATHER_BREEZE",
+			"g_wind": 0.85,
+			"rain_particles": 0,
+			"cloud_cover": 0.35,
+			"ambient_mult": 1.0
+		},
+		{
+			"id": "rain",
+			"name_key": "WEATHER_RAIN",
+			"g_wind": 0.55,
+			"rain_particles": 120,
+			"cloud_cover": 0.85,
+			"ambient_mult": 0.92
+		}
+	],
+	"weather_crossfade_s": 30,
+	"weather_plan": {
+		"doc": "Per local calendar day d, seed the plan RNG from (install_seed, d). Draw the number of rain episodes and the number of breeze episodes from the count probabilities (index = count), then for each episode a start uniformly in [0, 86400) s after local midnight and a duration uniformly in [min, max]. Episodes may run past midnight. Rain wins over breeze; otherwise clear. A drawn plan never changes.",
+		"rain_count_probs": [0.3, 0.45, 0.25],
+		"rain_min_s": 3600,
+		"rain_max_s": 10800,
+		"breeze_count_probs": [0.1, 0.25, 0.4, 0.25],
+		"breeze_min_s": 3600,
+		"breeze_max_s": 10800
+	},
+	"seasons": [{"id": "spring", "name_key": "SEASON_SPRING", "length_days": 14}],
+	"season_cycle": ["spring"],
+	"season_note": "MVP ships Spring only; season_cycle grows to [spring, summer, autumn, winter] later. Seasons never remove anything: out-of-season flowers stay planted and keep counting; out-of-season species simply rest."
+}

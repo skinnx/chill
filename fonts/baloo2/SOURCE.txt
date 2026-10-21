@@ -1,0 +1,4 @@
+@expo-google-fonts/baloo-2@0.4.2 (npm), tarball sha512 bafaf0d48fac3fbd8f63cc5138943a08c8861eef7e58909d8bbd90f8e896a50dec2ac211c881178a60df8149e4936be95957a3d095fd7cb73cee20e68ca13ce8
+Subset by tools/fonts/build_fonts.py: Latin + Vietnamese, all layout features kept.
+The copyright line of OFL.txt declares no Reserved Font Name, so the subset files
+keep the original family names. Licence: SIL Open Font License 1.1 (OFL.txt).

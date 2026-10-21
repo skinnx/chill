@@ -1,0 +1,230 @@
+; Engine configuration file.
+; Mossling Meadow - Godot 4.7.2-stable, Compatibility renderer.
+; Base: docs/research/00-SYNTHESIS.md §3 (binding). Additions are marked and explained in
+; docs/ARCHITECTURE.md §2: autoloads, locale fallback, the Art Bible §4.1 shader globals,
+; application/config/version and boot_splash/show_image=false (plain #F0EEE9 splash).
+
+config_version=5
+
+[application]
+
+config/name="Mossling Meadow"
+config/version="0.1.0"
+run/main_scene="res://scenes/boot.tscn"
+config/quit_on_go_back=false
+config/features=PackedStringArray("4.7", "GL Compatibility")
+run/max_fps=60
+boot_splash/show_image=false
+boot_splash/bg_color=Color(0.941, 0.933, 0.914, 1)
+config/icon="res://icon.svg"
+
+[autoload]
+
+ContentRegistry="*res://scripts/autoload/content_registry.gd"
+Settings="*res://scripts/autoload/settings.gd"
+Clock="*res://scripts/autoload/clock.gd"
+SaveService="*res://scripts/autoload/save_service.gd"
+FrameGovernor="*res://scripts/autoload/frame_governor.gd"
+Motion="*res://scripts/autoload/motion.gd"
+Haptics="*res://scripts/autoload/haptics.gd"
+UiTheme="*res://scripts/autoload/ui_theme.gd"
+TimeOfDay="*res://scripts/autoload/time_of_day.gd"
+AudioDirector="*res://scripts/autoload/audio_director.gd"
+Game="*res://scripts/autoload/game.gd"
+
+[debug]
+
+gdscript/warnings/untyped_declaration=1
+gdscript/warnings/unsafe_call_argument=1
+gdscript/warnings/unsafe_method_access=1
+gdscript/warnings/unsafe_property_access=1
+
+[display]
+
+window/size/viewport_width=1080
+window/size/viewport_height=1920
+window/size/window_width_override=540
+window/size/window_height_override=960
+window/size/window_width_override.movie=1080
+window/size/window_height_override.movie=2400
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+window/handheld/orientation=1
+window/energy_saving/keep_screen_on=false
+window/ios/suppress_ui_gesture=false
+
+[editor]
+
+movie_writer/mix_rate=44100
+movie_writer/fps=30
+
+[gui]
+
+common/drag_threshold=24
+
+[internationalization]
+
+locale/fallback="en"
+
+[physics]
+
+common/physics_ticks_per_second=30
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+textures/canvas_textures/default_texture_filter=2
+textures/vram_compression/import_etc2_astc=true
+environment/defaults/default_clear_color=Color(0.941, 0.933, 0.914, 1)
+
+[shader_globals]
+
+g_time={
+"type": "float",
+"value": 0.0
+}
+g_day={
+"type": "float",
+"value": 0.4
+}
+g_wind={
+"type": "float",
+"value": 0.5
+}
+g_motion={
+"type": "float",
+"value": 1.0
+}
+g_sun_dir={
+"type": "vec2",
+"value": Vector2(0.6, -0.8)
+}
+g_sky_top={
+"type": "color",
+"value": Color(0.435, 0.714, 0.925, 1)
+}
+g_sky_mid={
+"type": "color",
+"value": Color(0.62, 0.824, 0.949, 1)
+}
+g_sky_horizon={
+"type": "color",
+"value": Color(0.839, 0.933, 0.965, 1)
+}
+g_ambient={
+"type": "color",
+"value": Color(1, 1, 1, 1)
+}
+g_key={
+"type": "color",
+"value": Color(1, 0.945, 0.761, 1)
+}
+g_shadow={
+"type": "color",
+"value": Color(0.231, 0.424, 0.549, 1)
+}
+g_glow={
+"type": "color",
+"value": Color(1, 0.961, 0.839, 1)
+}
+g_far={
+"type": "color",
+"value": Color(0.659, 0.831, 0.8, 1)
+}
+g_mid={
+"type": "color",
+"value": Color(0.49, 0.749, 0.569, 1)
+}
+g_near={
+"type": "color",
+"value": Color(0.31, 0.627, 0.435, 1)
+}
+g_fg={
+"type": "color",
+"value": Color(0.184, 0.482, 0.357, 1)
+}
+g_accent={
+"type": "color",
+"value": Color(1, 0.773, 0.431, 1)
+}
+g_ground_back={
+"type": "color",
+"value": Color(0.404, 0.686, 0.51, 1)
+}
+g_ground_front={
+"type": "color",
+"value": Color(0.31, 0.627, 0.435, 1)
+}
+g_water_deep={
+"type": "color",
+"value": Color(0.322, 0.6, 0.62, 1)
+}
+g_water_shallow={
+"type": "color",
+"value": Color(0.741, 0.882, 0.957, 1)
+}
+g_rim={
+"type": "float",
+"value": 0.35
+}
+g_backlight={
+"type": "float",
+"value": 0.1
+}
+g_ground_light={
+"type": "float",
+"value": 0.18
+}
+g_shadow_alpha={
+"type": "float",
+"value": 0.3
+}
+g_sun_pos={
+"type": "vec2",
+"value": Vector2(780, 380)
+}
+g_moon_pos={
+"type": "vec2",
+"value": Vector2(820, 380)
+}
+g_celestial={
+"type": "vec2",
+"value": Vector2(1, 0)
+}
+g_halo={
+"type": "vec2",
+"value": Vector2(1, 0.18)
+}
+g_stars={
+"type": "float",
+"value": 0.0
+}
+g_lights={
+"type": "float",
+"value": 0.0
+}
+g_shafts={
+"type": "float",
+"value": 0.7
+}
+g_cloud={
+"type": "float",
+"value": 0.15
+}
+g_cloud_shadow={
+"type": "float",
+"value": 0.12
+}
+g_rain={
+"type": "float",
+"value": 0.0
+}
+g_mist={
+"type": "float",
+"value": 0.0
+}
+g_world_offset={
+"type": "vec2",
+"value": Vector2(0, 0)
+}
