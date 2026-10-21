@@ -1,6 +1,6 @@
 {
 	"schema": 1,
-	"doc": "Mossling species (one named individual each in the MVP). Visit weight w = base_weight * product(mult of every satisfied like) * best_friend_mult; w = 0 if any requires entry is unmet, if phases is non-empty and the current phase is not listed, or if the individual is already in the hollow. Item counts: flowers = bloomed stems, decor = copies. Palette slots reference creature tokens (cr_*) owned by docs/ART_BIBLE.md. See docs/GDD.md section 4.1.",
+	"doc": "Mossling species (one named individual each in the MVP). Visit weight w = base_weight * product(mult of every satisfied like) * best_friend_mult; w = 0 if any requires entry is unmet, if phases is non-empty and the current phase is not listed, or if the individual is already in the hollow. Item counts: flowers = bloomed stems, decor = copies. Palette slots reference creature tokens (cr_*) owned by docs/ART_BIBLE.md. See docs/GDD.md section 4.1. Retention v1 (GDD 13.2): signature_gift (economy gift_items id, left instead of gift_item from heart 2), nest_style (friendship.json nest.styles), best_friend (symmetric pair), postcard_heart2/4/5 (the 3-part story).",
 	"species": [
 		{
 			"id": "puffmoss",
@@ -38,7 +38,11 @@
 			},
 			"voice_step": 0,
 			"postcard_heart2": "POSTCARD_FRIEND_01",
-			"postcard_heart4": "POSTCARD_FRIEND_07",
+			"postcard_heart4": "POSTCARD_FRIEND_PUFFMOSS_H4",
+			"postcard_heart5": "POSTCARD_FRIEND_PUFFMOSS_H5",
+			"signature_gift": "sig_moss_tuft",
+			"nest_style": "moss_bowl",
+			"best_friend": "moonpuff",
 			"seasons": ["spring", "summer", "autumn", "winter"]
 		},
 		{
@@ -77,7 +81,11 @@
 			},
 			"voice_step": 2,
 			"postcard_heart2": "POSTCARD_FRIEND_02",
-			"postcard_heart4": "POSTCARD_FRIEND_08",
+			"postcard_heart4": "POSTCARD_FRIEND_BUTTONBUD_H4",
+			"postcard_heart5": "POSTCARD_FRIEND_BUTTONBUD_H5",
+			"signature_gift": "sig_daisy_button",
+			"nest_style": "petal_cup",
+			"best_friend": "honeyhum",
 			"seasons": ["spring", "summer", "autumn", "winter"]
 		},
 		{
@@ -116,7 +124,11 @@
 			},
 			"voice_step": -2,
 			"postcard_heart2": "POSTCARD_FRIEND_03",
-			"postcard_heart4": "POSTCARD_FRIEND_09",
+			"postcard_heart4": "POSTCARD_FRIEND_PEBBLEPAW_H4",
+			"postcard_heart5": "POSTCARD_FRIEND_PEBBLEPAW_H5",
+			"signature_gift": "sig_striped_pebble",
+			"nest_style": "pebble_ring",
+			"best_friend": "puddlewump",
 			"seasons": ["spring", "summer", "autumn", "winter"]
 		},
 		{
@@ -155,7 +167,11 @@
 			},
 			"voice_step": 3,
 			"postcard_heart2": "POSTCARD_FRIEND_04",
-			"postcard_heart4": "POSTCARD_FRIEND_10",
+			"postcard_heart4": "POSTCARD_FRIEND_HONEYHUM_H4",
+			"postcard_heart5": "POSTCARD_FRIEND_HONEYHUM_H5",
+			"signature_gift": "sig_honey_thimble",
+			"nest_style": "leaf_cradle",
+			"best_friend": "buttonbud",
 			"seasons": ["spring", "summer"]
 		},
 		{
@@ -194,7 +210,11 @@
 			},
 			"voice_step": 1,
 			"postcard_heart2": "POSTCARD_FRIEND_05",
-			"postcard_heart4": "POSTCARD_FRIEND_11",
+			"postcard_heart4": "POSTCARD_FRIEND_FERNWHISK_H4",
+			"postcard_heart5": "POSTCARD_FRIEND_FERNWHISK_H5",
+			"signature_gift": "sig_fern_curl",
+			"nest_style": "leaf_cradle",
+			"best_friend": "glowmote",
 			"seasons": ["spring", "summer", "autumn"]
 		},
 		{
@@ -233,7 +253,11 @@
 			},
 			"voice_step": 4,
 			"postcard_heart2": "POSTCARD_FRIEND_06",
-			"postcard_heart4": "POSTCARD_FRIEND_12",
+			"postcard_heart4": "POSTCARD_FRIEND_DANDELFLUFF_H4",
+			"postcard_heart5": "POSTCARD_FRIEND_DANDELFLUFF_H5",
+			"signature_gift": "sig_wish_seed",
+			"nest_style": "moss_bowl",
+			"best_friend": "bellkin",
 			"seasons": ["spring", "summer"]
 		},
 		{
@@ -271,8 +295,12 @@
 				"accent": "cr_berry"
 			},
 			"voice_step": 5,
-			"postcard_heart2": "POSTCARD_FRIEND_03",
-			"postcard_heart4": "POSTCARD_FRIEND_10",
+			"postcard_heart2": "POSTCARD_FRIEND_10",
+			"postcard_heart4": "POSTCARD_FRIEND_BELLKIN_H4",
+			"postcard_heart5": "POSTCARD_FRIEND_BELLKIN_H5",
+			"signature_gift": "sig_bluebell_bell",
+			"nest_style": "petal_cup",
+			"best_friend": "dandelfluff",
 			"seasons": ["spring", "summer", "autumn", "winter"]
 		},
 		{
@@ -310,8 +338,12 @@
 				"accent": "cr_rose"
 			},
 			"voice_step": 2,
-			"postcard_heart2": "POSTCARD_FRIEND_02",
-			"postcard_heart4": "POSTCARD_FRIEND_11",
+			"postcard_heart2": "POSTCARD_FRIEND_11",
+			"postcard_heart4": "POSTCARD_FRIEND_PRIMPIP_H4",
+			"postcard_heart5": "POSTCARD_FRIEND_PRIMPIP_H5",
+			"signature_gift": "sig_pressed_primrose",
+			"nest_style": "petal_cup",
+			"best_friend": "capling",
 			"seasons": ["spring"]
 		},
 		{
@@ -349,8 +381,12 @@
 				"accent": "cr_snow"
 			},
 			"voice_step": 3,
-			"postcard_heart2": "POSTCARD_FRIEND_06",
-			"postcard_heart4": "POSTCARD_FRIEND_08",
+			"postcard_heart2": "POSTCARD_FRIEND_08",
+			"postcard_heart4": "POSTCARD_FRIEND_CAPLING_H4",
+			"postcard_heart5": "POSTCARD_FRIEND_CAPLING_H5",
+			"signature_gift": "sig_raindrop_cap",
+			"nest_style": "pebble_ring",
+			"best_friend": "primpip",
 			"seasons": ["spring", "autumn"]
 		},
 		{
@@ -388,8 +424,12 @@
 				"accent": "cr_sky"
 			},
 			"voice_step": -1,
-			"postcard_heart2": "POSTCARD_FRIEND_05",
-			"postcard_heart4": "POSTCARD_FRIEND_09",
+			"postcard_heart2": "POSTCARD_FRIEND_09",
+			"postcard_heart4": "POSTCARD_FRIEND_PUDDLEWUMP_H4",
+			"postcard_heart5": "POSTCARD_FRIEND_PUDDLEWUMP_H5",
+			"signature_gift": "sig_spiral_shell",
+			"nest_style": "pebble_ring",
+			"best_friend": "pebblepaw",
 			"seasons": ["spring", "summer", "autumn"]
 		},
 		{
@@ -427,8 +467,12 @@
 				"accent": "cr_glow"
 			},
 			"voice_step": 1,
-			"postcard_heart2": "POSTCARD_FRIEND_04",
-			"postcard_heart4": "POSTCARD_FRIEND_12",
+			"postcard_heart2": "POSTCARD_FRIEND_12",
+			"postcard_heart4": "POSTCARD_FRIEND_GLOWMOTE_H4",
+			"postcard_heart5": "POSTCARD_FRIEND_GLOWMOTE_H5",
+			"signature_gift": "sig_glow_pebble",
+			"nest_style": "leaf_cradle",
+			"best_friend": "fernwhisk",
 			"seasons": ["spring", "summer", "autumn", "winter"]
 		},
 		{
@@ -439,7 +483,7 @@
 			"hint_key": "SPECIES_MOONPUFF_HINT",
 			"album_order": 12,
 			"rarity": "very_rare",
-			"base_weight": 3.0,
+			"base_weight": 4.0,
 			"gift_dew": 28,
 			"gift_item": "moon_drop",
 			"stay_mult": 1.5,
@@ -466,8 +510,12 @@
 				"accent": "cr_glow"
 			},
 			"voice_step": -3,
-			"postcard_heart2": "POSTCARD_FRIEND_01",
-			"postcard_heart4": "POSTCARD_FRIEND_07",
+			"postcard_heart2": "POSTCARD_FRIEND_07",
+			"postcard_heart4": "POSTCARD_FRIEND_MOONPUFF_H4",
+			"postcard_heart5": "POSTCARD_FRIEND_MOONPUFF_H5",
+			"signature_gift": "sig_moon_feather",
+			"nest_style": "moss_bowl",
+			"best_friend": "puffmoss",
 			"seasons": ["spring", "summer", "autumn", "winter"]
 		}
 	]

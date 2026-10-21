@@ -258,7 +258,7 @@ POSTCARD_FRIEND_05,I'm not very good at saying hello. But I like it here. I like
 POSTCARD_FRIEND_06,"The wind and I went all the way up the hill and back. From up there, your garden looks like a patchwork quilt.","Mình với cơn gió đã lên tận đỉnh đồi rồi quay về. Từ trên đó nhìn xuống, khu vườn của bạn trông như một tấm chăn chắp vá."
 POSTCARD_FRIEND_07,"I dreamed the whole hollow was a soft, round pillow. Then I woke up, and it was true.",Mình mơ thấy cả thung lũng là một chiếc gối tròn êm ái. Tỉnh dậy thì thấy đúng là vậy thật.
 POSTCARD_FRIEND_08,"I hopped three times around the garden today. That's how happy I am. You can hop too, if you like.","Hôm nay mình nhảy ba vòng quanh vườn. Mình vui đến thế đó. Bạn cũng nhảy thử nhé, nếu thích."
-POSTCARD_FRIEND_09,"Whenever you'd like a quiet place, the stream and I will keep a spot for you.","Bất cứ khi nào bạn muốn tìm một chỗ yên tĩnh, mình và con suối sẽ giữ cho bạn một chỗ ngồi."
+POSTCARD_FRIEND_09,"The stream and I have decided: you are invited to every splash. Bring your toes, or just watch from the bank.","Mình với con suối đã quyết định rồi: bạn được mời tới mọi trận té nước. Mang theo mấy ngón chân nhé, hoặc chỉ ngồi trên bờ ngắm thôi cũng được."
 POSTCARD_FRIEND_10,"I made up a little song about your garden. It goes hmm, hmm-hmm, hmmm. It sounds even better with chimes.","Mình nghĩ ra một bài hát nho nhỏ về khu vườn của bạn. Nó như thế này: ư ư, ư-ư, ưưư. Có tiếng chuông gió thì còn hay hơn nữa."
 POSTCARD_FRIEND_11,I tidied the moss by the old stump and left a pebble there for you. It's the roundest one I could find.,Mình đã chải lại lớp rêu cạnh gốc cây cũ và để ở đó một viên sỏi cho bạn. Viên tròn nhất mà mình tìm được đấy.
 POSTCARD_FRIEND_12,"When the lanterns glow, I like to sit very still and watch the sky. Thank you for the warm little lights.","Khi những chiếc đèn sáng lên, mình thích ngồi thật yên và ngắm bầu trời. Cảm ơn bạn vì những ánh đèn nhỏ ấm áp."
@@ -271,3 +271,174 @@ POSTCARD_EVENT_BRIMMING,"The basket is brimming with gifts! From now on, when it
 POSTCARD_EVENT_TEN_BOATS,"Ten little leaf boats have sailed down the stream. Somewhere far away, a duck is very puzzled and very pleased.","Đã có mười chiếc thuyền lá xuôi dòng suối. Ở đâu đó thật xa, có một chú vịt vừa ngơ ngác vừa thích thú lắm."
 POSTCARD_EVENT_ALBUM_COMPLETE,Every mossling of spring has visited your hollow. They all agree: it's the coziest place they know.,Tất cả các bé rêu mùa xuân đều đã ghé thăm thung lũng của bạn. Bạn nào cũng đồng ý: đây là nơi ấm cúng nhất mà các bạn từng biết.
 RECAP_ONE_VISITED_HI,{name} stopped by to say hi,{name} đã ghé qua chào bạn
+ALBUM_TAB_CLUES,Clues,Manh mối
+ALBUM_TAB_MEMORIES,Memories,Kỷ niệm
+ALBUM_TAB_KEEPSAKES,Keepsakes,Kỷ vật
+HEART_UP_TITLE,{name} feels closer to you,{name} thấy gần bạn hơn rồi
+HEART_UP_1,{name} will wave hello when you open the hollow.,{name} sẽ vẫy chào mỗi khi bạn mở thung lũng.
+HEART_UP_2,{name} wrote you a postcard and has a special gift to share.,{name} viết cho bạn một tấm bưu thiếp và có một món quà đặc biệt muốn tặng.
+HEART_UP_3,{name} is making a little nest in the hollow.,{name} đang làm một chiếc tổ nhỏ trong thung lũng.
+HEART_UP_4,"{name} wrote again, and loves spending time with {friend}.","{name} lại viết thư, và rất thích chơi cùng {friend}."
+HEART_UP_4_SOLO,{name} wrote again. There is someone {name} would love you to meet.,{name} lại viết thư. Có một người bạn mà {name} rất muốn giới thiệu với bạn.
+HEART_UP_5,{name} left you a keepsake. Someone in the family is curious about the hollow too.,{name} để lại cho bạn một kỷ vật. Có một người họ hàng cũng đang tò mò về thung lũng.
+UNLOCK_HEART_1,Waves hello · Favourite spot,Vẫy chào · Chỗ yêu thích
+UNLOCK_HEART_2,A postcard · A special gift,Một tấm bưu thiếp · Một món quà đặc biệt
+UNLOCK_HEART_3,Likes · A nest of its own,Sở thích · Một chiếc tổ riêng
+UNLOCK_HEART_4,A second postcard · A best buddy,Tấm bưu thiếp thứ hai · Một bạn chí cốt
+UNLOCK_HEART_5,A third postcard · A keepsake · A cousin,Tấm bưu thiếp thứ ba · Một kỷ vật · Một người họ hàng
+ALBUM_UNLOCK_LATER,Comes with more hearts,Sẽ đến khi có thêm trái tim
+ALBUM_PAIR,Best buddy: {friend},Bạn chí cốt: {friend}
+ALBUM_NEST,{name}'s nest: {nest},Tổ của {name}: {nest}
+BASKET_SIGNATURE_NOTE,A special gift from {name},Món quà đặc biệt từ {name}
+RECAP_HEARTS,{name} feels closer to you,{name} thấy gần bạn hơn rồi
+RECAP_NEST,{name}'s nest grew a little cozier,Tổ của {name} lại ấm cúng thêm một chút
+NEST_STYLE_MOSS_BOWL,Moss bowl,Ổ rêu tròn
+NEST_STYLE_LEAF_CRADLE,Leaf cradle,Nôi lá
+NEST_STYLE_PETAL_CUP,Petal cup,Chén cánh hoa
+NEST_STYLE_PEBBLE_RING,Pebble ring,Vòng sỏi
+NEST_STAGE_TWIGS,A few soft twigs,Vài cành nhỏ mềm
+NEST_STAGE_MOSS_BED,A soft moss bed,Một tấm đệm rêu êm
+NEST_STAGE_CANOPY,A canopy of flowers,Một mái che bằng hoa
+KEEPSAKE_TITLE,A keepsake from {name},Kỷ vật của {name}
+KEEPSAKE_PORTRAIT,A portrait to keep,Một bức chân dung để giữ mãi
+KEEPSAKE_GIFT,{name}'s gift: {gift},Quà của {name}: {gift}
+KEEPSAKES_EMPTY,Friends with five hearts leave a keepsake here.,Những người bạn có đủ năm trái tim sẽ để lại kỷ vật ở đây.
+CAPTION_HEART,a warm chime,tiếng chuông ấm áp
+A11Y_NEST,{name}'s nest,Tổ của {name}
+GIFT_SIG_MOSS_TUFT,Sun-warmed moss tuft,Nắm rêu ấm nắng
+GIFT_SIG_DAISY_BUTTON,Daisy-petal button,Chiếc cúc áo cánh hoa
+GIFT_SIG_STRIPED_PEBBLE,Striped stream pebble,Viên sỏi suối có vân
+GIFT_SIG_HONEY_THIMBLE,Thimble of flower honey,Chén mật hoa bé xíu
+GIFT_SIG_FERN_CURL,Curled fern frond,Ngọn dương xỉ cuộn tròn
+GIFT_SIG_WISH_SEED,Wish seed,Hạt điều ước
+GIFT_SIG_BLUEBELL_BELL,Tiny bluebell bell,Chiếc chuông xanh tí hon
+GIFT_SIG_PRESSED_PRIMROSE,Pressed primrose,Bông anh thảo ép khô
+GIFT_SIG_RAINDROP_CAP,Raindrop in a toadstool cap,Giọt mưa trong mũ nấm
+GIFT_SIG_SPIRAL_SHELL,Tiny spiral shell,Vỏ ốc xoắn tí hon
+GIFT_SIG_GLOW_PEBBLE,Softly glowing pebble,Viên sỏi phát sáng dịu
+GIFT_SIG_MOON_FEATHER,Moon-pale feather,Chiếc lông vũ màu trăng
+POSTCARD_FRIEND_PUFFMOSS_H4,My nest by the sun stone is all mossy now. {friend} came by at moonrise and we shared it. We took turns being the pillow.,"Tổ của mình cạnh phiến đá nắng giờ phủ đầy rêu rồi. Lúc trăng lên, {friend} ghé qua và tụi mình ngủ chung. Hai đứa thay phiên nhau làm gối."
+POSTCARD_FRIEND_PUFFMOSS_H5,"I like it here more than any warm stone I have ever known, and I have known a lot of warm stones. My cousin from over the hill wants to visit. She only travels when the sky turns gold.","Mình thích nơi này hơn mọi phiến đá ấm mà mình từng biết, mà mình biết nhiều phiến đá lắm đó. Chị họ mình ở bên kia đồi muốn ghé chơi. Chị ấy chỉ lên đường khi bầu trời ngả vàng."
+POSTCARD_FRIEND_BUTTONBUD_H4,{friend} showed me which flowers hum the loudest. I showed {friend} my new nest. It has seven petals. I counted!,{friend} chỉ cho mình bông hoa nào ngân nga to nhất. Mình thì khoe với {friend} cái tổ mới. Tổ có bảy cánh hoa. Mình đếm rồi đó!
+POSTCARD_FRIEND_BUTTONBUD_H5,"I have a cousin with honey-coloured fur. She says she will visit on a sunny day, once the garden is full of daisies. I already saved her a petal.","Mình có một cô em họ lông màu mật ong. Em ấy nói sẽ ghé vào một ngày nắng, khi khu vườn nở đầy cúc dại. Mình để dành cho em ấy một cánh hoa rồi."
+POSTCARD_FRIEND_PEBBLEPAW_H4,"{friend} splashes and I sit. It works very well. My nest is a ring of the smoothest pebbles, and the stream sings it to sleep.","{friend} thì té nước, còn mình thì ngồi. Hợp nhau lắm. Tổ của mình là một vòng sỏi nhẵn nhất, và con suối hát ru nó ngủ."
+POSTCARD_FRIEND_PEBBLEPAW_H5,"A very old cousin of mine has moss growing on his back. He likes tall pebble towers. If the cairn ever reaches the top, I think he will stop by.","Mình có một ông anh họ lớn tuổi, rêu mọc cả trên lưng. Anh ấy mê những tháp sỏi thật cao. Nếu tháp sỏi chạm tới đỉnh, chắc anh ấy sẽ ghé qua."
+POSTCARD_FRIEND_HONEYHUM_H4,"I built my nest out of leaves, but {friend} keeps decorating it with petals. Now it looks like a bouquet. I am not complaining. Hmm-hmm.","Mình làm tổ bằng lá, nhưng {friend} cứ trang trí thêm cánh hoa. Giờ trông nó như một bó hoa. Mình chẳng phàn nàn gì đâu. Ư-ư."
+POSTCARD_FRIEND_HONEYHUM_H5,"My cousin is the colour of blossoms and wakes before everyone else. If you see someone pink humming at dawn, say hello for me.","Em họ mình có màu hoa đào và dậy sớm hơn tất cả mọi người. Nếu bạn thấy ai đó màu hồng đang ngân nga lúc bình minh, chào em ấy giúp mình nhé."
+POSTCARD_FRIEND_FERNWHISK_H4,{friend} doesn't talk much either. We sit in the ferns and say nothing together. It's my favourite kind of conversation.,{friend} cũng ít nói như mình. Tụi mình ngồi trong đám dương xỉ và cùng nhau chẳng nói gì. Đó là kiểu trò chuyện mình thích nhất.
+POSTCARD_FRIEND_FERNWHISK_H5,"I have a cousin as pale as morning mist. She is even shyer than me. She only comes out when it rains, because then nobody can see her blush.","Mình có một người chị họ nhạt màu như sương sớm. Chị ấy còn nhút nhát hơn mình. Chị chỉ ra ngoài khi trời mưa, vì lúc đó chẳng ai thấy chị đỏ mặt."
+POSTCARD_FRIEND_DANDELFLUFF_H4,{friend} plays the wind chimes and I dance on the breeze. We are a very small band. My nest is so soft I sink right into it.,{friend} chơi chuông gió còn mình nhảy theo làn gió. Tụi mình là một ban nhạc tí hon. Tổ của mình mềm đến nỗi mình lún hẳn vào trong.
+POSTCARD_FRIEND_DANDELFLUFF_H5,"Somewhere out there, my cousin is floating along, the colour of a sunset. On the breeziest day, she might just drift this way.","Ở đâu đó ngoài kia, em họ mình đang bay lơ lửng, mang màu ráng chiều. Vào một ngày thật nhiều gió, biết đâu em ấy sẽ bay về phía này."
+POSTCARD_FRIEND_BELLKIN_H4,"{friend} floats by whenever I sing, so now I sing a lot. My nest is a little cup of petals. It rings very softly when I curl up.","Hễ mình hát là {friend} lại bay ngang qua, nên giờ mình hát suốt. Tổ của mình là một chiếc chén cánh hoa nhỏ. Mỗi lần mình cuộn tròn trong đó, nó lại ngân khẽ."
+POSTCARD_FRIEND_BELLKIN_H5,"My rose-coloured cousin can hear a wind chime from three hills away. When all ten shells are singing, she will follow the music here.","Cô em họ màu hồng của mình nghe được tiếng chuông gió từ ba ngọn đồi xa. Khi cả mười vỏ ốc cùng hát, em ấy sẽ lần theo tiếng nhạc mà tới đây."
+POSTCARD_FRIEND_PRIMPIP_H4,"{friend} bounces right through my neat rows of pebbles, and somehow I don't mind at all. My nest has a petal for a blanket. I fold it every morning.","{friend} cứ nhảy qua mấy hàng sỏi ngay ngắn của mình, vậy mà mình chẳng thấy phiền chút nào. Tổ của mình có một cánh hoa làm chăn. Sáng nào mình cũng gấp nó lại gọn gàng."
+POSTCARD_FRIEND_PRIMPIP_H5,"My cousin has lavender fur and very good manners. She says a proper garden has ten primroses. When yours does, expect a polite knock.","Chị họ mình lông màu oải hương và rất lễ phép. Chị nói một khu vườn đúng nghĩa phải có mười bông anh thảo. Khi vườn bạn có đủ, sẽ có tiếng gõ cửa thật lịch sự đấy."
+POSTCARD_FRIEND_CAPLING_H4,"{friend} tidies and I hop. Then {friend} tidies again! My nest is a ring of pebbles, perfect for bouncing in. Boing.","{friend} dọn dẹp còn mình thì nhảy. Rồi {friend} lại dọn dẹp tiếp! Tổ của mình là một vòng sỏi, nhảy trong đó là tuyệt nhất. Tưng tưng."
+POSTCARD_FRIEND_CAPLING_H5,"My cousin wears a blue cap with white spots. He says a full fairy ring is the best place in the world to hop. Ten toadstools, and he will be here.",Em họ mình đội chiếc mũ xanh chấm trắng. Em ấy bảo một vòng nấm thần tiên trọn vẹn là chỗ nhảy tuyệt nhất trên đời. Đủ mười chiếc ghế nấm là em ấy sẽ tới.
+POSTCARD_FRIEND_PUDDLEWUMP_H4,"{friend} sits so still that the minnows think it's a pebble. I splash, and they all swim over to see. My nest is right next to the water, of course.","{friend} ngồi yên đến nỗi lũ cá con tưởng là hòn sỏi. Mình té nước một cái, thế là cả bọn bơi tới xem. Tổ của mình dĩ nhiên là nằm sát mép nước."
+POSTCARD_FRIEND_PUDDLEWUMP_H5,My cousin is green as a lily pond and twice as splashy. She would love a stream with lots of stepping stones. Ten should do it.,Em họ mình xanh như mặt hồ sen và còn té nước giỏi gấp đôi mình. Em ấy sẽ mê lắm một con suối có thật nhiều đá. Chắc mười viên là vừa.
+POSTCARD_FRIEND_GLOWMOTE_H4,"{friend} and I watched the first star come out. Neither of us said a word. My nest is a leaf cradle, and my antenna is its nightlight.","{friend} với mình cùng ngắm ngôi sao đầu tiên ló ra. Chẳng ai nói câu nào. Tổ của mình là một chiếc nôi lá, và chiếc râu của mình là ngọn đèn ngủ."
+POSTCARD_FRIEND_GLOWMOTE_H5,"I have a cousin who glows the colour of warm honey. She is a night traveller. Look for an amber light by the lanterns, very late.","Mình có một người chị họ phát sáng màu mật ong ấm. Chị là lữ khách của màn đêm. Khuya thật khuya, hãy tìm một đốm sáng màu hổ phách bên những chiếc đèn nhé."
+POSTCARD_FRIEND_MOONPUFF_H4,"{friend} keeps my nest warm all day, and I keep it cool all night. We are almost never awake at the same time, but we are very good friends.","{friend} giữ ấm tổ của mình suốt ngày, còn mình giữ mát nó suốt đêm. Hai đứa hiếm khi thức cùng lúc, nhưng tụi mình thân nhau lắm."
+POSTCARD_FRIEND_MOONPUFF_H5,"On the clearest nights, my cousin rides down on starlight. She is very sleepy and very sparkly. Leave the sky open for her.","Vào những đêm trời trong nhất, em họ mình cưỡi ánh sao mà xuống. Em ấy rất buồn ngủ và rất lấp lánh. Hãy để bầu trời thật quang cho em ấy nhé."
+SIGN_FOOTPRINTS,Little footprints,Những dấu chân nhỏ
+SIGN_DROPPED,A little something,Một món nho nhỏ
+SIGN_RUSTLE,A rustling bush,Bụi cây xào xạc
+SIGN_NOTE,A tiny note,Một mẩu thư bé xíu
+A11Y_SIGN_FOOTPRINTS,Little footprints in the moss. Tap to look closer,Dấu chân nhỏ trên rêu. Chạm để nhìn kỹ hơn
+A11Y_SIGN_DROPPED,Something small lies here. Tap to look closer,Có một món nhỏ nằm đây. Chạm để nhìn kỹ hơn
+A11Y_SIGN_RUSTLE,A bush is rustling. Tap to look closer,Bụi cây đang xào xạc. Chạm để nhìn kỹ hơn
+A11Y_SIGN_NOTE,A tiny folded note. Tap to read,Một mẩu thư gấp nhỏ. Chạm để đọc
+CLUE_FOUND_TITLE,A clue!,Một manh mối!
+CLUE_FOUND_FOOTPRINTS,Someone small walked through here.,Có một bạn nhỏ vừa đi ngang qua đây.
+CLUE_FOUND_DROPPED,Someone left this behind. It still feels a little warm.,Có ai đó để lại món này. Nó vẫn còn hơi ấm.
+CLUE_FOUND_RUSTLE,"A soft chirp from the leaves, then quiet.","Một tiếng ríu rít khẽ vang trong lá, rồi lặng im."
+CLUE_ADDED,Added to Clues in your album,Đã thêm vào mục Manh mối trong album
+CLUES_COUNT,{count} of {total} clues,{count}/{total} manh mối
+CLUES_SOMEONE,Someone is on the way,Có ai đó đang trên đường tới
+CLUES_SOLVED,So it was {name}!,Hóa ra là {name}!
+CLUES_CAME_ALONE,{name} found the hollow all by itself.,{name} tự mình tìm đến thung lũng.
+CLUES_COUSIN,A cousin of {name},Họ hàng của {name}
+CLUES_EMPTY,"When someone new is on the way, their clues will gather here.","Khi có bạn mới sắp ghé, manh mối sẽ được cất ở đây."
+RECAP_CLUE,Someone left a little clue,Có ai đó để lại một manh mối nhỏ
+RECAP_COUSIN,{name} brought a cousin to visit,{name} dẫn theo một người họ hàng tới chơi
+NEWFRIEND_COUSIN_TITLE,A cousin came to visit!,Có họ hàng ghé chơi nè!
+CAPTION_RUSTLE,leaves rustle,lá xào xạc
+CAPTION_CLUE,a soft sparkle,tiếng lấp lánh khẽ
+RIDDLE_PUFFMOSS,"Someone round and sleepy is dreaming of a warm stone, right in the middle of the sun.","Có một bạn tròn tròn, buồn ngủ, đang mơ về một phiến đá ấm nằm ngay giữa nắng."
+RIDDLE_BUTTONBUD,"Someone small counts petals in their sleep: daisy, clover, daisy, clover…","Có một bạn nhỏ xíu đếm cánh hoa cả trong mơ: cúc dại, cỏ ba lá, cúc dại, cỏ ba lá…"
+RIDDLE_PEBBLEPAW,Someone patient is listening for running water and the click of smooth stones.,Có một bạn kiên nhẫn đang lắng nghe tiếng nước chảy và tiếng sỏi nhẵn lách cách.
+RIDDLE_HONEYHUM,Someone is humming nearby. They follow the smell of buttercups wherever it floats.,"Có ai đó đang ngân nga gần đây. Hương mao lương vàng bay tới đâu, bạn ấy theo tới đó."
+RIDDLE_FERNWHISK,"Someone shy hides behind a fern, and peeks out wherever forget-me-nots grow.","Có một bạn nhút nhát nấp sau lá dương xỉ, ló ra ở chỗ nào có hoa lưu ly."
+RIDDLE_DANDELFLUFF,"Someone light as a wish is drifting closer, carried along by dandelion seeds.","Có một bạn nhẹ như một điều ước đang bay lại gần, theo những hạt bồ công anh."
+RIDDLE_BELLKIN,Someone hums a tune that sounds like bluebells nodding in the breeze.,Có ai đó ngân nga một giai điệu nghe như những bông chuông xanh gật gù trong gió.
+RIDDLE_PRIMPIP,"Someone tidy lined up three pebbles here, very neatly, beside a pale primrose.","Có một bạn gọn gàng đã xếp ba viên sỏi thật ngay ngắn ở đây, cạnh một bông anh thảo vàng nhạt."
+RIDDLE_CAPLING,"Someone bouncy is looking for a ring of toadstools to hop around, rain or shine.","Có một bạn nhún nhảy đang tìm một vòng nấm để nhảy quanh, dù mưa hay nắng."
+RIDDLE_PUDDLEWUMP,"Someone wet and happy left a splash on the stream stones. Did it rain, or did they just jump?","Có một bạn ướt nhẹp mà vui vẻ đã để lại vệt nước trên đá suối. Trời mưa, hay bạn ấy vừa nhảy tõm?"
+RIDDLE_GLOWMOTE,Someone glows softly when the lanterns are lit. Look for a tiny light at dusk.,Có một bạn tỏa sáng dịu dàng khi đèn được thắp lên. Hãy tìm một đốm sáng nhỏ lúc chạng vạng.
+RIDDLE_MOONPUFF,"Someone dreams on moonlight. They will come on a quiet night, when moonblooms open and chimes ring.","Có một bạn ngủ mơ trên ánh trăng. Bạn ấy sẽ tới vào một đêm yên tĩnh, khi hoa quỳnh nở và chuông gió ngân."
+SCENE_SAVED,Saved to Memories,Đã cất vào Kỷ niệm
+A11Y_SCENE,Something happened here. Tap to look,Ở đây vừa có chuyện hay. Chạm để xem
+MEMORIES_SECTION_MOMENTS,Little moments,Khoảnh khắc nhỏ
+MEMORIES_EMPTY,Little moments from while you were away will gather here.,Những khoảnh khắc nhỏ trong lúc bạn đi vắng sẽ được cất ở đây.
+CAPTION_SCENE,a soft hush of wonder,một tiếng ồ khe khẽ
+SCENE_NAP_PILE_TITLE,Nap pile,Ngủ chồng đống
+SCENE_NAP_PILE_CAPTION,{name} and friends piled up for a nap on the sun stone.,{name} và các bạn nằm chồng lên nhau ngủ một giấc trên phiến đá nắng.
+RECAP_SCENE_NAP_PILE,Something soft happened on the sun stone…,Trên phiến đá nắng vừa có chuyện gì êm ái lắm…
+SCENE_PEBBLE_TOWER_TITLE,Pebble tower,Tháp sỏi chênh vênh
+SCENE_PEBBLE_TOWER_CAPTION,{name} built a wobbly pebble tower and is very proud of it.,{name} đã xây một tháp sỏi chênh vênh và tự hào về nó lắm.
+RECAP_SCENE_PEBBLE_TOWER,Someone has been building by the cairn…,Có ai đó vừa xây gì đó cạnh tháp sỏi…
+SCENE_LEAF_FORT_TITLE,Leaf fort,Pháo đài lá
+SCENE_LEAF_FORT_CAPTION,"While it rained, {name} and {friend} built a leaf fort and peeked out.","Lúc trời mưa, {name} và {friend} dựng một pháo đài lá rồi ló mắt nhìn ra."
+RECAP_SCENE_LEAF_FORT,Something leafy is hiding by the ferns…,Có gì đó bằng lá đang trốn bên đám dương xỉ…
+SCENE_MOON_WATCHERS_TITLE,Moon watchers,Ngắm trăng
+SCENE_MOON_WATCHERS_CAPTION,{name} and {friend} sat by the brook and watched the moon together.,{name} và {friend} ngồi bên suối cùng nhau ngắm trăng.
+RECAP_SCENE_MOON_WATCHERS,Two friends stayed up late by the brook…,Có hai người bạn thức khuya bên bờ suối…
+SCENE_FLOWER_CROWNS_TITLE,Flower crown,Vòng hoa
+SCENE_FLOWER_CROWNS_CAPTION,{name} is wearing a flower crown that {friend} made.,{name} đang đội chiếc vòng hoa mà {friend} kết tặng.
+RECAP_SCENE_FLOWER_CROWNS,Someone is looking very fancy today…,Hôm nay có ai đó trông thật điệu đà…
+SCENE_BOAT_REGATTA_TITLE,Boat parade,Đoàn thuyền lá
+SCENE_BOAT_REGATTA_CAPTION,"{name} lined up three leaf boats on the bank, ready for a parade.","{name} xếp ba chiếc thuyền lá thành hàng trên bờ, sẵn sàng diễu hành."
+RECAP_SCENE_BOAT_REGATTA,Something is lined up by the stream…,Bên suối có gì đó đang xếp hàng…
+SCENE_LANTERN_PARTY_TITLE,Lantern party,Tiệc đèn đom đóm
+SCENE_LANTERN_PARTY_CAPTION,{name} and friends danced in a circle around a lantern.,{name} và các bạn nhảy vòng tròn quanh một chiếc đèn.
+RECAP_SCENE_LANTERN_PARTY,Something glowed late into the evening…,Có gì đó lấp lánh tới tận khuya…
+SCENE_PAIR_NAP_TITLE,Back to back,Tựa lưng nhau ngủ
+SCENE_PAIR_NAP_CAPTION,{name} and {friend} fell asleep back to back.,"{name} và {friend} ngủ thiếp đi, lưng tựa lưng."
+RECAP_SCENE_PAIR_NAP,Two best buddies are fast asleep…,Có đôi bạn chí cốt đang ngủ say…
+VARIANT_TWILIGHT_PUFFMOSS_NAME,Twilight Puffmoss,Rêu Bông Hoàng Hôn
+VARIANT_TWILIGHT_PUFFMOSS_DESC,"{name}'s cousin, the colour of the sky after sunset. Naps wherever the last warm light falls.","Họ hàng của {name}, mang màu bầu trời lúc hoàng hôn. Ánh nắng ấm cuối ngày rơi ở đâu là ngủ ở đó."
+VARIANT_TWILIGHT_PUFFMOSS_RIDDLE,Someone the colour of evening travels only when the sky turns gold.,"Có một bạn mang màu chiều tà, chỉ lên đường khi bầu trời ngả vàng."
+VARIANT_HONEYDROP_BUTTONBUD_NAME,Honeydrop Buttonbud,Nụ Cúc Giọt Mật
+VARIANT_HONEYDROP_BUTTONBUD_DESC,"{name}'s cousin, with fur like warm honey. Counts daisies faster than anyone.","Họ hàng của {name}, bộ lông như mật ong ấm. Đếm cúc dại nhanh hơn bất kỳ ai."
+VARIANT_HONEYDROP_BUTTONBUD_RIDDLE,Someone honey-coloured is waiting for a sunny day and a garden full of daisies.,Có một bạn màu mật ong đang chờ một ngày nắng và một khu vườn đầy cúc dại.
+VARIANT_MOSSBACK_PEBBLEPAW_NAME,Mossback Pebblepaw,Sỏi Tròn Lưng Rêu
+VARIANT_MOSSBACK_PEBBLEPAW_DESC,{name}'s old cousin. Has sat still for so long that moss grew on his back.,Họ hàng lớn tuổi của {name}. Ngồi yên lâu đến nỗi rêu mọc cả trên lưng.
+VARIANT_MOSSBACK_PEBBLEPAW_RIDDLE,Someone mossy and very patient admires pebble towers that reach the very top.,"Có một bạn phủ rêu, rất kiên nhẫn, mê những tháp sỏi cao tới tận đỉnh."
+VARIANT_BLOSSOM_HONEYHUM_NAME,Blossom Honeyhum,Mật Ngọt Hoa Đào
+VARIANT_BLOSSOM_HONEYHUM_DESC,"{name}'s cousin, pink as a blossom. Up before everyone, humming the morning awake.","Họ hàng của {name}, hồng như hoa đào. Dậy sớm hơn mọi người, ngân nga đánh thức buổi sáng."
+VARIANT_BLOSSOM_HONEYHUM_RIDDLE,Someone pink is humming somewhere. Listen for them at dawn.,Có một bạn màu hồng đang ngân nga đâu đó. Hãy lắng nghe lúc bình minh.
+VARIANT_MISTY_FERNWHISK_NAME,Misty Fernwhisk,Lá Xoăn Sương Mù
+VARIANT_MISTY_FERNWHISK_DESC,"{name}'s cousin, pale as morning mist. Only comes out in the rain, when nobody can see her blush.","Họ hàng của {name}, nhạt màu như sương sớm. Chỉ ra ngoài khi trời mưa, lúc chẳng ai thấy bạn ấy đỏ mặt."
+VARIANT_MISTY_FERNWHISK_RIDDLE,Someone pale and shy is waiting for a soft rain to hide in.,"Có một bạn nhạt màu, nhút nhát, đang chờ một cơn mưa phùn để nấp vào."
+VARIANT_SUNSET_DANDELFLUFF_NAME,Sunset Dandelfluff,Bông Gió Ráng Chiều
+VARIANT_SUNSET_DANDELFLUFF_DESC,"{name}'s cousin, peach and pink like the evening sky. Rides the strongest breeze of the day.","Họ hàng của {name}, hồng đào như bầu trời chiều. Cưỡi làn gió mạnh nhất trong ngày."
+VARIANT_SUNSET_DANDELFLUFF_RIDDLE,Someone peach-coloured is floating this way. A good breeze will bring them.,Có một bạn màu hồng đào đang bay về phía này. Một làn gió đẹp sẽ đưa bạn ấy tới.
+VARIANT_ROSEBELL_BELLKIN_NAME,Rosebell Bellkin,Chuông Nhỏ Hoa Hồng
+VARIANT_ROSEBELL_BELLKIN_DESC,"{name}'s cousin, with ears like rose-coloured bells. Can hear a wind chime from three hills away.","Họ hàng của {name}, đôi tai như những chiếc chuông màu hồng. Nghe được tiếng chuông gió từ ba ngọn đồi xa."
+VARIANT_ROSEBELL_BELLKIN_RIDDLE,"Someone rosy follows the music. When every shell is singing, they will hear it.","Có một bạn màu hồng đi theo tiếng nhạc. Khi mọi vỏ ốc cùng hát, bạn ấy sẽ nghe thấy."
+VARIANT_LAVENDER_PRIMPIP_NAME,Lavender Primpip,Má Hồng Oải Hương
+VARIANT_LAVENDER_PRIMPIP_DESC,"{name}'s cousin, soft lavender and very polite. Believes every proper garden has ten primroses.","Họ hàng của {name}, màu oải hương dịu dàng và rất lễ phép. Tin rằng khu vườn đúng nghĩa phải có mười bông anh thảo."
+VARIANT_LAVENDER_PRIMPIP_RIDDLE,Someone polite and lavender is counting primroses. Ten would be just right.,Có một bạn màu oải hương lễ phép đang đếm hoa anh thảo. Mười bông là vừa đẹp.
+VARIANT_BLUECAP_CAPLING_NAME,Bluecap Capling,Nấm Lùn Mũ Xanh
+VARIANT_BLUECAP_CAPLING_DESC,"{name}'s cousin, in a blue cap with white spots. Thinks a full fairy ring is the best place in the world to hop.","Họ hàng của {name}, đội mũ xanh chấm trắng. Cho rằng vòng nấm thần tiên trọn vẹn là chỗ nhảy tuyệt nhất trên đời."
+VARIANT_BLUECAP_CAPLING_RIDDLE,Someone in a blue cap is waiting for the fairy ring to close.,Có một bạn đội mũ xanh đang chờ vòng nấm thần tiên khép kín.
+VARIANT_LILYPOND_PUDDLEWUMP_NAME,Lilypond Puddlewump,Bì Bõm Hồ Sen
+VARIANT_LILYPOND_PUDDLEWUMP_DESC,"{name}'s cousin, green as a lily pond. Splashes twice as much, and twice as happily.","Họ hàng của {name}, xanh như mặt hồ sen. Té nước nhiều gấp đôi, mà vui cũng gấp đôi."
+VARIANT_LILYPOND_PUDDLEWUMP_RIDDLE,Someone pond-green dreams of a stream with stepping stones all the way across.,Có một bạn xanh màu hồ sen mơ về một con suối có đá bắc ngang từ bờ này sang bờ kia.
+VARIANT_AMBER_GLOWMOTE_NAME,Amber Glowmote,Đốm Sáng Hổ Phách
+VARIANT_AMBER_GLOWMOTE_DESC,"{name}'s cousin, who glows like warm honey. Travels only in the deepest part of the night.","Họ hàng của {name}, tỏa sáng như mật ong ấm. Chỉ lên đường vào lúc đêm khuya nhất."
+VARIANT_AMBER_GLOWMOTE_RIDDLE,"Someone amber glows by the lanterns, late, late at night.","Có một bạn màu hổ phách tỏa sáng bên những chiếc đèn, vào lúc khuya thật khuya."
+VARIANT_STARLIT_MOONPUFF_NAME,Starlit Moonpuff,Bông Trăng Ánh Sao
+VARIANT_STARLIT_MOONPUFF_DESC,"{name}'s cousin, sprinkled with starlight. Rides down on the clearest nights and naps until dawn.","Họ hàng của {name}, lấm tấm ánh sao. Cưỡi ánh sao xuống vào những đêm trời trong nhất rồi ngủ tới sáng."
+VARIANT_STARLIT_MOONPUFF_RIDDLE,Someone sparkly is waiting for a night without a single cloud.,Có một bạn lấp lánh đang chờ một đêm không gợn mây.

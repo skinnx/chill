@@ -4,7 +4,7 @@
 
 **How to read this.** Numbers live in `data/*.json` and `i18n/strings.csv`; those files are the single source of truth. Tables marked ⟲ were generated from them when this document was written — if a table and a data file disagree, the data file wins and the table is stale. Principle tags (E1…X2) refer to 00-SYNTHESIS §4. "dp" = design dp = 3 px on the 1080×1920 base (C2).
 
-**Validation status.** `python3 tools/sim/economy_sim.py` → **ALL CHECKS PASS** on 10,000 random play schedules + 2,000 reference players over 30 days (§9). `python3 tools/sim/validate_content.py` → content OK (§10). Godot 4.7.2 imports `i18n/strings.csv` and resolves both locales (checked headless, §11).
+**Validation status.** `python3 tools/sim/economy_sim.py` → **ALL CHECKS PASS** on 10,000 random play schedules over 30 days + 2,000 reference players over 80 days, including the Retention v1 content-left checks (§9, §13.8). `python3 tools/sim/validate_content.py` → content OK (§10). Godot 4.7.2 imports `i18n/strings.csv` and resolves both locales (checked headless, §11).
 
 ---
 
@@ -15,11 +15,11 @@ A sun-dappled hollow under an open sky. Round, felted **mosslings** wander in, n
 | | MVP slice |
 |---|---|
 | Place | 1 hollow, portrait, one screen, no camera travel |
-| Content | 12 mossling species (one named individual each), 8 flowers, 6 décor sets, 1 repeatable leaf boat, 20 postcard templates, 60 photo poses |
+| Content | 12 mossling species (one named individual each), 8 flowers, 6 décor sets, 1 repeatable leaf boat, 44 postcards (12 three-part friend stories + 8 events), 60 photo poses · Retention v1 (§13): 5 heart unlocks per friend, 12 nests, 6 best-buddy pairs, 12 signature gifts, 46 clues, 12 cousins, 8 away scenes |
 | Time | Device clock: 5 palettes (dawn, day, golden hour, dusk, night) · weather: clear / breeze / soft rain · Spring only (season structure in place) |
 | Currency | **Dew** (one spendable currency) + **affection** per mossling (never decays, never spent) |
 | Sessions | 30 s glance · 1–5 min check-in · ambient watch mode |
-| Pacing (reference player, 2 × 5 min/day) | first visitor at 20–40 s · 3 friends in the first 5 min · 4 by 24 h · all 12 by day 8 (median; p90 day 11) · whole catalogue ≈ day 24 |
+| Pacing (reference player, 2 × 5 min/day) | first visitor at 20–40 s · 3 friends in the first 5 min · 4 by 24 h · all 12 by day 8 (median; p90 day 11) · whole catalogue ≈ day 24 · something new on 30 of the first 30 days · 8 friends at ♥3 by day 14 · last ♥5 ≈ day 65 · cousins until ≈ day 67 |
 | Economy | 140 purchasable copies, prices 15–527 dew, r = 1.10 (flowers) / 1.12 (décor), next purchase ≈ 79 min of passive income mid-game (median), basket full after ≈ 10–17 h, offline clamp 7 days |
 | Ethics | No fail states, decay, timers that end in loss, streaks, FOMO, gacha, ads, IAP, notifications, accounts or network (E1–E9) |
 
@@ -65,14 +65,14 @@ The player is the quiet keeper of a hollow: a shallow, mossy bowl ringed by a wi
 
 | Principle | Where it is satisfied |
 |---|---|
-| E1 no fail/decay | §5.8 world step only adds; sim check E1 (§9); no decay code path exists to write |
+| E1 no fail/decay | §5.8 world step only adds; sim check E1 (§9); no decay code path exists to write; retention G1/G2 (§13.0) |
 | E2 timers only good news | Only timers: growth ("Blooms in about 40 min"), dew cup ("brimming"), visits. None ends in loss (§3.3, §8.6) |
 | E3 return without guilt | §5.6 greeter + recap, basket → photos when full, nothing ever degrades; 30-day absence test (§9) |
 | E4 player-paced | §3.4: seed waits until tapped; scripted visitors happen in world time even if the app closed |
 | E5 abundance | §5.11 proof + sim: 0 of 2,985,975 sessions without an affordable purchase or something new |
 | E6 small numbers | Max price 527, max displayed ≈ 52 k (a saver's wallet after 30 d), hard cap 99,999 (§5.7) |
 | E7 relatedness | Named individuals, favourite spots, hearts, postcards (§4.1, §7) |
-| E8 no streaks/FOMO | No day counters; banned-word lint (§8.6); seasons recur (§6.4) |
+| E8 no streaks/FOMO | No day counters; banned-word lint (§8.6); seasons recur (§6.4); signs never expire, scenes reward absence (§13.0) |
 | E9 ethical v1 | No IAP/ads/notifications/accounts/network anywhere in this design |
 | I1–I3 input | §8.2–8.4 (feedback map, hit sizes, gestures) |
 | V1–V6 | §2 composition, §6 palettes/weather, motion tokens referenced from 05 |
@@ -196,8 +196,11 @@ Props (⟲ `spots.json:props`):
 | 40–80 min × stay | A visit (the mossling stays, cycles 2–6 min behaviour bouts, leaves a gift on departure) | §5.6 |
 | 10–17 h | Gift basket fills (24 slots); after that, visitors leave **photos** instead | §5.7 |
 | 12 h | Dew cup stops filling until the next collect ("brimming") | §5.3 |
-| ~1 day early / ~2 days later | A new species debuts after its flower/décor combination blooms or is placed | §5.5, §9 |
-| Days–weeks | Hearts grow; postcards at ♥2 and ♥4; best friends at ♥5 | §7.4 |
+| 15 min – 6 h | Mystery signs (footprints, a dropped thing, a rustle, a riddle note) appear after a friend's flower/décor combination is ready; its debut follows the last sign | §13.3 |
+| ~1 day early / ~2 days later | A new species debuts after its flower/décor combination blooms or is placed (and its signs are out) | §5.5, §9 |
+| Every return after ≥ 2 h | Sometimes a small staged away scene is waiting (nap pile, leaf fort, moon watchers …) | §13.4 |
+| Days–weeks | Hearts grow (visit affection at most once per 20 h per friend); postcards at ♥2, ♥4 and ♥5; nest at ♥3 (grows over 3 days); best buddies at ♥4; keepsake and a cousin mystery at ♥5 | §7.4, §13.2 |
+| Weeks 3–10 | Cousins (colour variants) visit with their ♥5 friends once their conditions hold | §13.3.5 |
 | 14 days | A season length. MVP is Spring only; the cycle structure exists (`world.json`) | §6.4 |
 
 ### 3.4 The first five minutes (scripted; numbers in `economy.json:onboarding`)
@@ -330,7 +333,7 @@ Weights are deterministic functions of what is in the garden, the weather and th
 | `capling` | 4 | 5 × Toadstool Seat | any | 5 × Sweet Clover ×1.3; rain ×1.8 | 1.0 | 0.15 / 0.10 / 0.50 / 0.20 / 0.05 |
 | `puddlewump` | 4 | 5 × Stream Stones | any | 2 × Pebble Cairn ×1.3; rain ×4.0 | 1.0 | 0.10 / 0.05 / 0.35 / 0.10 / 0.40 |
 | `glowmote` | 4 | 5 × Firefly Lantern | dusk, night | 2 × Moonbloom ×2.0; clear ×1.3 | 1.2 | 0.30 / 0.10 / 0.10 / 0.30 / 0.20 |
-| `moonpuff` | 3 | 5 × Moonbloom, 5 × Shell Wind Chime | night | 6 × Firefly Lantern ×1.5; clear ×1.5 | 1.5 | 0.60 / 0.05 / 0.05 / 0.15 / 0.15 |
+| `moonpuff` | 4 | 5 × Moonbloom, 5 × Shell Wind Chime | night | 6 × Firefly Lantern ×1.5; clear ×1.5 | 1.5 | 0.60 / 0.05 / 0.05 / 0.15 / 0.15 |
 
 Item counts mean **bloomed stems** for flowers and **copies** for décor. A species with unmet `requires`, or outside its `phases`, has weight 0. Its favourite spot always exists when it can visit (validator check).
 
@@ -382,7 +385,7 @@ Each copy adds the next piece at its anchor (§2.5). Effects beyond attraction (
 - Every mossling present that has not yet watched a boat this visit gains +1 affection. The 10th boat ever sends a postcard. Pure delight, no economic return.
 
 ### 4.5 Gift items
-Visual types for basket gifts (⟲ `economy.json:gift_items`, assigned per species `gift_item`): acorn cup of dew, petal bundle, shiny pebble, seed-pod pouch, moonlit dewdrop. The dew value is the species' `gift_dew` (onboarding overrides: 18 and 12).
+Visual types for basket gifts (⟲ `economy.json:gift_items`, assigned per species `gift_item`): acorn cup of dew, petal bundle, shiny pebble, seed-pod pouch, moonlit dewdrop. The dew value is the species' `gift_dew` (onboarding overrides: 18 and 12). From ♥2 each friend leaves its own **signature gift** instead (⟲ `economy.json:signature_gift_items`, species `signature_gift`, same dew value; §13.2.2).
 
 ---
 
@@ -440,7 +443,7 @@ Passive income right now (used by the pacing metric): `income/min = (cup_rate + 
 
 ### 5.5 Who comes (species choice and debuts)
 At an accepted arrival time t:
-1. `eligible` = species not currently present, with every `requires` met and (if `phases` non-empty) the current phase listed.
+1. `eligible` = species not currently present, with every `requires` met and (if `phases` non-empty) the current phase listed. An **unmet** species is additionally held until its mystery signs are out: not eligible before `debut_ok_t` (§13.3.1).
 2. `w(k) = base_weight · Π(mult of satisfied likes_items, likes_weather, likes_phases) · (1.25 if ♥5)`.
 3. **Debut rule**: if any eligible species has never been met, with probability `debut_chance` = 0.6 the pick is made among those only (weighted by w). This makes discovery feel responsive ("I planted bluebells and a Bellkin came") without guaranteeing it on a clock.
 4. Otherwise pick among all eligible by w. If none is eligible, the candidate is skipped.
@@ -460,13 +463,13 @@ At an accepted arrival time t:
 - **Live play** calls `advance(world_now)` every frame (cheap: usually no event). Phase and weather are read from the device's local wall clock.
 - **On resume/launch**: `delta = clamp(now_unix − saved_at_unix, 0, offline_clamp_s = 7 d)`; `advance(world + delta)`; during catch-up the wall time of an event is `now_unix − (world_end − t_event)`, used for phase/weather lookups. Any time beyond 7 days is skipped ("the hollow rested"): timers are in world seconds, so nothing jumps or is lost.
 - **Clock rolled back** (delta < 0): delta = 0, re-anchor `saved_at` to now, nothing changes (sim-tested).
-- Saves: JSON per D12 (tmp → rename, `.bak`, on FOCUS_OUT, PAUSED and every 30 s). Persist at least: schema, install_seed, rng state, world clock, saved_at_unix, dew, basket entries {species, gift_item, dew}, cup value + last_collect, stems {flower, bed, slot, planted_world_t}, décor counts, present visitors {species, arrive_t, depart_t, gift, boat_credit, pet_credit, scripted}, next_candidate_t, met {species: first_met_unix}, custom names, affection, photos, postcards {id, species, received_unix, read}, boats, onboarding step and flags (tutorial seed planted, basket_full_seen, postcards sent).
+- Saves: JSON per D12 (tmp → rename, `.bak`, on FOCUS_OUT, PAUSED and every 30 s). Persist at least: schema, install_seed, rng state, world clock, saved_at_unix, dew, basket entries {species, gift_item, dew}, cup value + last_collect, stems {flower, bed, slot, planted_world_t}, décor counts, present visitors {species, arrive_t, depart_t, gift, boat_credit, pet_credit, scripted}, next_candidate_t, met {species: first_met_unix}, custom names, affection, photos, postcards {id, species, received_unix, read}, boats, onboarding step and flags (tutorial seed planted, basket_full_seen, postcards sent). Retention v1 adds the fields in §13.6 (schema +1, additive migration).
 
 ### 5.9 Seasons (structure only in the MVP)
 `season_index = floor(world_days / length_days) mod len(season_cycle)`; MVP cycle = [spring]. Content carries `seasons` tags; a species out of season has weight 0, a flower out of season stays planted and keeps counting (nothing is removed, seasons recur — E8).
 
 ### 5.10 Affection and hearts
-+1 per visit (arrival), +1 per pet (once per visit), +1 per leaf boat watched (once per visit). Hearts at **3 / 8 / 15 / 25 / 40** points (`heart_thresholds`). Unlocks in §7.4.
++1 per visit (arrival) **if at least `visit_affection_rest_s` = 20 h of world time passed since that friend's last affection-granting visit** (Retention v1, §13.2.1), +1 per pet (once per visit), +1 per leaf boat watched (once per visit). Hearts at **3 / 8 / 15 / 25 / 40** points (`heart_thresholds`). Unlocks in §7.4 and §13.2.
 
 ### 5.11 Why E5 holds by construction (and the sim confirms it)
 - **Affordable**: the minimum gap between sessions is 10 min; the cup gains at least 6 dew/h × 1/6 h = 1 dew in any gap of 10 min–12 h (and ≥ 72 dew beyond), the fractional remainder is kept, and the leaf boat costs 1. At install, the free tutorial seed is the action. At the wallet cap, dew ≥ 1. So **every session can buy something meaningful** whatever the player spent before — even the sim's "drain" players who float boats with every last drop.
@@ -514,14 +517,14 @@ See §5.9. Each future season adds flowers, species and a palette shift, and rec
 ## 7. Album, postcards, photos, naming, petting, settings
 
 ### 7.1 Album (collection)
-Three tabs: **Friends**, **Photos**, **Postcards**.
+Five tabs (Retention v1, §13.5.1): **Friends**, **Clues**, **Memories** (away-scene moments + the photos below), **Keepsakes**, **Postcards**.
 - **Friends**: 12 cards in `album_order`. Unmet: soft silhouette, "Not met yet", the hint line, and requirement icons with dots (● ◐ ○), plus a moon icon for night-only friends. Met: live portrait (the rig, idle-breathing, at the current palette), name (tap the pencil to rename), hearts, "Favourite spot" (shows "Still a little secret" until ♥1), "First met on {date}", photo strip (5 poses), "Likes" (revealed at ♥3). If the friend is currently in the hollow: a **Pet** button (accessible alternative to long-press).
-- **Photos**: per friend, 5 pose slots (nap, sipping dew, playing, wandering, by the stream) = 60 total. A photo is *metadata* (species, pose, phase, weather, world time) rendered live by the rig, so no screenshots are stored. Re-taking a pose refreshes its time-of-day variant.
+- **Photos** (a section of Memories): per friend, 5 pose slots (nap, sipping dew, playing, wandering, by the stream) = 60 total. A photo is *metadata* (species, pose, phase, weather, world time) rendered live by the rig, so no screenshots are stored. Re-taking a pose refreshes its time-of-day variant.
 - **Postcards**: newest first; unread marked with a small dot (not a number).
 - The counter "{met} of {total} friends met" is the only collection number. No percentages.
 
-### 7.2 Postcards (20 templates ⟲ `strings.csv: POSTCARD_*`)
-- **Friendship**: each species has two templates (`postcard_heart2`, `postcard_heart4`) from 12 friend templates, signed "— {name}" with the player's chosen name. 24 deliveries in total.
+### 7.2 Postcards (44 templates ⟲ `strings.csv: POSTCARD_*`)
+- **Friendship**: each species has its own three-part story (`postcard_heart2`, `postcard_heart4`, `postcard_heart5`; §13.2.5), signed "— {name}" with the player's chosen name. 36 deliveries in total. A ♥4 postcard names the best buddy and waits for the buddy's first visit if needed.
 - **Events** (`economy.json:event_postcards`, signed "— the hollow"): welcome (240 s), first bloom of a bought flower, first décor, first rainy visit, first night visitor, basket brimming, 10th leaf boat, all friends of spring met. 8 deliveries.
 - Delivery: the mailbox flag pops up (S16, paper rustle); tap the mailbox (S07 as the reader opens) or open Album → Postcards. Reading is optional and nothing waits on it.
 
@@ -531,11 +534,11 @@ Three tabs: **Friends**, **Photos**, **Postcards**.
 
 ### 7.4 Petting and hearts
 - Long-press 450 ms or stroke (§3.1). Purr S03 loops while held; haptic: Subtle = none during the purr, Full = TICK every 120 ms (≥ 60 ms apart). On release 3 hearts float up (fade in ≥ 300 ms); crossing a heart threshold adds the 5-heart `celebrate` burst (`motion_tokens.json creature.pet`).
-- Unlocks: ♥1 favourite spot revealed · ♥2 first postcard · ♥3 "Likes" list revealed + greets you with a wave on arrival · ♥4 second postcard · ♥5 **best friend**: golden frame in the album, visit weight ×1.25.
-- Reference player: 11 best friends by day 30 (median).
+- Unlocks (Retention v1, full rules in §13.2): ♥1 favourite spot revealed + waves hello when you open the app · ♥2 story postcard I + signature gift · ♥3 "Likes" revealed + its own nest · ♥4 story postcard II + best-buddy pair · ♥5 **best friend**: story postcard III, keepsake portrait, golden frame in the album, visit weight ×1.25, and a cousin mystery.
+- Reference player: 7 best friends by day 30 and all 12 by about day 65 (median; §13.8).
 
 ### 7.5 Welcome-back recap
-Shown on resume when the gap ≥ `welcome_back_min_gap_s` (20 min) and at least one event happened. A frosted card over the living world, up to 3 lines chosen in priority order: new friend → postcard → "{name} napped at the {spot}" (the longest nap of the absence) → gifts waiting → new flowers opened → photos → it rained. Sound S10, MEDIUM haptic once. Auto-continues after 5 s; tap anywhere skips. Never lists what *didn't* happen.
+Shown on resume when the gap ≥ `welcome_back_min_gap_s` (20 min) and at least one event happened. A frosted card over the living world, up to 3 lines chosen in priority order: new friend → away-scene teaser → cousin → postcard → hearts → clue → "{name} napped at the {spot}" (the longest nap of the absence) → nest → gifts waiting → new flowers opened → photos → it rained (Retention v1 lines: §13.5.3). Sound S10, MEDIUM haptic once. Auto-continues after 5 s; tap anywhere skips. Never lists what *didn't* happen.
 
 ### 7.6 Settings (X1) — one sheet, grouped
 | Group | Setting | Values (default **bold**) | Effect |
@@ -569,7 +572,7 @@ Boot (splash + warm-up) ──▶ Main = World + HUD + Dock
 Dock:  [Settings] [Garden] [Basket] [Album]      (left-handed: [Album] [Basket] [Garden] [Settings])
   Garden sheet  ─ tabs Flowers | Décor (+ Leaf boat row) ─ item card ─ Plant/Place ─(first copy: choose bed)─▶ Main
   Basket sheet  ─ 24-slot grid + dew cup + [Collect all]
-  Album sheet   ─ tabs Friends | Photos | Postcards ─ friend detail (rename, Pet, photos)
+  Album sheet   ─ tabs Friends | Clues | Memories | Keepsakes | Postcards ─ friend detail (rename, Pet, photos, unlocks, nest, best buddy, cousin)
   Settings sheet─ groups §7.6
 Back (Android) closes the top-most card/sheet; at Main it opens "Leave the hollow for now?" [Stay a while] [Leave for now]
 ```
@@ -606,6 +609,10 @@ Back (Android) closes the top-most card/sheet; at Main it opens "Leave the hollo
 | Tap a pinwheel / lantern | spin burst / lantern brightens | S19 / S20 | — |
 | Tap the wind chime; breeze gusts | owned shells swing | S21 | — |
 | Settings toggle / segmented choice | thumb slides / pill moves | S15 | — / TICK |
+| Rustle sign shakes (§13.3.2) | bush sways | S22 at `voice_step` | — |
+| Tap a sign (clue found) | sign lifts into the Album button 600 ms, clue toast | S23 | — / TICK |
+| Heart-up (§13.2.2) | `celebrate` burst ≤ 900 ms, toast | S24 | MEDIUM / MEDIUM |
+| Away scene revealed (§13.4) | scene fades in, recap teaser | S25 | — |
 Captions (setting) show `CAPTION_*` bubbles next to the source.
 
 ### 8.4 Targets (I2)
@@ -632,7 +639,7 @@ Nunito 500/700/800, Baloo 2 700 (D6); type scale Caption 36 / Label 42 / Body 48
 - vi: nhanh lên, khẩn, gấp gáp, cơ hội cuối, sắp hết, hết hạn, giới hạn, có hạn, bỏ lỡ, chuỗi ngày, điểm danh, mỗi ngày, hằng ngày, hàng ngày, quay lại ngay, nhớ bạn, cô đơn, buồn (except *buồn ngủ*), đói, khát, héo, chết, mất, thua, thất bại, lỗi, sai, phạt, lãng phí, bỏ rơi, khuyến mãi, giảm giá, độc quyền, đếm ngược.
 
 ### 8.7 String keys
-All 271 player-facing strings, en + vi, are in Appendix A (copied from `i18n/strings.csv`, which wins). Placeholders use `{name}` style for `String.format()`: `{count} {name} {spot} {flower} {names} {time} {hours} {minutes} {owned} {max} {met} {total} {hearts} {date} {bed} {behaviour} {percent} {version}`. No plural forms are needed: every string is phrased to avoid them (no `?plural` column).
+All 443 player-facing strings, en + vi, are in Appendix A (copied from `i18n/strings.csv`, which wins). Placeholders use `{name}` style for `String.format()`: `{count} {name} {spot} {flower} {names} {time} {hours} {minutes} {owned} {max} {met} {total} {hearts} {date} {bed} {behaviour} {percent} {version}`, plus Retention v1 `{friend}` (the best buddy or second scene role), `{nest}` (style + stage name) and `{gift}` (a signature gift name). No plural forms are needed: every string is phrased to avoid them (no `?plural` column).
 
 ---
 
@@ -642,61 +649,94 @@ All 271 player-facing strings, en + vi, are in Appendix A (copied from `i18n/str
 `tools/sim/economy_sim.py` (numpy, seed 20261020, 4 worker processes) loads `data/*.json` and contains **no game constants**; only player behaviour lives in the script:
 - **10,000 random players**, each with its own mix of 30 s / 3 min / 10 min sessions (Dirichlet) and its own typical gap (log-uniform median 20 min–1 day, lognormal σ = 1, clipped to 10 min–3 days), install at a random local hour 07–23, 10 % never tap the tutorial seed in the first session.
 - **Spending policies** (share): *gentle* 35 % (≤ 1/2/3/4 purchases per 30 s/3 min/5 min/10 min session, sometimes skips, sometimes saves), *keen* 40 % (≤ 2/5/6/10), *greedy* 15 % (buys everything affordable), *drain* 10 % (greedy, then floats leaf boats with every remaining drop — the E5 stress case). Players follow album hints toward the next friend 0–70 % of the time.
-- **2,000 reference players**: install 20:00, then 2 × 5 min per day (08:00 and 20:00 ± 30 min), half gentle and half keen — the GDD pacing yardstick.
+- **2,000 reference players**: install 20:00, then 2 × 5 min per day (08:00 and 20:00 ± 30 min), half gentle and half keen — the GDD pacing yardstick. They run **80 days** so the ♥5 and cousin tail can be measured; their "by day 30" metrics are snapshots at day 30.
+- **Retention v1** (§13): friendship depth, mystery signs/clues/cousins and away scenes are simulated from `friendship.json`, `mysteries.json`, `scenes.json`; players tap every visible sign; the content-left metric and checks R1–R4 are explained in §13.8.
 - Plus a **30-day absence** test (clamped to 7 days), a clock-rollback test and a deterministic trace of the first 300 s.
 - Iteration log: first pass failed E5 at install sessions and on early "everyone is already here" sessions, and pacing was too slow (median all-12 at day 16) → added the free-seed/greeter/bout rules (§5.11), bigger visitor gifts with a smaller moss drip, hint-directed players, λ_min 1.0 → 1.4/h; then discovery was too fast (day 7) → raised rare requirements to 5 copies; then next-purchase minutes were too high (98) → raised flower dew yields; finally breeze was rarer than intended (10 % of the time) → more breeze episodes. Final numbers below.
 
-### 9.2 Results (final run)
-Simulated 10,000 random-schedule players + 2,000 reference players (2 x 5 min/day), 30 days, 2,985,975 sessions, seed 20261020, 197 s.
+### 9.2 Results (final run, 2026-10-21, Retention v1 data)
+Simulated 10,000 random-schedule players + 2,000 reference players (2 x 5 min/day), 30 days (reference 80 days), 3,185,960 sessions, seed 20261020, 295 s.
 
 | Check | Result | Target | Verdict |
 |---|---|---|---|
 | E1 no decrease (all sessions + 30-day absence) | 0 violations | 0 | PASS |
 | E1 clock rollback | unchanged | unchanged | PASS |
-| E5 sessions with nothing affordable | 0 of 2,985,975 | 0 | PASS |
-| E5 sessions with nothing new to see | 0 of 2,985,975 | 0 | PASS |
-| E6 max displayed value | 51,734 | <= 99,999 | PASS |
+| E5 sessions with nothing affordable | 0 of 3,185,960 | 0 | PASS |
+| E5 sessions with nothing new to see | 0 of 3,185,960 | 0 | PASS |
+| E6 max displayed value | 99,999 | <= 99,999 | PASS |
 | E6 max price | 527 | <= 99,999 | PASS |
 | First visitor (s) | 20-40 | 20-40 | PASS |
 | Species met in the 5-min first session | 3-3 | 3 | PASS |
 | Reference: species by 24 h (median) | 4 | 4-6 | PASS |
 | Reference: species by day 7 (median) | 11 | >= 9 | PASS |
-| Reference: all 12 met, day (p10 / median / p90) | 6.0 / 8.0 / 11.0 | median 7-14 | PASS |
+| Reference: all 12 met, day (p10 / median / p90) | 6.2 / 7.2 / 11.0 | median 7-14 | PASS |
 | Reference: players who never meet all 12 in 30 d | 0 of 2000 | 0 | PASS |
 | Next purchase, minutes of passive income (days 2-10; p25 / median / p75) | 56 / 79 / 101 | median 30-90 | PASS |
 | Basket saturation at mid-game snugness (h) | 11.5 | 10-14 | PASS |
+| R1 Reference: days with something new, first 30 (min / p10 / median) | 27 / 29 / 30 | median >= 30 | PASS |
+| R2 Reference: day the last of 12 friends reaches 5 hearts (p10 / median / p90) | 58.3 / 65.1 / 72.3 | median 45-70 | PASS |
+| R3 Species at >= 3 hearts by day 14 (reference median / random median) | 8 / 9 | >= 6 | PASS |
+| R4 Missable content (signs or scenes removed unseen) | 0 | 0 | PASS |
+| R4 30-day absence keeps waiting signs and scenes | 13 signs waiting, 1 memories | nothing removed | PASS |
 
 | Informational metric | Value |
 |---|---|
-| Sessions where a new flower/decor copy is affordable (all gaps) | 59.6 % |
+| Random: share of played days (first 30) with something new (p10 / median) | 89 % / 96 % |
+| Random: days with something new, first 30 (p10 / median) | 20 / 27 |
+| Reference: days 30-59 with something new (p10 / median) | 14 / 17 |
+| Reference: days with something new counting only friends, hearts, postcards, clues, first-time scenes and cousins (p10 / median) | 26 / 28 |
+| Reference: new friends seen in the first 30 days (median) | 12 |
+| Reference: heart levels seen in the first 30 days (median) | 52 |
+| Reference: postcards seen in the first 30 days (median) | 37 |
+| Reference: clues seen in the first 30 days (median) | 34 |
+| Reference: first-time scenes seen in the first 30 days (median) | 8 |
+| Reference: cousins seen in the first 30 days (median) | 5 |
+| Reference: new memories seen in the first 30 days (median) | 26 |
+| Reference: nest growth stages seen in the first 30 days (median) | 22 |
+| Reference: cousins met by day 30 / by day 80 (median of 12) | 6 / 12 |
+| Reference: last cousin met, day (median) | 67.2 |
+| Reference: clues collected by day 80 (median of 46) | 46 |
+| Random: heart-5 friends by day 30 (median) | 9 |
+| Sessions where a new flower/decor copy is affordable (all gaps) | 59.5 % |
 | ... after a gap of 3 h or more | 99.5 % |
-| Sessions with organic news (without the greeter rule) | 89.9 % |
-| Reference: whole catalogue bought, day (median) | 24.0 |
-| Random: whole catalogue bought within 30 d | 81.4 % |
+| Sessions with organic news (without the greeter rule) | 90.5 % |
+| Reference: whole catalogue bought, day (median; bimodal: keen ≈ 13.5, gentle ≈ 23.5) | 13.5 |
+| Random: whole catalogue bought within 30 d | 81.5 % |
 | Random 'gentle' (3493): species by day 7 / day 30 (median) | 11 / 12 |
 | Random 'keen' (3994): species by day 7 / day 30 (median) | 11 / 12 |
 | Random 'greedy' (1525): species by day 7 / day 30 (median) | 10 / 12 |
 | Random 'drain' (988): species by day 7 / day 30 (median) | 9 / 12 |
-| Final wallet after 30 d (median / max) | 32,139 / 51,734 |
-| Postcards by day 30, reference (median of 32) | 31 |
-| Photo poses by day 30, reference (median of 60) | 54 |
-| Best friends (5 hearts) by day 30, reference (median) | 11 |
-| 30-day absence: basket after return | 24 / 24 slots, cup 271 dew, photos 11 -> 44 |
+| Final wallet after 30 d (median / max) | 32,359 / 51,097 |
+| Postcards by day 30, reference (median of 44) | 37 |
+| Photo poses by day 30, reference (median of 60) | 55 |
+| Best friends (5 hearts) by day 30, reference (median) | 7 |
+| 30-day absence: basket after return | 24 / 24 slots, cup 265 dew, photos 9 -> 44 |
 
-| Species (reference player) | Met by day (median) | p90 |
-|---|---|---|
-| puffmoss | 0.00 | 0.00 |
-| buttonbud | 0.00 | 0.00 |
-| pebblepaw | 0.00 | 0.00 |
-| honeyhum | 0.62 | 1.16 |
-| fernwhisk | 1.59 | 2.63 |
-| dandelfluff | 1.79 | 3.36 |
-| bellkin | 2.16 | 3.70 |
-| primpip | 2.68 | 4.30 |
-| capling | 4.02 | 6.52 |
-| puddlewump | 4.06 | 7.03 |
-| glowmote | 5.97 | 8.95 |
-| moonpuff | 8.04 | 11.04 |
+| Species (reference player) | Met by day (median) | p90 | Hearts 1/2/3/4/5 by day (median) | Heart 5 p90 | Cousin met, day (median) |
+|---|---|---|---|---|---|
+| puffmoss | 0.00 | 0.00 | 1 / 4 / 7 / 13 / 21 | 24 | 23 |
+| buttonbud | 0.00 | 0.00 | 1 / 4 / 7 / 12 / 20 | 23 | 22 |
+| pebblepaw | 0.00 | 0.00 | 1 / 3 / 7 / 11 / 18 | 21 | 22 |
+| honeyhum | 0.73 | 1.26 | 2 / 5 / 9 / 16 / 26 | 30 | 28 |
+| fernwhisk | 1.70 | 2.75 | 3 / 6 / 11 / 19 / 31 | 36 | 36 |
+| dandelfluff | 1.90 | 3.39 | 4 / 7 / 12 / 20 / 30 | 35 | 33 |
+| bellkin | 2.27 | 3.81 | 4 / 7 / 10 / 16 / 25 | 29 | 27 |
+| primpip | 2.64 | 4.35 | 4 / 8 / 12 / 18 / 28 | 32 | 29 |
+| capling | 4.20 | 6.69 | 6 / 10 / 17 / 25 / 39 | 45 | 41 |
+| puddlewump | 4.25 | 7.25 | 6 / 11 / 17 / 25 / 38 | 44 | 40 |
+| glowmote | 5.26 | 8.95 | 8 / 12 / 18 / 28 / 42 | 48 | 44 |
+| moonpuff | 7.23 | 11.05 | 11 / 18 / 28 / 42 / 65 | 72 | 67 |
+
+| Scene (reference player) | Seen within 80 days |
+|---|---|
+| nap_pile | 100 % |
+| pebble_tower | 100 % |
+| leaf_fort | 100 % |
+| moon_watchers | 100 % |
+| flower_crowns | 100 % |
+| boat_regatta | 100 % |
+| lantern_party | 100 % |
+| pair_nap | 100 % |
 
 | Snugness | lambda (visits/h) | Basket full after (h) |
 |---|---|---|
@@ -712,10 +752,10 @@ Onboarding trace (first 300 s): 25 s meets puffmoss; 106 s basket holds 18 dew; 
 - **E1/E3**: no value ever decreased across ≈ 3 M sessions; after a 30-day absence the basket is full, the cup brimming and the photo album grew.
 - **E5**: 0 sessions without an affordable purchase or something new, including the drain players.
 - **E6**: the largest number ever displayed is the wallet of a gentle saver on day 30 (≈ 52 k); every price is ≤ 527.
-- **Pacing**: first visitor 20–40 s; 3 friends in the first 5-min session; 4 by 24 h; all 12 by day 8 (p10 6, p90 11) for the reference player, so the "~1–2 weeks" target holds; the catalogue lasts ≈ 3.5 weeks; mid-game the next purchase costs a median of 79 minutes of passive income.
-- **Known MVP characteristic** (not a failure): after the catalogue is complete (≈ day 24 for the reference player) dew keeps accumulating (median wallet 32 k on day 30). Seasons (post-MVP) are the intended sink; the 99,999 hard cap and "brimming" copy keep E6 safe meanwhile.
+- **Pacing**: first visitor 20–40 s; 3 friends in the first 5-min session; 4 by 24 h; all 12 by day 7–8 (p10 6, p90 11) for the reference player, so the "~1–2 weeks" target holds; the catalogue lasts ≈ 3.5 weeks; mid-game the next purchase costs a median of 79 minutes of passive income.
+- **Known MVP characteristic** (not a failure): after the catalogue is complete (≈ day 24 for the reference player) dew keeps accumulating (median wallet 32 k on day 30; savers reach the 99,999 cap by day 80, so E6's max displayed value reads 99,999). Seasons (post-MVP) are the intended sink; the 99,999 hard cap and "brimming" copy keep E6 safe meanwhile.
 
-How to re-run: `python3 tools/sim/economy_sim.py` (≈ 4 min on 4 CPUs; `--players 500 --reference 200` for a 15 s smoke run; `--markdown FILE` writes the tables). Exit code 1 on any failed check, so it can gate CI.
+How to re-run: `python3 tools/sim/economy_sim.py` (≈ 5 min on 4 CPUs; `--quick` = 500 + 200 players for a ≈ 25 s smoke run; `--ref-days N`; `--markdown FILE` writes the tables). Exit code 1 on any failed check, so it can gate CI.
 
 ---
 
@@ -725,21 +765,22 @@ All files: UTF-8 JSON, `"schema": 1`, a `"doc"` string, snake_case ids, seconds 
 
 | File | Top-level | Record fields |
 |---|---|---|
-| `data/species.json` | `species[]` | `id, name_key, default_name_key, desc_key, hint_key, album_order, rarity, base_weight, gift_dew, gift_item, stay_mult, entry, favourite_spot, requires[{item,min}], phases[], likes_items[{item,min,mult}], likes_weather[{weather,mult}], likes_phases[{phase,mult}], behaviours{nap,nibble,play,wander,sit_by_stream} (sum 1), rig{body_w_h,size,ear,tail,antenna,pattern,eye,fuzz_dp,fur,fur_2,belly,accent}, voice_step, postcard_heart2, postcard_heart4, seasons[]` |
+| `data/species.json` | `species[]` | `id, name_key, default_name_key, desc_key, hint_key, album_order, rarity, base_weight, gift_dew, gift_item, stay_mult, entry, favourite_spot, requires[{item,min}], phases[], likes_items[{item,min,mult}], likes_weather[{weather,mult}], likes_phases[{phase,mult}], behaviours{nap,nibble,play,wander,sit_by_stream} (sum 1), rig{body_w_h,size,ear,tail,antenna,pattern,eye,fuzz_dp,fur,fur_2,belly,accent}, voice_step, postcard_heart2, postcard_heart4, postcard_heart5, signature_gift, nest_style, best_friend, seasons[]` |
 | `data/flora.json` | `flowers[]` | `id, name_key, desc_key, garden_order, form, petal_token, cost_base, cost_growth, max_copies, sprout_at_s, bud_at_s, bloom_at_s, dew_per_hour, snug, opens_at (any / dusk_night), seasons[]` |
 | `data/decor.json` | `decor[]` | `id, name_key, desc_key, garden_order, anchor, cost_base, cost_growth, max_copies, snug, fx[], tap_fx, seasons[]` |
-| `data/economy.json` | flat constants | `display_max, wallet_cap, offline_clamp_s, welcome_back_min_gap_s, basket_slots, dew_cup_saturation_s, dew_cup_base_per_h, lambda_min_per_h, lambda_max_per_h, snug_half, stay_min_s, stay_max_s, max_present, photo_chance_with_gift, debut_chance, affection_per_visit/pet/boat, heart_thresholds[5], best_friend_heart, best_friend_weight_mult, leaf_boat_cost, leaf_boat_drift_s, greeter_delay_min_s/max_s, greeter_stay_s, greeter_pet_cooldown_s, rarity_order[], onboarding{…}, event_postcards[{id,template,trigger}], gift_items[{id,name_key}], validation_targets{…}` |
+| `data/economy.json` | flat constants | `display_max, wallet_cap, offline_clamp_s, welcome_back_min_gap_s, basket_slots, dew_cup_saturation_s, dew_cup_base_per_h, lambda_min_per_h, lambda_max_per_h, snug_half, stay_min_s, stay_max_s, max_present, photo_chance_with_gift, debut_chance, affection_per_visit/pet/boat, visit_affection_rest_s, heart_thresholds[5], best_friend_heart, best_friend_weight_mult, leaf_boat_cost, leaf_boat_drift_s, greeter_delay_min_s/max_s, greeter_stay_s, greeter_pet_cooldown_s, rarity_order[], onboarding{…}, event_postcards[{id,template,trigger}], gift_items[{id,name_key}], signature_gift_items[{id,name_key,signature_of}], validation_targets{…}` |
 | `data/world.json` | clock & weather | `phases[{id,start_s,g_day,audio_profile,name_key}], phase_crossfade_s, audio_profile_crossfade_s, weather[{id,name_key,g_wind,rain_particles,cloud_cover,ambient_mult}], weather_crossfade_s, weather_plan{rain_count_probs, rain_min_s, rain_max_s, breeze_count_probs, breeze_min_s, breeze_max_s}, seasons[{id,name_key,length_days}], season_cycle[]` |
+| `data/friendship.json`, `data/mysteries.json`, `data/scenes.json` | Retention v1 | see §13.10 |
 | `data/spots.json` | layout | `frame{width_px,height_px,anchor,px_per_dp}, zones[{id,y0,y1}], safe_x{x0,x1}, stream{polyline[[x,y]],water_width (fraction of frame height, = the tap band's height),tap_band_y0,tap_band_y1}, entries[{id,x,y}], spots[{id,name_key,x,y,capacity,behaviours[],shelter,requires_item,requires_min}], beds[{id,name_key,x,y,fill_order,hit_w_dp,hit_h_dp,capacity,stems[[dx,dy]],nibble_points[[x,y]]}], decor_anchors[{decor_id,layout,positions[[x,y]]}], props[{id,x,y,w_dp,h_dp,tap_action,hit_dp}]` |
 
 `world.json` is a sixth file beyond the five requested: clock and weather numbers are needed by both the sim and the game, and do not belong in the economy file.
 
-Validator rules (exit 1 on failure): ids unique snake_case; every reference resolves (items, spots, entries, anchors, phases, weather, seasons, gift items, string keys); r ∈ [1.10, 1.12]; copies ∈ [10, 12]; top price ≤ 99,999; stage times increase; behaviour weights sum to 1; every MVP species visits in spring; favourite spots exist whenever the species can visit; rig palette slots are `cr_*`; beds hold all flower copies; anchors hold exactly `max_copies` positions; static targets meet size floors, keep 8 dp gaps, keep their hit areas inside the frame's side edges and stay clear of the dock; required targets are not in the look zone.
+Validator rules (exit 1 on failure): ids unique snake_case; every reference resolves (items, spots, entries, anchors, phases, weather, seasons, gift items, string keys); r ∈ [1.10, 1.12]; copies ∈ [10, 12]; top price ≤ 99,999; stage times increase; behaviour weights sum to 1; every MVP species visits in spring; favourite spots exist whenever the species can visit; rig palette slots are `cr_*`; beds hold all flower copies; anchors hold exactly `max_copies` positions; static targets meet size floors, keep 8 dp gaps, keep their hit areas inside the frame's side edges and stay clear of the dock; required targets are not in the look zone. Retention v1 rules: §13.10.
 
 ---
 
 ## 11. Translations
-- `i18n/strings.csv` — Godot CSV translation format, header `keys,en,vi`, UTF-8 **without BOM**, Vietnamese **NFC**, comma-delimited, RFC-4180 quoting. 271 keys: UI, dock, sheets, settings, accessibility labels, captions, species (name, default name, description, hint), flowers, décor, spots, beds, behaviours, time/weather/season names, recap lines, 20 postcard templates.
+- `i18n/strings.csv` — Godot CSV translation format, header `keys,en,vi`, UTF-8 **without BOM**, Vietnamese **NFC**, comma-delimited, RFC-4180 quoting. 443 keys (271 MVP + 172 Retention v1): UI, dock, sheets, settings, accessibility labels, captions, species (name, default name, description, hint), flowers, décor, spots, beds, behaviours, time/weather/season names, recap lines, 44 postcard templates, and the Retention v1 strings (heart-up toasts, unlock lines, nests, signature gifts, signs and clues, 12 riddles, 8 scenes with recap teasers, 12 cousins with names, descriptions and riddles, Album tabs).
 - Import: Godot generates `strings.en.translation` and `strings.vi.translation` next to the CSV (verified on 4.7.2 headless; `unescape_translations` default true). Both are registered at startup by `I18n.ensure_translations()`, not in `project.godot` (ARCHITECTURE §2: on a fresh clone the editor would otherwise log load errors before the first import has produced them). Use `tr("KEY").format({...})`.
 - Lint: `validate_content.py` checks header, BOM, NFC, empty cells, duplicate keys, placeholder parity between en and vi, banned words, and that every key referenced from data exists.
 
@@ -751,7 +792,555 @@ Validator rules (exit 1 on failure): ids unique snake_case; every reference reso
 **Gameplay Engineer / Tech Lead:** port `Player.advance` from the sim (§5.8) as the one world step for live and offline; world seconds in the save; RNG state persisted; data loaded from JSON only. Greeter, debut, bout and wallet-cap rules are part of the contract (§5.5–5.7, §4.1.3).
 **UI Engineer:** dock order and mirroring (§8.1), sheet behaviour, unaffordable state (§8.1), name input filtering (§7.3), recap (§7.5), all strings via `tr()`.
 **QA:** `economy_sim.py` and `validate_content.py` are CI-ready gates (exit codes). The E1/E3 30-day screenshot diff (00 §4) still needs a render-based test.
+**Retention v1** hand-offs (P1 systems, P2 creatures/world/UI/audio, P3 QA) are in §13.9.
 **Open:** (1) post-catalogue dew accumulation is accepted for the MVP; revisit when Seasons land. (2) The first-visit card for night species discovered offline appears in the morning recap — playtest whether players want a "who came last night" moment in the album. (3) A one-time unlock (04 §5) is out of scope (R11).
+
+---
+
+## 13. Retention v1: a reason to come back tomorrow
+
+*P0 Design of `docs/plans/RETENTION_V1.md` (F1 friendship depth, F2 mystery signs, F3 away scenes). Numbers live in `data/friendship.json`, `data/mysteries.json`, `data/scenes.json`, the new `species.json` fields and `economy.json` (`visit_affection_rest_s`, `signature_gift_items`); text lives in `i18n/strings.csv`. Where this section and the data disagree, the data wins.*
+
+### 13.0 Guarantees (binding for P1–P3)
+
+| # | Guarantee | How it holds |
+|---|---|---|
+| G1 | **Never decreasing.** Affection, hearts, nest stages, clues, cousins met, memories, keepsakes and postcards only grow | No code path removes them. The save migration only adds fields. The sim checks every session and the 30-day absence (§13.8, R4 and E1) |
+| G2 | **Never missable.** Nothing is lost by being away or by not tapping | Signs wait until tapped and never expire. A debut never waits for a tap and never cancels a sign. A staged scene is archived to Memories when tapped, or after 600 s of foreground time, and stays pending across app closes. A ♥4 postcard that names a buddy you have not met waits for the buddy's first visit. Offline heart-ups are shown in the recap and as toasts at the next open |
+| G3 | **No urgency.** No retention timer is ever displayed. Copy is wonder-framed | E8 lint covers every new key (§13.10). Signs have no countdown, and nests show their stage, not a time |
+| G4 | **Absence is positive** | Scenes exist only because you were away (≥ 2 h). Nests grow, signs gather and cousins arrive while you are away |
+| G5 | **Opening the app often is no advantage** | At most 1 scene per return, and only after ≥ 2 h away. Visit affection rests for 20 h per friend (§13.2.1). The greeter rules are unchanged (§5.6) |
+| G6 | **Deterministic and replayable** | All retention randomness comes from the stateless hash in §13.1 and never draws from the world RNG stream. Everything else is a pure function of the save |
+
+### 13.1 Determinism: the retention hash
+
+`u(parts…) = (splitmix64(install_seed XOR fnv1a64(utf8(join(parts, "|")))) >> 11) / 2^53`, a float in [0, 1). The reference implementation is `tools/sim/economy_sim.py: hash_u`.
+
+- **FNV-1a 64:** offset `0xCBF29CE484222325` (signed int64 `-3750763034362895579`), prime `0x100000001B3`, multiplication mod 2^64.
+- **splitmix64:** `x += 0x9E3779B97F4A7C15; z = (x ^ (x >>> 30)) * 0xBF58476D1CE4E5B9; z = (z ^ (z >>> 27)) * 0x94D049BB133111EB; return z ^ (z >>> 31)`. As signed int64 the constants are `-7046029254386353131`, `-4658895280553007687` and `-7723592293110705685`.
+- **GDScript notes:** `int` is a signed 64-bit integer whose multiplication wraps. `>>` is arithmetic, so a logical shift must be written `(x >> n) & ((1 << (64 - n)) - 1)`.
+- **Golden vectors** (P1 parity tests):
+
+| Input | `u` |
+|---|---|
+| `u(12345, "sign", "honeyhum", 0)` | 0.90297526886713 |
+| `u(12345, "sign", "honeyhum", 1)` | 0.02754163461250092 |
+| `u(12345, "scene_roll", 1)` | 0.8649366456155851 |
+| `u(12345, "scene_pick", 1)` | 0.6148913306348076 |
+| `u(0, "sign", "twilight_puffmoss", 0)` | 0.7363310847892622 |
+
+| Draw | Key parts |
+|---|---|
+| Sign time | `"sign", <species id or variant id>, <sign index>` |
+| Scene roll | `"scene_roll", <return index>` |
+| Scene pick | `"scene_pick", <return index>` |
+| Wave delay (presentation only) | `"wave", <open index>, <species>` |
+
+Anchors and casts are chosen by fixed rules, with no randomness.
+
+### 13.2 F1 Friendship depth
+
+#### 13.2.1 Affection (changes §5.10)
+- **Visit:** +1 `affection_per_visit`, but only if at least `visit_affection_rest_s` = **72,000 s (20 h) of world time** have passed since this friend's last affection-granting visit (`visit_aff_t[species]`).
+  - Rationale: without the rest, hearts filled in about 9 days and the long tail vanished. With it, a frequent visitor warms by about one point per day from visits.
+  - The rest is never shown and nothing is lost. 20 h is short enough that a night-only friend visiting on consecutive nights is almost always credited.
+- **Pet** (+1, once per visit) and **leaf boat watched** (+1, once per visit) are unchanged. The greeter still gives nothing.
+- Hearts at **3 / 8 / 15 / 25 / 40** (`heart_thresholds`, unchanged). Affection never decays and is never spent.
+- **Tuning note:** Moonpuff `base_weight` went from 3 to 4. Moonpuff is the slowest friend by design, and at 3 its ♥5 landed after day 74. All-12-met is unchanged at a median of day 8.
+
+#### 13.2.2 Unlock table ⟲ `friendship.json: heart_unlocks`
+
+| ♥ | Points | Unlocks | Where |
+|---|---|---|---|
+| 1 | 3 | **Favourite spot** revealed (existing). **Waves hello on open:** when the app opens or resumes and the recap closes, up to 3 present friends with ≥ ♥1 (by hearts desc, then album order) turn to the camera and play the `wave` pose. Each waits a delay of 0.6–1.6 s (`u("wave", open_index, species)`), staggered 0.35 s apart | World, Album |
+| 2 | 8 | **Story postcard I** (`postcard_heart2`) plus the **signature gift**. From now on this friend leaves its `signature_gift` item instead of `gift_item` (same `gift_dew`, so the economy is unchanged). The first one carries `BASKET_SIGNATURE_NOTE`, and Keepsakes lists it | Basket, Postcards, Keepsakes |
+| 3 | 15 | **Likes** revealed (existing) plus the **nest** (§13.2.3) | World, Album |
+| 4 | 25 | **Story postcard II** (`postcard_heart4`, names the buddy as `{friend}`; if the buddy has not been met yet it waits for the buddy's first visit) plus the **best-buddy pair** (§13.2.4) | Postcards, World, Album |
+| 5 | 40 | **Story postcard III** (`postcard_heart5`, hints at the cousin's condition), the **keepsake** (a framed plush portrait, pose `keepsake_portrait`, golden-hour palette, frame `plush_portrait`, in Keepsakes), the golden album frame and visit weight ×1.25 (existing), and the **cousin mystery** opens (§13.3.5) | Album, World |
+
+- **Renaming** stays available from the first meeting (§7.3). The plan listed it at ♥1, but gating an ability players already have would be a regression; this is open question Q1.
+- **Heart-up, live:** the `celebrate` motion token (900 ms, `input_block_ms` 0, 5-heart burst) plays, with S24 and MEDIUM haptic (Subtle: none). A toast shows `HEART_UP_TITLE` plus `HEART_UP_n` for 3.0 s.
+  - At ♥4 the toast is `HEART_UP_4_SOLO` if the buddy is unmet.
+  - Toasts queue 0.6 s apart, at most 3 per open; the rest show only as the Album dot.
+- **Heart-up, offline:** the recap line `RECAP_HEARTS` appears (§13.5.3). The toasts then play after the recap card closes. `hearts_seen` stores what was shown, so nothing toasts twice.
+
+#### 13.2.3 Nests ⟲ `friendship.json: nest`
+- **Building:** a friend reaching ♥3 builds its nest at `nest.anchors[species]`, which is ≤ 60 dp from its favourite spot. The style is `species.nest_style` (moss bowl, leaf cradle, petal cup or pebble ring).
+- **Stages, in world seconds from `built_t`:** **twigs** at 0 s, **moss bed** at 86,400 s (1 day) and **flower canopy** at 259,200 s (3 days). The nest grows offline and never wilts or shrinks.
+- **Napping:** a nap bout of that friend chooses the nest with p `nap_preference` = 0.7, otherwise the normal spot rule (§4.1.3). Capacity is 1, and no other friend uses it. The exception is the pair nap fallback (§13.2.4).
+- **Look and hit:** the visual is 48 × 24 dp. The nest is not a tap target; the mossling in it is.
+- **Validation:** nests sit ≥ 30 dp apart and ≥ 8 dp clear of the basket, mailbox and chime hit areas.
+- **Album line:** `ALBUM_NEST`, with `{nest}` = style name + stage name. The recap line `RECAP_NEST` appears when a stage was reached while away.
+
+| Style | Species |
+|---|---|
+| `moss_bowl` | puffmoss, dandelfluff, moonpuff |
+| `leaf_cradle` | honeyhum, fernwhisk, glowmote |
+| `petal_cup` | buttonbud, bellkin, primpip |
+| `pebble_ring` | pebblepaw, capling, puddlewump |
+
+#### 13.2.4 Best buddies ⟲ `species.best_friend`, `friendship.json: pair`
+
+Pairs are symmetric, and the validator checks this:
+- puffmoss ↔ moonpuff
+- buttonbud ↔ honeyhum
+- pebblepaw ↔ puddlewump
+- fernwhisk ↔ glowmote
+- dandelfluff ↔ bellkin
+- primpip ↔ capling
+
+**Pair behaviour:**
+- **Trigger:** both A and B are in the hollow (real visitors or a greeter), either one is at ≥ ♥4 (`min_hearts_either`), and B is not napping. Then, when A starts a new bout, with p `pair_chance` = 0.6 it picks a pair behaviour by `weights`:
+  - **`pair_nap`** 0.45: back to back at the first free `nap_spots` (sun_stone, toadstool_ring) with capacity ≥ 2. If neither is free, the fallback is `side_by_side_at_nest` (the lead's nest).
+  - **`pair_play`** 0.35: a roll and chase next to each other.
+  - **`pair_sit_by_stream`** 0.2: leaning together at a stream spot.
+- **How B joins:** B ends its current bout early and walks over. Bouts are presentation-only, so this has no economy effect.
+- **Duration and repeats:** a pair bout lasts 120–360 s. The no-repeat rule (§4.1.3) applies to the pair.
+- **Pose ids:** `pair_nap_back_to_back`, `pair_play_roll`, `pair_sit_lean`.
+- **Album:** `ALBUM_PAIR` ("Best buddy: {friend}") appears once both are met and either is at ♥4.
+
+#### 13.2.5 The 3-part stories (36 postcards)
+
+Every friend has its own arc:
+1. **I** (♥2): settling in. These are the existing `POSTCARD_FRIEND_01…12`, now one per species; 09 was rewritten for Puddlewump.
+2. **II** (♥4): the nest and the best buddy, `POSTCARD_FRIEND_<SPECIES>_H4`.
+3. **III** (♥5): belonging, plus a gentle hint at the cousin's condition, `POSTCARD_FRIEND_<SPECIES>_H5`. For example, "She only travels when the sky turns gold."
+
+The full text is in Appendix A.
+
+### 13.3 F2 Mystery signs, clues and cousins ⟲ `mysteries.json`
+
+#### 13.3.1 Opening a mystery and holding the debut
+- **When a mystery opens:** a species that is not met and not an onboarding friend (onboarding = Puffmoss, Buttonbud, Pebblepaw) opens its mystery at the first world time `open_t` when every `requires` entry holds. Phases are ignored.
+  - Checked after every bloom and every décor purchase, and once at migration.
+  - Because nothing is ever removed, an open mystery never closes.
+- **Sign times:** `appear_t[i] = open_t + lo_i + (hi_i − lo_i) · u("sign", species, i)`, using `sign_windows_s[n]`, where n is the number of signs (`mysteries.species[].signs`).
+- **The debut hold** (adds a step 0 to §5.5): an unmet species is not eligible before `debut_ok_t = max(appear_t) + debut_after_last_sign_s` (1,800 s).
+  - From then on the normal debut rule applies.
+  - The debut never waits for any sign to be tapped.
+
+| Signs | Who | Sign windows after opening | Earliest debut |
+|---|---|---|---|
+| 2 | uncommon (honeyhum, fernwhisk, dandelfluff, bellkin, primpip) | 15–60 min · 1.5–3 h | 2–3.5 h |
+| 3 | rare and very rare (capling, puddlewump, glowmote, moonpuff) | 15–60 min · 1.5–3 h · 3.5–6 h | 4–6.5 h |
+
+Every debut mystery ends with the **note** (its riddle).
+
+| Species | Signs | Footprint | Dropped thing | Tint |
+|---|---|---|---|---|
+| honeyhum | dropped, note | tiny_paw | buttercup_petal | `cr_honey` |
+| fernwhisk | rustle, note | tiptoe | fern_frond | `cr_sage` |
+| dandelfluff | dropped, note | skip_dots | seed_fluff | `cr_snow` |
+| bellkin | rustle, note | tiny_paw | bluebell_flower | `cr_lilac` |
+| primpip | footprints, note | neat_row | primrose_petal | `cr_peach` |
+| capling | footprints, rustle, note | hop_dots | cap_fleck | `cr_rose` |
+| puddlewump | footprints, dropped, note | splash_paw | wet_pebble | `cr_sky` |
+| glowmote | dropped, rustle, note | tiptoe | glow_speck | `cr_glow` |
+| moonpuff | dropped, footprints, note | sleepy_drag | moon_feather | `cr_lilac` |
+
+The three onboarding friends also have a footprint, a dropped thing and a tint, used only for their cousins' signs.
+
+#### 13.3.2 Showing signs
+- **Visibility:** a sign is due at `appear_t`. At most `max_visible` = 3 are on screen at once.
+  - Further due signs wait in order (`appear_t`, then album order) and fade in over 600 ms when a slot frees.
+  - Signs that came due offline are already there when the world appears.
+- **Anchor:** chosen when the sign becomes visible, from the free anchors that list its type. The pick is the anchor nearest in dp to a reference point; ties go by anchor order.
+
+| Sign type | Reference point |
+|---|---|
+| footprints | the species' `entry` |
+| dropped | the favourite spot |
+| rustle | the favourite spot |
+| note | the sun stone |
+
+- **Anchors** ⟲ `mysteries.json: anchors`. All are in the tend zone with a 60 dp hit, except `ridge_bush`, which is in the look zone with a 64 dp hit.
+
+| Anchor | x | y | Types |
+|---|---|---|---|
+| `stump_bush` | 0.760 | 0.452 | rustle, dropped, footprints |
+| `fern_tuft` | 0.215 | 0.588 | rustle, dropped, footprints |
+| `clover_patch` | 0.800 | 0.588 | dropped, footprints, rustle |
+| `sun_stone_foot` | 0.500 | 0.628 | note, dropped, footprints |
+| `cairn_bank` | 0.250 | 0.716 | footprints, dropped, note |
+| `brook_bank` | 0.740 | 0.720 | footprints, dropped, note |
+| `ridge_bush` | 0.620 | 0.335 | rustle |
+
+  - **Rules** (validated):
+    - Anchors keep ≥ 8 dp gaps from each other and from the basket, mailbox and chime.
+    - Their centres are outside every bed's hit rectangle (a sign may overlap a bed edge; the sign wins the tap there).
+    - They are ≥ 30 dp from every spot centre (a resting mossling never covers a sign) and from every nest.
+    - Every type has ≥ 3 anchors, so 3 signs of the same type always fit.
+- **Hit priority** (extends §2.5): mossling > scene participant > **sign** > ready bud > prop > décor `tap_fx` > bed > stream > background.
+- **Look:**
+  - Footprints: a 40 dp stamp in the species' footprint style.
+  - Dropped thing: a 28 dp item in the species' tint, or the cousin's fur colour for a cousin.
+  - Rustle: a 44 dp bush prop at the anchor. It shakes every 6–14 s with S22 at the species' `voice_step`, captioned `CAPTION_RUSTLE`.
+  - Note: a 28 dp folded leaf.
+  - All are felt-look SVG tone masks with a 600 ms fade-in.
+- **Tap:**
+  - The `clue_lift` effect plays: the sign lifts and floats into the Album button over 600 ms, with S23, captioned `CAPTION_CLUE`.
+  - A toast shows `CLUE_FOUND_TITLE` plus `CLUE_FOUND_<TYPE>`. A note instead opens a mini postcard reader with the riddle.
+  - `CLUE_ADDED` is shown once per install.
+  - Saved: `clues[mystery] |= 1 << index`.
+  - The accessibility labels are `A11Y_SIGN_*`.
+
+#### 13.3.3 Album › Clues
+- **Which cards appear:** one card per opened mystery, species in album order and then cousins in opening order. Mysteries that have not opened do not appear; the Friends tab's silhouette and hint already cover them.
+- **Card while open:**
+  - A soft silhouette (a cousin's is tinted at 40 % of its fur colour).
+  - `CLUES_SOMEONE`, or `CLUES_COUSIN` for a cousin.
+  - Clue dots: ● found, ○ not found yet.
+  - The riddle, once the note is found.
+  - The a11y line `CLUES_COUNT`.
+- **Card once met:** `CLUES_SOLVED` ("So it was {name}!") with the live portrait.
+- **Onboarding friends:** a card with `CLUES_CAME_ALONE` and their riddle, so the tab feels complete.
+- **Empty state:** `CLUES_EMPTY`.
+
+#### 13.3.4 Riddles
+
+Riddles are `RIDDLE_<SPECIES>`, written from each species' hint, e.g. "Someone who loves…". The cousins have `VARIANT_<ID>_RIDDLE`. The text is in Appendix A.
+
+#### 13.3.5 Cousins (variants): the post-album long tail
+- **Opening:** a cousin mystery opens when its base friend is at ≥ `variant_hearts_required` (♥5), every species has been met (`variant_requires_all_met`), and the variant's `condition.items` hold.
+- **Signs:** dropped, then note, at `variant_sign_windows_s[2]` = **1–8 h and 20–32 h** after opening, keyed by variant id. `cousin_ok_t` is the later of the two.
+- **Debut:** the cousin arrives **together with its base friend** on the base's first arrival (not a peek, not a greeter) at t ≥ `cousin_ok_t` where:
+  - the phase is in `arrival_phases` (if any),
+  - the weather is in `arrival_weather` (if any),
+  - and a place is free (present < `max_present` after the base arrived).
+
+  If any part does not hold, it simply comes another time.
+- **Determinism:** the cousin itself is never a random draw. Only the existing visit process decides when the base arrives.
+- **While visiting:** the cousin is the base friend's guest. It takes a place, runs its own bouts with the base species' behaviour weights, and leaves with the base. It brings no gift and no affection, and has no hearts of its own.
+- **Later visits:** it comes along on every `cousin_every_n_visits` = 3rd arrival of the base (`cousin_visits[species]`). These do not re-check the conditions.
+- **Presentation:**
+  - The new-friend card shows `NEWFRIEND_COUSIN_TITLE` plus the variant name, with S09.
+  - The recap line is `RECAP_COUSIN`.
+  - The base friend's card gets a "cousin" row (name, description, live portrait), and Keepsakes lists cousins.
+- **Rig:** the base rig with exactly the four colour slots replaced; no new shapes. The validator checks that every token exists in `palettes.json`, that the fur changes plus ≥ 2 slots in all, and that the fur stays at HSV S ≤ 0.45 and V ≥ 0.45 (V2).
+
+| Variant (en / vi) | Base | fur / fur_2 / belly / accent | Condition (besides ♥5 + all met) |
+|---|---|---|---|
+| Twilight Puffmoss / Rêu Bông Hoàng Hôn | puffmoss | dusk / lilac / cream / glow | arrives at golden hour or dusk |
+| Honeydrop Buttonbud / Nụ Cúc Giọt Mật | buttonbud | honey / oat / cream / rose | 10 Button Daisy in bloom; arrives by day |
+| Mossback Pebblepaw / Sỏi Tròn Lưng Rêu | pebblepaw | sage / moss / snow / leaf | 10 Pebble Cairn |
+| Blossom Honeyhum / Mật Ngọt Hoa Đào | honeyhum | blush / rose / cream / sun | arrives at dawn |
+| Misty Fernwhisk / Lá Xoăn Sương Mù | fernwhisk | mist / sky / snow / lilac | arrives in soft rain |
+| Sunset Dandelfluff / Bông Gió Ráng Chiều | dandelfluff | peach / blush / cream / sun | arrives in a breeze |
+| Rosebell Bellkin / Chuông Nhỏ Hoa Hồng | bellkin | blush / berry / snow / lilac | 10 Shell Wind Chime |
+| Lavender Primpip / Má Hồng Oải Hương | primpip | lilac / dusk / cream / rose | 10 Primrose in bloom |
+| Bluecap Capling / Nấm Lùn Mũ Xanh | capling | snow / sky / cream / lilac | 10 Toadstool Seat (the fairy ring closes) |
+| Lilypond Puddlewump / Bì Bõm Hồ Sen | puddlewump | fern / leaf / cream / rose | 10 Stream Stones |
+| Amber Glowmote / Đốm Sáng Hổ Phách | glowmote | cocoa / honey / cream / glow | arrives at night |
+| Starlit Moonpuff / Bông Trăng Ánh Sao | moonpuff | mist / sky / snow / glow | arrives on a clear night |
+
+Tokens are `cr_*`.
+
+### 13.4 F3 Away scenes ⟲ `scenes.json`
+
+**Return:** a foreground after a background, where `t_now − t_bg ≥ min_absence_s` = 7,200 s in world seconds (after the offline catch-up, §5.8). The first launch is excluded. On a return:
+
+1. If `pending_scene` exists, re-show it and do not pick a new one.
+2. `scene_returns += 1` (= r). If `u("scene_roll", r) ≥ scene_chance` (0.5), there is no scene this return.
+3. Build the **absence profile:** seconds per (phase, weather) over `(t_bg, t_now]`, sampled every `away_sample_s` = 600 s with the catch-up wall-clock mapping.
+4. **Eligible** = scenes whose conditions all hold at `t_now` given that profile. **Pool** = eligible scenes never seen if there are any, otherwise all eligible (repeats only once every applicable scene has been seen). Pick by `weight` with `u("scene_pick", r)`.
+5. **Cast** (deterministic): fill the roles in order.
+   - A role's `prefer` list wins if one of those species is met.
+   - Then, ranked by: friends who have **not yet appeared in this scene** first; present visitors before absent ones; hearts (desc); album order.
+   - Pair scenes take the best-buddy pair (both met) ranked the same way.
+   - Every friend gets their moment, and repeats show new faces.
+6. **Staging:**
+   - Present participants walk to their slots; absent ones fade in at their slots (600 ms) behind the recap card. Staged-in friends behave like greeters: no gift, no affection, and they walk off when the scene ends.
+   - The recap card gains the teaser line (§13.5.3) and S25 plays as the scene fades in.
+   - The scene stays until the player taps a participant or prop (a long-press still pets), or until **600 s of foreground time** have passed (`pending_scene.shown_s`). It survives app closes.
+   - It is then archived to `memories` as {scene, cast, phase, weather, world_t, unix} and rendered live like photos. `SCENE_SAVED` toasts, and everyone returns to normal bouts.
+
+At most 1 scene and 3 signs are on screen at a time.
+
+| Scene | Anchor | Conditions ⟲ | Cast (pose ids) | Props |
+|---|---|---|---|---|
+| `nap_pile` | sun_stone | 3 met; ≥ 1 h of night or ≥ 30 min of rain while away | bottom, middle, top (`scene_pile_*`) | — |
+| `pebble_tower` | (0.14, 0.69) | 4 met; ≥ 3 Pebble Cairn | builder (prefers primpip, pebblepaw; `scene_tower_proud`), admirer | `scene_pebble_tower` |
+| `leaf_fort` | (0.12, 0.585) | 2 met; ≥ 30 min of rain while away | 2 peekers (`scene_fort_peek`) | `scene_leaf_fort` |
+| `moon_watchers` | stream_bend | a best-buddy pair met; ≥ 1 h of clear night while away | the pair (`scene_moon_sit`, `scene_moon_sit_lean`) | — |
+| `flower_crowns` | moss_cushion | 2 met; ≥ 20 stems of ≥ 4 kinds in bloom | wearer, admirer (`scene_crown_*`) | `scene_flower_crown` |
+| `boat_regatta` | (0.58, 0.738) | 3 met; ≥ 10 boats floated | 2 cheerers and a captain (`scene_regatta_*`) | `scene_boat_line` |
+| `lantern_party` | (0.82, 0.70) | 3 met; ≥ 5 Firefly Lantern; ≥ 30 min of dusk or night while away | 3 dancers (prefers glowmote; `scene_lantern_circle`) | — |
+| `pair_nap` | the lead's nest | a pair with either at ≥ ♥4 | the pair (`pair_nap_back_to_back`) | — |
+
+**Strings:**
+- `SCENE_<ID>_TITLE` and `SCENE_<ID>_CAPTION` (Memories; `{name}` = first role, `{friend}` = second).
+- `RECAP_SCENE_<ID>`, the teaser. It names nobody, so the scene stays a surprise.
+
+### 13.5 UI surfaces
+
+#### 13.5.1 Album
+
+**Tabs:** **Friends · Clues · Memories · Keepsakes · Postcards** (`ALBUM_TAB_*`).
+- **Photos** move into **Memories**, which has two sections: `MEMORIES_SECTION_MOMENTS` (scenes, newest first) and Photos (the 60 poses). The per-friend photo strip stays on the friend card.
+- **Tab bar:** icons plus labels. At 200 % text, labels wrap to 2 lines and the bar scrolls horizontally rather than shrinking text.
+- **Dots:** an unread dot (never a number) marks a tab with something new.
+
+**Friend card additions:**
+- The heart bar.
+- An unlock list of 5 lines (`UNLOCK_HEART_1…5`). Reached lines are in `ink`; lines not reached yet are in `ink_2` with `ALBUM_UNLOCK_LATER`, never a countdown or points.
+- `ALBUM_NEST`, `ALBUM_PAIR`, and the cousin row.
+
+**Keepsakes:** ♥5 portraits (`KEEPSAKE_TITLE`, `KEEPSAKE_PORTRAIT`), signature gifts (`KEEPSAKE_GIFT`) and cousins. The empty state is `KEEPSAKES_EMPTY`.
+
+#### 13.5.2 World
+- Signs (§13.3.2), nests (§13.2.3), a scene (§13.4) and cousins.
+- New a11y labels: `A11Y_SIGN_*`, `A11Y_NEST`, `A11Y_SCENE`.
+- Night chrome and Reduce Motion: signs and scenes cross-fade at ≤ 150 ms, `clue_lift` becomes a fade, and the celebrate burst particles drop to ×0.3.
+
+#### 13.5.3 Recap (extends §7.5)
+
+Up to 3 lines, in this priority order:
+1. new friend
+2. **scene teaser**
+3. **cousin** (`RECAP_COUSIN`)
+4. postcard
+5. **hearts** (`RECAP_HEARTS`, the friend with the highest new heart)
+6. **clue** (`RECAP_CLUE`, if new signs came due)
+7. visitors
+8. **nest** (`RECAP_NEST`)
+9. gifts
+10. flowers
+11. photos
+12. rain
+
+The scene teaser is the only line allowed to replace "visitors" when 3 lines are already full.
+
+#### 13.5.4 Toasts and cards
+- Heart-up toast (§13.2.2) and clue toast (§13.3.2): frosted, bottom-up, never covering the dock, tap to dismiss, auto-dismiss after 3.0 s.
+- Cousin new-friend card: the existing card with `NEWFRIEND_COUSIN_TITLE`.
+- Basket: the first signature gift shows `BASKET_SIGNATURE_NOTE` under its slot.
+
+### 13.6 Save schema +1 (additive) and migration
+
+| Field | Type | Meaning |
+|---|---|---|
+| `visit_aff_t` | Dictionary[String species → float world t] | Last visit that granted affection (§13.2.1) |
+| `hearts_seen` | Dictionary[String → int] | Hearts already celebrated to the player (offline toasts) |
+| `nests` | Dictionary[String → {style: String, built_t: float, stage: int}] | Stage is derived from `built_t` and stored for event emission. It never decreases |
+| `postcards_waiting` | Array[String] postcard id | ♥4 postcards waiting for the buddy's first visit |
+| `mysteries` | Dictionary[String mystery id → {kind: "species"/"variant", target: String, open_t: float, ok_t: float, solved_unix: float (−1 = open)}] | id = species id or variant id |
+| `signs` | Array[{mystery: String, index: int, type: String, appear_t: float, anchor: String ("" until visible)}] | Signs not yet tapped (scheduled, due or visible) |
+| `clues` | Dictionary[String mystery → int bitmask] | Found signs |
+| `variants_met` | Dictionary[String variant → float unix] | Cousins met |
+| `cousin_visits` | Dictionary[String species → int] | Base arrivals since the cousin was met (every 3rd brings it) |
+| `scene_returns` | int | Qualifying returns so far (hash key `r`) |
+| `scenes_seen` | Dictionary[String scene → int] | Times staged |
+| `scene_cast` | Dictionary[String scene → Array[String]] | Friends who have appeared in each scene (casting rule) |
+| `pending_scene` | Dictionary {scene, cast: Array[String], world_t: float, shown_s: float} or {} | A staged scene not archived yet |
+| `memories` | Array[{scene, cast: Array[String], phase, weather, world_t: float, unix: float}] | Album › Memories (metadata only) |
+| `keepsakes` | Dictionary[String species → float unix] | ♥5 portraits |
+| `last_bg_t` | float | World t when the app was last backgrounded (the 2 h scene rule) |
+| `basket[].signature` | bool (new key in basket entries) | Marks signature gifts (the first gets the note) |
+
+**Migration (schema N → N+1):**
+- Add every field empty.
+- `hearts_seen` = current hearts, so nobody re-toasts.
+- For each species already at ♥3+, `nests[s].built_t` = now; nests start as twigs and grow normally.
+- For each already ♥2+ friend, signature gifts start with its next departure; the gift has no retroactive copies.
+- Postcards ♥4 and ♥5 already earned are sent as new postcards. They use new template keys, so they were never delivered before; this is additive.
+- ♥5 friends get keepsakes now.
+- For every unmet non-onboarding species whose requires hold, open its mystery at the migration time.
+- If all 12 are met, open the cousin mysteries whose conditions hold.
+- Affection is never reduced. The 20 h rest starts empty, so the first visit after migration counts.
+
+### 13.7 Audio and haptics (new cues for the Sound Designer)
+
+| Cue | When | Sound | Bus / level | Caption | Haptic |
+|---|---|---|---|---|---|
+| S22 | A rustle sign shakes (every 6–14 s while visible) | Soft leaf rustle plus a tiny chirp at the species' `voice_step` (S13 timbre, −6 dB) | Ambience −31 | `CAPTION_RUSTLE` | — |
+| S23 | A sign is tapped (clue found) | Two-note felt-glass sparkle up a fifth, chord-snapped | SFX −24 | `CAPTION_CLUE` | — / TICK |
+| S24 | Heart-up (live, or the first toast after the recap) | Warm 3-note chime ladder (chord_clip), with a pad swell like S09 for ♥5 only | SFX −23 | `CAPTION_HEART` | MEDIUM / MEDIUM |
+| S25 | Scene fades in / teaser shown | Soft hush, airy glass swell, a far bird (no rhythm) | SFX −25 | `CAPTION_SCENE` | — |
+
+The wave reuses S13 at −6 dB, and a cousin debut reuses S09 + S12. Nest growth is silent. All new cues must pass the A1/A2 gates and snap to the chord pentatonic (A3).
+
+### 13.8 Validation: the content-left simulation
+
+**Method:**
+- `tools/sim/economy_sim.py` now also loads `friendship.json`, `mysteries.json` and `scenes.json` and implements everything above in `Player`.
+- Reference players run **80 days**; random-schedule players run 30.
+- Players tap every visible sign at the start and end of a session.
+- A **discovery** is anything the player sees for the first time: a new friend, a heart level, a postcard, a clue, a first-time scene, a cousin, a **new memory** (a scene staged with at least one friend new to it) or a **nest growth stage**.
+- A local calendar day "has something new" if any session that day shows ≥ 1 discovery. The install day is day 0.
+- The plan's narrower list (friends, hearts, postcards, clues, first-time scenes, cousins) is reported too.
+
+**Iteration log:**
+1. First pass, with no affection rest: hearts filled by about day 30, R1 median was 27 and the last ♥5 came at day 74 (Moonpuff).
+2. Added the 20 h visit rest, spread the scene gates (cairn ≥ 3, 20 stems/4 kinds, 10 boats, 5 lanterns) and the cast-new-faces rule, counted nest stages and new memories, and set Moonpuff weight 3 → 4: R1 median rose to 30 but p10 was only 28.
+3. Stretched the cousin sign windows to 1–8 h / 20–32 h: R1 min / p10 / median became 27 / 29 / 30.
+4. Final. `python3 tools/sim/economy_sim.py` (≈ 5 min on 4 CPUs) and `--quick` (500 + 200 players, ≈ 25 s) both exit 0.
+
+Simulated 10,000 random-schedule players + 2,000 reference players (2 x 5 min/day), 30 days (reference 80 days), 3,185,960 sessions, seed 20261020, 295 s.
+
+| Check | Result | Target | Verdict |
+|---|---|---|---|
+| R1 Reference: days with something new, first 30 (min / p10 / median) | 27 / 29 / 30 | median >= 30 | PASS |
+| R2 Reference: day the last of 12 friends reaches 5 hearts (p10 / median / p90) | 58.3 / 65.1 / 72.3 | median 45-70 | PASS |
+| R3 Species at >= 3 hearts by day 14 (reference median / random median) | 8 / 9 | >= 6 | PASS |
+| R4 Missable content (signs or scenes removed unseen) | 0 | 0 | PASS |
+| R4 30-day absence keeps waiting signs and scenes | 13 signs waiting, 1 memories | nothing removed | PASS |
+
+| Retention metric | Value |
+|---|---|
+| Random: share of played days (first 30) with something new (p10 / median) | 89 % / 96 % |
+| Random: days with something new, first 30 (p10 / median) | 20 / 27 |
+| Reference: days 30-59 with something new (p10 / median) | 14 / 17 |
+| Reference: days with something new counting only friends, hearts, postcards, clues, first-time scenes and cousins (p10 / median) | 26 / 28 |
+| Reference: new friends seen in the first 30 days (median) | 12 |
+| Reference: heart levels seen in the first 30 days (median) | 52 |
+| Reference: postcards seen in the first 30 days (median) | 37 |
+| Reference: clues seen in the first 30 days (median) | 34 |
+| Reference: first-time scenes seen in the first 30 days (median) | 8 |
+| Reference: cousins seen in the first 30 days (median) | 5 |
+| Reference: new memories seen in the first 30 days (median) | 26 |
+| Reference: nest growth stages seen in the first 30 days (median) | 22 |
+| Reference: cousins met by day 30 / by day 80 (median of 12) | 6 / 12 |
+| Reference: last cousin met, day (median) | 67.2 |
+| Reference: clues collected by day 80 (median of 46) | 46 |
+| Random: heart-5 friends by day 30 (median) | 9 |
+| Postcards by day 30, reference (median of 44) | 37 |
+| Best friends (5 hearts) by day 30, reference (median) | 7 |
+
+| Species (reference player) | Met by day (median) | p90 | Hearts 1/2/3/4/5 by day (median) | Heart 5 p90 | Cousin met, day (median) |
+|---|---|---|---|---|---|
+| puffmoss | 0.00 | 0.00 | 1 / 4 / 7 / 13 / 21 | 24 | 23 |
+| buttonbud | 0.00 | 0.00 | 1 / 4 / 7 / 12 / 20 | 23 | 22 |
+| pebblepaw | 0.00 | 0.00 | 1 / 3 / 7 / 11 / 18 | 21 | 22 |
+| honeyhum | 0.73 | 1.26 | 2 / 5 / 9 / 16 / 26 | 30 | 28 |
+| fernwhisk | 1.70 | 2.75 | 3 / 6 / 11 / 19 / 31 | 36 | 36 |
+| dandelfluff | 1.90 | 3.39 | 4 / 7 / 12 / 20 / 30 | 35 | 33 |
+| bellkin | 2.27 | 3.81 | 4 / 7 / 10 / 16 / 25 | 29 | 27 |
+| primpip | 2.64 | 4.35 | 4 / 8 / 12 / 18 / 28 | 32 | 29 |
+| capling | 4.20 | 6.69 | 6 / 10 / 17 / 25 / 39 | 45 | 41 |
+| puddlewump | 4.25 | 7.25 | 6 / 11 / 17 / 25 / 38 | 44 | 40 |
+| glowmote | 5.26 | 8.95 | 8 / 12 / 18 / 28 / 42 | 48 | 44 |
+| moonpuff | 7.23 | 11.05 | 11 / 18 / 28 / 42 / 65 | 72 | 67 |
+
+| Scene (reference player) | Seen within 80 days |
+|---|---|
+| nap_pile | 100 % |
+| pebble_tower | 100 % |
+| leaf_fort | 100 % |
+| moon_watchers | 100 % |
+| flower_crowns | 100 % |
+| boat_regatta | 100 % |
+| lantern_party | 100 % |
+| pair_nap | 100 % |
+
+All MVP checks (E1, E5, E6, pacing) still pass in the same run; the full table is §9.2.
+
+**Reading it:**
+- **R1:** the median reference player finds something new on all 30 of the first 30 days (min 27 / p10 29). On the plan's narrower list it is 28 days, the gap being nest stages and repeat-scene memories.
+- **R2:** the last ♥5 is Moonpuff at a median of about day 65, with every other friend between day 18 and 42. Cousins continue to about day 67 and days 30–59 still bring something new on about 17 of 30 days, so the tail is long and gentle.
+- **R3:** 8 friends reach ♥3 by day 14.
+- **E1, E5, E6 and nothing missable** all hold. E6 now shows 99,999 because reference players saving for 80 days reach the wallet cap ("brimming", §5.7). That is the known post-catalogue accumulation (§9.3), not a new risk.
+
+### 13.9 Hand-off
+
+**P1 Systems (Gameplay Engineer)**
+
+- **Data loading:** load `friendship.json`, `mysteries.json` and `scenes.json` into `GameContent`. Read `economy.visit_affection_rest_s` and `economy.signature_gift_items`; look up gift items in `gift_items` ∪ `signature_gift_items`.
+- **`WorldState`:** add every field in §13.6. **SaveStore:** schema +1, the migration in §13.6, and a test from a real current-schema fixture.
+- **`WorldSim`:** port `Player` from the sim:
+  - `_arrive`: rest rule, cousin debut and cousin visits.
+  - `_add_affection`: nests, ♥4 waiting postcards, ♥5 keepsakes and the cousin mystery.
+  - `_eligible`: the debut hold.
+  - `check_mysteries` after blooms and décor purchases.
+  - Sign due and visible bookkeeping with the anchor rule.
+  - `on_return` scene selection with the absence profile and casting.
+  - Nest stage events.
+  - `_leave_gift`: the signature gift item from ♥2.
+- **New events:** `EV_SIGN_DUE`, `EV_SIGN_VISIBLE`, `EV_CLUE`, `EV_NEST_STAGE`, `EV_SCENE_STAGED`, `EV_SCENE_ARCHIVED`, `EV_COUSIN_MET`, `EV_COUSIN_ARRIVED`, `EV_KEEPSAKE`.
+- **`Game` API:** `tap_sign(sign_key)`, `tap_scene()`, `scene_foreground_tick(dt)`, `on_background(world_t)`.
+- **`Recap`:** the priorities in §13.5.3.
+- **Hash:** `RetentionHash.u(...)` (§13.1) with the golden-vector test.
+- **GUT tests:**
+  - determinism (same save, same signs, scenes and casts);
+  - never-decreasing over a 30-day offline catch-up;
+  - offline parity with `economy_sim.py` (signs `appear_t`, `debut_ok_t`, scene picks, cousin debuts on a fixed seed);
+  - migration;
+  - sign queue ≤ 3;
+  - pending scene across close/reopen.
+- **Creature brain:** nest nap preference 0.7, pair bouts (§13.2.4), wave-on-open, cousins (base behaviour, leave with base), staged scene slots, and staged friends that behave as greeters.
+
+**P2 Creatures**
+- Poses:
+  - `wave`;
+  - `pair_nap_back_to_back`, `pair_play_roll`, `pair_sit_lean`;
+  - `scene_pile_bottom` / `_middle` / `_top`;
+  - `scene_tower_proud`, `scene_tower_admire`;
+  - `scene_fort_peek`;
+  - `scene_moon_sit`, `scene_moon_sit_lean`;
+  - `scene_crown_wear`, `scene_crown_admire`;
+  - `scene_regatta_cheer`, `scene_regatta_wave`;
+  - `scene_lantern_circle`;
+  - `keepsake_portrait`.
+- 12 cousin colourways via `creature_rig.json` (the 4 slot overrides in `mysteries.json: variants[].rig`, no new shapes; extend `art_data.py resolve` if useful).
+- Heart-up celebration on the `celebrate` token, ≤ 900 ms, no input block.
+
+**P2 World (Env + Garden)**
+- Sign stamps:
+  - footprints: `round_paw`, `hop_dots`, `tiny_paw`, `tiptoe`, `skip_dots`, `neat_row`, `splash_paw`, `sleepy_drag`;
+  - dropped things: `moss_tuft`, `daisy_petal`, `smooth_pebble`, `buttercup_petal`, `fern_frond`, `seed_fluff`, `bluebell_flower`, `primrose_petal`, `cap_fleck`, `wet_pebble`, `glow_speck`, `moon_feather`;
+  - the rustle bush and the folded note.
+- Nests: 4 styles × 3 stages (`moss_bowl`, `leaf_cradle`, `petal_cup`, `pebble_ring` × `twigs`, `moss_bed`, `flower_canopy`).
+- Scene props: `scene_pebble_tower`, `scene_leaf_fort`, `scene_flower_crown`, `scene_boat_line`.
+- 12 signature gift stamps: `sig_*` in `decor_atlas` `gift_parts`. Then move `signature_gift_items` into the gift-stamp test.
+- Everything within the ≤ 100 draw-call budget and the 30–40 % calm-area rule.
+
+**P2 UI**
+- The 5 Album tabs, Clues cards, Memories (moments + photos), Keepsakes.
+- On the friend card: the unlock list, nest line, best buddy line and cousin row.
+- The heart-up and clue toasts, the cousin card, the recap teaser line, and the basket signature note.
+- vi/en, 200 % text, night chrome, Reduce Motion and Reduce Transparency.
+
+**P2 Audio**
+- S22–S25 (§13.7) in `tools/audio/`, plus manifest entries and the new captions.
+
+**P3 QA**
+- `--fixture=retention_mid`: hearts 1–5 spread, 2 nests (twigs and canopy), 2 open mysteries with 1 visible sign each, 1 pending scene and 1 cousin met.
+- `--qa-scene=<id>` for each of the 8 scenes.
+- A copy audit (the E8 lint already passes on all 443 keys), the rubric on the new views, and the 30-day sim report.
+
+### 13.10 Data files and validator additions
+
+| File | Top-level | Record fields |
+|---|---|---|
+| `data/friendship.json` | `heart_unlocks[]`, `wave_on_open`, `signature_gift`, `nest`, `pair`, `keepsake`, `celebration` | `heart_unlocks[{heart, unlocks[], toast_key, album_key}]`<br>`wave_on_open{min_hearts, delay_min_s, delay_max_s, stagger_s, max_wavers, pose}`<br>`signature_gift{from_heart, note_key}`<br>`nest{min_hearts, nap_preference, capacity, visual_w_dp, visual_h_dp, stages[{id, at_s, name_key}], styles[{id, name_key}], anchors[{species, x, y}]}`<br>`pair{min_hearts_either, pair_chance, weights{pair_nap, pair_play, pair_sit_by_stream}, nap_spots[], fallback, pose_ids{}, album_key}`<br>`keepsake{min_hearts, pose, frame, phase, album_key}`<br>`celebration{motion_token, max_duration_ms, input_block_ms, hearts_burst, toast_s, toast_queue_gap_s, max_toasts_per_open, audio_cue, haptic, offline_recap_key, toast_title_key}` |
+| `data/mysteries.json` | `sign_types[]`, `anchors[]`, `species[]`, `variants[]` + constants | `sign_types[{id, name_key, a11y_key, visual_dp, ref, (rustle_every_min_s, rustle_every_max_s)}]`<br>`anchors[{id, x, y, hit_dp, types[]}]`<br>`max_visible`<br>`sign_windows_s{"n": [[lo, hi]…]}`, `variant_sign_windows_s{…}`<br>`debut_after_last_sign_s`, `fade_in_ms`, `tap_fx`, `audio{rustle, found}`<br>`variant_hearts_required`, `variant_requires_all_met`, `cousin_every_n_visits`<br>`species[{species, riddle_key, signs[], onboarding, footprint, dropped, tint}]`<br>`variants[{id, species, name_key, desc_key, riddle_key, signs[], rig{fur, fur_2, belly, accent}, condition{items[{item, min}], arrival_phases[], arrival_weather[]}}]` |
+| `data/scenes.json` | `scenes[]` + constants | `min_absence_s`, `max_per_return`, `scene_chance`, `linger_s`, `away_sample_s`, `fade_in_ms`, `audio_cue`, `repeat_rule`<br>`scenes[{id, anchor{spot \| x, y \| nest_of}, weight, conditions{met_min, items[], boats_min, bloomed_stems_min, bloomed_types_min, pair_hearts_min, away[{phases[], weather[], min_s}]}, pair, roles[{role, pose, slot_dp[dx, dy], prefer[]}], props[{id, slot_dp}], title_key, caption_key, teaser_key}]` |
+| `data/species.json` (added) | — | `signature_gift, nest_style, best_friend, postcard_heart5` (and `postcard_heart2/4` now point at each friend's own story) |
+| `data/economy.json` (added) | — | `visit_affection_rest_s`, `signature_gift_items[{id, name_key, signature_of}]`, `validation_targets.{retention_days, retention_new_days_min, last_heart5_day_median, heart3_by_day, heart3_species_median_min}` |
+
+**Validator** (`validate_content.py`, exit 1 on failure):
+- Every new key resolves in en + vi.
+- Signature gifts are unique, declare `signature_of`, and are distinct from `gift_items`.
+- Nest styles exist. Best friends are another species and symmetric. Each friend has its own 3 story keys.
+- Hearts 1…5 are listed in order. Nest stages start at 0 and increase. Pair weights sum to 1 and nap spots have capacity ≥ 2.
+- Celebrate is ≤ 1,000 ms with no input block, and its motion token exists.
+- Nests are inside the frame, above the dock, ≤ 60 dp from the favourite spot, ≥ 30 dp apart and ≥ 8 dp from tap props.
+- Sign anchors:
+  - meet the 60/64 dp floors, stay inside the frame and above the dock, and keep 8 dp gaps from each other and from props;
+  - have centres outside beds and ≥ 30 dp from spots and nests;
+  - give every type ≥ `max_visible` anchors.
+- Sign windows are ordered.
+- Onboarding flags match `economy.onboarding`. Non-onboarding species have `requires` and end with a note. Tints are existing tokens.
+- Variants: one per species; rig = 4 existing `cr_*` tokens with the fur changed plus ≥ 2 slots; fur inside V2; items achievable; phases compatible with the base.
+- Scenes: min absence ≥ 2 h, 1 per return, known conditions, `met_min` ≥ roles, slots inside the play area, pair scenes cast 2. Captions use `{name}` (+ `{friend}` only with 2 roles), and teasers name nobody.
+- Cousin descriptions use `{name}`. ♥4 postcards may use only `{friend}`; the others take no placeholders.
+- The E8 lint runs over all 443 keys. `python3 tools/art/art_data.py check` still passes (no palette tokens were added).
+
+### 13.11 Open questions for the Director
+1. **Renaming at ♥1:** the plan gates it, but the MVP already allows renaming at first meeting. Kept ungated (§13.2.2).
+2. **The content-left definition counts nest stages and new memories.** On the plan's narrower list the median reference player has 28 of 30 days. If only that list may count, the next lever is a third, later scene tier or more cousin signs.
+3. **Five Album tabs** (Photos merged into Memories) need a UI-team check at 200 % text.
+4. **Signature gifts** live in `economy.signature_gift_items` until P2 Garden adds their stamps, because the existing gift-stamp test requires a stamp per `gift_items` entry.
+5. **Moonpuff `base_weight` 3 → 4** is a small change to the validated MVP economy. Every MVP check still passes.
 
 ---
 
@@ -947,7 +1536,7 @@ Validator rules (exit 1 on failure): ids unique snake_case; every reference reso
 | `SPECIES_PEBBLEPAW_HINT` | Fond of smooth stones and running water. | Thích sỏi nhẵn và nước chảy. |
 | `SPECIES_HONEYHUM_NAME` | Honeyhum | Mật Ngọt |
 | `SPECIES_HONEYHUM_DEFAULT_NAME` | Bumble | Vo Ve |
-| `SPECIES_HONEYHUM_DESC` | Hums while working, and is always working. Sips dew from flower to flower. | Vừa làm vừa ngân nga, mà lúc nào cũng đang làm. Nhấm nháp sương từ hoa này sang hoa khác. |
+| `SPECIES_HONEYHUM_DESC` | Hums a little tune as it drifts from flower to flower, sipping dew. | Vừa ngân nga một giai điệu nhỏ, vừa lững thững từ hoa này sang hoa khác, nhấm nháp sương. |
 | `SPECIES_HONEYHUM_HINT` | Comes when a few buttercups bloom. | Sẽ ghé khi vài bông mao lương vàng nở. |
 | `SPECIES_FERNWHISK_NAME` | Fernwhisk | Lá Xoăn |
 | `SPECIES_FERNWHISK_DEFAULT_NAME` | Wisp | Xíu |
@@ -1017,7 +1606,7 @@ Validator rules (exit 1 on failure): ids unique snake_case; every reference reso
 | `POSTCARD_FRIEND_06` | The wind and I went all the way up the hill and back. From up there, your garden looks like a patchwork quilt. | Mình với cơn gió đã lên tận đỉnh đồi rồi quay về. Từ trên đó nhìn xuống, khu vườn của bạn trông như một tấm chăn chắp vá. |
 | `POSTCARD_FRIEND_07` | I dreamed the whole hollow was a soft, round pillow. Then I woke up, and it was true. | Mình mơ thấy cả thung lũng là một chiếc gối tròn êm ái. Tỉnh dậy thì thấy đúng là vậy thật. |
 | `POSTCARD_FRIEND_08` | I hopped three times around the garden today. That's how happy I am. You can hop too, if you like. | Hôm nay mình nhảy ba vòng quanh vườn. Mình vui đến thế đó. Bạn cũng nhảy thử nhé, nếu thích. |
-| `POSTCARD_FRIEND_09` | Whenever you'd like a quiet place, the stream and I will keep a spot for you. | Bất cứ khi nào bạn muốn tìm một chỗ yên tĩnh, mình và con suối sẽ giữ cho bạn một chỗ ngồi. |
+| `POSTCARD_FRIEND_09` | The stream and I have decided: you are invited to every splash. Bring your toes, or just watch from the bank. | Mình với con suối đã quyết định rồi: bạn được mời tới mọi trận té nước. Mang theo mấy ngón chân nhé, hoặc chỉ ngồi trên bờ ngắm thôi cũng được. |
 | `POSTCARD_FRIEND_10` | I made up a little song about your garden. It goes hmm, hmm-hmm, hmmm. It sounds even better with chimes. | Mình nghĩ ra một bài hát nho nhỏ về khu vườn của bạn. Nó như thế này: ư ư, ư-ư, ưưư. Có tiếng chuông gió thì còn hay hơn nữa. |
 | `POSTCARD_FRIEND_11` | I tidied the moss by the old stump and left a pebble there for you. It's the roundest one I could find. | Mình đã chải lại lớp rêu cạnh gốc cây cũ và để ở đó một viên sỏi cho bạn. Viên tròn nhất mà mình tìm được đấy. |
 | `POSTCARD_FRIEND_12` | When the lanterns glow, I like to sit very still and watch the sky. Thank you for the warm little lights. | Khi những chiếc đèn sáng lên, mình thích ngồi thật yên và ngắm bầu trời. Cảm ơn bạn vì những ánh đèn nhỏ ấm áp. |
@@ -1029,3 +1618,175 @@ Validator rules (exit 1 on failure): ids unique snake_case; every reference reso
 | `POSTCARD_EVENT_BRIMMING` | The basket is brimming with gifts! From now on, when it is full, friends will leave photos for you. | Giỏ đã đầy ắp quà rồi! Từ giờ, mỗi khi giỏ đầy, các bạn sẽ để lại ảnh tặng bạn. |
 | `POSTCARD_EVENT_TEN_BOATS` | Ten little leaf boats have sailed down the stream. Somewhere far away, a duck is very puzzled and very pleased. | Đã có mười chiếc thuyền lá xuôi dòng suối. Ở đâu đó thật xa, có một chú vịt vừa ngơ ngác vừa thích thú lắm. |
 | `POSTCARD_EVENT_ALBUM_COMPLETE` | Every mossling of spring has visited your hollow. They all agree: it's the coziest place they know. | Tất cả các bé rêu mùa xuân đều đã ghé thăm thung lũng của bạn. Bạn nào cũng đồng ý: đây là nơi ấm cúng nhất mà các bạn từng biết. |
+| `RECAP_ONE_VISITED_HI` | {name} stopped by to say hi | {name} đã ghé qua chào bạn |
+| `ALBUM_TAB_CLUES` | Clues | Manh mối |
+| `ALBUM_TAB_MEMORIES` | Memories | Kỷ niệm |
+| `ALBUM_TAB_KEEPSAKES` | Keepsakes | Kỷ vật |
+| `HEART_UP_TITLE` | {name} feels closer to you | {name} thấy gần bạn hơn rồi |
+| `HEART_UP_1` | {name} will wave hello when you open the hollow. | {name} sẽ vẫy chào mỗi khi bạn mở thung lũng. |
+| `HEART_UP_2` | {name} wrote you a postcard and has a special gift to share. | {name} viết cho bạn một tấm bưu thiếp và có một món quà đặc biệt muốn tặng. |
+| `HEART_UP_3` | {name} is making a little nest in the hollow. | {name} đang làm một chiếc tổ nhỏ trong thung lũng. |
+| `HEART_UP_4` | {name} wrote again, and loves spending time with {friend}. | {name} lại viết thư, và rất thích chơi cùng {friend}. |
+| `HEART_UP_4_SOLO` | {name} wrote again. There is someone {name} would love you to meet. | {name} lại viết thư. Có một người bạn mà {name} rất muốn giới thiệu với bạn. |
+| `HEART_UP_5` | {name} left you a keepsake. Someone in the family is curious about the hollow too. | {name} để lại cho bạn một kỷ vật. Có một người họ hàng cũng đang tò mò về thung lũng. |
+| `UNLOCK_HEART_1` | Waves hello · Favourite spot | Vẫy chào · Chỗ yêu thích |
+| `UNLOCK_HEART_2` | A postcard · A special gift | Một tấm bưu thiếp · Một món quà đặc biệt |
+| `UNLOCK_HEART_3` | Likes · A nest of its own | Sở thích · Một chiếc tổ riêng |
+| `UNLOCK_HEART_4` | A second postcard · A best buddy | Tấm bưu thiếp thứ hai · Một bạn chí cốt |
+| `UNLOCK_HEART_5` | A third postcard · A keepsake · A cousin | Tấm bưu thiếp thứ ba · Một kỷ vật · Một người họ hàng |
+| `ALBUM_UNLOCK_LATER` | Comes with more hearts | Sẽ đến khi có thêm trái tim |
+| `ALBUM_PAIR` | Best buddy: {friend} | Bạn chí cốt: {friend} |
+| `ALBUM_NEST` | {name}'s nest: {nest} | Tổ của {name}: {nest} |
+| `BASKET_SIGNATURE_NOTE` | A special gift from {name} | Món quà đặc biệt từ {name} |
+| `RECAP_HEARTS` | {name} feels closer to you | {name} thấy gần bạn hơn rồi |
+| `RECAP_NEST` | {name}'s nest grew a little cozier | Tổ của {name} lại ấm cúng thêm một chút |
+| `NEST_STYLE_MOSS_BOWL` | Moss bowl | Ổ rêu tròn |
+| `NEST_STYLE_LEAF_CRADLE` | Leaf cradle | Nôi lá |
+| `NEST_STYLE_PETAL_CUP` | Petal cup | Chén cánh hoa |
+| `NEST_STYLE_PEBBLE_RING` | Pebble ring | Vòng sỏi |
+| `NEST_STAGE_TWIGS` | A few soft twigs | Vài cành nhỏ mềm |
+| `NEST_STAGE_MOSS_BED` | A soft moss bed | Một tấm đệm rêu êm |
+| `NEST_STAGE_CANOPY` | A canopy of flowers | Một mái che bằng hoa |
+| `KEEPSAKE_TITLE` | A keepsake from {name} | Kỷ vật của {name} |
+| `KEEPSAKE_PORTRAIT` | A portrait to keep | Một bức chân dung để giữ mãi |
+| `KEEPSAKE_GIFT` | {name}'s gift: {gift} | Quà của {name}: {gift} |
+| `KEEPSAKES_EMPTY` | Friends with five hearts leave a keepsake here. | Những người bạn có đủ năm trái tim sẽ để lại kỷ vật ở đây. |
+| `CAPTION_HEART` | a warm chime | tiếng chuông ấm áp |
+| `A11Y_NEST` | {name}'s nest | Tổ của {name} |
+| `GIFT_SIG_MOSS_TUFT` | Sun-warmed moss tuft | Nắm rêu ấm nắng |
+| `GIFT_SIG_DAISY_BUTTON` | Daisy-petal button | Chiếc cúc áo cánh hoa |
+| `GIFT_SIG_STRIPED_PEBBLE` | Striped stream pebble | Viên sỏi suối có vân |
+| `GIFT_SIG_HONEY_THIMBLE` | Thimble of flower honey | Chén mật hoa bé xíu |
+| `GIFT_SIG_FERN_CURL` | Curled fern frond | Ngọn dương xỉ cuộn tròn |
+| `GIFT_SIG_WISH_SEED` | Wish seed | Hạt điều ước |
+| `GIFT_SIG_BLUEBELL_BELL` | Tiny bluebell bell | Chiếc chuông xanh tí hon |
+| `GIFT_SIG_PRESSED_PRIMROSE` | Pressed primrose | Bông anh thảo ép khô |
+| `GIFT_SIG_RAINDROP_CAP` | Raindrop in a toadstool cap | Giọt mưa trong mũ nấm |
+| `GIFT_SIG_SPIRAL_SHELL` | Tiny spiral shell | Vỏ ốc xoắn tí hon |
+| `GIFT_SIG_GLOW_PEBBLE` | Softly glowing pebble | Viên sỏi phát sáng dịu |
+| `GIFT_SIG_MOON_FEATHER` | Moon-pale feather | Chiếc lông vũ màu trăng |
+| `POSTCARD_FRIEND_PUFFMOSS_H4` | My nest by the sun stone is all mossy now. {friend} came by at moonrise and we shared it. We took turns being the pillow. | Tổ của mình cạnh phiến đá nắng giờ phủ đầy rêu rồi. Lúc trăng lên, {friend} ghé qua và tụi mình ngủ chung. Hai đứa thay phiên nhau làm gối. |
+| `POSTCARD_FRIEND_PUFFMOSS_H5` | I like it here more than any warm stone I have ever known, and I have known a lot of warm stones. My cousin from over the hill wants to visit. She only travels when the sky turns gold. | Mình thích nơi này hơn mọi phiến đá ấm mà mình từng biết, mà mình biết nhiều phiến đá lắm đó. Chị họ mình ở bên kia đồi muốn ghé chơi. Chị ấy chỉ lên đường khi bầu trời ngả vàng. |
+| `POSTCARD_FRIEND_BUTTONBUD_H4` | {friend} showed me which flowers hum the loudest. I showed {friend} my new nest. It has seven petals. I counted! | {friend} chỉ cho mình bông hoa nào ngân nga to nhất. Mình thì khoe với {friend} cái tổ mới. Tổ có bảy cánh hoa. Mình đếm rồi đó! |
+| `POSTCARD_FRIEND_BUTTONBUD_H5` | I have a cousin with honey-coloured fur. She says she will visit on a sunny day, once the garden is full of daisies. I already saved her a petal. | Mình có một cô em họ lông màu mật ong. Em ấy nói sẽ ghé vào một ngày nắng, khi khu vườn nở đầy cúc dại. Mình để dành cho em ấy một cánh hoa rồi. |
+| `POSTCARD_FRIEND_PEBBLEPAW_H4` | {friend} splashes and I sit. It works very well. My nest is a ring of the smoothest pebbles, and the stream sings it to sleep. | {friend} thì té nước, còn mình thì ngồi. Hợp nhau lắm. Tổ của mình là một vòng sỏi nhẵn nhất, và con suối hát ru nó ngủ. |
+| `POSTCARD_FRIEND_PEBBLEPAW_H5` | A very old cousin of mine has moss growing on his back. He likes tall pebble towers. If the cairn ever reaches the top, I think he will stop by. | Mình có một ông anh họ lớn tuổi, rêu mọc cả trên lưng. Anh ấy mê những tháp sỏi thật cao. Nếu tháp sỏi chạm tới đỉnh, chắc anh ấy sẽ ghé qua. |
+| `POSTCARD_FRIEND_HONEYHUM_H4` | I built my nest out of leaves, but {friend} keeps decorating it with petals. Now it looks like a bouquet. I am not complaining. Hmm-hmm. | Mình làm tổ bằng lá, nhưng {friend} cứ trang trí thêm cánh hoa. Giờ trông nó như một bó hoa. Mình chẳng phàn nàn gì đâu. Ư-ư. |
+| `POSTCARD_FRIEND_HONEYHUM_H5` | My cousin is the colour of blossoms and wakes before everyone else. If you see someone pink humming at dawn, say hello for me. | Em họ mình có màu hoa đào và dậy sớm hơn tất cả mọi người. Nếu bạn thấy ai đó màu hồng đang ngân nga lúc bình minh, chào em ấy giúp mình nhé. |
+| `POSTCARD_FRIEND_FERNWHISK_H4` | {friend} doesn't talk much either. We sit in the ferns and say nothing together. It's my favourite kind of conversation. | {friend} cũng ít nói như mình. Tụi mình ngồi trong đám dương xỉ và cùng nhau chẳng nói gì. Đó là kiểu trò chuyện mình thích nhất. |
+| `POSTCARD_FRIEND_FERNWHISK_H5` | I have a cousin as pale as morning mist. She is even shyer than me. She only comes out when it rains, because then nobody can see her blush. | Mình có một người chị họ nhạt màu như sương sớm. Chị ấy còn nhút nhát hơn mình. Chị chỉ ra ngoài khi trời mưa, vì lúc đó chẳng ai thấy chị đỏ mặt. |
+| `POSTCARD_FRIEND_DANDELFLUFF_H4` | {friend} plays the wind chimes and I dance on the breeze. We are a very small band. My nest is so soft I sink right into it. | {friend} chơi chuông gió còn mình nhảy theo làn gió. Tụi mình là một ban nhạc tí hon. Tổ của mình mềm đến nỗi mình lún hẳn vào trong. |
+| `POSTCARD_FRIEND_DANDELFLUFF_H5` | Somewhere out there, my cousin is floating along, the colour of a sunset. On the breeziest day, she might just drift this way. | Ở đâu đó ngoài kia, em họ mình đang bay lơ lửng, mang màu ráng chiều. Vào một ngày thật nhiều gió, biết đâu em ấy sẽ bay về phía này. |
+| `POSTCARD_FRIEND_BELLKIN_H4` | {friend} floats by whenever I sing, so now I sing a lot. My nest is a little cup of petals. It rings very softly when I curl up. | Hễ mình hát là {friend} lại bay ngang qua, nên giờ mình hát suốt. Tổ của mình là một chiếc chén cánh hoa nhỏ. Mỗi lần mình cuộn tròn trong đó, nó lại ngân khẽ. |
+| `POSTCARD_FRIEND_BELLKIN_H5` | My rose-coloured cousin can hear a wind chime from three hills away. When all ten shells are singing, she will follow the music here. | Cô em họ màu hồng của mình nghe được tiếng chuông gió từ ba ngọn đồi xa. Khi cả mười vỏ ốc cùng hát, em ấy sẽ lần theo tiếng nhạc mà tới đây. |
+| `POSTCARD_FRIEND_PRIMPIP_H4` | {friend} bounces right through my neat rows of pebbles, and somehow I don't mind at all. My nest has a petal for a blanket. I fold it every morning. | {friend} cứ nhảy qua mấy hàng sỏi ngay ngắn của mình, vậy mà mình chẳng thấy phiền chút nào. Tổ của mình có một cánh hoa làm chăn. Sáng nào mình cũng gấp nó lại gọn gàng. |
+| `POSTCARD_FRIEND_PRIMPIP_H5` | My cousin has lavender fur and very good manners. She says a proper garden has ten primroses. When yours does, expect a polite knock. | Chị họ mình lông màu oải hương và rất lễ phép. Chị nói một khu vườn đúng nghĩa phải có mười bông anh thảo. Khi vườn bạn có đủ, sẽ có tiếng gõ cửa thật lịch sự đấy. |
+| `POSTCARD_FRIEND_CAPLING_H4` | {friend} tidies and I hop. Then {friend} tidies again! My nest is a ring of pebbles, perfect for bouncing in. Boing. | {friend} dọn dẹp còn mình thì nhảy. Rồi {friend} lại dọn dẹp tiếp! Tổ của mình là một vòng sỏi, nhảy trong đó là tuyệt nhất. Tưng tưng. |
+| `POSTCARD_FRIEND_CAPLING_H5` | My cousin wears a blue cap with white spots. He says a full fairy ring is the best place in the world to hop. Ten toadstools, and he will be here. | Em họ mình đội chiếc mũ xanh chấm trắng. Em ấy bảo một vòng nấm thần tiên trọn vẹn là chỗ nhảy tuyệt nhất trên đời. Đủ mười chiếc ghế nấm là em ấy sẽ tới. |
+| `POSTCARD_FRIEND_PUDDLEWUMP_H4` | {friend} sits so still that the minnows think it's a pebble. I splash, and they all swim over to see. My nest is right next to the water, of course. | {friend} ngồi yên đến nỗi lũ cá con tưởng là hòn sỏi. Mình té nước một cái, thế là cả bọn bơi tới xem. Tổ của mình dĩ nhiên là nằm sát mép nước. |
+| `POSTCARD_FRIEND_PUDDLEWUMP_H5` | My cousin is green as a lily pond and twice as splashy. She would love a stream with lots of stepping stones. Ten should do it. | Em họ mình xanh như mặt hồ sen và còn té nước giỏi gấp đôi mình. Em ấy sẽ mê lắm một con suối có thật nhiều đá. Chắc mười viên là vừa. |
+| `POSTCARD_FRIEND_GLOWMOTE_H4` | {friend} and I watched the first star come out. Neither of us said a word. My nest is a leaf cradle, and my antenna is its nightlight. | {friend} với mình cùng ngắm ngôi sao đầu tiên ló ra. Chẳng ai nói câu nào. Tổ của mình là một chiếc nôi lá, và chiếc râu của mình là ngọn đèn ngủ. |
+| `POSTCARD_FRIEND_GLOWMOTE_H5` | I have a cousin who glows the colour of warm honey. She is a night traveller. Look for an amber light by the lanterns, very late. | Mình có một người chị họ phát sáng màu mật ong ấm. Chị là lữ khách của màn đêm. Khuya thật khuya, hãy tìm một đốm sáng màu hổ phách bên những chiếc đèn nhé. |
+| `POSTCARD_FRIEND_MOONPUFF_H4` | {friend} keeps my nest warm all day, and I keep it cool all night. We are almost never awake at the same time, but we are very good friends. | {friend} giữ ấm tổ của mình suốt ngày, còn mình giữ mát nó suốt đêm. Hai đứa hiếm khi thức cùng lúc, nhưng tụi mình thân nhau lắm. |
+| `POSTCARD_FRIEND_MOONPUFF_H5` | On the clearest nights, my cousin rides down on starlight. She is very sleepy and very sparkly. Leave the sky open for her. | Vào những đêm trời trong nhất, em họ mình cưỡi ánh sao mà xuống. Em ấy rất buồn ngủ và rất lấp lánh. Hãy để bầu trời thật quang cho em ấy nhé. |
+| `SIGN_FOOTPRINTS` | Little footprints | Những dấu chân nhỏ |
+| `SIGN_DROPPED` | A little something | Một món nho nhỏ |
+| `SIGN_RUSTLE` | A rustling bush | Bụi cây xào xạc |
+| `SIGN_NOTE` | A tiny note | Một mẩu thư bé xíu |
+| `A11Y_SIGN_FOOTPRINTS` | Little footprints in the moss. Tap to look closer | Dấu chân nhỏ trên rêu. Chạm để nhìn kỹ hơn |
+| `A11Y_SIGN_DROPPED` | Something small lies here. Tap to look closer | Có một món nhỏ nằm đây. Chạm để nhìn kỹ hơn |
+| `A11Y_SIGN_RUSTLE` | A bush is rustling. Tap to look closer | Bụi cây đang xào xạc. Chạm để nhìn kỹ hơn |
+| `A11Y_SIGN_NOTE` | A tiny folded note. Tap to read | Một mẩu thư gấp nhỏ. Chạm để đọc |
+| `CLUE_FOUND_TITLE` | A clue! | Một manh mối! |
+| `CLUE_FOUND_FOOTPRINTS` | Someone small walked through here. | Có một bạn nhỏ vừa đi ngang qua đây. |
+| `CLUE_FOUND_DROPPED` | Someone left this behind. It still feels a little warm. | Có ai đó để lại món này. Nó vẫn còn hơi ấm. |
+| `CLUE_FOUND_RUSTLE` | A soft chirp from the leaves, then quiet. | Một tiếng ríu rít khẽ vang trong lá, rồi lặng im. |
+| `CLUE_ADDED` | Added to Clues in your album | Đã thêm vào mục Manh mối trong album |
+| `CLUES_COUNT` | {count} of {total} clues | {count}/{total} manh mối |
+| `CLUES_SOMEONE` | Someone is on the way | Có ai đó đang trên đường tới |
+| `CLUES_SOLVED` | So it was {name}! | Hóa ra là {name}! |
+| `CLUES_CAME_ALONE` | {name} found the hollow all by itself. | {name} tự mình tìm đến thung lũng. |
+| `CLUES_COUSIN` | A cousin of {name} | Họ hàng của {name} |
+| `CLUES_EMPTY` | When someone new is on the way, their clues will gather here. | Khi có bạn mới sắp ghé, manh mối sẽ được cất ở đây. |
+| `RECAP_CLUE` | Someone left a little clue | Có ai đó để lại một manh mối nhỏ |
+| `RECAP_COUSIN` | {name} brought a cousin to visit | {name} dẫn theo một người họ hàng tới chơi |
+| `NEWFRIEND_COUSIN_TITLE` | A cousin came to visit! | Có họ hàng ghé chơi nè! |
+| `CAPTION_RUSTLE` | leaves rustle | lá xào xạc |
+| `CAPTION_CLUE` | a soft sparkle | tiếng lấp lánh khẽ |
+| `RIDDLE_PUFFMOSS` | Someone round and sleepy is dreaming of a warm stone, right in the middle of the sun. | Có một bạn tròn tròn, buồn ngủ, đang mơ về một phiến đá ấm nằm ngay giữa nắng. |
+| `RIDDLE_BUTTONBUD` | Someone small counts petals in their sleep: daisy, clover, daisy, clover… | Có một bạn nhỏ xíu đếm cánh hoa cả trong mơ: cúc dại, cỏ ba lá, cúc dại, cỏ ba lá… |
+| `RIDDLE_PEBBLEPAW` | Someone patient is listening for running water and the click of smooth stones. | Có một bạn kiên nhẫn đang lắng nghe tiếng nước chảy và tiếng sỏi nhẵn lách cách. |
+| `RIDDLE_HONEYHUM` | Someone is humming nearby. They follow the smell of buttercups wherever it floats. | Có ai đó đang ngân nga gần đây. Hương mao lương vàng bay tới đâu, bạn ấy theo tới đó. |
+| `RIDDLE_FERNWHISK` | Someone shy hides behind a fern, and peeks out wherever forget-me-nots grow. | Có một bạn nhút nhát nấp sau lá dương xỉ, ló ra ở chỗ nào có hoa lưu ly. |
+| `RIDDLE_DANDELFLUFF` | Someone light as a wish is drifting closer, carried along by dandelion seeds. | Có một bạn nhẹ như một điều ước đang bay lại gần, theo những hạt bồ công anh. |
+| `RIDDLE_BELLKIN` | Someone hums a tune that sounds like bluebells nodding in the breeze. | Có ai đó ngân nga một giai điệu nghe như những bông chuông xanh gật gù trong gió. |
+| `RIDDLE_PRIMPIP` | Someone tidy lined up three pebbles here, very neatly, beside a pale primrose. | Có một bạn gọn gàng đã xếp ba viên sỏi thật ngay ngắn ở đây, cạnh một bông anh thảo vàng nhạt. |
+| `RIDDLE_CAPLING` | Someone bouncy is looking for a ring of toadstools to hop around, rain or shine. | Có một bạn nhún nhảy đang tìm một vòng nấm để nhảy quanh, dù mưa hay nắng. |
+| `RIDDLE_PUDDLEWUMP` | Someone wet and happy left a splash on the stream stones. Did it rain, or did they just jump? | Có một bạn ướt nhẹp mà vui vẻ đã để lại vệt nước trên đá suối. Trời mưa, hay bạn ấy vừa nhảy tõm? |
+| `RIDDLE_GLOWMOTE` | Someone glows softly when the lanterns are lit. Look for a tiny light at dusk. | Có một bạn tỏa sáng dịu dàng khi đèn được thắp lên. Hãy tìm một đốm sáng nhỏ lúc chạng vạng. |
+| `RIDDLE_MOONPUFF` | Someone dreams on moonlight. They will come on a quiet night, when moonblooms open and chimes ring. | Có một bạn ngủ mơ trên ánh trăng. Bạn ấy sẽ tới vào một đêm yên tĩnh, khi hoa quỳnh nở và chuông gió ngân. |
+| `SCENE_SAVED` | Saved to Memories | Đã cất vào Kỷ niệm |
+| `A11Y_SCENE` | Something happened here. Tap to look | Ở đây vừa có chuyện hay. Chạm để xem |
+| `MEMORIES_SECTION_MOMENTS` | Little moments | Khoảnh khắc nhỏ |
+| `MEMORIES_EMPTY` | Little moments from while you were away will gather here. | Những khoảnh khắc nhỏ trong lúc bạn đi vắng sẽ được cất ở đây. |
+| `CAPTION_SCENE` | a soft hush of wonder | một tiếng ồ khe khẽ |
+| `SCENE_NAP_PILE_TITLE` | Nap pile | Ngủ chồng đống |
+| `SCENE_NAP_PILE_CAPTION` | {name} and friends piled up for a nap on the sun stone. | {name} và các bạn nằm chồng lên nhau ngủ một giấc trên phiến đá nắng. |
+| `RECAP_SCENE_NAP_PILE` | Something soft happened on the sun stone… | Trên phiến đá nắng vừa có chuyện gì êm ái lắm… |
+| `SCENE_PEBBLE_TOWER_TITLE` | Pebble tower | Tháp sỏi chênh vênh |
+| `SCENE_PEBBLE_TOWER_CAPTION` | {name} built a wobbly pebble tower and is very proud of it. | {name} đã xây một tháp sỏi chênh vênh và tự hào về nó lắm. |
+| `RECAP_SCENE_PEBBLE_TOWER` | Someone has been building by the cairn… | Có ai đó vừa xây gì đó cạnh tháp sỏi… |
+| `SCENE_LEAF_FORT_TITLE` | Leaf fort | Pháo đài lá |
+| `SCENE_LEAF_FORT_CAPTION` | While it rained, {name} and {friend} built a leaf fort and peeked out. | Lúc trời mưa, {name} và {friend} dựng một pháo đài lá rồi ló mắt nhìn ra. |
+| `RECAP_SCENE_LEAF_FORT` | Something leafy is hiding by the ferns… | Có gì đó bằng lá đang trốn bên đám dương xỉ… |
+| `SCENE_MOON_WATCHERS_TITLE` | Moon watchers | Ngắm trăng |
+| `SCENE_MOON_WATCHERS_CAPTION` | {name} and {friend} sat by the brook and watched the moon together. | {name} và {friend} ngồi bên suối cùng nhau ngắm trăng. |
+| `RECAP_SCENE_MOON_WATCHERS` | Two friends stayed up late by the brook… | Có hai người bạn thức khuya bên bờ suối… |
+| `SCENE_FLOWER_CROWNS_TITLE` | Flower crown | Vòng hoa |
+| `SCENE_FLOWER_CROWNS_CAPTION` | {name} is wearing a flower crown that {friend} made. | {name} đang đội chiếc vòng hoa mà {friend} kết tặng. |
+| `RECAP_SCENE_FLOWER_CROWNS` | Someone is looking very fancy today… | Hôm nay có ai đó trông thật điệu đà… |
+| `SCENE_BOAT_REGATTA_TITLE` | Boat parade | Đoàn thuyền lá |
+| `SCENE_BOAT_REGATTA_CAPTION` | {name} lined up three leaf boats on the bank, ready for a parade. | {name} xếp ba chiếc thuyền lá thành hàng trên bờ, sẵn sàng diễu hành. |
+| `RECAP_SCENE_BOAT_REGATTA` | Something is lined up by the stream… | Bên suối có gì đó đang xếp hàng… |
+| `SCENE_LANTERN_PARTY_TITLE` | Lantern party | Tiệc đèn đom đóm |
+| `SCENE_LANTERN_PARTY_CAPTION` | {name} and friends danced in a circle around a lantern. | {name} và các bạn nhảy vòng tròn quanh một chiếc đèn. |
+| `RECAP_SCENE_LANTERN_PARTY` | Something glowed late into the evening… | Có gì đó lấp lánh tới tận khuya… |
+| `SCENE_PAIR_NAP_TITLE` | Back to back | Tựa lưng nhau ngủ |
+| `SCENE_PAIR_NAP_CAPTION` | {name} and {friend} fell asleep back to back. | {name} và {friend} ngủ thiếp đi, lưng tựa lưng. |
+| `RECAP_SCENE_PAIR_NAP` | Two best buddies are fast asleep… | Có đôi bạn chí cốt đang ngủ say… |
+| `VARIANT_TWILIGHT_PUFFMOSS_NAME` | Twilight Puffmoss | Rêu Bông Hoàng Hôn |
+| `VARIANT_TWILIGHT_PUFFMOSS_DESC` | {name}'s cousin, the colour of the sky after sunset. Naps wherever the last warm light falls. | Họ hàng của {name}, mang màu bầu trời lúc hoàng hôn. Ánh nắng ấm cuối ngày rơi ở đâu là ngủ ở đó. |
+| `VARIANT_TWILIGHT_PUFFMOSS_RIDDLE` | Someone the colour of evening travels only when the sky turns gold. | Có một bạn mang màu chiều tà, chỉ lên đường khi bầu trời ngả vàng. |
+| `VARIANT_HONEYDROP_BUTTONBUD_NAME` | Honeydrop Buttonbud | Nụ Cúc Giọt Mật |
+| `VARIANT_HONEYDROP_BUTTONBUD_DESC` | {name}'s cousin, with fur like warm honey. Counts daisies faster than anyone. | Họ hàng của {name}, bộ lông như mật ong ấm. Đếm cúc dại nhanh hơn bất kỳ ai. |
+| `VARIANT_HONEYDROP_BUTTONBUD_RIDDLE` | Someone honey-coloured is waiting for a sunny day and a garden full of daisies. | Có một bạn màu mật ong đang chờ một ngày nắng và một khu vườn đầy cúc dại. |
+| `VARIANT_MOSSBACK_PEBBLEPAW_NAME` | Mossback Pebblepaw | Sỏi Tròn Lưng Rêu |
+| `VARIANT_MOSSBACK_PEBBLEPAW_DESC` | {name}'s old cousin. Has sat still for so long that moss grew on his back. | Họ hàng lớn tuổi của {name}. Ngồi yên lâu đến nỗi rêu mọc cả trên lưng. |
+| `VARIANT_MOSSBACK_PEBBLEPAW_RIDDLE` | Someone mossy and very patient admires pebble towers that reach the very top. | Có một bạn phủ rêu, rất kiên nhẫn, mê những tháp sỏi cao tới tận đỉnh. |
+| `VARIANT_BLOSSOM_HONEYHUM_NAME` | Blossom Honeyhum | Mật Ngọt Hoa Đào |
+| `VARIANT_BLOSSOM_HONEYHUM_DESC` | {name}'s cousin, pink as a blossom. Up before everyone, humming the morning awake. | Họ hàng của {name}, hồng như hoa đào. Dậy sớm hơn mọi người, ngân nga đánh thức buổi sáng. |
+| `VARIANT_BLOSSOM_HONEYHUM_RIDDLE` | Someone pink is humming somewhere. Listen for them at dawn. | Có một bạn màu hồng đang ngân nga đâu đó. Hãy lắng nghe lúc bình minh. |
+| `VARIANT_MISTY_FERNWHISK_NAME` | Misty Fernwhisk | Lá Xoăn Sương Mù |
+| `VARIANT_MISTY_FERNWHISK_DESC` | {name}'s cousin, pale as morning mist. Only comes out in the rain, when nobody can see her blush. | Họ hàng của {name}, nhạt màu như sương sớm. Chỉ ra ngoài khi trời mưa, lúc chẳng ai thấy bạn ấy đỏ mặt. |
+| `VARIANT_MISTY_FERNWHISK_RIDDLE` | Someone pale and shy is waiting for a soft rain to hide in. | Có một bạn nhạt màu, nhút nhát, đang chờ một cơn mưa phùn để nấp vào. |
+| `VARIANT_SUNSET_DANDELFLUFF_NAME` | Sunset Dandelfluff | Bông Gió Ráng Chiều |
+| `VARIANT_SUNSET_DANDELFLUFF_DESC` | {name}'s cousin, peach and pink like the evening sky. Rides the strongest breeze of the day. | Họ hàng của {name}, hồng đào như bầu trời chiều. Cưỡi làn gió mạnh nhất trong ngày. |
+| `VARIANT_SUNSET_DANDELFLUFF_RIDDLE` | Someone peach-coloured is floating this way. A good breeze will bring them. | Có một bạn màu hồng đào đang bay về phía này. Một làn gió đẹp sẽ đưa bạn ấy tới. |
+| `VARIANT_ROSEBELL_BELLKIN_NAME` | Rosebell Bellkin | Chuông Nhỏ Hoa Hồng |
+| `VARIANT_ROSEBELL_BELLKIN_DESC` | {name}'s cousin, with ears like rose-coloured bells. Can hear a wind chime from three hills away. | Họ hàng của {name}, đôi tai như những chiếc chuông màu hồng. Nghe được tiếng chuông gió từ ba ngọn đồi xa. |
+| `VARIANT_ROSEBELL_BELLKIN_RIDDLE` | Someone rosy follows the music. When every shell is singing, they will hear it. | Có một bạn màu hồng đi theo tiếng nhạc. Khi mọi vỏ ốc cùng hát, bạn ấy sẽ nghe thấy. |
+| `VARIANT_LAVENDER_PRIMPIP_NAME` | Lavender Primpip | Má Hồng Oải Hương |
+| `VARIANT_LAVENDER_PRIMPIP_DESC` | {name}'s cousin, soft lavender and very polite. Believes every proper garden has ten primroses. | Họ hàng của {name}, màu oải hương dịu dàng và rất lễ phép. Tin rằng khu vườn đúng nghĩa phải có mười bông anh thảo. |
+| `VARIANT_LAVENDER_PRIMPIP_RIDDLE` | Someone polite and lavender is counting primroses. Ten would be just right. | Có một bạn màu oải hương lễ phép đang đếm hoa anh thảo. Mười bông là vừa đẹp. |
+| `VARIANT_BLUECAP_CAPLING_NAME` | Bluecap Capling | Nấm Lùn Mũ Xanh |
+| `VARIANT_BLUECAP_CAPLING_DESC` | {name}'s cousin, in a blue cap with white spots. Thinks a full fairy ring is the best place in the world to hop. | Họ hàng của {name}, đội mũ xanh chấm trắng. Cho rằng vòng nấm thần tiên trọn vẹn là chỗ nhảy tuyệt nhất trên đời. |
+| `VARIANT_BLUECAP_CAPLING_RIDDLE` | Someone in a blue cap is waiting for the fairy ring to close. | Có một bạn đội mũ xanh đang chờ vòng nấm thần tiên khép kín. |
+| `VARIANT_LILYPOND_PUDDLEWUMP_NAME` | Lilypond Puddlewump | Bì Bõm Hồ Sen |
+| `VARIANT_LILYPOND_PUDDLEWUMP_DESC` | {name}'s cousin, green as a lily pond. Splashes twice as much, and twice as happily. | Họ hàng của {name}, xanh như mặt hồ sen. Té nước nhiều gấp đôi, mà vui cũng gấp đôi. |
+| `VARIANT_LILYPOND_PUDDLEWUMP_RIDDLE` | Someone pond-green dreams of a stream with stepping stones all the way across. | Có một bạn xanh màu hồ sen mơ về một con suối có đá bắc ngang từ bờ này sang bờ kia. |
+| `VARIANT_AMBER_GLOWMOTE_NAME` | Amber Glowmote | Đốm Sáng Hổ Phách |
+| `VARIANT_AMBER_GLOWMOTE_DESC` | {name}'s cousin, who glows like warm honey. Travels only in the deepest part of the night. | Họ hàng của {name}, tỏa sáng như mật ong ấm. Chỉ lên đường vào lúc đêm khuya nhất. |
+| `VARIANT_AMBER_GLOWMOTE_RIDDLE` | Someone amber glows by the lanterns, late, late at night. | Có một bạn màu hổ phách tỏa sáng bên những chiếc đèn, vào lúc khuya thật khuya. |
+| `VARIANT_STARLIT_MOONPUFF_NAME` | Starlit Moonpuff | Bông Trăng Ánh Sao |
+| `VARIANT_STARLIT_MOONPUFF_DESC` | {name}'s cousin, sprinkled with starlight. Rides down on the clearest nights and naps until dawn. | Họ hàng của {name}, lấm tấm ánh sao. Cưỡi ánh sao xuống vào những đêm trời trong nhất rồi ngủ tới sáng. |
+| `VARIANT_STARLIT_MOONPUFF_RIDDLE` | Someone sparkly is waiting for a night without a single cloud. | Có một bạn lấp lánh đang chờ một đêm không gợn mây. |

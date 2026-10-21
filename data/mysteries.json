@@ -1,0 +1,281 @@
+{
+	"schema": 1,
+	"doc": "Retention v1 F2 mystery signs, clues and variant cousins (docs/GDD.md section 13.3). A mystery opens for an unmet, non-onboarding species the moment its requires list holds (ignoring phases), and for a variant the moment its base species reaches hearts_required with every species met and the variant's items held. Signs appear at open_t + a seeded offset inside their window and wait until tapped (never missable, never expire). A species debut is allowed once its last sign has appeared plus debut_after_last_sign_s; it never waits for a tap. Positions are normalized to the 1080x1920 bottom-anchored frame; hit sizes follow GDD 8.4. Randomness uses the stateless retention hash (GDD 13.1), never the world RNG stream.",
+	"sign_types": [
+		{
+			"id": "footprints",
+			"name_key": "SIGN_FOOTPRINTS",
+			"a11y_key": "A11Y_SIGN_FOOTPRINTS",
+			"visual_dp": 40,
+			"ref": "entry"
+		},
+		{
+			"id": "dropped",
+			"name_key": "SIGN_DROPPED",
+			"a11y_key": "A11Y_SIGN_DROPPED",
+			"visual_dp": 28,
+			"ref": "favourite_spot"
+		},
+		{
+			"id": "rustle",
+			"name_key": "SIGN_RUSTLE",
+			"a11y_key": "A11Y_SIGN_RUSTLE",
+			"visual_dp": 44,
+			"ref": "favourite_spot",
+			"rustle_every_min_s": 6,
+			"rustle_every_max_s": 14
+		},
+		{"id": "note", "name_key": "SIGN_NOTE", "a11y_key": "A11Y_SIGN_NOTE", "visual_dp": 28, "ref": "sun_stone"}
+	],
+	"anchors": [
+		{"id": "stump_bush", "x": 0.76, "y": 0.452, "hit_dp": 60, "types": ["rustle", "dropped", "footprints"]},
+		{"id": "fern_tuft", "x": 0.215, "y": 0.588, "hit_dp": 60, "types": ["rustle", "dropped", "footprints"]},
+		{"id": "clover_patch", "x": 0.8, "y": 0.588, "hit_dp": 60, "types": ["dropped", "footprints", "rustle"]},
+		{"id": "sun_stone_foot", "x": 0.5, "y": 0.628, "hit_dp": 60, "types": ["note", "dropped", "footprints"]},
+		{"id": "cairn_bank", "x": 0.25, "y": 0.716, "hit_dp": 60, "types": ["footprints", "dropped", "note"]},
+		{"id": "brook_bank", "x": 0.74, "y": 0.72, "hit_dp": 60, "types": ["footprints", "dropped", "note"]},
+		{"id": "ridge_bush", "x": 0.62, "y": 0.335, "hit_dp": 64, "types": ["rustle"]}
+	],
+	"max_visible": 3,
+	"sign_windows_s": {"1": [[900, 3600]], "2": [[900, 3600], [5400, 10800]], "3": [[900, 3600], [5400, 10800], [12600, 21600]]},
+	"debut_after_last_sign_s": 1800,
+	"fade_in_ms": 600,
+	"tap_fx": "clue_lift",
+	"audio": {"rustle": "S22", "found": "S23"},
+	"variant_hearts_required": 5,
+	"variant_requires_all_met": true,
+	"cousin_every_n_visits": 3,
+	"species": [
+		{
+			"species": "puffmoss",
+			"riddle_key": "RIDDLE_PUFFMOSS",
+			"signs": [],
+			"onboarding": true,
+			"footprint": "round_paw",
+			"dropped": "moss_tuft",
+			"tint": "cr_moss"
+		},
+		{
+			"species": "buttonbud",
+			"riddle_key": "RIDDLE_BUTTONBUD",
+			"signs": [],
+			"onboarding": true,
+			"footprint": "hop_dots",
+			"dropped": "daisy_petal",
+			"tint": "cr_cream"
+		},
+		{
+			"species": "pebblepaw",
+			"riddle_key": "RIDDLE_PEBBLEPAW",
+			"signs": [],
+			"onboarding": true,
+			"footprint": "round_paw",
+			"dropped": "smooth_pebble",
+			"tint": "cr_mist"
+		},
+		{
+			"species": "honeyhum",
+			"riddle_key": "RIDDLE_HONEYHUM",
+			"signs": ["dropped", "note"],
+			"onboarding": false,
+			"footprint": "tiny_paw",
+			"dropped": "buttercup_petal",
+			"tint": "cr_honey"
+		},
+		{
+			"species": "fernwhisk",
+			"riddle_key": "RIDDLE_FERNWHISK",
+			"signs": ["rustle", "note"],
+			"onboarding": false,
+			"footprint": "tiptoe",
+			"dropped": "fern_frond",
+			"tint": "cr_sage"
+		},
+		{
+			"species": "dandelfluff",
+			"riddle_key": "RIDDLE_DANDELFLUFF",
+			"signs": ["dropped", "note"],
+			"onboarding": false,
+			"footprint": "skip_dots",
+			"dropped": "seed_fluff",
+			"tint": "cr_snow"
+		},
+		{
+			"species": "bellkin",
+			"riddle_key": "RIDDLE_BELLKIN",
+			"signs": ["rustle", "note"],
+			"onboarding": false,
+			"footprint": "tiny_paw",
+			"dropped": "bluebell_flower",
+			"tint": "cr_lilac"
+		},
+		{
+			"species": "primpip",
+			"riddle_key": "RIDDLE_PRIMPIP",
+			"signs": ["footprints", "note"],
+			"onboarding": false,
+			"footprint": "neat_row",
+			"dropped": "primrose_petal",
+			"tint": "cr_peach"
+		},
+		{
+			"species": "capling",
+			"riddle_key": "RIDDLE_CAPLING",
+			"signs": ["footprints", "rustle", "note"],
+			"onboarding": false,
+			"footprint": "hop_dots",
+			"dropped": "cap_fleck",
+			"tint": "cr_rose"
+		},
+		{
+			"species": "puddlewump",
+			"riddle_key": "RIDDLE_PUDDLEWUMP",
+			"signs": ["footprints", "dropped", "note"],
+			"onboarding": false,
+			"footprint": "splash_paw",
+			"dropped": "wet_pebble",
+			"tint": "cr_sky"
+		},
+		{
+			"species": "glowmote",
+			"riddle_key": "RIDDLE_GLOWMOTE",
+			"signs": ["dropped", "rustle", "note"],
+			"onboarding": false,
+			"footprint": "tiptoe",
+			"dropped": "glow_speck",
+			"tint": "cr_glow"
+		},
+		{
+			"species": "moonpuff",
+			"riddle_key": "RIDDLE_MOONPUFF",
+			"signs": ["dropped", "footprints", "note"],
+			"onboarding": false,
+			"footprint": "sleepy_drag",
+			"dropped": "moon_feather",
+			"tint": "cr_lilac"
+		}
+	],
+	"variants": [
+		{
+			"id": "twilight_puffmoss",
+			"species": "puffmoss",
+			"name_key": "VARIANT_TWILIGHT_PUFFMOSS_NAME",
+			"desc_key": "VARIANT_TWILIGHT_PUFFMOSS_DESC",
+			"riddle_key": "VARIANT_TWILIGHT_PUFFMOSS_RIDDLE",
+			"signs": ["dropped", "note"],
+			"rig": {"fur": "cr_dusk", "fur_2": "cr_lilac", "belly": "cr_cream", "accent": "cr_glow"},
+			"condition": {"items": [], "arrival_phases": ["golden", "dusk"], "arrival_weather": []}
+		},
+		{
+			"id": "honeydrop_buttonbud",
+			"species": "buttonbud",
+			"name_key": "VARIANT_HONEYDROP_BUTTONBUD_NAME",
+			"desc_key": "VARIANT_HONEYDROP_BUTTONBUD_DESC",
+			"riddle_key": "VARIANT_HONEYDROP_BUTTONBUD_RIDDLE",
+			"signs": ["dropped", "note"],
+			"rig": {"fur": "cr_honey", "fur_2": "cr_oat", "belly": "cr_cream", "accent": "cr_rose"},
+			"condition": {"items": [{"item": "button_daisy", "min": 10}], "arrival_phases": ["day"], "arrival_weather": []}
+		},
+		{
+			"id": "mossback_pebblepaw",
+			"species": "pebblepaw",
+			"name_key": "VARIANT_MOSSBACK_PEBBLEPAW_NAME",
+			"desc_key": "VARIANT_MOSSBACK_PEBBLEPAW_DESC",
+			"riddle_key": "VARIANT_MOSSBACK_PEBBLEPAW_RIDDLE",
+			"signs": ["dropped", "note"],
+			"rig": {"fur": "cr_sage", "fur_2": "cr_moss", "belly": "cr_snow", "accent": "cr_leaf"},
+			"condition": {"items": [{"item": "pebble_cairn", "min": 10}], "arrival_phases": [], "arrival_weather": []}
+		},
+		{
+			"id": "blossom_honeyhum",
+			"species": "honeyhum",
+			"name_key": "VARIANT_BLOSSOM_HONEYHUM_NAME",
+			"desc_key": "VARIANT_BLOSSOM_HONEYHUM_DESC",
+			"riddle_key": "VARIANT_BLOSSOM_HONEYHUM_RIDDLE",
+			"signs": ["dropped", "note"],
+			"rig": {"fur": "cr_blush", "fur_2": "cr_rose", "belly": "cr_cream", "accent": "cr_sun"},
+			"condition": {"items": [], "arrival_phases": ["dawn"], "arrival_weather": []}
+		},
+		{
+			"id": "misty_fernwhisk",
+			"species": "fernwhisk",
+			"name_key": "VARIANT_MISTY_FERNWHISK_NAME",
+			"desc_key": "VARIANT_MISTY_FERNWHISK_DESC",
+			"riddle_key": "VARIANT_MISTY_FERNWHISK_RIDDLE",
+			"signs": ["dropped", "note"],
+			"rig": {"fur": "cr_mist", "fur_2": "cr_sky", "belly": "cr_snow", "accent": "cr_lilac"},
+			"condition": {"items": [], "arrival_phases": [], "arrival_weather": ["rain"]}
+		},
+		{
+			"id": "sunset_dandelfluff",
+			"species": "dandelfluff",
+			"name_key": "VARIANT_SUNSET_DANDELFLUFF_NAME",
+			"desc_key": "VARIANT_SUNSET_DANDELFLUFF_DESC",
+			"riddle_key": "VARIANT_SUNSET_DANDELFLUFF_RIDDLE",
+			"signs": ["dropped", "note"],
+			"rig": {"fur": "cr_peach", "fur_2": "cr_blush", "belly": "cr_cream", "accent": "cr_sun"},
+			"condition": {"items": [], "arrival_phases": [], "arrival_weather": ["breeze"]}
+		},
+		{
+			"id": "rosebell_bellkin",
+			"species": "bellkin",
+			"name_key": "VARIANT_ROSEBELL_BELLKIN_NAME",
+			"desc_key": "VARIANT_ROSEBELL_BELLKIN_DESC",
+			"riddle_key": "VARIANT_ROSEBELL_BELLKIN_RIDDLE",
+			"signs": ["dropped", "note"],
+			"rig": {"fur": "cr_blush", "fur_2": "cr_berry", "belly": "cr_snow", "accent": "cr_lilac"},
+			"condition": {"items": [{"item": "wind_chime", "min": 10}], "arrival_phases": [], "arrival_weather": []}
+		},
+		{
+			"id": "lavender_primpip",
+			"species": "primpip",
+			"name_key": "VARIANT_LAVENDER_PRIMPIP_NAME",
+			"desc_key": "VARIANT_LAVENDER_PRIMPIP_DESC",
+			"riddle_key": "VARIANT_LAVENDER_PRIMPIP_RIDDLE",
+			"signs": ["dropped", "note"],
+			"rig": {"fur": "cr_lilac", "fur_2": "cr_dusk", "belly": "cr_cream", "accent": "cr_rose"},
+			"condition": {"items": [{"item": "primrose", "min": 10}], "arrival_phases": [], "arrival_weather": []}
+		},
+		{
+			"id": "bluecap_capling",
+			"species": "capling",
+			"name_key": "VARIANT_BLUECAP_CAPLING_NAME",
+			"desc_key": "VARIANT_BLUECAP_CAPLING_DESC",
+			"riddle_key": "VARIANT_BLUECAP_CAPLING_RIDDLE",
+			"signs": ["dropped", "note"],
+			"rig": {"fur": "cr_snow", "fur_2": "cr_sky", "belly": "cr_cream", "accent": "cr_lilac"},
+			"condition": {"items": [{"item": "toadstool_seat", "min": 10}], "arrival_phases": [], "arrival_weather": []}
+		},
+		{
+			"id": "lilypond_puddlewump",
+			"species": "puddlewump",
+			"name_key": "VARIANT_LILYPOND_PUDDLEWUMP_NAME",
+			"desc_key": "VARIANT_LILYPOND_PUDDLEWUMP_DESC",
+			"riddle_key": "VARIANT_LILYPOND_PUDDLEWUMP_RIDDLE",
+			"signs": ["dropped", "note"],
+			"rig": {"fur": "cr_fern", "fur_2": "cr_leaf", "belly": "cr_cream", "accent": "cr_rose"},
+			"condition": {"items": [{"item": "stream_stones", "min": 10}], "arrival_phases": [], "arrival_weather": []}
+		},
+		{
+			"id": "amber_glowmote",
+			"species": "glowmote",
+			"name_key": "VARIANT_AMBER_GLOWMOTE_NAME",
+			"desc_key": "VARIANT_AMBER_GLOWMOTE_DESC",
+			"riddle_key": "VARIANT_AMBER_GLOWMOTE_RIDDLE",
+			"signs": ["dropped", "note"],
+			"rig": {"fur": "cr_cocoa", "fur_2": "cr_honey", "belly": "cr_cream", "accent": "cr_glow"},
+			"condition": {"items": [], "arrival_phases": ["night"], "arrival_weather": []}
+		},
+		{
+			"id": "starlit_moonpuff",
+			"species": "moonpuff",
+			"name_key": "VARIANT_STARLIT_MOONPUFF_NAME",
+			"desc_key": "VARIANT_STARLIT_MOONPUFF_DESC",
+			"riddle_key": "VARIANT_STARLIT_MOONPUFF_RIDDLE",
+			"signs": ["dropped", "note"],
+			"rig": {"fur": "cr_mist", "fur_2": "cr_sky", "belly": "cr_snow", "accent": "cr_glow"},
+			"condition": {"items": [], "arrival_phases": [], "arrival_weather": ["clear"]}
+		}
+	],
+	"variant_sign_windows_s": {"2": [[3600, 28800], [72000, 115200]]}
+}

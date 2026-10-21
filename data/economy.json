@@ -1,6 +1,6 @@
 {
 	"schema": 1,
-	"doc": "Global economy, visitor, affection and onboarding constants. All durations in seconds, rates per hour where the key says _per_h. Formulas in docs/GDD.md section 5. tools/sim/economy_sim.py reads this file directly.",
+	"doc": "Global economy, visitor, affection and onboarding constants. All durations in seconds, rates per hour where the key says _per_h. Formulas in docs/GDD.md section 5. tools/sim/economy_sim.py reads this file directly. signature_gift_items (Retention v1, GDD 13.2): one per species, left instead of the species' gift_item from heart 2 (same gift_dew).",
 	"currency_id": "dew",
 	"display_max": 99999,
 	"wallet_cap": 99999,
@@ -20,6 +20,7 @@
 	"affection_per_visit": 1,
 	"affection_per_pet": 1,
 	"affection_per_boat": 1,
+	"visit_affection_rest_s": 72000,
 	"heart_thresholds": [3, 8, 15, 25, 40],
 	"best_friend_heart": 5,
 	"best_friend_weight_mult": 1.25,
@@ -72,7 +73,12 @@
 		"reference_all_species_day_median": [7, 14],
 		"mid_game_next_purchase_minutes_median": [30, 90],
 		"mid_game_days": [2, 10],
-		"basket_saturation_hours": [10, 14]
+		"basket_saturation_hours": [10, 14],
+		"retention_days": 30,
+		"retention_new_days_min": 30,
+		"last_heart5_day_median": [45, 70],
+		"heart3_by_day": 14,
+		"heart3_species_median_min": 6
 	},
 	"gift_items": [
 		{"id": "acorn_cup", "name_key": "GIFT_ACORN_CUP"},
@@ -80,5 +86,19 @@
 		{"id": "shiny_pebble", "name_key": "GIFT_SHINY_PEBBLE"},
 		{"id": "seed_pouch", "name_key": "GIFT_SEED_POUCH"},
 		{"id": "moon_drop", "name_key": "GIFT_MOON_DROP"}
+	],
+	"signature_gift_items": [
+		{"id": "sig_moss_tuft", "name_key": "GIFT_SIG_MOSS_TUFT", "signature_of": "puffmoss"},
+		{"id": "sig_daisy_button", "name_key": "GIFT_SIG_DAISY_BUTTON", "signature_of": "buttonbud"},
+		{"id": "sig_striped_pebble", "name_key": "GIFT_SIG_STRIPED_PEBBLE", "signature_of": "pebblepaw"},
+		{"id": "sig_honey_thimble", "name_key": "GIFT_SIG_HONEY_THIMBLE", "signature_of": "honeyhum"},
+		{"id": "sig_fern_curl", "name_key": "GIFT_SIG_FERN_CURL", "signature_of": "fernwhisk"},
+		{"id": "sig_wish_seed", "name_key": "GIFT_SIG_WISH_SEED", "signature_of": "dandelfluff"},
+		{"id": "sig_bluebell_bell", "name_key": "GIFT_SIG_BLUEBELL_BELL", "signature_of": "bellkin"},
+		{"id": "sig_pressed_primrose", "name_key": "GIFT_SIG_PRESSED_PRIMROSE", "signature_of": "primpip"},
+		{"id": "sig_raindrop_cap", "name_key": "GIFT_SIG_RAINDROP_CAP", "signature_of": "capling"},
+		{"id": "sig_spiral_shell", "name_key": "GIFT_SIG_SPIRAL_SHELL", "signature_of": "puddlewump"},
+		{"id": "sig_glow_pebble", "name_key": "GIFT_SIG_GLOW_PEBBLE", "signature_of": "glowmote"},
+		{"id": "sig_moon_feather", "name_key": "GIFT_SIG_MOON_FEATHER", "signature_of": "moonpuff"}
 	]
 }

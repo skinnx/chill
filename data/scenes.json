@@ -1,0 +1,144 @@
+{
+	"schema": 1,
+	"doc": "Retention v1 F3 away scenes (docs/GDD.md section 13.4). Evaluated once per return after an absence of at least min_absence_s; at most max_per_return. A scene is staged in the world until tapped or linger_s seconds of foreground time pass, then archived to Album > Memories as metadata (rendered live). Conditions: met_min (species met), items [{item,min}] (bloomed stems / decor copies), boats_min (lifetime), bloomed_stems_min + bloomed_types_min, pair_hearts_min (a best-friend pair, both met, the higher at >= n hearts), away (any-of list; each entry needs >= min_s seconds of the absence with phase in phases and weather in weather, empty = any; sampled every away_sample_s). Participants: roles in order; a role's prefer list wins if one of those species is met; pair scenes take the best-friend pair; the rest come from present visitors, then met species, by hearts (desc) then album_order. Staged participants who were not visiting are like greeters: no gift, no affection. Slot offsets are dp from the anchor (x right, y down).",
+	"min_absence_s": 7200,
+	"max_per_return": 1,
+	"scene_chance": 0.5,
+	"linger_s": 600,
+	"away_sample_s": 600,
+	"fade_in_ms": 600,
+	"audio_cue": "S25",
+	"repeat_rule": "unseen_first",
+	"scenes": [
+		{
+			"id": "nap_pile",
+			"anchor": {"spot": "sun_stone"},
+			"weight": 1.0,
+			"conditions": {
+				"met_min": 3,
+				"away": [{"phases": ["night"], "weather": [], "min_s": 3600}, {"phases": [], "weather": ["rain"], "min_s": 1800}]
+			},
+			"pair": false,
+			"roles": [
+				{"role": "bottom", "pose": "scene_pile_bottom", "slot_dp": [0, 6]},
+				{"role": "middle", "pose": "scene_pile_middle", "slot_dp": [-4, -22]},
+				{"role": "top", "pose": "scene_pile_top", "slot_dp": [3, -44]}
+			],
+			"props": [],
+			"title_key": "SCENE_NAP_PILE_TITLE",
+			"caption_key": "SCENE_NAP_PILE_CAPTION",
+			"teaser_key": "RECAP_SCENE_NAP_PILE"
+		},
+		{
+			"id": "pebble_tower",
+			"anchor": {"x": 0.14, "y": 0.69},
+			"weight": 1.0,
+			"conditions": {"met_min": 4, "items": [{"item": "pebble_cairn", "min": 3}]},
+			"pair": false,
+			"roles": [
+				{"role": "builder", "pose": "scene_tower_proud", "slot_dp": [18, 4], "prefer": ["primpip", "pebblepaw"]},
+				{"role": "admirer", "pose": "scene_tower_admire", "slot_dp": [44, 10]}
+			],
+			"props": [{"id": "scene_pebble_tower", "slot_dp": [-6, -10]}],
+			"title_key": "SCENE_PEBBLE_TOWER_TITLE",
+			"caption_key": "SCENE_PEBBLE_TOWER_CAPTION",
+			"teaser_key": "RECAP_SCENE_PEBBLE_TOWER"
+		},
+		{
+			"id": "leaf_fort",
+			"anchor": {"x": 0.12, "y": 0.585},
+			"weight": 1.0,
+			"conditions": {"met_min": 2, "away": [{"phases": [], "weather": ["rain"], "min_s": 1800}]},
+			"pair": false,
+			"roles": [
+				{"role": "peeker_left", "pose": "scene_fort_peek", "slot_dp": [-10, 4]},
+				{"role": "peeker_right", "pose": "scene_fort_peek", "slot_dp": [12, 6]}
+			],
+			"props": [{"id": "scene_leaf_fort", "slot_dp": [0, -6]}],
+			"title_key": "SCENE_LEAF_FORT_TITLE",
+			"caption_key": "SCENE_LEAF_FORT_CAPTION",
+			"teaser_key": "RECAP_SCENE_LEAF_FORT"
+		},
+		{
+			"id": "moon_watchers",
+			"anchor": {"spot": "stream_bend"},
+			"weight": 1.0,
+			"conditions": {"met_min": 2, "away": [{"phases": ["night"], "weather": ["clear"], "min_s": 3600}]},
+			"pair": true,
+			"roles": [
+				{"role": "left", "pose": "scene_moon_sit", "slot_dp": [-16, 0]},
+				{"role": "right", "pose": "scene_moon_sit_lean", "slot_dp": [16, 0]}
+			],
+			"props": [],
+			"title_key": "SCENE_MOON_WATCHERS_TITLE",
+			"caption_key": "SCENE_MOON_WATCHERS_CAPTION",
+			"teaser_key": "RECAP_SCENE_MOON_WATCHERS"
+		},
+		{
+			"id": "flower_crowns",
+			"anchor": {"spot": "moss_cushion"},
+			"weight": 1.0,
+			"conditions": {"met_min": 2, "bloomed_stems_min": 20, "bloomed_types_min": 4},
+			"pair": false,
+			"roles": [
+				{"role": "wearer", "pose": "scene_crown_wear", "slot_dp": [0, 0]},
+				{"role": "admirer", "pose": "scene_crown_admire", "slot_dp": [30, 6]}
+			],
+			"props": [{"id": "scene_flower_crown", "slot_dp": [0, -26]}],
+			"title_key": "SCENE_FLOWER_CROWNS_TITLE",
+			"caption_key": "SCENE_FLOWER_CROWNS_CAPTION",
+			"teaser_key": "RECAP_SCENE_FLOWER_CROWNS"
+		},
+		{
+			"id": "boat_regatta",
+			"anchor": {"x": 0.58, "y": 0.738},
+			"weight": 1.0,
+			"conditions": {"met_min": 3, "boats_min": 10},
+			"pair": false,
+			"roles": [
+				{"role": "cheer_left", "pose": "scene_regatta_cheer", "slot_dp": [-36, -6]},
+				{"role": "captain", "pose": "scene_regatta_wave", "slot_dp": [0, -10]},
+				{"role": "cheer_right", "pose": "scene_regatta_cheer", "slot_dp": [36, -6]}
+			],
+			"props": [{"id": "scene_boat_line", "slot_dp": [0, 14]}],
+			"title_key": "SCENE_BOAT_REGATTA_TITLE",
+			"caption_key": "SCENE_BOAT_REGATTA_CAPTION",
+			"teaser_key": "RECAP_SCENE_BOAT_REGATTA"
+		},
+		{
+			"id": "lantern_party",
+			"anchor": {"x": 0.82, "y": 0.7},
+			"weight": 1.0,
+			"conditions": {
+				"met_min": 3,
+				"items": [{"item": "firefly_lantern", "min": 5}],
+				"away": [{"phases": ["dusk", "night"], "weather": [], "min_s": 1800}]
+			},
+			"pair": false,
+			"roles": [
+				{"role": "circle_a", "pose": "scene_lantern_circle", "slot_dp": [-28, 4], "prefer": ["glowmote"]},
+				{"role": "circle_b", "pose": "scene_lantern_circle", "slot_dp": [0, -16]},
+				{"role": "circle_c", "pose": "scene_lantern_circle", "slot_dp": [28, 4]}
+			],
+			"props": [],
+			"title_key": "SCENE_LANTERN_PARTY_TITLE",
+			"caption_key": "SCENE_LANTERN_PARTY_CAPTION",
+			"teaser_key": "RECAP_SCENE_LANTERN_PARTY"
+		},
+		{
+			"id": "pair_nap",
+			"anchor": {"nest_of": "pair_lead"},
+			"weight": 1.0,
+			"conditions": {"met_min": 2, "pair_hearts_min": 4},
+			"pair": true,
+			"roles": [
+				{"role": "lead", "pose": "pair_nap_back_to_back", "slot_dp": [-10, 0]},
+				{"role": "buddy", "pose": "pair_nap_back_to_back", "slot_dp": [10, 0]}
+			],
+			"props": [],
+			"title_key": "SCENE_PAIR_NAP_TITLE",
+			"caption_key": "SCENE_PAIR_NAP_CAPTION",
+			"teaser_key": "RECAP_SCENE_PAIR_NAP"
+		}
+	]
+}
