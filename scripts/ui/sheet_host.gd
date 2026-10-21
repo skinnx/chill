@@ -22,6 +22,9 @@ const DOCK_GAP := 24.0
 const SIDE := 24.0
 ## The sheet draws above the dock's z-lifted labels (DockView.Z_LABELS) while it slides over them.
 const Z_SHEET := 2
+const OPEN_SPRING := &"pop"
+## The glass copy also covers the open spring's overshoot above the rest position.
+const OVERSHOOT_PX := 16.0
 
 var current: UiSheet
 var current_id: StringName = &""
@@ -31,6 +34,15 @@ var chrome: Control
 ## Callable(id) -> UiSheet, set by the HUD.
 var factory: Callable
 var dock_top: float = 1541.0
+## The neutral night dim of the sheets (HudController, night_chrome.sheet_dim): rgb only, the
+## open / close motion drives modulate.a.
+var tint: Color = Color.WHITE:
+	set(v):
+		tint = v
+		for c: Node in get_children():
+			if c is UiSheet:
+				var s := c as UiSheet
+				s.modulate = Color(v.r, v.g, v.b, s.modulate.a)
 var _bbc: BackBufferCopy
 var _scrim: ColorRect
 var _back := Callable()
@@ -125,7 +137,9 @@ func open(id: StringName, instant: bool = false) -> void:
 			t.tween_property(s, "modulate:a", 1.0, Motion.duration(&"reduce_motion_crossfade"))
 		else:
 			s.position = r.position + Vector2(0.0, rise)
-			Motion.tween(s, "position", r.position, &"standard")
+			# M3-Expressive (round 4): the sheet rises on the `pop` spring, a few px of overshoot
+			# and settle, while it fades in on `standard`.
+			Motion.spring_to(s, "position", r.position, OPEN_SPRING)
 			Motion.tween(s, "modulate:a", 1.0, &"standard")
 	_sync_copy()
 	sheet_changed.emit(id)
@@ -200,6 +214,7 @@ func _make(id: StringName) -> UiSheet:
 	s.position = r.position
 	s.close_requested.connect(close)
 	s.z_index = Z_SHEET
+	s.modulate = Color(tint.r, tint.g, tint.b, s.modulate.a)
 	add_child(s)
 	current = s
 	current_id = id
@@ -214,7 +229,7 @@ func _sync_copy() -> void:
 	var r := sheet_rect()
 	var rise := float(UiTokens.ui_block("sheet_open").get("rise_px", 96.0))
 	_bbc.copy_mode = BackBufferCopy.COPY_MODE_RECT
-	_bbc.rect = Rect2(r.position, r.size + Vector2(0.0, rise)).grow(2.0)
+	_bbc.rect = Rect2(r.position - Vector2(0.0, OVERSHOOT_PX), r.size + Vector2(0.0, rise + OVERSHOOT_PX)).grow(2.0)
 
 
 func _on_scrim_input(event: InputEvent) -> void:

@@ -17,20 +17,20 @@ const KIND_Z := 1
 const KIND_SPARKLE := 2
 const KIND_RING := 3
 const KIND_UMBRELLA := 4
-const HEART_POOL := 5
+const HEART_POOL := 9
 const Z_POOL := 2
-const SPARKLE_POOL := 6
-const HEART_HALF_PX := 26.0
+const SPARKLE_POOL := 7
+const HEART_HALF_PX := 52.0
 const Z_HALF_PX := 15.0
-const SPARKLE_HALF_PX := 12.0
+const SPARKLE_HALF_PX := 34.0
 const UMBRELLA_HALF_PX := 100.0
 ## Stem foot (the paw) relative to the quad centre, in half sizes (creature_fx.gdshader UMB_P0,
 ## y up): the canopy hangs up and in from the paw.
 const UMBRELLA_STEM_FOOT := Vector2(0.55, -0.95)
 const SPARKLE_LIFE_S := 0.45
-const SPARKLE_RADIUS_PX := 70.0
+const SPARKLE_RADIUS_PX := 90.0
 ## Heart x offsets and sideways sway (px) so three hearts read as a little bouquet.
-const HEART_SPREAD_PX := 26.0
+const HEART_SPREAD_PX := 40.0
 const HEART_SWAY_PX := 6.0
 const HEART_POP_S := 0.22
 const Z_WOBBLE_PX := 3.0
@@ -152,7 +152,9 @@ func zzz(at: Vector2, drift_px: float = NAN) -> bool:
 	return false
 
 
-func sparkles(center: Vector2, count: int) -> void:
+## [param count] sparkles burst outward from [param start_r] px around [param center] (so they
+## fly out over the background, not across the pale fur).
+func sparkles(center: Vector2, count: int, start_r: float = 0.0) -> void:
 	var n := 0
 	for s: Stamp in _sparkles:
 		if n >= count:
@@ -160,7 +162,8 @@ func sparkles(center: Vector2, count: int) -> void:
 		if s.active:
 			continue
 		var a := TAU * float(n) / float(maxi(count, 1)) + 0.4
-		_start(s, center, Vector2(cos(a), sin(a)) * SPARKLE_RADIUS_PX, SPARKLE_LIFE_S, float(n) * 0.03, 0.4, 1.0, 1.0)
+		var dir := Vector2(cos(a), sin(a))
+		_start(s, center + dir * start_r, dir * SPARKLE_RADIUS_PX, SPARKLE_LIFE_S, float(n) * 0.03, 0.5, 1.0, 1.0)
 		n += 1
 
 

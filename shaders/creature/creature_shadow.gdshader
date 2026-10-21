@@ -5,14 +5,16 @@
 //   2. cast ellipse pushed away from the light: offset = cast_offset_k(key) x height / 2, i.e.
 //      2.5x long toward the viewer at golden hour, darker with backlight;
 //   3. a = max(core, cast) * g_shadow_alpha * (1 - 0.6 hop) * (1 - 0.4 g_rain);
-//   4. tinted with g_shadow (never black), TPDF dithered.
+//   4. round 4: MULTIPLIES the ground like the prop shadows (fx/contact_shadow: a luminance-
+//      normalised world_light shadow_tint(), desaturated with backlight), so a creature's shadow
+//      darkens the meadow under it and keeps its hue exactly as a stump's or a stone's does.
 // Batching (Art Bible §4.19, <= 100 draw calls): the quad's rect is in body units (x in body
 // widths, y in body heights) and the node scale carries the body size in px; the per-shadow state
 // rides on one instance uniform and the node modulate stays white (the GLES3 canvas renderer
 // breaks a batch on any modulate change, never on instance uniforms), so every meadow shadow,
 // drawn consecutively from the layer's shadow host, shares one batch.
 shader_type canvas_item;
-render_mode blend_mix, unshaded;
+render_mode blend_mul, unshaded;
 
 #include "res://shaders/inc/world_light.gdshaderinc"
 #include "res://shaders/inc/finish.gdshaderinc"
@@ -27,6 +29,10 @@ const float OCC_W = 0.40;          // tight occlusion right under the body
 const float OCC_H = 0.05;
 const float OCC_SOFT_PX = 7.0;
 const float RAIN_FADE = 0.4;
+// fx/contact_shadow mul_luma / mul_gain / mul_max (keep in sync: one family of shadows)
+const float MUL_LUMA = 0.40;
+const float MUL_GAIN = 1.35;
+const float MUL_MAX = 0.85;
 
 // x hop 0..1 (apex = 1), y squash (1 = rest), z lean rad, w alpha (fade x shelter)
 instance uniform vec4 i_shadow = vec4(0.0, 1.0, 0.0, 1.0);
@@ -85,5 +91,8 @@ void fragment() {
 	if (a < 0.002) {
 		discard;
 	}
-	COLOR = vec4(g_shadow.rgb + tpdf(FRAGCOORD.xy), clamp(a + tpdf(FRAGCOORD.xy + 3.1), 0.0, 1.0));
+	vec3 tint = shadow_tint();
+	vec3 target = clamp(tint / max(wl_luma(tint), 1e-3) * MUL_LUMA, 0.0, 1.0);
+	vec3 m = mix(vec3(1.0), target, clamp(a * MUL_GAIN, 0.0, MUL_MAX));
+	COLOR = vec4(m + tpdf(FRAGCOORD.xy), 1.0);
 }

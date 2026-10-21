@@ -21,6 +21,12 @@ uniform float u_shadow_blur = 48.0;
 uniform float u_shadow_dy = 18.0;
 // Corner radius px; below 0 = a pill / circle (half the short side, resolved per surface).
 uniform float u_radius = 60.0;
+// Night chrome (round 4, palettes ui_alpha.night_chrome): the HUD chips and the dock blend to a
+// dim warm-navy glass after dark (u_night 0..1, crossfaded by the HUD); its rim and sheen lift
+// toward u_rim_night instead of the cream surface_hi. Sheets never set it (they stay light).
+uniform float u_night = 0.0;
+uniform vec4 u_surface_night : source_color = vec4(0.208, 0.227, 0.337, 1.0);   // ui.night_glass
+uniform vec4 u_rim_night : source_color = vec4(0.478, 0.502, 0.659, 1.0);       // ui.night_glass_rim
 
 const float RIM_PX = 4.5;          // 1.5 dp rim (round 3: a visible specular edge)
 const float RIM_SOFT_PX = 1.5;
@@ -74,8 +80,9 @@ vec4 glass_dress(vec3 c, float a, float d, vec2 sz) {
 	vec2 half_size = sz * 0.5;
 	vec2 n = (v_local - half_size) / max(half_size, vec2(1.0));
 	float inside = -d;
+	vec3 rim_c = mix(u_rim.rgb, u_rim_night.rgb, u_night);
 	float ty = v_local.y / max(sz.y, 1.0);
-	c = mix(c, u_rim.rgb, SHEEN * (1.0 - smoothstep(0.0, SHEEN_END, ty)));
+	c = mix(c, rim_c, SHEEN * (1.0 - smoothstep(0.0, SHEEN_END, ty)));
 	// inner bottom shadow: a 2 dp band along the lower edge
 	float sh = (1.0 - smoothstep(0.0, SHADOW_PX, inside)) * smoothstep(0.15, 0.85, n.y) * u_inner_shadow;
 	c = mix(c, u_ink.rgb, sh);
@@ -83,10 +90,10 @@ vec4 glass_dress(vec3 c, float a, float d, vec2 sz) {
 	// rim: 1 dp light band just inside the edge, strongest at the top-left
 	float t = clamp(0.5 + 0.35 * (n.x + n.y), 0.0, 1.0);
 	float lens = (1.0 - smoothstep(0.0, LENS_PX, inside)) * LENS_LIFT * (1.0 - 0.6 * t);
-	c = mix(c, u_rim.rgb, lens);
+	c = mix(c, rim_c, lens);
 	float spec = max(mix(u_rim_tl, u_rim_br, t), COUNTER_GLINT * u_rim_tl * smoothstep(0.78, 1.0, t));
 	float rim = (1.0 - smoothstep(RIM_PX - RIM_SOFT_PX, RIM_PX + RIM_SOFT_PX, inside)) * spec;
-	c = mix(c, u_rim.rgb, rim);
+	c = mix(c, rim_c, rim);
 	a = a + (1.0 - a) * rim;
 	return vec4(c, a);
 }

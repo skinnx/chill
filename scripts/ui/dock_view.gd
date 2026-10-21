@@ -44,6 +44,8 @@ const PRESS_DEPTH := 2.0
 const PRESS_CAPSULE_ALPHA := 0.75
 ## Selection capsule hairline: primary at this alpha, 1 dp.
 const CAPSULE_LINE_ALPHA := 0.16
+## ... and at night the hairline is the glass rim colour, a little stronger (the capsule's edge).
+const NIGHT_LINE_ALPHA := 0.5
 const BADGE_MIN := 48.0
 const BADGE_PAD := 12.0
 ## Badge centre from the icon centre (the icon's top-right shoulder).
@@ -95,6 +97,8 @@ var _basket_slots: int = 24
 var _screen: Vector2 = Vector2(1080, 1920)
 var _safe_bottom: float = 0.0
 var _tab_size: Vector2 = Vector2(252, 216)
+var _night_k: float = 0.0
+var _night_icons: bool = false
 
 
 func _init() -> void:
@@ -106,6 +110,7 @@ func _ready() -> void:
 	_basket_slots = int(ContentRegistry.content.economy.get("basket_slots", _basket_slots))
 	pill = GlassPanel.new()
 	pill.name = "Pill"
+	pill.night_aware = true
 	add_child(pill)
 	# Draw-call budget (Art Bible §4.19: HUD + dock ~14): the capsules are drawn by one layer
 	# (one batch), the icons come from one atlas and sit next to each other in draw order (one
@@ -127,9 +132,7 @@ func _ready() -> void:
 		b.tint_active_label = true
 		b.set_meta(&"ripple_owner_shape", true)
 		b.set_meta(PressFeedback.META_RIPPLE_ON_DARK, false)
-		var icons: Array[Texture2D] = [atlas[Icons.atlas_key(id, ICON_PX)] as Texture2D,
-				atlas[Icons.atlas_key(id, ICON_PX, true)] as Texture2D]
-		b.icon_textures = icons
+		b.icon_textures = _tab_icons(atlas, id)
 		b.icon_name = id
 		b.icon_z = Z_ICONS
 		b.set_label(tr(String(LABEL_KEYS[id])))
@@ -157,6 +160,37 @@ func _notification(what: int) -> void:
 			(buttons[id] as RoundButton).set_label(tr(String(LABEL_KEYS[id])))
 			(buttons[id] as RoundButton).tooltip_text = tr(String(LABEL_KEYS[id]))
 		_fit_labels.call_deferred()
+
+
+func _tab_icons(atlas: Dictionary, id: StringName) -> Array[Texture2D]:
+	var icons: Array[Texture2D] = [atlas[Icons.atlas_key(id, ICON_PX, false, _night_icons)] as Texture2D,
+			atlas[Icons.atlas_key(id, ICON_PX, true, _night_icons)] as Texture2D]
+	return icons
+
+
+## Night chrome (palettes ui_alpha.night_chrome; the pill glass follows GlassPanel.night_k): tab
+## labels lerp to night_ink, the capsules and the basket ring track to night_capsule /
+## night_track, ripples turn light (white, capped) and the icons take their night variant at the
+## crossfade's midpoint.
+func set_night(k: float) -> void:
+	_night_k = clampf(k, 0.0, 1.0)
+	var icons_night := _night_k >= 0.5
+	var swap := icons_night != _night_icons
+	_night_icons = icons_night
+	var atlas := Icons.hud_atlas()
+	for id: StringName in ORDER:
+		var b := buttons[id] as RoundButton
+		b.night_k = _night_k
+		b.set_meta(PressFeedback.META_RIPPLE_ON_DARK, icons_night)
+		if swap:
+			b.icon_textures = _tab_icons(atlas, id)
+			b.icon_name = id
+	_ring_mat.set_shader_parameter(&"u_track", UiTokens.color(&"gold_tint").lerp(UiTokens.color(&"night_track"), _night_k))
+	_plates.queue_redraw()
+
+
+func _capsule_color() -> Color:
+	return UiTokens.color(&"primary_tint").lerp(UiTokens.color(&"night_capsule"), _night_k)
 
 
 func button(id: StringName) -> RoundButton:
@@ -328,15 +362,20 @@ func _draw_capsules() -> void:
 		if b == null or not b.visible or b.active or not b.looks_pressed():
 			continue
 		var rect := _tab_rect(b, b.position.x)
-		_plates.draw_style_box(UiTokens.fill_box(UiTokens.tinted(&"primary_tint", PRESS_CAPSULE_ALPHA), r), rect)
+		var pc := _capsule_color()
+		pc.a = PRESS_CAPSULE_ALPHA
+		_plates.draw_style_box(UiTokens.fill_box(pc, r), rect)
 	if cap_a <= 0.01 or _active == &"":
 		return
 	var ab := buttons.get(_active) as RoundButton
 	var rect2 := _tab_rect(ab, cap_x)
-	var fill := UiTokens.tinted(&"primary_tint", clampf(cap_a, 0.0, 1.0))
+	var fill := _capsule_color()
+	fill.a = clampf(cap_a, 0.0, 1.0)
 	var box := UiTokens.fill_box(fill, rect2.size.y * 0.5, UiTokens.E1)
 	box.shadow_color.a *= clampf(cap_a, 0.0, 1.0)
-	box.border_color = UiTokens.tinted(&"primary", CAPSULE_LINE_ALPHA * clampf(cap_a, 0.0, 1.0))
+	var line := UiTokens.color(&"primary").lerp(UiTokens.color(&"night_glass_rim"), _night_k)
+	line.a = lerpf(CAPSULE_LINE_ALPHA, NIGHT_LINE_ALPHA, _night_k) * clampf(cap_a, 0.0, 1.0)
+	box.border_color = line
 	box.set_border_width_all(roundi(UiTokens.PX_PER_DP))
 	_plates.draw_style_box(box, rect2)
 

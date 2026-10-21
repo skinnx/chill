@@ -70,6 +70,8 @@ var dock: DockView
 var sheets: SheetHost
 var overlays: OverlayHost
 var ambient: bool = false
+## Night chrome (palettes ui_alpha.night_chrome): on after dark, with hysteresis on g_lights.
+var night_on: bool = false
 var _idle_s: float = 0.0
 var _safe := Rect2(48, 72, 48, 127)
 var _qa: Dictionary = {}
@@ -78,7 +80,9 @@ var _garden_seen: bool = false
 var _choose_flower: StringName = &""
 var _choose_back := Callable()
 var _pending_friends: Array[StringName] = []
-var _night_tint := Color.WHITE
+var _night_known: bool = false
+var _night_k: float = 0.0
+var _night_tween: Tween
 var _qa_frames: int = 0
 
 @onready var _safe_area: SafeAreaContainer = $SafeArea
@@ -121,7 +125,6 @@ func _ready() -> void:
 		_refresh_onboarding()
 		sheets.refresh())
 	Game.leave_requested.connect(func() -> void: overlays.show_leave())
-	_night_tint = UiTokens.color(&"hud_night_tint")
 	TimeOfDay.globals_updated.connect(_on_globals)
 	_on_globals({&"g_lights": float(TimeOfDay.scalars.get("lights", 0.0))})
 	AudioDirector.cue_played.connect(overlays.on_cue_played)
@@ -192,15 +195,51 @@ func set_ambient(on: bool, instant: bool = false) -> void:
 	_set_chrome_input(not on)
 
 
-## After dark the whole HUD (glass, cards, ink, icons) dims toward hud_night_tint with the
-## palette's lantern level (g_lights: dusk 0.75, night 1.0), so the glass never outshines the
-## moon and the lantern pools (round-2 QA, Art Bible §1.3 night focal). A multiply keeps every
-## ink-on-glass pair above 4.5:1 (the darkest glass, L* ~74, still gives ink 8.0:1; the primary
-## pill label 4.6:1).
+## After dark (round 4, QA r3: the cream dock and chips were a glare slab under the night sky):
+## the HUD chrome switches to its night scheme (dim warm-navy glass, night_ink labels and icons;
+## GlassPanel / TopBarView / DockView.set_night), crossfading over hud_ambient_fade when g_lights
+## crosses night_chrome.on (back below .off). Sheets and overlays stay light, dimmed neutrally by
+## night_chrome.sheet_dim x g_lights (no lavender cast: ink and the primary label keep >= 4.5:1).
 func _on_globals(values: Dictionary) -> void:
-	var k := clampf(float(values.get(&"g_lights", 0.0)), 0.0, 1.0)
-	var c := Color.WHITE.lerp(_night_tint, k)
-	modulate = Color(c.r, c.g, c.b, modulate.a)
+	if not values.has(&"g_lights"):
+		return
+	var lights := clampf(float(values.get(&"g_lights", 0.0)), 0.0, 1.0)
+	var nt := GlassPanel.night_tokens()
+	var want := night_on
+	if lights >= float(nt.get("on", 0.6)):
+		want = true
+	elif lights <= float(nt.get("off", 0.4)):
+		want = false
+	if want != night_on or not _night_known:
+		set_night(want, not _night_known)
+		_night_known = true
+	var dim := 1.0 - float(nt.get("sheet_dim", 0.08)) * lights
+	var c := Color(dim, dim, dim)
+	sheets.tint = c
+	overlays.modulate = Color(c.r, c.g, c.b, overlays.modulate.a)
+
+
+## Switches the chrome scheme (instant at start-up and for QA stills).
+func set_night(on: bool, instant: bool = false) -> void:
+	night_on = on
+	if _night_tween != null and _night_tween.is_valid():
+		_night_tween.kill()
+	var to := 1.0 if on else 0.0
+	if instant:
+		_apply_night(to)
+		return
+	var dur := Motion.duration(&"reduce_motion_crossfade") if Motion.reduce_motion \
+			else UiTokens.seconds("hud_ambient_fade")
+	_night_tween = create_tween()
+	_night_tween.tween_method(_apply_night, _night_k, to, dur).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	FrameGovernor.hold_for(dur)
+
+
+func _apply_night(k: float) -> void:
+	_night_k = k
+	GlassPanel.set_night(k)
+	top_bar.set_night(k)
+	dock.set_night(k)
 
 
 func _set_chrome_input(enabled: bool) -> void:

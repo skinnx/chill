@@ -183,6 +183,7 @@ var _touch_at: Vector2 = Vector2.ZERO
 var _petting: bool = false
 var _pet_t: float = 0.0
 var _pet_heart_t: float = 0.0
+var _pet_heart_n: int = 0
 var _frozen: bool = false
 var _last_tap_s: float = -INF
 var _reopen_t: float = -1.0
@@ -236,6 +237,9 @@ func setup(p_rig: MosslingRig, p_species: StringName, p_seed01: float, fur: Shad
 	_body = SdfQuad.new()
 	_body.name = "Body"
 	_body.material = fur
+	# a UI portrait (the creature lives in a Control): studio light, never the world's night
+	if get_parent() is Control and fur != null:
+		rig.apply_studio(fur)
 	_body.rect = rig.quad_rect(p_species)
 	_visual.add_child(_body)
 	# the leaf umbrella is HELD (QA r2): drawn over the body, its stem gripped by a paw on the
@@ -389,8 +393,8 @@ func peek(at: Vector2, entry_path: PackedVector2Array, exit_path: PackedVector2A
 # ================================================================= behaviours
 
 ## Starts [param p_behaviour] at the current position (the layer walks the creature there first).
-## [param params]: "look" (float), "lean_dir" (float, nibble), "partner" (Mossling, play),
-## "shelter" (bool).
+## [param params]: "look" (float; with "look_hold_s" it is held that long), "lean_dir" (float,
+## nibble), "partner" (Mossling, play), "shelter" (bool), "happy_s" (a happy-eyes beat, s).
 func perform(p_behaviour: StringName, p_spot: StringName, params: Dictionary = {}) -> void:
 	behaviour = p_behaviour
 	spot_id = p_spot
@@ -419,6 +423,14 @@ func perform(p_behaviour: StringName, p_spot: StringName, params: Dictionary = {
 			_stream_t = rng.randf_range(2.0, float(_b.get("stream_paw_s", 12.8)))
 		_:
 			_set_act(Act.IDLE)
+	# optional pose hints (QA fixture / brain): a held look and a happy "^ ^" beat
+	if params.has("look") and p_behaviour != B_STREAM and p_behaviour != B_NAP:
+		turn_to(float(params["look"]))
+		_look_next = maxf(_look_next, float(params.get("look_hold_s", 0.0)))
+	if float(params.get("happy_s", 0.0)) > 0.0 and p_behaviour != B_NAP:
+		_happy_to = 1.0
+		_closed = MosslingRig.CLOSED_HAPPY
+		_reopen_t = float(params["happy_s"])
 	_update_rest_pose()
 
 
@@ -517,6 +529,10 @@ func touch_up(_point: Vector2) -> void:
 	_squash.target = _rest_squash
 	if _touch_at.distance_to(_touch_from) <= TAP_MAX_MOVE_PX:
 		_on_tap()
+		if not asleep:
+			# bespoke tap beat (QA r3 c7): the press squash springs up into a short stretch
+			_squash.target = float(_b.get("tap_stretch", 1.08))
+			_overshoot_hold = float(_b.get("tap_stretch_hold_ms", 90.0)) * MS
 
 
 func cancel_touch() -> void:
@@ -543,7 +559,7 @@ func _on_tap() -> void:
 		_happy_to = 1.0
 		_closed = MosslingRig.CLOSED_HAPPY
 		_reopen_t = float(_b.get("tap_happy_ms", 650.0)) * MS
-		_fx.sparkles(_head_local() + Vector2(0.0, _s_px * 0.25), int(_b.get("tap_sparkles", 4)))
+		_fx.sparkles(_head_local() + Vector2(0.0, _s_px * 0.35), int(_b.get("tap_sparkles", 4)), _w_px * 0.5)
 	tapped.emit(self)
 
 
@@ -571,7 +587,9 @@ func _end_pet(released: bool) -> void:
 	_overshoot_hold = 0.12
 	pet_ended.emit(self)
 	if released:
-		_fx.hearts(_head_local(), int(pet.get("hearts_on_release", 3)), float(_b.get("heart_stagger_ms", 120.0)) * MS)
+		var n_rel := int(_b.get("release_hearts", pet.get("hearts_on_release", 3)))
+		_fx.hearts(_head_local(), n_rel, float(_b.get("heart_stagger_ms", 120.0)) * MS,
+			float(_b.get("release_heart_scale", 1.0)))
 		_reopen_t = float(_b.get("pet_reopen_ms", 300.0)) * MS
 		petted.emit(self)
 	else:
@@ -665,8 +683,12 @@ func _update_touch(delta: float) -> void:
 		_pet_heart_t -= delta
 		if _pet_heart_t <= 0.0:
 			_pet_heart_t = float(_b.get("pet_heart_every_s", 0.8))
-			var side := 1.0 if int(_pet_t / maxf(_pet_heart_t, 0.1)) % 2 == 0 else -1.0
-			_fx.hearts(_head_local() + Vector2(side * _w_px * 0.28, 0.0), 1, 0.0, float(_b.get("pet_heart_scale", 0.7)))
+			# a steady stream of hearts from the head, alternating sides with a little jitter
+			_pet_heart_n += 1
+			var side := 1.0 if _pet_heart_n % 2 == 0 else -1.0
+			var jit := rng.randf_range(0.12, 0.34)
+			_fx.hearts(_head_local() + Vector2(side * _w_px * jit, rng.randf_range(-0.08, 0.04) * _s_px), 1, 0.0,
+				float(_b.get("pet_heart_scale", 0.7)) * rng.randf_range(0.9, 1.1))
 
 
 func _update_walk(delta: float) -> void:
@@ -953,8 +975,9 @@ func _tick_play(delta: float) -> void:
 			_act_next = rng.randf_range(float(rr[0]), float(rr[1]))
 			if _play_partner == null and rng.randf() < 0.5:
 				turn_to(-_look_to if absf(_look_to) > 0.1 else 0.6)
-			_happy_to = 0.0
-			_closed = MosslingRig.CLOSED_OPEN
+			if _reopen_t < 0.0:   # a held happy beat (perform happy_s, a tap) runs out on its own
+				_happy_to = 0.0
+				_closed = MosslingRig.CLOSED_OPEN
 		else:
 			var gr: Array = _b.get("play_gap_s", [0.35, 0.9])
 			_act_next = rng.randf_range(float(gr[0]), float(gr[1]))
@@ -1222,7 +1245,9 @@ func _depth_at(y: float) -> float:
 	var span := float(ds.get("span", 740.0))
 	var lo := float(ds.get("min", 0.62))
 	var hi := float(ds.get("max", 1.0))
-	return clampf(lo + (hi - lo) * (y - y0) / span, lo, hi)
+	# near_cap: the front-most friends stop growing a little early, so the focal sun stone keeps
+	# the hierarchy (QA r3: the big near mossling outweighed the napper on the stone)
+	return minf(clampf(lo + (hi - lo) * (y - y0) / span, lo, hi), float(ds.get("near_cap", hi)))
 
 
 ## Writes the animated instance uniforms (slots 11-13) and the shadow, only when they change.

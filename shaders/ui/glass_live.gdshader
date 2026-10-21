@@ -20,6 +20,10 @@ uniform float u_tint_min = 0.66;        // ui_alpha.glass_live_adaptive.min
 uniform float u_tint_max = 0.9;         // ui_alpha.glass_live_adaptive.max
 uniform float u_luma_lo = 0.05;
 uniform float u_luma_hi = 0.45;
+// After dark the sheet's veil is held at u_night_tint (ui_alpha.night_chrome.live_tint) whatever
+// the local backdrop, so the moon disc and the lantern halos never shine through (QA r3 #19).
+uniform float u_live_night = 0.0;
+uniform float u_night_tint = 0.94;
 
 const float TAP_SPREAD_PX = 9.0;
 
@@ -39,6 +43,7 @@ void fragment() {
 	float l = dot(b, vec3(0.2126, 0.7152, 0.0722));
 	b = clamp(mix(vec3(l), b, u_saturation), 0.0, 1.0);
 	float tint = mix(u_tint_max, u_tint_min, smoothstep(u_luma_lo, u_luma_hi, l));
+	tint = mix(tint, max(tint, u_night_tint), u_live_night);
 	vec3 c = mix(b, u_surface.rgb, tint);
 	vec4 g = glass_dress(c, 1.0, d, u_size);
 	vec4 o = over_shadow(g.rgb, cov, glass_shadow(u_size));

@@ -27,7 +27,7 @@ uniform vec4 u_ripples[4];
 uniform float ripple_s = 0.38;
 uniform float ripple_radius_px = 108.0;
 uniform float rain_cell_px = 48.0;
-uniform float rain_ring_k = 76.0;
+uniform float rain_ring_k = 104.0;
 // Body and reflection balance (round 3: a darker body with bright reflection streaks).
 uniform float body_dark = 0.80;
 uniform float body_shadow_k = 0.22;
@@ -35,6 +35,9 @@ uniform float shallow_k = 0.22;
 uniform float refl_base = 0.16;
 uniform float refl_far = 0.82;
 uniform float refl_streak_k = 0.30;
+// Round 4 (QA r3: golden brook read lilac-grey): with a low sun the whole ribbon mirrors the warm
+// horizon, the bottom anchor of the eye path (reference frame A).
+uniform float refl_backlight_k = 0.38;
 uniform float mirror_k = 0.72;
 uniform float column_px = 46.0;
 uniform float column_k = 1.0;
@@ -48,7 +51,12 @@ const float FLOW_A_CELL = 90.0;
 const float FLOW_B_SPEED = 30.0;
 const float FLOW_B_TILE = 360.0;
 const float FLOW_B_CELL = 60.0;
-const float GLINT_FADE_S = 0.4;
+// Round 4 (QA r3: ~11 Hz shimmer): every glint lives >= 0.9 s with a sin^2 envelope (smooth onset,
+// no per-frame threshold) and the light-path sparkles sit on coarser, sparser cells.
+const float GLINT_FADE_S = 0.9;
+const vec2 SPARK_CELL_PX = vec2(22.0, 11.0);
+const float SPARK_LIFE_S = 1.1;
+const float SPARK_SHARE = 0.55;
 // Sky-reflection streak cells (px along the flow, px across): long, thin, anisotropic.
 const float REFL_CELL_X = 108.0;
 const float REFL_CELL_Y = 9.0;
@@ -59,10 +67,14 @@ const float RIPPLE_WIDTH_PX = 3.0;
 const float RIPPLE_ALPHA = 0.75;
 const float RIPPLE_BEND_PX = 4.0;
 const float RAIN_RING_LIFE_S = 1.1;
+// Round 4 (QA r3: rings barely showed): twice the ring strength, slightly wider.
+const float RAIN_RING_ALPHA = 0.85;
 const float RAIN_RING_R_PX = 20.0;
 const float MIST_DRIFT_PX_S = 6.0;
 const float MIST_TILE_PX = 1800.0;
 const float MIST_Y = 1470.0;
+// Night floor (Art Bible §1.3 "no pixel crushed under L* 6"): the darkest water keeps luminance >= this.
+const float WATER_LUMA_FLOOR = 0.11;
 
 varying vec2 v_design;
 varying vec2 v_canvas;
@@ -132,15 +144,15 @@ void fragment() {
 	// the horizon (warm and bright at golden / dawn), toward the near bank the higher, cooler sky;
 	// the reflectance falls toward the viewer (Fresnel), so the near half shows the dark body.
 	float vs = smoothstep(0.04, 0.98, vr);
-	vec3 sky_low = mix(g_sky_horizon.rgb, g_glow.rgb, 0.30 * g_celestial.x * g_backlight);
+	vec3 sky_low = mix(g_sky_horizon.rgb, g_glow.rgb, 0.45 * g_celestial.x * g_backlight);
 	vec3 sky_high = mix(g_sky_mid.rgb, g_sky_top.rgb, 0.45);
-	vec3 sky = mix(sky_low, mix(g_sky_mid.rgb, sky_high, vs), smoothstep(0.22, 0.85, vs));
+	vec3 sky = mix(sky_low, mix(g_sky_mid.rgb, sky_high, vs), smoothstep(0.22, 0.85, vs) * (1.0 - 0.75 * g_backlight * g_celestial.x));
 	float rs_a = vnoise_tiled(vec2((s - FLOW_A_SPEED * g_time) / REFL_CELL_X + 1.7, y_px / REFL_CELL_Y),
 			vec2(FLOW_A_TILE / REFL_CELL_X, 4096.0));
 	float rs_b = vnoise_tiled(vec2((s - FLOW_B_SPEED * g_time) / (REFL_CELL_X * 0.6) + 9.2, y_px / (REFL_CELL_Y * 0.7) + 2.0),
 			vec2(FLOW_B_TILE / (REFL_CELL_X * 0.6), 4096.0));
 	float refl_streak = smoothstep(0.50, 0.80, rs_a * 0.65 + rs_b * 0.35);
-	float refl = mix(refl_far, refl_base, vs) + refl_streak * refl_streak_k * (1.0 - 0.4 * vs);
+	float refl = mix(refl_far, refl_base + refl_backlight_k * g_backlight * g_celestial.x, vs) + refl_streak * refl_streak_k * (1.0 - 0.4 * vs);
 	refl *= 1.0 - 0.35 * g_rain;
 	vec3 c = mix(body, sky, clamp(refl, 0.0, 0.94));
 	// The far bank mirrored: a darker band of moss + grass just under the far edge, its lower edge
@@ -169,17 +181,17 @@ void fragment() {
 	c = mix(c, col_c, clamp(column * vis * (0.25 + 0.75 * col_break) * column_k, 0.0, 0.9));
 	float glint_light = (g_celestial.x * (0.35 + 0.65 * g_backlight) + g_celestial.y * 0.55) * (1.0 - g_rain * 0.7);
 	// Column sparkles: small cells inside the light path (3x denser there), each breathing softly.
-	vec2 sc = vec2(s, y_px) / vec2(12.0, 8.0);
+	vec2 sc = vec2(s, y_px) / SPARK_CELL_PX;
 	vec2 sci = floor(sc);
 	vec2 sj = h22(sci + 3.7);
 	float sk = floor(mix(glint_k.x, glint_k.y + 1.0, sj.x));
-	float sph = fract(g_time * sk / LOOP_S + sj.y);
-	float dt_s = (sph - 0.5) * LOOP_S / sk;
-	float bell = exp(-(dt_s * dt_s) / (0.45 * 0.45));
-	vec2 sp = (sci + 0.25 + 0.5 * h22(sci + 9.1)) * vec2(12.0, 8.0);
+	float st_s = fract(g_time * sk / LOOP_S + sj.y) * LOOP_S / sk;
+	float life = clamp(st_s / SPARK_LIFE_S, 0.0, 1.0);
+	float bell = st_s < SPARK_LIFE_S ? pow(sin(PI * life), 2.0) : 0.0;
+	vec2 sp = (sci + 0.25 + 0.5 * h22(sci + 9.1)) * SPARK_CELL_PX;
 	vec2 sd = vec2(s, y_px) - sp;
 	float spark = exp(-dot(sd, sd) / 2.2) + 0.45 * exp(-sd.y * sd.y / 0.8) * exp(-sd.x * sd.x / 40.0);
-	float sparkle_mask = column * step(0.40, h12(sci + 1.3));
+	float sparkle_mask = column * step(1.0 - SPARK_SHARE, h12(sci + 1.3));
 	c += mix(g_glow.rgb, vec3(1.0), 0.4) * spark * (0.35 + 0.65 * bell) * sparkle_mask * glint_light * 1.1 * water;
 
 	// Edge foam and the spring's churn.
@@ -230,7 +242,7 @@ void fragment() {
 	float gk = floor(mix(glint_k.x, glint_k.y + 1.0, h12(vec2(gcell, 7.0))));
 	float gph = fract(g_time * gk / LOOP_S + h12(vec2(gcell, 13.0)));
 	float gt = gph * LOOP_S / gk;
-	float gamp = smoothstep(0.0, GLINT_FADE_S * 0.5, gt) * (1.0 - smoothstep(GLINT_FADE_S * 0.5, GLINT_FADE_S, gt));
+	float gamp = gt < GLINT_FADE_S ? pow(sin(PI * gt / GLINT_FADE_S), 2.0) : 0.0;
 	vec2 gpos = vec2((gcell + 0.25 + 0.5 * h12(vec2(gcell, 3.0))) * glint_cell_px,
 			(0.15 + 0.4 * h12(vec2(gcell, 5.0))) * water_px);
 	vec2 gd = vec2(s, y_px) - gpos;
@@ -249,14 +261,18 @@ void fragment() {
 			d.y /= RIPPLE_SQUASH;
 			float ur = rage / RAIN_RING_LIFE_S;
 			float rr = RAIN_RING_R_PX * (1.0 - (1.0 - ur) * (1.0 - ur));
-			rip += (1.0 - smoothstep(0.0, 1.8, abs(length(d) - rr))) * 0.42 * (1.0 - ur) * g_rain;
+			rip += (1.0 - smoothstep(0.0, 2.2, abs(length(d) - rr))) * RAIN_RING_ALPHA * (1.0 - ur) * g_rain;
 		}
 	}
 	c = mix(c, ripple_color.rgb, clamp(rip, 0.0, 0.85) * water);
 
 	// Banks: a dark wet lip just outside the water on both sides, fading into the meadow; a thin
 	// bright rim where the far edge catches the sky and a lit lip on the near edge.
-	float bank_a = v < 0.0 ? smoothstep(-bank_v, 0.0, v) : 1.0 - smoothstep(1.0, 1.0 + bank_v, v);
+	// Round 4 (QA r3 "plastic strip"): the shoreline is feathered over the whole damp bank and
+	// broken by a slow noise along the arc, so the bank melts into the moss with an irregular edge.
+	float shore_n = (vnoise(vec2(s / 23.0, v < 0.5 ? 1.0 : 7.0)) - 0.5) * 0.9 + (vnoise(vec2(s / 7.0, 3.0)) - 0.5) * 0.35;
+	float bank_t = v < 0.0 ? -v / bank_v : (v - 1.0) / bank_v;
+	float bank_a = v < 0.0 || v > 1.0 ? 1.0 - smoothstep(0.15, 0.95, bank_t + shore_n * 0.35) : 1.0;
 	vec3 bank = water_bank.rgb * (1.0 + (vnoise(p / 6.0) - 0.5) * 0.08);
 	bank = mix(bank, bank * g_shadow.rgb * SHADE_K, 0.35);
 	c = mix(bank, c, water);
@@ -265,10 +281,12 @@ void fragment() {
 	// Both bank edges: a 6-8 px band of water darkened by ~25 % (wet moss overhang, shadowed shallows).
 	float edge_px = min(v, 1.0 - v) * water_px;
 	c *= 1.0 - bank_edge_k * (1.0 - smoothstep(2.0, 8.0, edge_px)) * water;
-	float far_rim = (1.0 - smoothstep(0.0, 2.0 / water_px, abs(v - 0.035))) * water;
-	c = mix(c, mix(hi, vec3(1.0), 0.25), far_rim * (0.45 + 0.25 * fres) * (1.0 - 0.6 * g_lights));
-	float near_rim = (1.0 - smoothstep(0.0, 2.5 / water_px, abs(v - 0.975))) * water;
-	c = mix(c, mix(g_water_shallow.rgb, ripple_color.rgb, 0.4), near_rim * 0.35);
+	// Round 4: soft, broken rims (QA r3: hard light outlines made the brook read as a plastic strip).
+	float rim_brk = 0.55 + 0.45 * smoothstep(0.3, 0.7, fa);
+	float far_rim = (1.0 - smoothstep(0.0, 4.0 / water_px, abs(v - 0.04))) * water * rim_brk;
+	c = mix(c, mix(hi, vec3(1.0), 0.25), far_rim * (0.26 + 0.16 * fres) * (1.0 - 0.6 * g_lights));
+	float near_rim = (1.0 - smoothstep(0.0, 5.0 / water_px, abs(v - 0.965))) * water * rim_brk;
+	c = mix(c, mix(g_water_shallow.rgb, ripple_color.rgb, 0.4), near_rim * 0.14);
 	float alpha = max(water, bank_a * 0.9);
 
 	// Mist over the brook (dawn).
@@ -277,5 +295,7 @@ void fragment() {
 	c = mix(c, mix(g_sky_horizon.rgb, g_glow.rgb, 0.2), clamp(g_mist * mband, 0.0, 0.6));
 	c += sun_veil(v_canvas, 0.25);
 
+	float lw = wl_luma(c);
+	c += max(WATER_LUMA_FLOOR - lw, 0.0) * normalize(g_water_deep.rgb + vec3(0.05)) * 1.6;
 	COLOR = vec4(finish(c, p / PX_PER_DP, FRAGCOORD.xy, GRAIN_WATER), alpha);
 }

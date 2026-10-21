@@ -31,6 +31,8 @@ const SIDE := 48.0
 const BOTTOM_PAD := 24.0
 ## Scrolled content fades out over 72 px at the bottom edge (§9.4).
 const FADE_PX := 72.0
+## Scroll culling margin (the e1 card shadow reaches 30 px).
+const CULL_MARGIN := 36.0
 ## In-card buttons: 48 dp (Art Bible §9.4 draws 132 with a hit grown into the card padding; a
 ## Button's hit is its rect, so the visual itself is the 48 dp target).
 const CARD_BUTTON_H := 144.0
@@ -39,6 +41,8 @@ const CARD_BUTTON_H := 144.0
 const TITLE_SCALE_CAP := 1.3
 ## Minimum touch target, 48 dp (I2).
 const MIN_TARGET := 144.0
+## A hugging pill is never narrower than 120 dp (a short label still reads as a button).
+const MIN_PILL_W := 360.0
 
 var sheet_id: StringName = &""
 var title_key: String = ""
@@ -143,7 +147,34 @@ func make_scroll(top: float, separation: int = 24) -> VBoxContainer:
 	list.add_theme_constant_override(&"separation", separation)
 	list.mouse_filter = Control.MOUSE_FILTER_PASS
 	pad.add_child(list)
+	# Draw-call budget (Art Bible §4.19): rows scrolled fully out of the window would still draw
+	# (the scroll only scissors them; the sheet's lower rows sit on screen behind the dock), so
+	# they are culled by alpha (the canvas skips a subtree below alpha 0.007; layout untouched).
+	var cull := func() -> void: _cull_rows(sc, list)
+	sc.get_v_scroll_bar().value_changed.connect(func(_v: float) -> void: cull.call())
+	list.sort_children.connect(func() -> void: cull.call_deferred())
+	sc.resized.connect(func() -> void: cull.call_deferred())
 	return list
+
+
+## Hides (alpha 0) every row of [param list] (and every cell of a grid row) outside the scroll
+## window, plus a shadow margin; partly visible rows draw as usual.
+static func _cull_rows(sc: ScrollContainer, list: Control) -> void:
+	if not is_instance_valid(sc) or not is_instance_valid(list) or not sc.is_inside_tree():
+		return
+	var window := sc.get_global_rect().grow(CULL_MARGIN)
+	for row: Node in list.get_children():
+		var items: Array[Node] = []
+		if row is GridContainer:
+			items.assign(row.get_children())
+		else:
+			items.append(row)
+		for n: Node in items:
+			var c := n as Control
+			if c == null:
+				continue
+			var on := window.intersects(c.get_global_rect())
+			c.modulate.a = 1.0 if on else 0.0
 
 
 
@@ -258,12 +289,16 @@ static func card(pad: int = 24, radius_px: float = ThemeBuilder.R_L, level: int 
 	return p
 
 
-## Primary (or secondary) pill button with the press feedback wired.
-static func pill_button(text: String, primary: bool = true, height: float = CARD_BUTTON_H) -> Button:
+## Primary (or secondary) pill button with the press feedback wired. Round 4 (QA r3: full-width
+## blue slabs read as 2023 Material and flooded the frame): buttons hug their label (min
+## MIN_PILL_W), centred; [param hug] false keeps a full-width stack (two-choice dialogs).
+static func pill_button(text: String, primary: bool = true, height: float = CARD_BUTTON_H, hug: bool = true) -> Button:
 	var b := Button.new()
 	b.text = text
 	b.focus_mode = Control.FOCUS_NONE
-	b.custom_minimum_size = Vector2(0.0, height)
+	b.custom_minimum_size = Vector2(MIN_PILL_W if hug else 0.0, height)
+	if hug:
+		b.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	if not primary:
 		b.theme_type_variation = &"SecondaryButton"
 	PressFeedback.attach(b)

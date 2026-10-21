@@ -19,6 +19,8 @@ const ACCENT_ACTIVE := "fill-opacity=\"1\""
 const ATLAS_GAP := 4.0
 
 ## [name, px, active] of every HUD icon (TopBarView ICON_PX 72 / badge 36, DockView 84, sparkle 30).
+## The HUD atlas holds each of these twice: as drawn by day and in the night-chrome variant
+## ([method night_source]: night_ink strokes, a stronger accent layer).
 const HUD_ATLAS: Array = [
 	[&"dew", 72.0, false], [&"watch", 72.0, false], [&"watch_closed", 72.0, false],
 	[&"dawn", 72.0, false], [&"sun", 72.0, false], [&"golden", 72.0, false], [&"dusk", 72.0, false],
@@ -32,8 +34,8 @@ static var _cache: Dictionary = {}
 
 
 ## [param name] is the file stem ("garden", "dew" ...); [param px] the drawn size.
-static func texture(name: StringName, px: float, active: bool = false) -> Texture2D:
-	var key := "%s@%d%s" % [name, roundi(px), "+" if active else ""]
+static func texture(name: StringName, px: float, active: bool = false, night: bool = false) -> Texture2D:
+	var key := atlas_key(name, px, active, night)
 	var hit: Variant = _cache.get(key)
 	if hit is Texture2D:
 		return hit
@@ -41,9 +43,7 @@ static func texture(name: StringName, px: float, active: bool = false) -> Textur
 	if base == null:
 		push_error("Icons: missing %s.svg" % name)
 		return null
-	var src := base.get_source()
-	if active:
-		src = src.replace(ACCENT_ATTR, ACCENT_ACTIVE)
+	var src := variant_source(base.get_source(), active, night)
 	var tex := DPITexture.create_from_string(src, maxf(px, 1.0) / CANVAS_PX)
 	_cache[key] = tex
 	return tex
@@ -66,7 +66,7 @@ static func exists(name: StringName) -> bool:
 static func atlas(entries: Array) -> Dictionary:
 	var key_parts := PackedStringArray()
 	for e: Array in entries:
-		key_parts.append(atlas_key(StringName(e[0]), float(e[1]), bool(e[2])))
+		key_parts.append(atlas_key(StringName(e[0]), float(e[1]), bool(e[2]), e.size() > 3 and bool(e[3])))
 	var cache_key := "atlas:" + ",".join(key_parts)
 	var hit: Variant = _cache.get(cache_key)
 	if hit is Dictionary:
@@ -82,9 +82,7 @@ static func atlas(entries: Array) -> Dictionary:
 		if base == null:
 			push_error("Icons: missing %s.svg" % e[0])
 			continue
-		var src := base.get_source()
-		if bool(e[2]):
-			src = src.replace(ACCENT_ATTR, ACCENT_ACTIVE)
+		var src := variant_source(base.get_source(), bool(e[2]), e.size() > 3 and bool(e[3]))
 		var inner := src.substr(src.find(">") + 1)
 		inner = inner.substr(0, inner.rfind("</svg>"))
 		body += "<g transform=\"translate(%s 0) scale(%s)\">%s</g>" % [str(x), str(px / CANVAS_PX), inner]
@@ -107,11 +105,30 @@ static func atlas(entries: Array) -> Dictionary:
 ## The one atlas every HUD icon comes from (top bar + dock + brim sparkles), so all HUD icons
 ## draw in one batch (round 3 draw-call budget: HUD + dock = 6 calls).
 static func hud_atlas() -> Dictionary:
-	return atlas(HUD_ATLAS)
+	var entries: Array = []
+	for e: Array in HUD_ATLAS:
+		entries.append(e)
+		entries.append([e[0], e[1], e[2], true])
+	return atlas(entries)
 
 
-static func atlas_key(name: StringName, px: float, active: bool = false) -> String:
-	return "%s@%d%s" % [name, roundi(px), "+" if active else ""]
+static func atlas_key(name: StringName, px: float, active: bool = false, night: bool = false) -> String:
+	return "%s@%d%s%s" % [name, roundi(px), "+" if active else "", "~n" if night else ""]
+
+
+## The SVG source of a state: active lifts the accent layer to 100 %; night (the night-chrome HUD,
+## palettes ui_alpha.night_chrome) redraws the ink layer in night_ink and lifts the accent layer
+## to night_chrome.icon_secondary, so the duotone keeps its weight on the dim glass.
+static func variant_source(src: String, active: bool, night: bool) -> String:
+	if active:
+		src = src.replace(ACCENT_ATTR, ACCENT_ACTIVE)
+	if night:
+		var ink := "#" + UiTokens.color(&"ink").to_html(false).to_upper()
+		var night_ink := "#" + UiTokens.color(&"night_ink").to_html(false).to_upper()
+		src = src.replace(ink, night_ink)
+		var nt := UiTokens.alpha_section(&"night_chrome")
+		src = src.replace(ACCENT_ATTR, "fill-opacity=\"%s\"" % str(float(nt.get("icon_secondary", 0.6))))
+	return src
 
 
 ## A TextureRect showing [param name] at [param px] (mouse-transparent).

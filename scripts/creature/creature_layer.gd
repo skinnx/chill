@@ -50,18 +50,20 @@ const SHADOWS := "CreatureShadows"
 ## The shadow host's y: far above the frame, so the y-sorted Play draws it first.
 const SHADOW_SORT_Y := -100000.0
 const GROUND := "Ground"
-## QA fixture: species, behaviour and spot, in the order --qa-creatures takes them (only spots
-## that exist without décor, so a fresh install shows them).
+## QA fixture: species, behaviour, spot and pose hints (Mossling.perform params), in the order
+## --qa-creatures takes them (only spots that exist without décor, so a fresh install shows
+## them). The hints vary the looks and faces so one still reads as a lively hollow (QA r3 #2):
+## friends turn toward each other, one beams "^ ^", the stream-sitter watches the water.
 const QA_FIXTURE: Array[Array] = [
-	[&"puffmoss", &"nap", &"sun_stone"],
-	[&"buttonbud", &"nibble", &"clover_bank"],
-	[&"pebblepaw", &"sit_by_stream", &"stream_bend"],
-	[&"honeyhum", &"play", &"moss_cushion"],
-	[&"dandelfluff", &"play", &"hill_crest"],
-	[&"primpip", &"nap", &"stump_hollow"],
-	[&"bellkin", &"wander", &"willow_root"],
-	[&"fernwhisk", &"nap", &"fern_shade"],
-	[&"moonpuff", &"nap", &"moon_rock"],
+	[&"puffmoss", &"nap", &"sun_stone", {}],
+	[&"buttonbud", &"nibble", &"clover_bank", {}],
+	[&"pebblepaw", &"sit_by_stream", &"stream_bend", {"look": 0.7}],
+	[&"honeyhum", &"play", &"moss_cushion", {"look": 0.8, "look_hold_s": 8.0, "happy_s": 8.0}],
+	[&"dandelfluff", &"play", &"hill_crest", {"look": -0.5, "look_hold_s": 8.0}],
+	[&"primpip", &"nap", &"stump_hollow", {}],
+	[&"bellkin", &"wander", &"willow_root", {"look": 0.4}],
+	[&"fernwhisk", &"nap", &"fern_shade", {}],
+	[&"moonpuff", &"nap", &"moon_rock", {}],
 ]
 const QA_PET_DOWN_S := 0.4
 const QA_PET_UP_S := 2.5
@@ -632,7 +634,9 @@ func _spawn_fixture() -> void:
 		_mosslings[sp] = m
 		_commanded[sp] = bout
 		var perch := float((rig.view().get("perch_sort_px", {}) as Dictionary).get(String(bout.spot), 0.0))
-		var params := {"shelter": bout.shelter, "look": -0.6}
+		var params := {"shelter": bout.shelter}
+		var hints: Dictionary = row[3] if row.size() > 3 else {}
+		params.merge(hints)
 		if bout.behaviour == CreatureBrain.NIBBLE:
 			params["lean_dir"] = 1.0
 		elif bout.behaviour == CreatureBrain.PLAY:

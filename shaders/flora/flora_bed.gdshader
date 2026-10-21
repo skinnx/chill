@@ -66,6 +66,19 @@ uniform float leaf_flutter = 0.07;
 uniform float bell_swing = 0.12;
 uniform float tilt_k = 0.8;
 uniform float jitter_l = 0.045;
+// Round 4 (QA r3 c1 / V4: the left bed out-shouted the sun stone): sway trimmed 25 %, and every stem
+// outside the focal ellipse sits back: a little
+// darker, less saturated and with flatter petal value contrast, so the focal pool wins the squint.
+uniform float sway_scale = 0.75;
+// The focal pool: the sun stone and its nappers (spots.json sun_stone 0.5, 0.565 of the 1080 x 1920
+// frame, lifted to the creatures' bodies), a little tighter than the ValueFrame ellipse.
+uniform vec2 focal_centre = vec2(540.0, 1100.0);
+uniform vec2 focal_radii = vec2(260.0, 180.0);
+// Normalised ellipse distance where the calming starts and where it is full.
+uniform vec2 calm_from_to = vec2(0.9, 1.6);
+uniform float calm_dark = 0.10;
+uniform float calm_desat = 0.14;
+uniform float calm_flat = 0.28;
 uniform float root_ao = 0.9;
 // Felt fringe and rim: blurred-alpha mip level (a 1-2 design px band inside every edge).
 uniform float edge_lod = 2.0;
@@ -80,6 +93,7 @@ varying float v_h;
 varying float v_alpha;
 varying float v_jitter;
 varying vec2 v_canvas;
+varying float v_calm;
 
 vec3 lut(int col, int row) {
 	return texelFetch(flora_lut, ivec2(col, row), 0).rgb;
@@ -143,7 +157,8 @@ void vertex() {
 	float s = sin(TAU * k / LOOP_S * g_time + ph) + 0.35 * sin(TAU * k2 / LOOP_S * g_time + ph * 1.7 + 1.3);
 	vec2 root_design = (MODEL_MATRIX * vec4(CUSTOM1.xy, 0.0, 1.0)).xy - g_world_offset;
 	float wk = wind_k();
-	float dx = CUSTOM0.x * g_motion * wk * (0.8 * s + gust_lean * gust(root_design.x));
+	float dx = CUSTOM0.x * sway_scale * g_motion * wk * (0.8 * s + gust_lean * gust_at(root_design));
+	v_calm = smoothstep(calm_from_to.x, calm_from_to.y, length((root_design - focal_centre) / focal_radii));
 	dx += i_bed.x * g_motion * (0.6 + 0.4 * sin(ph)) * step(0.001, CUSTOM0.x);
 	float len = max(CUSTOM1.z, 1.0);
 	if (kind == PART_STEM) {
@@ -170,6 +185,10 @@ void fragment() {
 	float o = clamp(1.0 - (m.r + m.g + m.b), 0.0, 1.0);
 	vec3 alb = m.r * v_lit + m.g * v_shade + m.b * v_detail + o * v_shade * line_k;
 	alb *= 1.0 + jitter_l * v_jitter;
+	if (kind == PART_PETAL || kind == PART_BELL || kind == PART_CENTRE || kind == PART_STAMEN) {
+		alb = mix(alb, 0.5 * (v_lit + v_shade), calm_flat * v_calm);
+	}
+	alb = mix(alb, vec3(wl_luma(alb)), calm_desat * v_calm) * (1.0 - calm_dark * v_calm);
 	vec3 c;
 	float blurred = textureLod(TEXTURE, UV, edge_lod).a;
 	float edge = clamp(m.a - blurred, 0.0, 1.0);

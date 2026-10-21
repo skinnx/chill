@@ -44,6 +44,15 @@ uniform float lamp_fill_k = 1.1;
 // Touch-down brighten (GDD §8.3 tint): a little stronger than props so a still shows the press.
 uniform float tap_tint = 0.10;
 uniform float backlight_k = 0.38;
+// Round 4 (QA r3 c1: the cairn and edge décor out-shouted the sun stone): pieces outside the focal
+// ellipse (spots.json sun_stone, the ValueFrame ellipse) sit back, darker and less saturated.
+// The focal pool: the sun stone and its nappers (spots.json sun_stone 0.5, 0.565 of the 1080 x 1920
+// frame, lifted to the creatures' bodies), a little tighter than the ValueFrame ellipse.
+uniform vec2 focal_centre = vec2(540.0, 1100.0);
+uniform vec2 focal_radii = vec2(260.0, 180.0);
+uniform vec2 calm_from_to = vec2(0.9, 1.6);
+uniform float calm_dark = 0.08;
+uniform float calm_desat = 0.16;
 
 varying vec2 v_canvas;
 varying vec2 v_size;
@@ -91,6 +100,9 @@ void fragment() {
 	}
 	float o = clamp(1.0 - (m.r + m.g + m.b), 0.0, 1.0);
 	vec3 alb = m.r * v_lit + m.g * v_shade + m.b * v_detail + o * v_shade * line_k;
+	vec2 p_design = v_canvas - g_world_offset;
+	float calm = smoothstep(calm_from_to.x, calm_from_to.y, length((p_design - focal_centre) / focal_radii));
+	alb = mix(alb, vec3(wl_luma(alb)), calm_desat * calm) * (1.0 - calm_dark * calm);
 	vec3 c = light_object(alb, 1.0 - v_luv.y, smoothstep(0.80, 1.0, v_luv.y));
 	c = mix(c, c * g_shadow.rgb * SHADE_K, backlight_k * g_backlight * (0.45 + 0.55 * smoothstep(0.1, 0.9, v_luv.y)));
 	if (v_rim > 0.5) {
@@ -98,7 +110,6 @@ void fragment() {
 		float ahead = textureLod(TEXTURE, UV + kd * rim_px * TEXTURE_PIXEL_SIZE, 0.75).a;
 		c += g_key.rgb * g_rim * rim_k * m.a * (1.0 - ahead) * (1.0 - o);
 	}
-	vec2 p_design = v_canvas - g_world_offset;
 	if (g_cloud_shadow > 0.001) {
 		c = mix(c, c * g_shadow.rgb * SHADE_K, cloud_shadow(p_design));
 	}

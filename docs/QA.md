@@ -444,7 +444,7 @@ Run before every milestone (synthesis R4; 02 §7). Record the results in `qa/rep
 ## 8. Garden QA flags (fixtures and touch strip; owner: Flora & Décor)
 
 Fixtures (`scripts/garden/garden_fixture.gd`, applied before the world layers bind; use ONE `--fixture`):
-`--fixture=garden_mid` (50 stems at mixed stages in all five beds, every décor set, 7 gifts in the basket),
+`--fixture=garden_mid` (46 stems at mixed stages in all five beds, bed_2 as two masses with a rest gap, every décor set, 7 gifts in the basket),
 `--fixture=night_lanterns` (the same garden with 5 lanterns; pair with `--tod=1.0`),
 `--fixture=garden_full` (every stem and all 10 copies of every décor set: the draw-call / uniform-buffer stress case).
 
@@ -456,11 +456,88 @@ same frame, and plays S01 (+ its haptic).
 |---|---|---|
 | bed press | `--tod=0.4 --fixture=garden_mid --qa-garden=bed:90` | bed_2 at peak squash + tint, ground ring |
 | ready buds | `--tod=0.4 --fixture=garden_mid --qa-garden=ready` | the 3 front-most blooms of bed_2 as ready buds (1.6× halo, α 0.4) |
-| bud unfurl | `--tod=0.4 --fixture=garden_mid --qa-garden=unfurl:220` | 220 ms into the 600 ms unfurl after a tap: petals opening, 3-5 sparkles |
-| lantern tap | `--tod=1.0 --fixture=night_lanterns --qa-garden=lantern:200` | the first lantern at the top of its +60 % brighten, ring |
+| bud unfurl | `--tod=0.4 --fixture=garden_mid --qa-garden=unfurl:220` | 220 ms into the 600 ms unfurl after a tap: petals opening, the ready glow flaring (×1.7 α, 1.45× size), 3-5 sparkles (30 px), ring α 0.6 |
+| lantern tap | `--tod=1.0 --fixture=night_lanterns --qa-garden=lantern:200` | the first (right-most) lantern at the top of its +60 % brighten: halo blooms 1.5×, pool 150 → 190 px, warm ring α 0.6 |
 | pinwheel tap | `--tod=0.4 --fixture=garden_mid --qa-garden=pinwheel:200` | spin burst + dust puff, ring |
 | chime swing | `--tod=0.6 --fixture=garden_mid --qa-garden=chime:300` | the tubes mid-swing after the willow-branch tap |
 | décor placed | `--tod=0.4 --fixture=garden_mid --qa-garden=place:150` | a new pinwheel popping in (fade + pop 0.6 → 1) with its dust puff |
 
 `--qa-ready=<bed_id>` picks the bed for bed / ready / unfurl (default `bed_2`). Draw calls: add `--qa-drawcalls`
-(round 3: `garden_full` + HUD + 8 mosslings = 91-92 at golden).
+(round 3: `garden_full` + HUD + 8 mosslings = 91-92 at golden; round 4: `garden_full` + HUD + 6 mosslings = 89-90).
+
+Round 4 notes: beds and décor outside the focal ellipse (centre 540,1100, radii 260×180 design px) sit back
+(−10 % value, −14 % chroma, petal value contrast −28 % at full calm), so the sun stone wins the squint; flower sway is
+25 % lower and the gust front is the env's diagonal `gust_at` (beds, pinwheels, chimes and lanterns lag with depth).
+Best motion strip for the garden: `video --seconds=8 --tod=0.4 --fixture=garden_mid --qa-creatures=6` (a gust crosses
+the beds left to right every ~9.7 s; pinwheels spin up with it, chime tubes swing on their own pendulums).
+
+---
+
+## 9. Creature QA flags (fixtures, touch strip, lineup; owner: Creature team)
+
+Fixture: `--qa-creatures=<n>` (1-9) places n mosslings in varied behaviours at their favourite spots
+(`scripts/creature/creature_layer.gd` QA_FIXTURE): Puffmoss naps on the sun stone (focal, z's),
+Buttonbud nibbles a clover, Pebblepaw sits by the brook looking at the water, Honeyhum plays beside the
+stone with a held "^ ^" face, Dandelfluff plays on the hill crest, Primpip naps in the stump. Use 6 for
+the rater set. `--qa-walk` makes them walk in from their entries instead (arrive fade >= 300 ms).
+
+Touch strip (`--qa-touch=<species>:<tap|hold|release>:<ms>`): the touch happens 1.0 s after the fixture
+spawns and that mossling (and its stamps) FREEZES `<ms>` later. Keep `--frames=120`.
+
+| Frame | Command (add `--size=1080x2400 --seed=7 --fixture=garden_mid --qa-creatures=6 --qa-met=7 --frames=120 --out=...`) | Shows at peak |
+|---|---|---|
+| tap | `--tod=0.4 --qa-touch=buttonbud:tap:300` | ripple ring, press squash -> 1.08 stretch beat, "^ ^" eyes, 6 gold sparkles bursting from the silhouette, name tag rising |
+| hold / pet | `--tod=0.4 --qa-touch=pebblepaw:hold:1100` | pet squash 0.88, happy eyes + blush, 3-4 outlined hearts (~27 dp) streaming from the head (1 per 220 ms) |
+| release | `--tod=0.4 --qa-touch=pebblepaw:release:250` | the 5-heart bouquet (~31 dp) and the 1.04 overshoot |
+| napper stir | `--tod=0.4 --qa-touch=puffmoss:tap:200` | a gentle ripple, ear twitch, one sparkle; the z's pause (never wakes) |
+| Album at night | `--tod=0.95 --fixture=night_lanterns --qa-friend=puffmoss` | the portrait in the fixed studio light (day palette), never a night blob |
+
+Lineup (`scenes/creatures/lineup.tscn`, all 12 species awake and asleep on the live meadow colours):
+`tools/qa/capture.sh still --scene=res://scenes/creatures/lineup.tscn --size=1080x2400 --seed=7 --frames=20 --tod=0.4 --lineup-pose=both --out=...`
+(`--tod=0.6` golden rim, `--tod=1.0` moon rim). Close-ups: `--lineup-only=pebblepaw,honeyhum --lineup-scale=2.2 --lineup-pose=awake`
+(1:1 / 200 % fibre check); `--lineup-pose=happy`, `--lineup-live` (blinks / fidgets on), `--lineup-labels=0`.
+
+Draw calls (round 4): `garden_full` + HUD + 6 mosslings = 90 at golden (`--qa-draw-audit`: Creatures 11).
+
+### Environment touch + value flags (round 4, env)
+
+| Frame | Command (add `--size=1080x2400 --seed=7 --qa-creatures=6 --fixture=garden_mid --out=...`) | Shows |
+|---|---|---|
+| brook tap | `--tod=0.4 --qa-brook-tap=640@150` | ripple rings (3, flattened) + TouchRing bloom/sparkles on the water, 150 ms into the 380 ms ripple; `@<ms>` picks the moment (peak ≈ 120–180 ms) |
+| prop tap | `--tod=0.4 --qa-prop-tap=mailbox@120` (or `basket`, `wind_chime_branch`) | peak squash + tint + ground ring |
+| both in one still | `--tod=0.4 --qa-brook-tap=640@150 --qa-prop-tap=basket@90` | the two env touch beats side by side |
+| draw calls | `--tod=0.6 --fixture=garden_full --qa-draw-audit --frames=200` | per-layer draw calls in the log (`qa-draw-audit:` lines; round 4: 90 total) |
+
+`--debug-ripple=<x>` is the older ripple-only alias. Real brook taps now also spawn the flattened TouchRing (S01 + S06 cues unchanged).
+
+## 10. UI QA flags (HUD, dock, sheets, overlays; owner: UI)
+
+All flags are user args after `--` (capture.sh passes them through); parsed in `scripts/ui/hud_controller.gd`.
+Base: `tools/qa/capture.sh still --size=1080x2400 --seed=7 --frames=120 --no-save --fixture=garden_mid --qa-creatures=6 --qa-met=7 --out=...`
+
+| Still | Add | Shows |
+|---|---|---|
+| Garden sheet | `--tod=0.4 --qa-sheet=garden` (`--qa-tab=1` Décor) | live glass sheet, raised segmented thumb, hugging Plant / Place pills, price chips |
+| Album grid | `--tod=0.4 --qa-sheet=album` (`--qa-tab=1` Photos, `2` Postcards) | 12 portrait wells (studio light, studio diorama) |
+| Album friend at night | `--fixture=night_lanterns --tod=0.95 --qa-friend=puffmoss` | night chrome dock/chips, neutral sheet, crisp studio-lit portrait |
+| Basket / Settings | `--qa-sheet=basket` / `--qa-sheet=settings` | — |
+| Recap / new friend / leave / toast / captions | `--qa-recap`, `--qa-newfriend=honeyhum`, `--qa-leave`, `--qa-toast`, `--qa-captions` | overlays (no auto-dismiss) |
+| Ambient watch | `--qa-ambient` | HUD hidden |
+| Night chrome | `--fixture=night_lanterns --tod=1.0` (also dusk `--tod=0.82`) | dim warm-navy glass, night_ink labels/icons (switch at g_lights >= 0.6, back <= 0.4) |
+| vi + large text | `--set=language:vi --set=text_scale:200` | reflow, +12 % vi line height |
+
+Touch strip (UI): `--qa-press=<target> --qa-press-t=<ms>` freezes a touch-down `<ms>` after it happened (press dip
+peaks at 80 ms, ripple runs 380 ms; best stills 60-120 ms).
+
+| Frame | Add | Shows at peak |
+|---|---|---|
+| dock tab | `--tod=0.4 --qa-press=garden --qa-press-t=60` | squash on the baseline, press capsule, ripple under icon + label |
+| dock tab at night | `--fixture=night_lanterns --tod=1.0 --qa-press=garden --qa-press-t=60` | light capped ripple (0.12) on the night capsule |
+| primary pill | `--tod=0.4 --qa-sheet=garden --qa-press=primary --qa-press-t=90` | pressed primary_deep fill, lighter-primary splash UNDER the white label (>= 5.2:1 at the crest) |
+| segmented tab | `--tod=0.4 --qa-sheet=album --qa-press=tab --qa-press-t=90` | ripple inside the track segment |
+| friend card | `--tod=0.4 --qa-sheet=album --qa-press=card --qa-press-t=90` | card dip + ripple |
+| toggle | `--tod=0.4 --qa-sheet=settings --qa-press=toggle --qa-press-t=90` | row press + thumb |
+| eye / close | `--qa-press=eye` / `--qa-sheet=garden --qa-press=close` | plate press |
+
+Draw calls: `--qa-drawcalls --frames=200` prints `qa-drawcalls: <n>`. Round 4: HUD-only golden `garden_full` 86-87;
+with a sheet open the sheet adds ~30 (Garden) to ~57 (Album grid; rows scrolled out of the window are culled).

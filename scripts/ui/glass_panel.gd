@@ -20,8 +20,12 @@ const PILL := -1.0
 ## FrameGovernor tier from which live glass is replaced by faux.
 const LIVE_MAX_TIER := 0
 
-## Shared faux materials by "elevation|radius|fill".
+## Shared faux materials by "elevation|radius|fill|night".
 static var _faux_shared: Dictionary = {}
+## Night chrome blend 0..1 (HudController crossfades it; palettes ui_alpha.night_chrome).
+static var night_k: float = 0.0
+## Live sheet materials (at most one in use), for the night veil.
+static var _live_mats: Array[ShaderMaterial] = []
 
 ## Corner radius in px (PILL = h/2).
 var radius: float = PILL:
@@ -33,6 +37,9 @@ var elevation: int = UiTokens.E2:
 	set(v):
 		elevation = v
 		_refresh_shape()
+## HUD chrome (top chips, dock): follows the night chrome scheme (dim glass after dark). Set
+## before the panel enters the tree.
+var night_aware: bool = false
 ## Live glass (screen read) instead of faux. Only the open sheet sets this.
 var live: bool = false:
 	set(v):
@@ -83,6 +90,10 @@ func _refresh_material() -> void:
 			_mat.set_shader_parameter(&"u_tint_max", float(ad.get("max", 0.9)))
 			_mat.set_shader_parameter(&"u_luma_lo", float(ad.get("backdrop_luma_lo", 0.05)))
 			_mat.set_shader_parameter(&"u_luma_hi", float(ad.get("backdrop_luma_hi", 0.45)))
+			_mat.set_shader_parameter(&"u_night_tint", float(night_tokens().get("live_tint", 0.94)))
+			_mat.set_shader_parameter(&"u_live_night", night_k)
+			_live_mats = _live_mats.filter(func(m: ShaderMaterial) -> bool: return is_instance_valid(m))
+			_live_mats.append(_mat)
 		_glass.material = _mat
 	_refresh_shape()
 
@@ -90,8 +101,8 @@ func _refresh_material() -> void:
 ## The faux-glass material shared by every surface with the same elevation, radius rule and fill
 ## (the shader derives each surface's size from its own quad), so consecutive faux surfaces
 ## batch: the HUD chips and the dock pill draw in one call (Art Bible §4.19 budget).
-static func _faux_material(level: int, radius_px: float, fill: float) -> ShaderMaterial:
-	var key := "%d|%.1f|%.3f" % [level, radius_px, fill]
+static func _faux_material(level: int, radius_px: float, fill: float, night: bool = false) -> ShaderMaterial:
+	var key := "%d|%.1f|%.3f|%s" % [level, radius_px, fill, "n" if night else "d"]
 	var hit: Variant = _faux_shared.get(key)
 	if hit is ShaderMaterial:
 		return hit as ShaderMaterial
@@ -107,6 +118,11 @@ static func _faux_material(level: int, radius_px: float, fill: float) -> ShaderM
 	m.set_shader_parameter(&"u_shadow_dy", shape.y)
 	m.set_shader_parameter(&"u_radius", radius_px)
 	m.set_shader_parameter(&"u_fill", fill)
+	m.set_meta(&"night_aware", night)
+	if night:
+		var nt := night_tokens()
+		m.set_shader_parameter(&"u_fill_night", maxf(fill, float(nt.get("fill", 0.88))))
+		m.set_shader_parameter(&"u_night", night_k)
 	_faux_shared[key] = m
 	return m
 
@@ -127,11 +143,33 @@ static func _apply_common(m: ShaderMaterial) -> void:
 	m.set_shader_parameter(&"u_rim_tl", UiTokens.alpha(&"rim_top_left"))
 	m.set_shader_parameter(&"u_rim_br", UiTokens.alpha(&"rim_bottom_right"))
 	m.set_shader_parameter(&"u_inner_shadow", UiTokens.alpha(&"inner_bottom_shadow"))
+	m.set_shader_parameter(&"u_surface_night", UiTokens.color(&"night_glass"))
+	m.set_shader_parameter(&"u_rim_night", UiTokens.color(&"night_glass_rim"))
+
+
+## palettes.json ui_alpha.night_chrome.
+static func night_tokens() -> Dictionary:
+	return UiTokens.alpha_section(&"night_chrome")
+
+
+## Night chrome blend [param k] 0..1: every night-aware faux surface (chips, dock) and the live
+## sheet's night veil follow it.
+static func set_night(k: float) -> void:
+	night_k = clampf(k, 0.0, 1.0)
+	for m: Variant in _faux_shared.values():
+		var sm := m as ShaderMaterial
+		if sm != null and bool(sm.get_meta(&"night_aware", false)):
+			sm.set_shader_parameter(&"u_night", night_k)
+	_live_mats = _live_mats.filter(func(m: ShaderMaterial) -> bool: return is_instance_valid(m))
+	for lm: ShaderMaterial in _live_mats:
+		lm.set_shader_parameter(&"u_live_night", night_k)
 
 
 ## Releases the shared faux materials (HUD exit).
 static func release_shared() -> void:
 	_faux_shared = {}
+	_live_mats.clear()
+	night_k = 0.0
 
 
 func _refresh_shape() -> void:
@@ -152,7 +190,7 @@ func _refresh_shape() -> void:
 	# faux: the radius rule (pill, or a fixed px radius) and the fill pick the shared material
 	var opaque := Settings.get_bool(Settings.REDUCE_TRANSPARENCY) or live
 	var fill := UiTokens.alpha(&"reduce_transparency_fill") if opaque else UiTokens.alpha(&"glass_faux_fill")
-	var m := _faux_material(elevation, PILL if radius < 0.0 else radius, fill)
+	var m := _faux_material(elevation, PILL if radius < 0.0 else radius, fill, night_aware)
 	if _mat != m:
 		_mat = m
 		_glass.material = m

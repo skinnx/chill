@@ -3,9 +3,12 @@
 // g_sun_dir and the light elevation, 2 Hz), tinted g_shadow, never black. One shared material.
 // Quad contract (ContactShadow): local VERTEX px with the foot at the origin.
 shader_type canvas_item;
-render_mode blend_mix, unshaded;
+// Round 4 (QA r3: golden shadows were a lavender alpha wash): the shadow MULTIPLIES the ground with
+// a luminance-normalised shadow tint (desaturated with backlight), so it darkens whatever is under
+// it and keeps that surface's own hue.
+render_mode blend_mul, unshaded;
 
-#include "res://shaders/inc/globals.gdshaderinc"
+#include "res://shaders/inc/world_light.gdshaderinc"
 #include "res://shaders/inc/finish.gdshaderinc"
 
 // x contact half-width px, y contact half-height px, z object height px, w alpha multiplier.
@@ -22,6 +25,10 @@ uniform float cast_len_k = 1.0;
 uniform float backlight_gain = 0.5;
 // The far end of a long shadow fades over this fraction of its length (soft, lost edge).
 uniform vec2 cast_fade_band = vec2(0.55, 1.0);
+// Multiply target luminance and strength gain (alpha-blend look matched at day, darker cores).
+uniform float mul_luma = 0.40;
+uniform float mul_gain = 1.35;
+uniform float mul_max = 0.85;
 
 varying vec2 v_local;
 
@@ -57,5 +64,8 @@ void fragment() {
 	if (a < 0.002) {
 		discard;
 	}
-	COLOR = vec4(g_shadow.rgb + tpdf(FRAGCOORD.xy), clamp(a + tpdf(FRAGCOORD.xy + 3.1), 0.0, 1.0));
+	vec3 tint = shadow_tint();
+	vec3 target = clamp(tint / max(wl_luma(tint), 1e-3) * mul_luma, 0.0, 1.0);
+	vec3 m = mix(vec3(1.0), target, clamp(a * mul_gain, 0.0, mul_max));
+	COLOR = vec4(m + tpdf(FRAGCOORD.xy), 1.0);
 }

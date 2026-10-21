@@ -1,9 +1,11 @@
 class_name Segmented
 extends Control
-## Segmented control (Art Bible §9.5: Garden tabs, Album tabs, Music, Haptics, Language). A
-## surface_hi track (never glass on glass) with a primary selection pill that glides on the `move`
-## spring; the selected label is surface_hi on primary_pressed (5.86:1), the others ink. Every segment is a
-## full-height hit; touch-down presses that segment (PressFeedback), the change plays S15 + TICK.
+## Segmented control (Art Bible §9.5: Garden tabs, Album tabs, Music, Haptics, Language). Round 4
+## (QA r3: saturated blue thumbs flooded the sheets, V2): a recessed primary_tint track with a
+## raised surface_hi thumb (e1, 1 dp primary hairline, a light top lip) that glides on the `pop`
+## spring with a small M3-Expressive overshoot; the selected label is primary_deep (7.0:1 on
+## surface_hi), the others ink_soft (8.6:1 on primary_tint). Every segment is a full-height hit;
+## touch-down presses that segment (PressFeedback), the change plays S15 + TICK.
 
 # Data boundary: values read from JSON / Dictionaries are Variants and each one is converted
 # explicitly (int(), float(), String() ...) where it is read; the analyzer still flags every
@@ -18,6 +20,8 @@ const HAIRLINE_DP := 1.0
 const CUE_SELECT := &"S15"
 ## Art Bible §9.5: the 120 px control's hit runs 24 px above and below it (168 = 56 dp).
 const HIT_GROW := 24.0
+const THUMB_LINE_ALPHA := 0.18
+const SPRING := &"pop"
 
 var index: int = 0
 var _labels: Array[Label] = []
@@ -84,7 +88,7 @@ func select(i: int, animate: bool = true) -> void:
 	_recolor()
 	if animate:
 		if _spring == null:
-			_spring = Motion.spring(&"move", _pill_x)
+			_spring = Motion.spring(SPRING, _pill_x)
 		_spring.target = _seg_x(i)
 		set_process(true)
 		FrameGovernor.hold_for(Motion.duration(&"standard"))
@@ -115,6 +119,10 @@ func _relayout() -> void:
 		_hits[i].position = Vector2(_seg_x(i), -HIT_GROW)
 		_hits[i].size = Vector2(w, size.y + HIT_GROW * 2.0)
 		_hits[i].pivot_offset = _hits[i].size * 0.5
+		# the ripple stays inside the visible segment (the hit grows past the track)
+		var seg := Rect2(Vector2(0.0, HIT_GROW), Vector2(w, size.y)).grow(-INSET)
+		_hits[i].set_meta(PressFeedback.META_RIPPLE_RECT, seg)
+		_hits[i].set_meta(PressFeedback.META_RIPPLE_RADIUS, seg.size.y * 0.5)
 		_labels[i].position = Vector2(0.0, HIT_GROW)
 		_labels[i].size = Vector2(w, size.y)
 	if _spring == null or _spring.is_at_rest():
@@ -125,14 +133,16 @@ func _relayout() -> void:
 func _recolor() -> void:
 	for i in _labels.size():
 		_labels[i].add_theme_color_override(&"font_color",
-				UiTokens.color(&"surface_hi") if i == index else UiTokens.color(&"ink"))
+				UiTokens.color(&"primary_deep") if i == index else UiTokens.color(&"ink_soft"))
 
 
 func _draw() -> void:
-	var track := UiTokens.fill_box(UiTokens.color(&"surface_hi"), size.y * 0.5, UiTokens.E1)
+	var track := UiTokens.fill_box(UiTokens.color(&"primary_tint"), size.y * 0.5, UiTokens.E0)
 	track.border_color = UiTokens.tinted(&"ink", UiTokens.alpha(&"divider"))
 	track.set_border_width_all(roundi(HAIRLINE_DP * UiTokens.PX_PER_DP))
 	draw_style_box(track, Rect2(Vector2.ZERO, size))
 	var ph := size.y - INSET * 2.0
-	var pill := UiTokens.fill_box(UiTokens.color(&"primary_pressed"), ph * 0.5, UiTokens.E1)
-	draw_style_box(pill, Rect2(Vector2(_pill_x, INSET), Vector2(_seg_w(), ph)))
+	var thumb := UiTokens.fill_box(UiTokens.color(&"surface_hi"), ph * 0.5, UiTokens.E1)
+	thumb.border_color = UiTokens.tinted(&"primary", THUMB_LINE_ALPHA)
+	thumb.set_border_width_all(roundi(HAIRLINE_DP * UiTokens.PX_PER_DP))
+	draw_style_box(thumb, Rect2(Vector2(_pill_x, INSET), Vector2(_seg_w(), ph)))

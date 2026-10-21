@@ -73,6 +73,9 @@ var _ambient_icon: bool = false
 var _screen: Vector2 = Vector2(1080, 1920)
 var _atlas: Dictionary = {}
 var _safe_top: float = 0.0
+## Night chrome blend (HudController): labels lerp to night_ink, icons swap at the midpoint.
+var _night_k: float = 0.0
+var _night_icons: bool = false
 
 
 func _init() -> void:
@@ -293,8 +296,28 @@ func dew_target_point() -> Vector2:
 func _icon(name: StringName, px: float) -> Texture2D:
 	if _atlas.is_empty():
 		_atlas = Icons.hud_atlas()
-	var t: Variant = _atlas.get(Icons.atlas_key(name, px))
-	return t if t is Texture2D else Icons.texture(name, px)
+	var t: Variant = _atlas.get(Icons.atlas_key(name, px, false, _night_icons))
+	return t if t is Texture2D else Icons.texture(name, px, false, _night_icons)
+
+
+## Night chrome (palettes ui_alpha.night_chrome): the chips' glass follows GlassPanel.night_k;
+## here the numerals and the peek label lerp ink -> night_ink, the badge plate surface_hi ->
+## night_capsule, and the icons switch to their night variant at the midpoint of the crossfade.
+func set_night(k: float) -> void:
+	_night_k = clampf(k, 0.0, 1.0)
+	var ink := UiTokens.color(&"ink").lerp(UiTokens.color(&"night_ink"), _night_k)
+	for l: Label in [_dew_label, _time_label]:
+		if l != null:
+			l.add_theme_color_override(&"font_color", ink)
+	var icons_night := _night_k >= 0.5
+	if icons_night != _night_icons:
+		_night_icons = icons_night
+		if _dew_icon != null:
+			_dew_icon.texture = _icon(&"dew", ICON_PX)
+			_set_time(_phase, _weather, false)
+			set_ambient_icon(_ambient_icon)
+	if _badge != null:
+		_badge.queue_redraw()
 
 
 func _icon_rect(name: StringName, px: float) -> TextureRect:
@@ -307,6 +330,7 @@ func _icon_rect(name: StringName, px: float) -> TextureRect:
 func _build_dew() -> void:
 	dew_chip = GlassPanel.new()
 	dew_chip.name = "DewChip"
+	dew_chip.night_aware = true
 	add_child(dew_chip)
 	_dew_icon = _icon_rect(&"dew", ICON_PX)
 	_dew_icon.position = Vector2(DEW_ICON_X, (CHIP_H - ICON_PX) * 0.5)
@@ -325,6 +349,7 @@ func _build_dew() -> void:
 func _build_time() -> void:
 	time_chip = GlassPanel.new()
 	time_chip.name = "TimeChip"
+	time_chip.night_aware = true
 	time_chip.clip_contents = false
 	add_child(time_chip)
 	_time_label = Label.new()
@@ -342,7 +367,8 @@ func _build_time() -> void:
 	_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_badge.size = Vector2(BADGE_PX, BADGE_PX)
 	_badge.draw.connect(func() -> void:
-		_badge.draw_style_box(UiTokens.fill_box(UiTokens.color(&"surface_hi"), BADGE_PX * 0.5, UiTokens.E1),
+		var plate := UiTokens.color(&"surface_hi").lerp(UiTokens.color(&"night_capsule"), _night_k)
+		_badge.draw_style_box(UiTokens.fill_box(plate, BADGE_PX * 0.5, UiTokens.E1),
 				Rect2(Vector2.ZERO, Vector2(BADGE_PX, BADGE_PX))))
 	time_chip.add_child(_badge)
 	_badge_icon = _icon_rect(&"breeze", BADGE_ICON_PX)
@@ -359,6 +385,7 @@ func _build_eye() -> void:
 	eye = b
 	add_child(eye)
 	_eye_glass = GlassPanel.new()
+	_eye_glass.night_aware = true
 	eye.add_child(_eye_glass)
 	_eye_icon = _icon_rect(&"watch", ICON_PX)
 	_eye_icon.position = Vector2((CHIP_H - ICON_PX) * 0.5, (CHIP_H - ICON_PX) * 0.5)

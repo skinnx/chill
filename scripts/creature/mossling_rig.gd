@@ -227,7 +227,32 @@ func make_fur_material() -> ShaderMaterial:
 	var gust_sp: Dictionary = spatial.get("gust", {})
 	mat.set_shader_parameter(&"u_wind_k", Vector4(_k(loops, "ear_wind"), _k(loops, "antenna_bob"),
 		_k(loops, "gust"), float(gust_sp.get("spacing_px", 1742.0))))
+	mat.set_shader_parameter(&"u_rain_amb", rain_ambient_mult())
 	return mat
+
+
+## world.json weather "rain" ambient_mult (the fur divides it back out, QA r3 rain).
+func rain_ambient_mult() -> float:
+	var w: Dictionary = content.weather_by_id.get(&"rain", {})
+	return maxf(float(w.get("ambient_mult", 1.0)), 0.05)
+
+
+## UI portraits: a fixed studio light (creature_rig.json view.studio, from its palette phase)
+## whatever the world time, so the Album friend never renders as a night blob (QA r3).
+func apply_studio(mat: ShaderMaterial) -> void:
+	var st: Dictionary = view().get("studio", {})
+	var phase := String(st.get("phase", "day"))
+	var tod: Dictionary = content.palettes.get("tod", {})
+	var pal: Dictionary = (tod.get("palettes", {}) as Dictionary).get(phase, {})
+	var sc: Dictionary = (tod.get("scalars", {}) as Dictionary).get(phase, {})
+	var dir: Array = st.get("key_dir", [-0.55, 0.83])
+	mat.set_shader_parameter(&"u_studio", 1.0)
+	mat.set_shader_parameter(&"u_studio_ambient", Color.html(String(pal.get("ambient", "#FFFFFF"))))
+	mat.set_shader_parameter(&"u_studio_key", Color.html(String(pal.get("key", "#FFF1C2"))))
+	mat.set_shader_parameter(&"u_studio_shadow", Color.html(String(pal.get("shadow", "#3B6C8C"))))
+	mat.set_shader_parameter(&"u_studio_light", Vector4(float(sc.get("backlight", 0.1)),
+		float(st.get("rim", sc.get("rim", 0.35))), float(dir[0]), float(dir[1])))
+	mat.set_shader_parameter(&"u_studio_elev", float(st.get("elevation", 0.8)))
 
 
 ## Binds the fur material's palette grass slots (nestle blades) to [param feed]; the owner calls
@@ -259,7 +284,8 @@ func make_fx_materials() -> Dictionary:
 	var spec := {
 		MosslingFx.KIND_HEART: [MosslingFx.HEART_HALF_PX, heart, heart.darkened(0.12), spark],
 		MosslingFx.KIND_Z: [MosslingFx.Z_HALF_PX, zzz, zzz, zzz],
-		MosslingFx.KIND_SPARKLE: [MosslingFx.SPARKLE_HALF_PX, spark, spark, spark],
+		# round 4: a warm gold body with a cream core, so a sparkle reads over pale fur too
+		MosslingFx.KIND_SPARKLE: [MosslingFx.SPARKLE_HALF_PX, spark, _creature_token("cr_sun", spark), spark],
 		MosslingFx.KIND_RING: [1.0, spark, spark, spark],
 		MosslingFx.KIND_UMBRELLA: [MosslingFx.UMBRELLA_HALF_PX, leaf[0], leaf[1], leaf[2]],
 	}
@@ -275,6 +301,12 @@ func make_fx_materials() -> Dictionary:
 		mat.set_shader_parameter(&"u_c", v[3])
 		out[kind] = mat
 	return out
+
+
+## A palettes.json creatures token (cr_*), or [param fallback].
+func _creature_token(id: String, fallback: Color) -> Color:
+	var tokens: Dictionary = (content.palettes.get("creatures", {}) as Dictionary).get("tokens", {})
+	return Color.html(String(tokens[id])) if tokens.has(id) else fallback
 
 
 ## Colour of an FX element from palettes.json fx (hearts coral, z's, sparkles).

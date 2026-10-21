@@ -44,7 +44,22 @@ uniform float cirrus_speed = 3.0;
 uniform vec2 cirrus_band = vec2(-420.0, 420.0);
 // L1 parallax: the celestial bodies and stars shift by 0.02 x the camera offset.
 uniform vec2 u_cam_offset = vec2(0.0);
+// Round 4 (V2 budget, ADR 0001 #1): the zenith keeps its hue but its HSV saturation is capped, so
+// the calm-colour budget is spent on the darker foreground frame (directive 1) instead of the sky.
+uniform float sat_cap = 0.44;
+// Round 4 (QA r3: the big sky was dead space): a loose trio of distant birds glides across the sky
+// by day (dawn .. golden): 12.5 px/s (k 5 over a 1500 px loop: seamless at the 600 s wrap), slow
+// 0.4 Hz wing beats, drawn as a faint darker-sky stroke. Hidden at night and in rain.
+uniform vec2 bird_band = vec2(330.0, 560.0);
+uniform float bird_alpha = 0.5;
+uniform float bird_span_px = 15.0;
 
+const int BIRD_COUNT = 3;
+const float BIRD_LOOP_PX = 1500.0;
+const float BIRD_K = 5.0;
+const float BIRD_BOB_K = 36.0;
+const float BIRD_FLAP_K = 240.0;
+const float BIRD_DARK = 0.62;
 const float LIMB_PX = 3.0;
 const float LIMB_DARKEN = 0.04;
 const float DISC_AA_PX = 1.5;
@@ -228,6 +243,27 @@ void fragment() {
 		}
 	}
 
+	float bird_vis = g_celestial.x * (1.0 - g_rain) * (1.0 - g_stars) * bird_alpha;
+	if (bird_vis > 0.001) {
+		float bw = 0.0;
+		for (int i = 0; i < BIRD_COUNT; i++) {
+			float fi = float(i);
+			float bx = mod(g_time * BIRD_LOOP_PX * BIRD_K / LOOP_S + fi * 61.0 + 910.0, BIRD_LOOP_PX) - 210.0;
+			float by = mix(bird_band.x, bird_band.y, 0.35 + 0.22 * fi) + 7.0 * sin(TAU * BIRD_BOB_K / LOOP_S * g_time + fi * 2.1)
+					- fi * 14.0;
+			vec2 q = p - vec2(bx + fi * 38.0, by);
+			float span = bird_span_px * (1.0 - 0.18 * fi);
+			if (abs(q.x) < span * 1.3 && abs(q.y) < span) {
+				float flap = sin(TAU * BIRD_FLAP_K / LOOP_S * g_time + fi * 1.9);
+				float ax = abs(q.x) / span;
+				float wing_y = -span * (0.10 + 0.32 * flap) * ax + span * 0.38 * ax * ax;
+				float thick = mix(1.25, 0.35, ax);
+				bw = max(bw, (1.0 - smoothstep(thick * 0.6, thick + 0.6, abs(q.y - wing_y))) * (1.0 - smoothstep(0.85, 1.0, ax)));
+			}
+		}
+		c = mix(c, c * BIRD_DARK, bw * bird_vis);
+	}
+
 	// Overcast (rain): soft felt-grey wool. Near-isotropic, domain-warped fBm grouped into large
 	// banks by a low-frequency mask; lit along upper edges with a small value range; never darker
 	// than the clear sky it covers at night (QA round 1). Drifts left at 16 px/s (1920 px tile).
@@ -248,5 +284,10 @@ void fragment() {
 		c = mix(c, cc, bank * 0.88);
 	}
 
+	float mx = max(c.r, max(c.g, c.b));
+	float mn = min(c.r, min(c.g, c.b));
+	if (mx > 1e-4 && (mx - mn) / mx > sat_cap) {
+		c = mix(vec3(mx), c, sat_cap * mx / max(mx - mn, 1e-4));
+	}
 	COLOR = vec4(finish(c, p / PX_PER_DP, FRAGCOORD.xy, GRAIN_SKY), 1.0);
 }

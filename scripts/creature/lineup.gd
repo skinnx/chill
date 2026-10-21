@@ -25,7 +25,7 @@ const COLUMNS := 4
 ## Fraction of a cell the tallest creature may fill.
 const FILL := 0.7
 const LABEL_GAP_PX := 18.0
-const LABEL_SCALE := 0.6
+const LABEL_SCALE := 0.78
 const LABEL_MAX_W := 0.7
 ## Tallest cell height as a multiple of its width (keeps close-ups large and centred).
 const MAX_CELL_ASPECT := 1.5

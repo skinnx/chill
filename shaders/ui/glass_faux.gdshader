@@ -15,6 +15,7 @@ render_mode unshaded;
 #include "res://shaders/ui/glass.gdshaderinc"
 
 uniform float u_fill = 0.84;        // ui_alpha.glass_faux_fill / reduce_transparency_fill
+uniform float u_fill_night = 0.88;  // ui_alpha.night_chrome.fill (1.0 under Reduce Transparency)
 
 varying vec2 v_quad;
 
@@ -29,7 +30,7 @@ void fragment() {
 	vec2 sz = max(quad - vec2(2.0 * u_margin), vec2(1.0));
 	float d = glass_sd(sz);
 	float cov = clamp(0.5 - d, 0.0, 1.0);
-	vec4 g = glass_dress(u_surface.rgb, u_fill, d, sz);
+	vec4 g = glass_dress(mix(u_surface.rgb, u_surface_night.rgb, u_night), mix(u_fill, u_fill_night, u_night), d, sz);
 	vec4 o = over_shadow(g.rgb, g.a * cov, glass_shadow(sz));
 	vec3 c = finish(o.rgb, v_local / PX_PER_DP, FRAGCOORD.xy, GRAIN_GLASS);
 	COLOR = vec4(c, o.a * COLOR.a);

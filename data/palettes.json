@@ -462,7 +462,12 @@
 		"toggle_off_border": "#5D596E",
 		"primary_deep": "#2E4CA6",
 		"ink_soft": "#47445A",
-		"hud_night_tint": "#BEC2D6"
+		"hud_night_tint": "#BEC2D6",
+		"night_glass": "#353A56",
+		"night_glass_rim": "#7A80A8",
+		"night_ink": "#EDEAF2",
+		"night_capsule": "#484E76",
+		"night_track": "#454B6E"
 	},
 	"ui_alpha": {
 		"glass_live_tint": 0.66,
@@ -495,7 +500,16 @@
 		"divider": 0.1,
 		"icon_duotone_secondary": 0.4,
 		"backdrop_saturation": 1.15,
-		"glass_lod": 3.5
+		"glass_lod": 3.5,
+		"night_chrome": {
+			"doc": "round 4 (QA r3 night glare): after dark the HUD chrome (top chips + dock) switches to a dim warm-navy glass (ui_derived.night_glass at fill) with night_ink labels and icons; on/off are g_lights thresholds (hysteresis), the switch crossfades over durations_ms.hud_ambient_fade. Sheets keep their light glass, dimmed neutrally by sheet_dim x g_lights and with the live tint held at live_tint (no moon / halo bleed).",
+			"on": 0.6,
+			"off": 0.4,
+			"fill": 0.88,
+			"sheet_dim": 0.08,
+			"live_tint": 0.94,
+			"icon_secondary": 0.6
+		}
 	},
 	"icon_accent": {
 		"garden": "leaf",

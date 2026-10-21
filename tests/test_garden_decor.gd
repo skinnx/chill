@@ -150,3 +150,33 @@ func test_lantern_pools_fit_the_lamp_registry() -> void:
 	# Glow mushrooms (1) + lantern pools + up to max_on_water boat candles must fit u_lamps[12].
 	var boats := int(c.motion["ui"]["leaf_boat"]["max_on_water"])
 	assert_true(1 + DecorLayer.MAX_LANTERN_POOLS + boats <= LampRegistry.MAX_LAMPS)
+
+
+## Round 4: the gust front is diagonal (world_light.gdshaderinc gust_at): a nearer piece at the same
+## x sees the same envelope shifted along x by its depth.
+func test_gust_front_lags_with_depth() -> void:
+	var far := Vector2(300.0, DecorLayer.GUST_DEPTH_Y0)
+	var near := Vector2(300.0, DecorLayer.GUST_DEPTH_Y0 + 200.0)
+	assert_almost_eq(DecorLayer.gust_at_pos(far, 42.0), DecorLayer.gust_at(300.0, 42.0), 1e-6)
+	var shifted := 300.0 - 200.0 * DecorLayer.GUST_DEPTH_LAG
+	assert_almost_eq(DecorLayer.gust_at_pos(near, 42.0), DecorLayer.gust_at(shifted, 42.0), 1e-6)
+
+
+## Round 4 (QA r3 V4): the left bed of the mid garden is two masses with a rest gap at its centre.
+func test_mid_garden_left_bed_is_two_masses() -> void:
+	var st := _fresh_state()
+	GardenFixture.apply(c, st, GardenFixture.MID)
+	var offsets: Array = c.beds_by_id[&"bed_2"]["stems"]
+	var left := 0
+	var right := 0
+	for s: Dictionary in st.stems:
+		if String(s["bed"]) != "bed_2":
+			continue
+		var x := float((offsets[int(s["slot"])] as Array)[0])
+		assert_true(absf(x) > 0.015, "no stem in the rest gap (slot %d)" % int(s["slot"]))
+		if x < 0.0:
+			left += 1
+		else:
+			right += 1
+	assert_eq(left + right, 8, "bed_2 is about 30 % lighter than round 3 (12)")
+	assert_true(left >= 3 and right >= 3, "two masses")

@@ -10,8 +10,9 @@ extends Node2D
 ##   BrookLayer.current.add_ripple(design_pos, 1.0)       # leaf boat wake, a creature pawing water
 ##   BrookLayer.current.set_stone(&"stone_3", design_pos, 27.0) / remove_stone(&"stone_3")
 ##
-## QA user arg: --debug-ripple=<x> shows a tap ripple at design x, 150 ms into its 380 ms life, so a
-## frozen-time still (tools/qa/capture.sh) can show it.
+## QA user arg: --qa-brook-tap=<x>[@<ms>] taps the brook at design x as a touch would (ripple +
+## flattened TouchRing), both held <ms> into their life (default 150 ms of 380 ms) for a
+## frozen-time still (tools/qa/capture.sh). --debug-ripple=<x> is the older alias (ripple only).
 
 # Data boundary: values read from JSON / Dictionaries are Variants and each one is converted
 # explicitly (int(), float(), String() ...) where it is read; the analyzer still flags every
@@ -24,7 +25,7 @@ signal tapped(design_pos: Vector2)
 const SHADER_PATH := "res://shaders/world/water.gdshader"
 ## Art Bible §4.7: one segment per 12 px of arc length; 10 px damp banks.
 const SEGMENT_PX := 12.0
-const BANK_PX := 14.0
+const BANK_PX := 22.0
 ## Wide-screen bleed on the left (the brook leaves at the left edge, Art Bible §2.1).
 const LEFT_BLEED_X := -420.0
 const MAX_RIPPLES := 4
@@ -41,6 +42,9 @@ const CUE_TOUCH := &"S01"
 const CUE_STREAM := &"S06"
 const ARG_DEBUG_RIPPLE := "--debug-ripple="
 const DEBUG_RIPPLE_AGE_S := 0.15
+const ARG_QA_TAP := "--qa-brook-tap="
+## The touch ring lies on the water: flattened like the ripple (water.gdshader RIPPLE_SQUASH x 1.3).
+const RING_SQUASH := 0.45
 
 static var current: BrookLayer = null
 
@@ -112,6 +116,20 @@ func _ready() -> void:
 			add_ripple(Vector2(x, centre_y_at(x)), 1.0)
 			_ripples[(_next_ripple + MAX_RIPPLES - 1) % MAX_RIPPLES].z = Clock.g_time - DEBUG_RIPPLE_AGE_S
 			_mat.set_shader_parameter(&"u_ripples", _ripples)
+		elif a.begins_with(ARG_QA_TAP):
+			_qa_tap(a.trim_prefix(ARG_QA_TAP))
+
+
+## QA: "<x>[@<ms>]" -> ripple + touch ring at the brook centre line, frozen <ms> into their life.
+func _qa_tap(spec: String) -> void:
+	var parts := spec.split("@")
+	var x := parts[0].to_float()
+	var age := (parts[1].to_float() / 1000.0) if parts.size() > 1 else DEBUG_RIPPLE_AGE_S
+	var hit := Vector2(x, centre_y_at(x))
+	add_ripple(hit, 1.0)
+	_ripples[(_next_ripple + MAX_RIPPLES - 1) % MAX_RIPPLES].z = Clock.g_time - age
+	_mat.set_shader_parameter(&"u_ripples", _ripples)
+	TouchRing.spawn(self, hit, RING_SQUASH).freeze_at(age)
 
 
 func _build(ring_px: float) -> void:
@@ -245,6 +263,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	var hit := Vector2(pos.x, clampf(pos.y, cy - half_width * RIPPLE_CLAMP, cy + half_width * RIPPLE_CLAMP))
 	add_ripple(hit, 1.0)
+	TouchRing.spawn(self, hit, RING_SQUASH)
 	var canvas_pos := get_global_transform_with_canvas() * hit
 	AudioDirector.play_cue(CUE_TOUCH, {"world": true, "position": canvas_pos})
 	AudioDirector.play_cue(CUE_STREAM, {"position": canvas_pos})

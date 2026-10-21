@@ -45,7 +45,7 @@ uniform float occlusion_k = 0.30;
 uniform float height_tint_k = 0.16;
 uniform float dapple_k = 0.03;
 uniform float wet_sheen_k = 0.30;
-uniform float wet_dark_k = 0.22;
+uniform float wet_dark_k = 0.30;
 uniform float crest_rim_px = 10.0;
 uniform float crest_glow_px = 70.0;
 // Round 3: the backlit crest is the brightest ridge line at golden (eye path sun -> crest -> stone).
@@ -54,7 +54,7 @@ uniform float crest_glow_k = 0.09;
 uniform vec2 crest_band = vec2(760.0, 880.0);
 uniform vec2 brook_band = vec2(1400.0, 1540.0);
 uniform float mist_sigma = 40.0;
-uniform float focal_pool_k = 0.48;
+uniform float focal_pool_k = 0.62;
 // Depth frame: near ground below the brook and the bottom corners sink toward the shadow tint.
 // (The ValueFrame multiply pass darkens the near band and the side wedges over everything; these
 // terms only shape the ground under it.)
@@ -62,8 +62,22 @@ uniform float near_frame_k = 0.16;
 uniform float corner_k = 0.30;
 // Round 3 (directive 2): the open meadow outside the focal pool sits a few L* lower so the stone
 // and the creatures carry the value peak; the pool is warmer and brighter.
-uniform float open_shade_k = 0.16;
+uniform float open_shade_k = 0.42;
+// Round 4: the pool's light is warm (key leaning toward the accent), not a white lift (QA r3 "milky").
+uniform float pool_warm_k = 0.45;
+uniform float pool_day_lift = 0.45;
 uniform float far_haze_k = 0.10;
+// Round 4: the warm sun veil belongs to the far air; the play area only keeps a trace of it.
+uniform float sun_veil_k = 0.10;
+// Round 4 (QA r3 "milky, grey-green veil"): by day the moss carries a little more chroma (lush,
+// not grey); off with the light behind (golden keeps its palette) and at night, halved in rain.
+uniform float day_chroma_k = 0.28;
+// Rain-washed moss is a saturated, darker green (QA r3: rain read olive-grey and foggy).
+uniform float rain_chroma_k = 0.55;
+// Golden grade (QA r3: olive / mustard ground): with the light behind, the moss's hue leans toward
+// the warm rose-brown of reference frame A (#977B73) at its own luminance.
+uniform vec4 golden_rose : source_color = vec4(0.592, 0.482, 0.451, 1.0);
+uniform float golden_rose_k = 0.42;
 
 const vec2 FOCAL = vec2(540.0, 1123.0);
 const float T_TOP = 760.0;
@@ -162,7 +176,10 @@ vec3 meadow_color(vec2 uv, vec2 frag) {
 	vec2 fd = (p - FOCAL) / vec2(420.0, 260.0);
 	float pool = exp(-dot(fd, fd) * 1.4);
 	c = mix(c, shade_of(c), open_shade_k * (1.0 - pool) * (1.0 - 0.7 * night));
-	c += g_key.rgb * (g_ground_light + 0.04) * focal_pool_k * pool * (1.0 - 0.6 * night);
+	vec3 pool_light = mix(g_key.rgb, g_accent.rgb, pool_warm_k);
+	c = mix(c, c * pool_light * 1.25, pool * focal_pool_k * 0.5 * (1.0 - night));
+	// By day the pool is mostly warmth, not lift (the stone and creatures must out-value it).
+	c += pool_light * (g_ground_light + 0.04) * focal_pool_k * pool * (1.0 - 0.6 * night) * mix(pool_day_lift, 1.0, g_backlight);
 
 	// 4b. Worn moss path (quieter at night).
 	float path = path_mask(p) * (1.0 - 0.55 * night);
@@ -205,11 +222,16 @@ vec3 meadow_color(vec2 uv, vec2 frag) {
 	float glow = 1.0 - smoothstep(0.0, crest_glow_px, below);
 	c += g_key.rgb * g_backlight * (g_rim * crest_rim_k * rim * rim + crest_glow_k * glow);
 	// Warm veil from the sun.
-	c += sun_veil(v_canvas, 0.25);
+	c += sun_veil(v_canvas, sun_veil_k);
 	// Low valley mist (dawn), drawn again by the water shader.
 	if (g_mist > 0.001) {
 		c = mix(c, mix(g_sky_horizon.rgb, g_glow.rgb, 0.2), clamp(g_mist * mist_band(p), 0.0, 0.6));
 	}
+	float lum = wl_luma(c);
+	float day_w = (1.0 - g_backlight) * (1.0 - night);
+	c = max(mix(vec3(lum), c, 1.0 + day_chroma_k * day_w + rain_chroma_k * g_rain * (1.0 - night)), vec3(0.0));
+	vec3 rose = golden_rose.rgb / max(wl_luma(golden_rose.rgb), 1e-3) * wl_luma(c);
+	c = mix(c, rose, golden_rose_k * g_backlight * (1.0 - night));
 	// Lamp pools last: they light whatever is there (skipped by day: g_lights = 0).
 	if (g_lights > 0.001) {
 		c = apply_lamp(c, lamp_weight(p));

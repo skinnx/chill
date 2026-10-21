@@ -14,6 +14,7 @@
 //   cloud_shadow(p_design)        0..~0.12 darkening from drifting fBm cloud shadows (§8.2)
 //   wind_k()                      sway amplitude factor (0.5 + g_wind) / 0.85
 //   gust(x_design)                travelling gust envelope 0..1 (k 62, 1742 px spacing, §3.4)
+//   gust_at(p_design)             the same front, diagonal: lags with depth (round 4)
 //   sun_veil(p_canvas, layer_k)   additive warm veil around the sun (far 1.0, mid 0.6, meadow 0.25)
 #ifndef MM_WORLD_LIGHT_INC
 #define MM_WORLD_LIGHT_INC
@@ -30,7 +31,9 @@ const float SUN_RADIUS_PX = 48.0;
 const float ELEVATION_SPAN_PX = 400.0;
 // Art Bible §8.2 / motion_tokens loops_spatial.cloud_shadow_drift: 15 px/s, 1800 px tile, 300 px blobs.
 const float CLOUD_SHADOW_SPEED = 15.0;
-const float CLOUD_SHADOW_SCALE = 300.0;
+// Round 4 (QA r3: readable blob columns): blobs twice as large, with a wide soft edge.
+const float CLOUD_SHADOW_SCALE = 600.0;
+const vec2 CLOUD_SHADOW_EDGE = vec2(0.48, 0.80);
 const float CLOUD_SHADOW_TILE_CELLS = 6.0;
 // palettes.json weather.gust / wind_k.
 const float GUST_K = 62.0;
@@ -49,15 +52,24 @@ float wl_luma(vec3 c) {
 	return dot(c, vec3(0.2126, 0.7152, 0.0722));
 }
 
+// Round 4 (QA r3: golden shadows read as a lavender wash): with the light behind (golden, dusk)
+// the shadow tint loses part of its chroma, a warm-cool grey-mauve instead of violet.
+const float SHADOW_TINT_DESAT = 0.45;
+
+vec3 shadow_tint() {
+	vec3 s = g_shadow.rgb;
+	return mix(s, vec3(dot(s, vec3(0.2126, 0.7152, 0.0722))), SHADOW_TINT_DESAT * g_backlight);
+}
+
 vec3 shade_of(vec3 c) {
 	vec3 d = c * TERRAIN_SHADE_DARK;
-	vec3 tint = g_shadow.rgb / max(wl_luma(g_shadow.rgb), 1e-3) * wl_luma(d);
+	vec3 tint = shadow_tint() / max(wl_luma(g_shadow.rgb), 1e-3) * wl_luma(d);
 	return mix(d, min(tint, vec3(1.0)), TERRAIN_SHADE_TINT);
 }
 
 vec3 light_object(vec3 albedo, float up, float ao) {
 	vec3 c = albedo * g_ambient.rgb;
-	c = mix(c, c * g_shadow.rgb * SHADE_K, ao * AO_MAX);
+	c = mix(c, c * shadow_tint() * SHADE_K, ao * AO_MAX);
 	c += g_key.rgb * KEY_TOP * up;
 	return c;
 }
@@ -95,7 +107,7 @@ float cloud_shadow(vec2 p_design) {
 	vec2 q = (p_design + vec2(CLOUD_SHADOW_SPEED * g_time, 0.0)) / CLOUD_SHADOW_SCALE;
 	float n = (2.0 * vnoise_tiled(q, vec2(CLOUD_SHADOW_TILE_CELLS, 4096.0))
 			+ vnoise_tiled(q * 2.0 + vec2(0.0, 7.3), vec2(CLOUD_SHADOW_TILE_CELLS * 2.0, 8192.0))) / 3.0;
-	return smoothstep(0.55, 0.75, n) * g_cloud_shadow * (0.4 + 0.6 * g_cloud);
+	return smoothstep(CLOUD_SHADOW_EDGE.x, CLOUD_SHADOW_EDGE.y, n) * g_cloud_shadow * (0.4 + 0.6 * g_cloud);
 }
 
 float wind_k() {
@@ -105,6 +117,16 @@ float wind_k() {
 float gust(float x_design) {
 	float ph = fract(g_time * GUST_K / LOOP_S - x_design / GUST_SPACING_PX);
 	return smoothstep(0.0, 0.25, ph) * (1.0 - smoothstep(0.25, 0.6, ph));
+}
+
+// Round 4 (QA r3: layers swayed in lockstep): the gust front is diagonal, so it reaches the far
+// hedge, the willow, the beds and the near grass at different moments (about 0.5 s per 100 px of
+// depth at 180 px/s); per-layer phase lags come for free from each object's own position.
+const float GUST_DEPTH_LAG = 0.9;
+const float GUST_DEPTH_Y0 = 1150.0;
+
+float gust_at(vec2 p_design) {
+	return gust(p_design.x - (p_design.y - GUST_DEPTH_Y0) * GUST_DEPTH_LAG);
 }
 
 vec3 sun_veil(vec2 p_canvas, float layer_k) {

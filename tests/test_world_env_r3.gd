@@ -56,7 +56,9 @@ func test_value_frame_leaves_the_focal_open() -> void:
 	for r: Rect2 in ValueFrame.rects():
 		area += r.get_area()
 	var screen := (ValueFrame.DESIGN_W + 2.0 * ValueFrame.BLEED_X) * 2400.0
-	assert_lt(area / screen, 0.5, "fill stays well under the full screen")
+	# Round 4 (directive 1): the frame covers the whole play area around the focal; still well under
+	# the full screen (one cheap multiply pass, dropped at governor tier 1+).
+	assert_lt(area / screen, 0.6, "fill stays well under the full screen")
 	assert_eq(ValueFrame.build_mesh().get_surface_count(), 1, "one surface, one draw call")
 
 

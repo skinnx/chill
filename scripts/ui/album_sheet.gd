@@ -241,8 +241,11 @@ func _hearts(n: int, center: bool) -> Control:
 	h.add_theme_constant_override(&"separation", 3)
 	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	h.tooltip_text = I18n.fmt(&"ALBUM_HEARTS_A11Y", {"hearts": n})
+	# both heart states come from one small atlas, so a row of hearts is one draw call
+	var atlas := Icons.atlas([[&"heart", HEART_PX, false], [&"heart_empty", HEART_PX, false]])
 	for i in HEARTS:
 		var r := Icons.rect(&"heart" if i < n else &"heart_empty", HEART_PX)
+		r.texture = atlas[Icons.atlas_key(&"heart" if i < n else &"heart_empty", HEART_PX)] as Texture2D
 		if i >= n:
 			r.modulate.a = 0.35
 		h.add_child(r)

@@ -143,7 +143,8 @@ func _item_card(id: StringName, d: Dictionary, flower: bool) -> Control:
 		return shell[0]
 	var room := not flower or not GardenRules.beds_with_room(ContentRegistry.content, sim.state.stems).is_empty()
 	var b := pill_button(text, affordable and room)
-	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	# hugs its label, aligned with the text column (and the "All planted" chip)
+	b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	b.pressed.connect(_on_buy.bind(id, flower, b, chip))
 	info.add_child(b)
 	return shell[0]
@@ -163,6 +164,7 @@ func _boat_card() -> Control:
 	info.add_child(row)
 	info.add_child(label(tr("GARDEN_LEAF_BOAT_DESC"), &"SecondaryLabel", true))
 	var b := pill_button(tr("GARDEN_FLOAT") if affordable else tr("GARDEN_MORE_DEW"), affordable)
+	b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	b.pressed.connect(_on_boat.bind(b, chip))
 	info.add_child(b)
 	return shell[0]

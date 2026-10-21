@@ -20,13 +20,17 @@ uniform vec4 u_c : source_color = vec4(1.0);   // detail colour
 
 const float RING_STROKE = 0.085;   // ring stroke as a fraction of the radius
 const float RING_TRACK_A = 0.28;
-const float AMBIENT_MIX = 0.35;
+const float AMBIENT_MIX = 0.35;               // feedback stamps keep their colour at night (readability)
 const vec2 UMB_P0 = vec2(0.55, -0.95);   // petiole foot (the pivot, at the paw)
 const vec2 UMB_P1 = vec2(0.58, -0.15);
 const vec2 UMB_P2 = vec2(0.44, 0.30);
 const vec2 UMB_P3 = vec2(0.12, 0.44);    // attaches under the canopy
 const vec2 UMB_PAW = vec2(0.53, -0.80);
-const float UMB_FRINGE_PX = 3.0;    // umbrella felt fringe length (local px)    // feedback stamps keep their colour at night (readability)
+const float UMB_FRINGE_PX = 3.0;    // umbrella felt fringe length (local px)
+
+const float HEART_OUTLINE = 0.11;           // cream outline width (heart units)
+const float UMB_TIP_Y = 0.0;                // canopy tips end here (no rim under the hollow)
+const float UMB_TONE = 0.84;                // canopy value step below the lit leaf tone
 
 varying vec2 v_local;
 
@@ -84,13 +88,17 @@ void fragment() {
 	float a = 0.0;
 	if (kind < 0.5) {
 		// heart: soft felt heart with a top-left highlight
-		vec2 hp = p * 1.18 + vec2(0.0, 0.62);
+		// round 4 (QA r3 c7: hearts read small and thin over the meadow): a cream felt outline
+		// keeps them legible on any background, a soft lower shade gives them a little volume
+		vec2 hp = p * 1.3 + vec2(0.0, 0.66);
 		float d = sd_heart(hp) - 0.06;
-		a = 1.0 - smoothstep(-aa, aa, d);
+		float inner = 1.0 - smoothstep(-aa, aa, d);
+		a = 1.0 - smoothstep(-aa, aa, d - HEART_OUTLINE);
 		float hl = 1.0 - smoothstep(0.0, 0.22, length(hp - vec2(-0.3, 0.78)) - 0.06);
 		float edge = smoothstep(-0.25, 0.0, d);
-		col = mix(u_a.rgb, u_b.rgb, edge * 0.35);
-		col = mix(col, u_c.rgb, hl * 0.55);
+		col = mix(u_a.rgb, u_b.rgb, edge * 0.35 + 0.3 * (1.0 - smoothstep(0.0, 0.7, hp.y)));
+		col = mix(col, u_c.rgb, hl * 0.6);
+		col = mix(u_c.rgb, col, inner);
 		col *= amb;
 	} else if (kind < 1.5) {
 		// "z": three round-capped strokes, a little italic
@@ -109,7 +117,8 @@ void fragment() {
 		float d = pow(q.x, 0.55) + pow(q.y, 0.55) - 0.82;
 		a = 1.0 - smoothstep(-0.06, 0.06, d);
 		a = max(a, (1.0 - smoothstep(0.0, 0.5, length(p))) * 0.5);
-		col = u_a.rgb;
+		// gold star, cream core (round 4: white sparkles vanished over pale fur)
+		col = mix(u_b.rgb, u_a.rgb, 1.0 - smoothstep(0.08, 0.42, length(p)));
 	} else if (kind < 3.5) {
 		// long-press fill ring: faint track + a filled arc growing clockwise from the top
 		float r = length(p);
@@ -130,6 +139,9 @@ void fragment() {
 		float d_out = sd_ellipse_fx(cq, vec2(0.95, 0.50));
 		float d_in = sd_ellipse_fx(p - vec2(0.0, 0.14), vec2(0.80, 0.30));
 		float dl = max(d_out, -d_in);
+		// round 4: the outer ellipse dipped below the inner one, so a hairline rim closed the
+		// crescent into a lens ("wireframe" in QA r3); the canopy now ends at its drooping tips
+		dl = max(dl, UMB_TIP_Y - p.y);
 		// a little drip tip on the far end (leaf apex), so it reads as a leaf, not a bowl
 		dl = smin_fx(dl, sd_segment(p, vec2(-0.80, 0.20), vec2(-0.98, 0.04)) - 0.03, 0.05);
 		// petiole: up along the body's edge from the paw, then a cane bend in to the canopy
@@ -174,6 +186,9 @@ void fragment() {
 		// rim from the key so the umbrella belongs to the same light as the creatures
 		float top = smoothstep(-0.12, 0.0, d_out) * step(0.0, -d_in);
 		float rim = top * clamp(dot(normalize(cq + 1e-4), normalize(vec2(g_sun_dir.x, -g_sun_dir.y))) * 0.6 + 0.4, 0.0, 1.0);
+		// round 4 (QA r3 rain: the pale leaf read as a see-through outline): the canopy sits a step
+		// darker than the misty meadow so it reads as a solid silhouette, the key rim on top
+		col *= mix(1.0, UMB_TONE, core_l);
 		col += g_key.rgb * rim * g_rim * 0.35 * core_l;
 		col *= g_ambient.rgb;
 		col = finish(col, p * px / PX_PER_DP, FRAGCOORD.xy, GRAIN_OBJECT);

@@ -33,7 +33,10 @@ uniform float backlight_k = 0.38;
 uniform float ground_k = 0.18;
 uniform float ground_backlight_k = 0.3;
 uniform float focal_k = 0.08;
-uniform float focal_front_k = 0.40;
+uniform float focal_front_k = 0.62;
+// Round 4: the focal's front face sinks toward a near-neutral cool grey (not the teal of the raw day
+// shadow token), so the stone reads as warm stone with a lit top and a shaded front.
+uniform vec3 focal_front_tint = vec3(0.66, 0.68, 0.76);
 uniform float focal_back_k = 0.12;
 
 varying vec2 v_canvas;
@@ -53,7 +56,7 @@ void vertex() {
 		float h = clamp((i_sway.z - luv.y) / max(i_sway.z, 0.001), 0.0, 1.0);
 		vec2 world = (MODEL_MATRIX * vec4(VERTEX, 0.0, 1.0)).xy - g_world_offset;
 		float s = sin(TAU * i_sway.y / LOOP_S * g_time + i_sway.w) + 0.35 * sin(TAU * i_sway.y * 2.13 / LOOP_S * g_time + 1.7 + i_sway.w);
-		VERTEX.x += s * i_sway.x * wind_k() * (1.0 + GUST_AMP * gust(world.x)) * g_motion * h * h;
+		VERTEX.x += s * i_sway.x * wind_k() * (1.0 + GUST_AMP * gust_at(world)) * g_motion * h * h;
 	}
 	v_canvas = (MODEL_MATRIX * vec4(VERTEX, 0.0, 1.0)).xy;
 }
@@ -68,14 +71,15 @@ void fragment() {
 	vec3 c = light_object(alb, 1.0 - v_luv.y, smoothstep(0.80, 1.0, v_luv.y));
 	// Contre-jour: with the light behind (golden, dusk) the viewer sees the shaded faces; tops
 	// stay lit, sides and fronts sink toward the tinted shadow (Art Bible §8.1) [J].
-	c = mix(c, c * g_shadow.rgb * SHADE_K, backlight_k * g_backlight * (0.45 + 0.55 * smoothstep(0.1, 0.9, v_luv.y))
+	c = mix(c, c * shadow_tint() * SHADE_K, backlight_k * g_backlight * (0.45 + 0.55 * smoothstep(0.1, 0.9, v_luv.y))
 			* (1.0 - 0.7 * i_focal.x * m.r));
 	// The focal's lit top plane: a warm key wash (strongest at golden), a cooler front face.
 	c += (g_key.rgb * 0.75 + alb * 0.25) * i_focal.x * m.r * (focal_k + focal_back_k * g_backlight) * (1.0 - 0.6 * g_lights);
 	// Round 3 (QA r2: the stone barely separated from the meadow): the focal's front / shade faces
 	// sink toward the tinted shadow, so its lit top reads as the highest local contrast.
-	c = mix(c, c * g_shadow.rgb * SHADE_K, i_focal.x * m.g * focal_front_k);
-	c = mix(c, c * g_shadow.rgb * SHADE_K, i_fx.w * (ground_k + ground_backlight_k * g_backlight));
+	vec3 front_t = mix(focal_front_tint, shadow_tint() * SHADE_K, 0.35);
+	c = mix(c, c * front_t, i_focal.x * clamp(m.g + 0.5 * smoothstep(0.45, 0.9, v_luv.y), 0.0, 1.0) * focal_front_k);
+	c = mix(c, c * shadow_tint() * SHADE_K, i_fx.w * (ground_k + ground_backlight_k * g_backlight));
 	// Rim: inside the shape, with empty space toward the light (one extra, slightly blurred read).
 	if (i_fx.z > 0.5) {
 		vec2 kd = key_dir(v_canvas);
@@ -85,7 +89,7 @@ void fragment() {
 	}
 	vec2 p_design = v_canvas - g_world_offset;
 	if (g_cloud_shadow > 0.001) {
-		c = mix(c, c * g_shadow.rgb * SHADE_K, cloud_shadow(p_design));
+		c = mix(c, c * shadow_tint() * SHADE_K, cloud_shadow(p_design));
 	}
 	if (g_lights > 0.001) {
 		c += alb * g_accent.rgb * lamp_soft(lamp_weight(p_design)) * lamp_fill_k;

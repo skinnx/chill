@@ -22,7 +22,7 @@ const FOCAL := Vector2(540.0, 1123.0)
 ## dapple, alpha scale]. Round 3: day shafts are quieter (QA r2: a milky veil over the stone), golden
 ## shafts carry the signature backlit air through the willow / stump gap.
 const PLANS := {
-	&"day": [3, 14.0, 120.0, 1000.0, Vector2(90, 160), Vector2(200, 260), 0.0, 0.4],
+	&"day": [3, 14.0, 120.0, 560.0, Vector2(90, 160), Vector2(180, 230), 0.0, 0.3],
 	&"golden": [4, 25.0, 70.0, 820.0, Vector2(50, 70), Vector2(170, 230), 0.0, 1.3],
 	&"dawn": [3, 18.0, 100.0, 950.0, Vector2(80, 120), Vector2(200, 240), 1.0, 1.1],
 }

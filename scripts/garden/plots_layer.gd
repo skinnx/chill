@@ -74,6 +74,12 @@ const HALO_QUAD_K := 3.2
 const READY_HALO_SCALE := 1.6
 const READY_HALO_ALPHA_K := 1.6
 const READY_PULSE_K := 300.0
+## Round 4 (QA r3 c7): the ready glow no longer vanishes on the tap; it flares and widens with the
+## opening petals (peak x UNFURL_FLARE alpha at mid-unfurl, UNFURL_GROW x size), then fades out.
+const UNFURL_FLARE := 0.7
+const UNFURL_GROW := 0.45
+## Touch ring alpha on the busy beds (motion_tokens ui.ring 0.35 is too faint over flowers).
+const RING_ALPHA := 0.6
 ## --qa-ready / --qa-garden: at most this many stems of the bed become ready buds (in play a bed
 ## rarely has more; a dozen stacked halos read as one white blob).
 const QA_READY_MAX := 3
@@ -431,6 +437,7 @@ func _process(delta: float) -> void:
 				v.unfurl_delay -= delta
 			else:
 				v.unfurl_s += delta
+				_flare_halo(v)
 				if v.unfurl_s * v.unfurl_rate >= _unfurl_total_s:
 					v.unfurl_s = -1.0
 					v.ready_s = -1.0
@@ -497,7 +504,7 @@ func _step_open(v: StemView, delta: float) -> bool:
 
 
 func _start_unfurl(v: StemView, rate: float, delay: float, sound: bool) -> void:
-	_remove_halo(v)  # the glow hands over to the unfurl's own sparkles
+	# A ready bud's glow stays and flares with the petals (_flare_halo); removed when they settle.
 	v.unfurl_s = 0.0
 	v.unfurl_rate = rate
 	v.unfurl_delay = delay
@@ -507,6 +514,20 @@ func _start_unfurl(v: StemView, rate: float, delay: float, sound: bool) -> void:
 		AudioDirector.play_cue(CUE_UNFURL, {"position": _canvas_of(_stem_root(v.index))})
 	FrameGovernor.hold_for(delay + _unfurl_total_s / rate)
 	set_process(true)
+
+
+## The ready glow flares with the opening petals and fades as they settle (removed at the end).
+func _flare_halo(v: StemView) -> void:
+	var bv: BedView = _beds.get(v.bed)
+	if bv == null or not bv.halos.has(v.index):
+		return
+	var h: HaloSprite = bv.halos[v.index]
+	var u := clampf(v.unfurl_s * v.unfurl_rate / _unfurl_total_s, 0.0, 1.0)
+	var c: Color = h.get_instance_shader_parameter(&"i_color")
+	c.a = float(_ready_cfg["glow_alpha"]) * READY_HALO_ALPHA_K * (1.0 + UNFURL_FLARE * sin(PI * minf(u * 1.6, 1.0))) \
+			* (1.0 - u * u)
+	h.set_instance_shader_parameter(&"i_color", c)
+	h.scale = Vector2.ONE * (1.0 + UNFURL_GROW * (1.0 - pow(1.0 - u, 3.0)))
 
 
 func _step_press(bv: BedView, delta: float) -> bool:
@@ -811,6 +832,9 @@ func _bed_at(pos: Vector2) -> StringName:
 func _touch_down(bv: BedView, pos: Vector2) -> void:
 	_qa_ring = TouchRing.spawn(self, pos, RING_SQUASH)
 	_qa_ring.z_index = 1
+	var rv: Vector4 = _qa_ring.get_instance_shader_parameter(&"i_ring")
+	rv.z = RING_ALPHA
+	_qa_ring.set_instance_shader_parameter(&"i_ring", rv)
 	bv.press = Motion.spring(&"press", bv.press.value)
 	bv.press.target = float(_content.motion["ui"]["world_touch_squash"])
 	bv.tint = 1.0

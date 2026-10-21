@@ -33,7 +33,7 @@ void vertex() {
 	float ph = TAU * COLOR.r;
 	float w = sin(TAU * sway_k / LOOP_S * g_time + ph - wave_rad * h)
 			+ 0.3 * sin(TAU * sway_k * 1.7 / LOOP_S * g_time + ph * 1.3 - wave_rad * 1.6 * h);
-	VERTEX.x += w * amp * wind_k() * (1.0 + GUST_AMP * 1.6 * gust(world.x)) * g_motion * pow(h, 1.5);
+	VERTEX.x += w * amp * wind_k() * (1.0 + GUST_AMP * 1.6 * gust_at(world)) * g_motion * pow(h, 1.5);
 	v_canvas = (MODEL_MATRIX * vec4(VERTEX, 0.0, 1.0)).xy;
 	COLOR = vec4(1.0);
 }
@@ -84,7 +84,7 @@ void fragment() {
 	vec3 c = light_object(alb, 1.0 - h, 0.0);
 	vec2 p_design = v_canvas - g_world_offset;
 	if (g_cloud_shadow > 0.001) {
-		c = mix(c, c * g_shadow.rgb * SHADE_K, cloud_shadow(p_design));
+		c = mix(c, c * shadow_tint() * SHADE_K, cloud_shadow(p_design));
 	}
 	if (g_lights > 0.001) {
 		c += alb * g_accent.rgb * lamp_soft(lamp_weight(p_design)) * 1.1;

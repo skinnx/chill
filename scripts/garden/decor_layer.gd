@@ -61,6 +61,9 @@ const PW_BURST_TAU := 1.2
 const GUST_K := 62.0
 const GUST_SPACING := 1742.0
 const LOOP_S := 600.0
+## world_light.gdshaderinc gust_at (round 4): the gust front is diagonal and lags with depth.
+const GUST_DEPTH_LAG := 0.9
+const GUST_DEPTH_Y0 := 1150.0
 ## Art Bible §6.6 chimes: forced 2-6 deg by wind x gust; tap impulse 8 deg staggered 40 ms.
 const CHIME_FORCE_DEG := Vector2(2.0, 6.0)
 const CHIME_TAP_DEG := 8.0
@@ -77,6 +80,17 @@ const LANTERN_FALL_S := 1.2
 const LANTERN_POOL_R := 150.0
 const LANTERN_POOL_I := 0.6
 const LANTERN_POOL_DY := -8.0
+## Round 4 (QA r3 c7: the lantern tap was barely visible): at the top of the brighten the pool
+## grows 150 -> 190 px and the glass halo blooms 1.35x, and the touch ring is warm and stronger.
+const LANTERN_POOL_R_BOOST := 190.0
+const LANTERN_HALO_POP := 0.5
+## Touch ring alpha on décor (motion_tokens ui.ring is 0.35 on the busy meadow: too faint there).
+const RING_ALPHA := 0.6
+## Round 4 (hand-placed, not a fence): each lantern on the bank path stands a little off its anchor
+## and its crook is a little taller or shorter (deterministic per copy).
+const LANTERN_JITTER_PX := 10.0
+const LANTERN_HEIGHT_JITTER := 0.07
+const RING_WARM := Color(1.0, 0.86, 0.58)
 ## LampRegistry holds 12 lamps (mushrooms + boat candles share it): lanterns past this have no pool.
 const MAX_LANTERN_POOLS := 8
 ## Halos (Art Bible §4.13): lantern head r0 18 px, quad 108 px; ring motes r0 6 px.
@@ -254,6 +268,11 @@ static func gust_at(x: float, g_time: float) -> float:
 	return smoothstep(0.0, 0.25, ph) * (1.0 - smoothstep(0.25, 0.6, ph))
 
 
+## The same front at a design-px position (lags with depth like the shaders' gust_at).
+static func gust_at_pos(p: Vector2, g_time: float) -> float:
+	return gust_at(p.x - (p.y - GUST_DEPTH_Y0) * GUST_DEPTH_LAG, g_time)
+
+
 ## Idle pinwheel speed (rev/s) for a wind and gust value (Art Bible §6.6).
 static func pinwheel_rev_s(wind: float, gust: float) -> float:
 	return minf(PW_BASE_REV + PW_WIND_REV * wind * (1.0 + PW_GUST * gust), PW_IDLE_CAP)
@@ -293,6 +312,11 @@ func _add_piece(id: StringName, i: int, animate: bool) -> Piece:
 	p.index = i
 	p.foot = _anchor(id, i)
 	p.depth = depth_scale(p.foot.y) * float(_set_scale.get(String(id), 1.0))
+	if id == LANTERN:
+		var rng := RandomNumberGenerator.new()
+		rng.seed = hash([String(LANTERN), i])
+		p.foot.x += rng.randf_range(-1.0, 1.0) * LANTERN_JITTER_PX
+		p.depth *= 1.0 + rng.randf_range(-1.0, 1.0) * LANTERN_HEIGHT_JITTER
 	p.press = Motion.spring(&"press", 1.0)
 	p.pop = Motion.spring(&"pop", 1.0)
 	p.unit = _unit_key(p)
@@ -614,7 +638,7 @@ func _process(delta: float) -> void:
 		if _chime_own_s > CHIME_OWN_CUE_S:
 			_chime_own_s = -1.0
 	for p: Piece in _pieces.get(PINWHEEL, []):
-		var rev := pinwheel_rev_s(_wind, gust_at(p.hit.x, gt)) * motion
+		var rev := pinwheel_rev_s(_wind, gust_at_pos(p.hit, gt)) * motion
 		if p.burst_t >= 0.0:
 			p.burst_t += delta
 			rev = maxf(rev, PW_BURST_REV * exp(-p.burst_t / PW_BURST_TAU))
@@ -627,11 +651,11 @@ func _process(delta: float) -> void:
 	var chimes: Unit = _units.get("chimes")
 	var lanterns: Unit = _units.get("lanterns")
 	for p: Piece in _pieces.get(CHIME, []):
-		p.pend.target = force * (0.35 + 0.65 * gust_at(p.foot.x, gt))
+		p.pend.target = force * (0.35 + 0.65 * gust_at_pos(p.foot, gt))
 		p.angle = p.pend.step(delta)
 		_swing(p, chimes)
 	for p: Piece in _pieces.get(LANTERN, []):
-		p.pend.target = deg_to_rad(JAR_SWAY_DEG) * _wind * gust_at(p.foot.x, gt) * motion
+		p.pend.target = deg_to_rad(JAR_SWAY_DEG) * _wind * gust_at_pos(p.foot, gt) * motion
 		p.angle = p.pend.step(delta)
 		_swing(p, lanterns)
 		if p.boost_t >= 0.0:
@@ -693,16 +717,18 @@ func _step_boost(p: Piece, delta: float) -> void:
 		e = 1.0 - (t - LANTERN_RISE_S - LANTERN_HOLD_S) / LANTERN_FALL_S
 	else:
 		p.boost_t = -1.0
-	var k := 1.0 + LANTERN_BOOST * smoothstep(0.0, 1.0, e)
+	var se := smoothstep(0.0, 1.0, e)
+	var k := 1.0 + LANTERN_BOOST * se
 	var c: Color = p.halo.get_instance_shader_parameter(&"i_color")
 	c.a = LANTERN_HALO_ALPHA * k
 	p.halo.set_instance_shader_parameter(&"i_color", c)
+	p.halo.scale = Vector2.ONE * (1.0 + LANTERN_HALO_POP * se)
 	p.boost_k = k
 	if p.stamp != null:
 		DecorKit.set_stamp_fx(p.stamp, p.tint, p.press.value, k)
 	if p.lamp != &"":
 		LampRegistry.set_lamp(p.lamp, Vector2(p.foot.x + p.head_pivot.x, p.foot.y + LANTERN_POOL_DY),
-				LANTERN_POOL_R, LANTERN_POOL_I * k)
+				lerpf(LANTERN_POOL_R, LANTERN_POOL_R_BOOST, se), LANTERN_POOL_I * k)
 
 
 func _puff(at: Vector2) -> void:
@@ -781,15 +807,20 @@ func _touch_down(p: Piece, pos: Vector2) -> void:
 	p.press = Motion.spring(&"press", p.press.value)
 	p.press.target = float(_content.motion["ui"]["world_touch_squash"])
 	p.tint = 1.0
-	_ring(pos)
+	_ring(pos, p.decor == LANTERN)
 	AudioDirector.play_cue(CUE_TOUCH, {"world": true, "position": _canvas_of(p.hit)})
 	FrameGovernor.hold_for(Motion.duration(&"short"))
 	set_process(true)
 
 
-func _ring(pos: Vector2) -> void:
+func _ring(pos: Vector2, warm: bool = false) -> void:
 	_qa_ring = TouchRing.spawn(self, pos)
 	_qa_ring.z_index = 1
+	var v: Vector4 = _qa_ring.get_instance_shader_parameter(&"i_ring")
+	v.z = RING_ALPHA
+	_qa_ring.set_instance_shader_parameter(&"i_ring", v)
+	if warm:
+		_qa_ring.set_instance_shader_parameter(&"i_tint", RING_WARM)
 
 
 func _piece_at(pos: Vector2) -> Piece:

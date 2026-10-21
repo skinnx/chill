@@ -48,6 +48,9 @@ const BUTTON_PAD_X := 48
 ## 1 dp outline of the secondary button: ink @ 0.10.
 const HAIRLINE_PX := 3
 const HAIRLINE_ALPHA := 0.10
+## Primary pill top lip (round 4): 1.5 dp of surface_hi at this alpha, blended.
+const LIP_PX := 5
+const LIP_ALPHA := 0.28
 ## Dock labels stop scaling at 130 % (Art Bible §9.1); handled by the dock, not here.
 ## Art Bible §9.1: line height 1.25 x font size in English; Vietnamese x I18n.VI_LINE_SPACING_MUL
 ## (1.12, synthesis §3) = 1.40 for stacked marks. Godot's line_spacing is the extra px on top of
@@ -113,8 +116,8 @@ static func build(palettes: Dictionary, text_scale: float = 1.0, vietnamese: boo
 
 	# --- buttons: primary pill by default (no focus ring after taps; 4.6 separates focus kinds)
 	var pill := roundi(BUTTON_H * 0.5)
-	t.set_stylebox(&"normal", &"Button", _box(primary_fill, pill, e1, ink, BUTTON_PAD_X))
-	t.set_stylebox(&"hover", &"Button", _box(primary_fill, pill, e1, ink, BUTTON_PAD_X))
+	t.set_stylebox(&"normal", &"Button", _lip(_box(primary_fill, pill, e1, ink, BUTTON_PAD_X), surface_hi))
+	t.set_stylebox(&"hover", &"Button", _lip(_box(primary_fill, pill, e1, ink, BUTTON_PAD_X), surface_hi))
 	t.set_stylebox(&"pressed", &"Button", _box(primary_down, pill, e1, ink, BUTTON_PAD_X))
 	t.set_stylebox(&"hover_pressed", &"Button", _box(primary_down, pill, e1, ink, BUTTON_PAD_X))
 	t.set_stylebox(&"disabled", &"Button", _box(primary_fill, pill, [], ink, BUTTON_PAD_X))
@@ -206,6 +209,16 @@ static func _label_variation(t: Theme, name: StringName, font: Font, size: int, 
 static func _panel_variation(t: Theme, name: StringName, box: StyleBoxFlat) -> void:
 	t.set_type_variation(name, &"PanelContainer")
 	t.set_stylebox(&"panel", name, box)
+
+
+## A soft light lip along the top edge (the pill's "inner highlight", Liquid-Glass-era depth):
+## a top border in surface_hi at LIP_ALPHA, blended into the fill. The pressed state drops it
+## (the button sinks).
+static func _lip(b: StyleBoxFlat, light: Color) -> StyleBoxFlat:
+	b.border_color = Color(light, LIP_ALPHA)
+	b.border_width_top = LIP_PX
+	b.border_blend = true
+	return b
 
 
 ## Rounded fill with an optional elevation shadow [alpha, size, y offset] in ink.

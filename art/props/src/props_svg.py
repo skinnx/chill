@@ -756,7 +756,7 @@ PARTS = [
     ("stump_front", stump_front, "stump", (0, 0), 86, "wood_bark", {}),
     ("stump_moss", stump_moss, "stump", (26, -1), 87, "moss", {"ground": 0.5}),
     ("basket", basket, "basket", (0, -4), 48, "wicker", {"shadow": [58, 10, 1.0, 52]}),
-    ("sun_stone", sun_stone, "sun_stone_rock", (0, 0), -52, "stone_warm", {"shadow": [126, 18, 1.6, 56], "focal": 1.0}),
+    ("sun_stone", sun_stone, "sun_stone_rock", (0, 0), -52, "stone_warm", {"shadow": [132, 22, 2.2, 56], "focal": 1.0}),
     ("stone_moss", stone_moss, "sun_stone_rock", (0, 50), 58, "moss", {"rim": 0, "ground": 1.0}),
     ("spring_rock", spring_rock, "spring_rock", (0, 0), -10, "stone_cool", {"shadow": [84, 12, 1.0, 56]}),
     # Art dressing (absolute design px).

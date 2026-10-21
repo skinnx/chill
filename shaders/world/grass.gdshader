@@ -61,7 +61,7 @@ void vertex() {
 	float k = INSTANCE_CUSTOM.x;
 	float ph = INSTANCE_CUSTOM.z;
 	float sway = sin(TAU * k / LOOP_S * g_time + ph) + 0.35 * sin(TAU * k * 2.13 / LOOP_S * g_time + ph + 1.7);
-	float g = gust(world.x);
+	float g = gust_at(world);
 	float amp = INSTANCE_CUSTOM.y;
 	// MODEL_MATRIX may mirror x: sway and lean are applied in local space, so undo the flip.
 	v_flip = sign(MODEL_MATRIX[0].x);

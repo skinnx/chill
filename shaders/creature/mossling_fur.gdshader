@@ -34,6 +34,17 @@ uniform float u_grain_density = 1.0;
 uniform vec4 u_grass_tip : source_color = vec4(0.565, 0.722, 0.549, 1.0);
 uniform vec4 u_grass_root : source_color = vec4(0.286, 0.576, 0.471, 1.0);
 uniform vec4 u_ground : source_color = vec4(0.486, 0.675, 0.506, 1.0);
+// Studio light for UI portraits (MosslingRig.apply_studio, creature_rig.json view.studio + the
+// day palette): 0 in the world.
+uniform float u_studio = 0.0;
+uniform vec4 u_studio_ambient : source_color = vec4(1.0);
+uniform vec4 u_studio_key : source_color = vec4(1.0, 0.945, 0.761, 1.0);
+uniform vec4 u_studio_shadow : source_color = vec4(0.231, 0.424, 0.549, 1.0);
+uniform vec4 u_studio_light = vec4(0.1, 0.45, -0.55, 0.83);   // backlight, rim, key dir xy (y up)
+uniform float u_studio_elev = 0.8;
+// world.json weather rain ambient_mult: the fur divides it back out so friends keep their
+// clear-day lightness in the rain (QA r3 rain: creatures are the light in a grey frame).
+uniform float u_rain_amb = 0.92;
 
 // ------------------------------------------------------------------ instance uniforms (§5.5, 16/16)
 instance uniform vec4 i_fur : source_color = vec4(1.0, 1.0, 1.0, 0.5);    // rgb fur; a = fuzz_dp / 2
@@ -69,9 +80,9 @@ const float BOTTOM_FRINGE = 0.15;
 const float FEET_X = 0.23;                   // feet centres at ±0.23 w_h
 const float FEET_W = 0.085;                  // bump half-width (bu, x min(w_h, 1.15))
 const float FEET_DROP = 0.034;               // how far the feet push the seat outline down (bu)            // fibres pressed flat where the body meets the ground
-const float SHADE_MIX = 0.45;                // how far the unlit side leans to the shadow tint
-const float WRAP = 0.55;                     // wrapped diffuse: felt scatters light round the edge
-const float SHADE_DARK = 0.84;               // the turned-away side is darker, not only cooler
+const float SHADE_MIX = 0.62;                // how far the unlit side leans to the shadow tint
+const float WRAP = 0.42;                     // wrapped diffuse: felt scatters light round the edge
+const float SHADE_DARK = 0.72;               // the turned-away side is darker, not only cooler
 const float CREATURE_AO = 0.6;               // share of AO_MAX at the seat (pale felt goes blue fast)
 const float EAR_WIND_AMP = 0.05;             // §5.6.2 ear sway rad
 const float STEM_WIND_AMP = 0.12;            // §5.6.2 sprouts and dandelion stems
@@ -82,18 +93,29 @@ const float LINE_BU = 0.028;                 // §5.4 closed-eye / mouth stroke
 const float LOD_PX = 90.0;                   // §5.6 LOD when the body is under 90 screen px
 const float BLEND_BU = 0.018;                // colour hand-over between parts across a join
 const float NIGHT_SHINE = 0.85;              // §5.4 highlights dim only x0.85 at night
-const float RIM_GAIN = 0.55;                 // §5.6.6 rim weight (0.45 in the spike; felt needs a bit more)
+const float RIM_GAIN = 0.7;                  // §5.6.6 rim weight (0.45 in the spike; felt needs a bit more)
 const float RIM_BACKLIT_GAIN = 1.5;          // golden hour: the rim reaches L* >= 90 (QA round 1)
+const float MOON_RIM_MAX = 0.85;            // moon rim alpha ceiling (QA r3: still too faint at 0.75)
+const float BOUNCE_K = 0.16;                 // ground bounce on the lower shadow-side edge (form)
+const float SHEEN_K = 0.10;                  // the felt crown's soft key sheen on the lit side
+const float KEY_Z_DAY = 0.42;                // key elevation toward the viewer at low backlight
+                                             // (0.62 lit every front face: no directional form)
+const float LOWER_DARK = 0.09;               // seat-half value drop under the top light
+const float KEY_Z_BACKLIT = 0.28;            // golden: the low sun still lifts the front a little
+const float SHADE_DARK_BACKLIT = 0.86;       // backlit fronts sit in a luminous shade (L* 75-80)
+const float NIGHT_AMB_LIFT = 0.20;           // night fur stays >= L* 45 (QA r3)
+const float GOLDEN_AMB_LIFT = 0.3;           // fur ambient lifted toward white at full backlight
 const float NIGHT_RIM = 1.4;                 // extra rim when the ambient is dark
-const float MOON_RIM_A = 0.62;               // §1.3 B: moon rim alpha on the moon-facing edge (QA r2: 0.5 read too faint)
+const float MOON_RIM_A = 0.78;               // §1.3 B: moon rim alpha on the moon-facing edge (QA r2: 0.5 read too faint)
 const float MOON_RIM_PX = 5.0;               // moon rim band (local px; x2 soft inner edge)
-const float MOON_RIM_GLOW = 0.22;            // additive lift so the moonlit edge reads luminous, not grey
+const float MOON_RIM_GLOW = 0.32;            // additive lift so the moonlit edge reads luminous, not grey
 const float NIGHT_TIP = 0.4;                 // QA r2: the omnidirectional light fibre tips fade to 40 % at night
 const float NIGHT_GRAIN = 0.7;               // QA r2: felt grain -30 % at low ambient (dark values stay clean)
-// Near-camera creatures (depth scale > 0.9) sit back into the frame so the sun stone keeps the
-// top local contrast (Art Bible §2.5, QA r2): albedo x 0.92 and rim x 0.7 at full depth.
-const float NEAR_ALBEDO = 0.92;
-const float NEAR_RIM = 0.7;
+// Near-camera creatures (depth scale > 0.9): round 4 hands the "sit back" job to the env value
+// frame and creature_rig depth_scale.near_cap, so they keep their own value (QA r3: the near
+// friend went muddy grey-mauve) and the full golden peach rim.
+const float NEAR_ALBEDO = 0.97;
+const float NEAR_RIM = 1.0;
 const vec2 NEAR_DEPTH = vec2(0.9, 1.0);      // depth-scale ramp; > 1.05 = lineup / UI portrait (off)
 // Focal creature (the sun-stone friend, i_light.w < 0): a stronger rim and a warm lift (§2.5).
 const float FOCAL_RIM = 0.45;
@@ -106,9 +128,9 @@ const float UMB_CODE = 0.4;                  // i_misc.z = feet (0 / 1) + UMB_CO
 const float LEAF_STEPS = 8.0;
 // Species identity survives the ambient tint: this share of the light keeps the fur's own hue at
 // its lit value (day / golden), more at night so friends stay tellable apart (QA round 1).
-const float HUE_KEEP_DAY = 0.18;
+const float HUE_KEEP_DAY = 0.26;
 const float HUE_KEEP_NIGHT = 0.55;
-const float FRONT_DARK = 0.11;               // backlit: the front face sits 8-12 % darker
+const float FRONT_DARK = 0.07;               // backlit: the front face sits 8-12 % darker
 const float LAMP_FILL_MAX = 0.55;            // lantern screen fill ceiling
 const float LAMP_FILL_K = 1.3;
 const float LAMP_RIM_A = 0.55;               // §8.3: warm rim on the lamp-facing edge (α 0.4 x weight, felt needs more)
@@ -229,6 +251,18 @@ void vertex() {
 
 // ------------------------------------------------------------------ fragment
 void fragment() {
+	// UI portraits (u_studio = 1): a fixed "studio" light from the day palette whatever the world
+	// time, so a friend admired in the Album never turns into a night blob (QA r3 #19 / #13).
+	float st = u_studio;
+	vec4 l_ambient = mix(g_ambient, u_studio_ambient, st);
+	vec4 l_key = mix(g_key, u_studio_key, st);
+	vec4 l_shadow = mix(g_shadow, u_studio_shadow, st);
+	vec4 l_glow = mix(g_glow, u_studio_key, st);
+	float l_backlight = mix(g_backlight, u_studio_light.x, st);
+	float l_rim = mix(g_rim, u_studio_light.y, st);
+	float l_lights = g_lights * (1.0 - st);
+	float l_rain = g_rain * (1.0 - st);
+	vec3 l_keyv = mix(v_key, vec3(normalize(u_studio_light.zw), u_studio_elev), st);
 	float fade = COLOR.a;                                     // node modulate (arrive / leave fades)
 	float S = i_body.z;
 	float wh = i_body.x;
@@ -573,7 +607,7 @@ void fragment() {
 				c_a = bc;
 				r_a = rbo;
 				float hr = length(ps - bc) / (rbo * 1.1);
-				halo = i_accent.a * g_lights * mix(1.0, 0.4, sleep) / (1.0 + hr * hr * 2.2) * (1.0 - smoothstep(2.2, 3.0, hr));
+				halo = i_accent.a * l_lights * mix(1.0, 0.4, sleep) / (1.0 + hr * hr * 2.2) * (1.0 - smoothstep(2.2, 3.0, hr));
 			}
 		}
 		float w = clamp(0.5 + (d - d_a) / (2.0 * BLEND_BU), 0.0, 1.0);
@@ -601,7 +635,7 @@ void fragment() {
 	float aa = max(bu_per_px * S, 0.6);                      // local px per screen px
 
 	// 4. fuzz: wobble + fibre fringe outside the silhouette
-	float fz = mix(1.0, fz_part, w_part) * (1.0 - 0.3 * g_rain);
+	float fz = mix(1.0, fz_part, w_part) * (1.0 - 0.3 * l_rain);
 	vec2 pcb = ps - BODY_C;
 	float ang_b = atan(pcb.y, pcb.x);
 	float n_b = max(floor(PI * (rb.x + rb.y) * S / FIBRE_PITCH_PX), 8.0);
@@ -677,8 +711,8 @@ void fragment() {
 				}
 			}
 			nest_col = mix(mix(u_grass_root.rgb, u_ground.rgb, 0.6), u_grass_tip.rgb * 1.04, smoothstep(0.0, 0.85, best_t));
-			nest_col += g_key.rgb * g_backlight * g_rim * 0.25 * best_t * best_t;
-			nest_col = 1.0 - (1.0 - nest_col) * (1.0 - g_accent.rgb * clamp(i_light.z * g_lights * LAMP_FILL_K * 0.6, 0.0, LAMP_FILL_MAX));
+			nest_col += l_key.rgb * l_backlight * l_rim * 0.25 * best_t * best_t;
+			nest_col = 1.0 - (1.0 - nest_col) * (1.0 - g_accent.rgb * clamp(i_light.z * l_lights * LAMP_FILL_K * 0.6, 0.0, LAMP_FILL_MAX));
 			nest_col = finish(nest_col, q * S / PX_PER_DP * u_grain_density, FRAGCOORD.xy, GRAIN_OBJECT);
 			nest_a *= nestle;
 		}
@@ -792,12 +826,12 @@ void fragment() {
 		float mot = (vnoise(ps * 9.0 + seed * 13.0) * 0.05 - 0.025);
 		mot += lod > 0.5 ? 0.0 : (vnoise(ps * 31.0) * 0.03 - 0.015);
 		float hair = lod > 0.5 ? 0.0 : (vnoise(rot(dp, seed * 6.0) * vec2(1.6, 0.35)) - 0.5) * 0.035;
-		float noise_k = mix(1.0, NIGHT_GRAIN, 1.0 - smoothstep(0.35, 0.8, luma(g_ambient.rgb)));
+		float noise_k = mix(1.0, NIGHT_GRAIN, 1.0 - smoothstep(0.35, 0.8, luma(l_ambient.rgb)));
 		vec3 body_alb = alb * (1.0 + (mot + hair) * noise_k);
 		alb = mix(body_alb, alb_part * (1.0 + mot * 0.8), w_part);
 		// fibre tips are lighter (outer band and fringe)
 		float depth_in = clamp(-d_px / (0.35 * S), 0.0, 1.0);
-		float night_k = 1.0 - smoothstep(0.35, 0.8, luma(g_ambient.rgb));
+		float night_k = 1.0 - smoothstep(0.35, 0.8, luma(l_ambient.rgb));
 		float tip_k = mix(1.0, NIGHT_TIP, night_k);
 		float tipband = smoothstep(0.55, 1.0, 1.0 - depth_in) * i_tip.a * smoothstep(-0.85, 0.1, n2.y) * tip_k;
 		vec3 tip_col = mix(alb, mix(i_tip.rgb, alb, w_part * 0.6), 0.85);
@@ -808,8 +842,8 @@ void fragment() {
 		alb = max(mix(vec3(luma(alb)), alb, 1.0 + FOCAL_CHROMA * focal), vec3(0.0));
 
 		// 6. light: ambient multiply, felt pillow volume, wrapped key, hue-shifted shade, top light, AO
-		vec2 L2 = normalize(v_key.xy);
-		float lz = mix(0.62, 0.12, g_backlight) * (0.6 + 0.4 * v_key.z);
+		vec2 L2 = normalize(l_keyv.xy);
+		float lz = mix(KEY_Z_DAY, KEY_Z_BACKLIT, l_backlight) * (0.6 + 0.4 * l_keyv.z);
 		vec3 L3 = normalize(vec3(L2 * sqrt(max(1.0 - lz * lz, 0.0)), lz));
 		float pr = mix(PILLOW_R, pr_part, w_part);
 		float t = clamp(-d / pr, 0.0, 1.0);
@@ -818,50 +852,68 @@ void fragment() {
 		float diff = clamp((dot(n3, L3) + WRAP) / (1.0 + WRAP), 0.0, 1.0);
 		float up = smoothstep(0.05, 0.95, ps.y);
 		float ao = 1.0 - smoothstep(0.0, 0.25, ps.y);
-		float amb_l = luma(g_ambient.rgb);
-		float dark = 1.0 - smoothstep(0.35, 0.8, amb_l);
+		float dark = 1.0 - smoothstep(0.35, 0.8, luma(l_ambient.rgb));
+		// the fur's own ambient: lifted toward white under the low golden sun (cream stays >= L* 78,
+		// cool fur never turns grey-mauve; QA r3) and the rain's ambient_mult divided back out
+		vec3 amb = mix(l_ambient.rgb, vec3(1.0), GOLDEN_AMB_LIFT * l_backlight * (1.0 - dark) + NIGHT_AMB_LIFT * dark);
+		amb /= mix(1.0, u_rain_amb, l_rain);
+		float amb_l = luma(amb);
 		// ambient multiply that keeps part of the fur's own hue (species identity at night)
-		vec3 col = mix(alb * g_ambient.rgb, alb * amb_l, mix(HUE_KEEP_DAY, HUE_KEEP_NIGHT, dark));
-		vec3 shade = col * mix(vec3(1.0), g_shadow.rgb * SHADE_K, SHADE_MIX * (1.0 - 0.5 * dark)) * SHADE_DARK;
-		col = mix(shade, col, 0.12 + 0.88 * diff);
+		vec3 col = mix(alb * amb, alb * amb_l, mix(HUE_KEEP_DAY, HUE_KEEP_NIGHT, dark));
+		vec3 shade = col * mix(vec3(1.0), l_shadow.rgb * SHADE_K, SHADE_MIX * (1.0 - 0.5 * dark)) * mix(SHADE_DARK, SHADE_DARK_BACKLIT, l_backlight);
+		col = mix(shade, col, 0.08 + 0.92 * diff);
+		// form (QA r3 c1): lit crown -> core shadow on the turned-away side -> a little ground
+		// bounce on the lower shadow-side edge -> rim. The bounce keeps the core band the darkest
+		// value, so the body reads round at 48 dp instead of a flat pastel disc.
+		float edge_k = 1.0 - smoothstep(0.0, 0.5, t);
+		float away = 1.0 - smoothstep(0.05, 0.55, diff);
+		float low_side = smoothstep(0.45, -0.6, n2.y);
+		col += alb * mix(u_ground.rgb, amb, 0.35) * BOUNCE_K * away * edge_k * (0.35 + 0.65 * low_side) * (1.0 - 0.6 * dark);
+		col += alb * l_key.rgb * SHEEN_K * diff * diff * diff * up * (1.0 - 0.7 * l_backlight) * (1.0 - dark);
 		// felt scatters light: a faint warm glow where light turns into shade
-		col += alb * g_key.rgb * g_ambient.rgb * 0.05 * diff * (1.0 - diff) * 4.0;
-		col = mix(col, col * g_shadow.rgb * SHADE_K * SHADE_DARK, ao * AO_MAX * CREATURE_AO * (1.0 - 0.6 * w_feet));
-		col += g_key.rgb * KEY_TOP * up * (0.5 + 0.5 * diff) * (1.0 - 0.6 * g_backlight);
+		col += alb * l_key.rgb * amb * 0.05 * diff * (1.0 - diff) * 4.0;
+		col = mix(col, col * l_shadow.rgb * SHADE_K * SHADE_DARK, ao * AO_MAX * CREATURE_AO * (1.0 - 0.6 * w_feet));
+		col += l_key.rgb * KEY_TOP * up * (0.5 + 0.5 * diff) * (1.0 - 0.6 * l_backlight);
 		col *= mix(0.94, 1.03, smoothstep(0.0, 0.6, depth_in));
+		// the seat half sits in its own soft occlusion (top-lit felt, value step crown -> base)
+		col *= mix(1.0 - LOWER_DARK * (1.0 - 0.5 * dark), 1.0, smoothstep(0.05, 0.62, ps.y));
 		// backlit (golden hour): the sun is behind, so the face toward us sits in its own shade
-		float front = FRONT_DARK * g_backlight * smoothstep(0.05, 0.45, depth_in);
-		col = mix(col * (1.0 - front), col * g_shadow.rgb * SHADE_K, front * 0.5);
-		col = mix(col, col * g_shadow.rgb * SHADE_K, max(v_env.y, i_light.w));   // passing cloud shadows
+		float front = FRONT_DARK * l_backlight * smoothstep(0.05, 0.45, depth_in);
+		col = mix(col * (1.0 - front), col * l_shadow.rgb * SHADE_K, front * 0.5);
+		col = mix(col, col * l_shadow.rgb * SHADE_K, max(v_env.y * (1.0 - st), i_light.w));   // passing cloud shadows
 		// the leaf umbrella's soft shade on the crown (offset to the side it is held on)
 		vec2 uq = (ps - vec2(facing * 0.12 * wh, 1.02)) / vec2(0.42 * wh, 0.26);
-		col = mix(col, col * g_shadow.rgb * SHADE_K, UMB_SHADE_A * umb * exp(-dot(uq, uq) * 1.6));
+		col = mix(col, col * l_shadow.rgb * SHADE_K, UMB_SHADE_A * umb * exp(-dot(uq, uq) * 1.6));
 
 		// rim and backlit peach fuzz (§5.6.6); the bottom edge never lights up
 		float lam = clamp(dot(n2, L2), 0.0, 1.0);
 		float rup = smoothstep(-0.35, 0.75, n2.y);
-		float rim_w = mix(4.5, 9.0, g_backlight);
+		float rim_w = mix(4.5, 9.0, l_backlight);
 		// thin parts: the rim fades toward the medial line, so it never flips edge to edge
-		float band = smoothstep(-rim_w, -1.0, d_s) * (1.0 - smoothstep(0.55, 1.0, t));
-		float rim = band * mix(lam * lam, rup * (0.35 + 0.65 * lam), g_backlight) * g_rim * smoothstep(-0.55, 0.0, n2.y);
+		// crisp: the band rises steeply at the silhouette and falls off fast inside (QA r3 c3/c1)
+		float band_in = smoothstep(-rim_w, -1.0, d_s);
+		float band = band_in * band_in * (1.0 - smoothstep(0.55, 1.0, t));
+		// backlit: the whole upper and side contour catches the sun (peach fuzz), lit side strongest
+		float rim = band * mix(lam * lam, mix(rup, 1.0, 0.3) * (0.4 + 0.6 * lam), l_backlight) * l_rim
+				* smoothstep(-0.8, -0.1, n2.y);
 		// peach: the key warmed toward the glow of the sky around the sun
-		vec3 rim_col = mix(g_key.rgb, max(g_glow.rgb, g_key.rgb), 0.45 * g_backlight);
+		vec3 rim_col = mix(l_key.rgb, max(l_glow.rgb, l_key.rgb), 0.45 * l_backlight);
 		float rim_k = mix(1.0, NEAR_RIM, v_near) * (1.0 + FOCAL_RIM * focal);
-		col += rim_col * rim * RIM_GAIN * (1.0 + RIM_BACKLIT_GAIN * g_backlight) * (1.0 - dark) * rim_k;
-		col += g_key.rgb * g_ambient.rgb * FOCAL_LIFT * focal * up;
-		float fuzz_glow = clamp((fringe_a * in_fringe + band * 0.35 * rup) * g_backlight * rup, 0.0, 1.0) * rim_k;
+		col += rim_col * rim * RIM_GAIN * (1.0 + RIM_BACKLIT_GAIN * l_backlight) * (1.0 - dark) * rim_k;
+		col += l_key.rgb * amb * FOCAL_LIFT * focal * up;
+		float fuzz_glow = clamp((fringe_a * in_fringe + band * 0.35 * rup) * l_backlight * rup, 0.0, 1.0) * rim_k;
 		col = mix(col, mix(col, rim_col, 0.85) * 1.12, fuzz_glow * smoothstep(-3.0, 0.0, d_s) + fuzz_glow * 0.35 * band);
 		// night: a thin cool moon rim on the key-facing fringe separates friends from the navy meadow
 		// masked to the moon-facing (upper-right) edges, so the moonlight has a direction
-		float mface = smoothstep(0.15, 0.8, dot(n2, L2) * 0.9 + n2.y * 0.2);
+		float mface = smoothstep(0.05, 0.7, dot(n2, L2) * 0.9 + n2.y * 0.25);
 		float mband = smoothstep(-MOON_RIM_PX * 2.0, -0.5, d_s) * mface * (1.0 - smoothstep(0.6, 1.0, t));
-		float ma = clamp(mband * MOON_RIM_A * dark * (1.0 + 0.4 * NIGHT_RIM * lam), 0.0, 0.75);
-		col = mix(col, g_key.rgb * mix(0.85, 1.0, lam), ma);
-		col += g_key.rgb * MOON_RIM_GLOW * ma * mface;
+		float ma = clamp(mband * MOON_RIM_A * dark * (1.0 + 0.4 * NIGHT_RIM * lam), 0.0, MOON_RIM_MAX);
+		col = mix(col, l_key.rgb * mix(0.85, 1.0, lam), ma);
+		col += l_key.rgb * MOON_RIM_GLOW * ma * mface;
 
 		// 7. lantern light (Mossling writes i_light from LampRegistry at 2 Hz): a warm screen fill
 		// stronger on the lamp-facing side, plus a warm rim on that edge (QA round 1)
-		float lampw = i_light.z * g_lights * (1.0 - lod * 0.5);
+		float lampw = i_light.z * l_lights * (1.0 - lod * 0.5);
 		float lface = clamp(dot(n2, normalize(i_light.xy + vec2(0.0, 0.35))), 0.0, 1.0);
 		vec3 lamp_a = g_accent.rgb * clamp(lampw * LAMP_FILL_K * (0.3 + 0.7 * lface) * (0.6 + 0.4 * up), 0.0, LAMP_FILL_MAX);
 		col = 1.0 - (1.0 - col) * (1.0 - lamp_a);
@@ -869,14 +921,14 @@ void fragment() {
 		col = mix(col, g_accent.rgb, clamp(lband * LAMP_RIM_A * min(lampw * 2.5, 1.0), 0.0, LAMP_RIM_A));
 
 		// 9. emission: the glow bobble warms toward its accent at night
-		col = mix(col, i_accent.rgb * 1.1, emit_mask * i_accent.a * g_lights * mix(1.0, 0.4, sleep) * w_part);
+		col = mix(col, i_accent.rgb * 1.1, emit_mask * i_accent.a * l_lights * mix(1.0, 0.4, sleep) * w_part);
 
 		// 8. face (body only, never on parts) ----------------------------------------------
 		float on_body = (1.0 - w_part) * core;
 		float look = i_anim.w;
-		vec3 ink = i_eye.rgb * mix(vec3(1.0), g_ambient.rgb, 0.5);
-		float night = 1.0 - smoothstep(0.35, 0.8, luma(g_ambient.rgb));
-		vec3 shine_col = u_shine.rgb * mix(1.0, NIGHT_SHINE, night) * mix(vec3(1.0), g_ambient.rgb, 0.25);
+		vec3 ink = i_eye.rgb * mix(vec3(1.0), l_ambient.rgb, 0.5);
+		float night = 1.0 - smoothstep(0.35, 0.8, luma(l_ambient.rgb));
+		vec3 shine_col = u_shine.rgb * mix(1.0, NIGHT_SHINE, night) * mix(vec3(1.0), l_ambient.rgb, 0.25);
 		float lid = clamp(i_anim.z, 0.0, 1.0);
 		float closed = closed_id;
 		float hl_side = sign(L2.x + 1e-3);
@@ -942,15 +994,15 @@ void fragment() {
 			if (pat_id == 8) {
 				float dc = length(ps - (bc + vec2(float(s) * 0.01, 0.02))) - 0.11;
 				float patch_ = 1.0 - smoothstep(-0.025, 0.02, dc + (pn - 0.5) * 0.015);
-				col = mix(col, i_fur2.rgb * g_ambient.rgb * (0.94 + 0.06 * diff), patch_ * on_body * i_fur2.a);
+				col = mix(col, i_fur2.rgb * l_ambient.rgb * (0.94 + 0.06 * diff), patch_ * on_body * i_fur2.a);
 			}
 		}
 		float cheek_a = (i_cheek.a + 0.25 * happy) * (pat_id == 8 ? 0.55 : 1.0);
-		col = mix(col, i_cheek.rgb * g_ambient.rgb, blush * cheek_a * on_body);
+		col = mix(col, i_cheek.rgb * l_ambient.rgb, blush * cheek_a * on_body);
 		// eyes
 		vec3 eye_col = mix(ink, mix(ink, shine_col, 0.12), lift);
 		col = mix(col, eye_col, eyes * on_body);
-		col = mix(col, col * mix(vec3(1.0), g_shadow.rgb * SHADE_K, 0.08) * 0.9, lash * on_body);
+		col = mix(col, col * mix(vec3(1.0), l_shadow.rgb * SHADE_K, 0.08) * 0.9, lash * on_body);
 		col = mix(col, shine_col, shine * on_body);
 		col = mix(col, ink, stroke * on_body);
 		// mouth: 1 smile, 2 "w"; a happy creature opens a tiny smile
@@ -973,7 +1025,7 @@ void fragment() {
 			mline = 1.0 - smoothstep(-aa * 0.7, aa * 0.7, dm);
 		}
 		col = mix(col, ink, mline * 0.85 * on_body);
-		vec3 tongue = mix(ink, i_cheek.rgb * g_ambient.rgb, smoothstep(0.0, -0.025, mp.y));
+		vec3 tongue = mix(ink, i_cheek.rgb * l_ambient.rgb, smoothstep(0.0, -0.025, mp.y));
 		col = mix(col, tongue, mfill * on_body);
 		// nibble: a little clover held in the mouth (a stem to a three-lobed leaf on the facing
 		// side), grows in with leaf_k; drawn over the tummy so it never leaves the silhouette
@@ -992,8 +1044,8 @@ void fragment() {
 			float dl = min(dstem, dclov) * S;
 			float lcov = (1.0 - smoothstep(-aa * 0.8, aa * 0.8, dl)) * on_body;
 			float ledge = smoothstep(-2.2, 0.0, dl);
-			vec3 leaf_c = u_leaf.rgb * g_ambient.rgb * mix(1.0, 0.82, ledge);
-			leaf_c += g_key.rgb * g_ambient.rgb * 0.12 * smoothstep(0.0, 0.03, dot(ps - lc, vec2(-side, 1.0)));
+			vec3 leaf_c = u_leaf.rgb * l_ambient.rgb * mix(1.0, 0.82, ledge);
+			leaf_c += l_key.rgb * l_ambient.rgb * 0.12 * smoothstep(0.0, 0.03, dot(ps - lc, vec2(-side, 1.0)));
 			col = mix(col, leaf_c, lcov);
 		}
 

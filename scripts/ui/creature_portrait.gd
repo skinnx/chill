@@ -24,6 +24,11 @@ const SILHOUETTE_ALPHA := 0.10
 ## the magnification): one fur material per density step, so same-size portraits still batch.
 const GRAIN_PARAM := &"u_grain_density"
 const GRAIN_STEP := 0.25
+## The fur fringe is drawn in body px, so a magnified portrait would blow it up into a soft halo
+## (QA r3: "looks rendered at low resolution and upscaled"): the fringe width is divided by
+## k^FUZZ_EXP (0.5: a 3x portrait keeps a 1.7x fringe, still felted, never blurry).
+const FUZZ_EXP := 0.5
+const FUZZ_SLOT := &"i_fur"
 
 static var _rig: MosslingRig
 static var _fur: ShaderMaterial
@@ -97,10 +102,23 @@ func _fit() -> void:
 		var body := mossling.get_node_or_null(^"Visual/Body") as CanvasItem
 		if body != null:
 			body.material = _fur_for(k)
+			_crisp_fringe(body, k)
 	if _silhouette != null:
 		_silhouette.position = Vector2.ZERO
 		_silhouette.size = size
 		(_silhouette.material as ShaderMaterial).set_shader_parameter(&"u_size", size)
+
+
+func _crisp_fringe(body: CanvasItem, k: float) -> void:
+	if not body.has_meta(&"fur_base"):
+		var v: Variant = body.get_instance_shader_parameter(FUZZ_SLOT)
+		if not (v is Color):
+			return
+		body.set_meta(&"fur_base", v)
+	var base: Color = body.get_meta(&"fur_base")
+	var c := base
+	c.a = base.a / pow(maxf(k, 1.0), FUZZ_EXP)
+	body.set_instance_shader_parameter(FUZZ_SLOT, c)
 
 
 ## Frees the shared rig and materials (HUD exit).

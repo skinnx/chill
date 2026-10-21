@@ -19,8 +19,9 @@ const RING_DP := 3.0
 const ASLEEP_ALPHA := 0.5
 ## Gap between the icon and the in-plate label, px.
 const LABEL_GAP := 2.0
-## Label colour when active (dock tab: the selected label takes the primary, 5.0:1 on primary_tint).
-const ACTIVE_LABEL_TOKEN := &"primary_pressed"
+## Label colour when active (dock tab: the selected label takes primary_deep, 7.0:1 on
+## primary_tint; round 4: primary_pressed measured 3.7:1 at 200 % vi text in QA r3 stills).
+const ACTIVE_LABEL_TOKEN := &"primary_deep"
 
 var plate_px: float = 168.0:
 	set(v):
@@ -68,6 +69,11 @@ var label_w: float = -1.0
 var label_gap: float = LABEL_GAP
 ## The active label takes ACTIVE_LABEL_TOKEN (dock tabs).
 var tint_active_label: bool = false
+## Night chrome blend (dock tabs): the label lerps toward night_ink.
+var night_k: float = 0.0:
+	set(v):
+		night_k = v
+		_refresh_label_color()
 var label: Label
 ## The icon's z_index (the dock lifts its icons to the HUD icon layer so they batch).
 var icon_z: int = 0:
@@ -166,10 +172,13 @@ func _refresh_alpha() -> void:
 
 
 func _refresh_label_color() -> void:
-	if label == null or not tint_active_label:
+	if label == null:
 		return
-	if active:
-		label.add_theme_color_override(&"font_color", UiTokens.color(ACTIVE_LABEL_TOKEN))
+	var night := UiTokens.color(&"night_ink")
+	if active and tint_active_label:
+		label.add_theme_color_override(&"font_color", UiTokens.color(ACTIVE_LABEL_TOKEN).lerp(night, night_k))
+	elif night_k > 0.0:
+		label.add_theme_color_override(&"font_color", UiTokens.color(&"ink").lerp(night, night_k))
 	else:
 		label.remove_theme_color_override(&"font_color")
 

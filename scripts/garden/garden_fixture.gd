@@ -32,18 +32,19 @@ const FIXTURE_DEW := 340
 ## decor.json fx flag of a set whose copies add chime shells (AUDIO_BIBLE §5).
 const FX_CHIME_NOTE := "adds_chime_note"
 
-## [flower, bed, count, stage]: the mid-game garden (50 stems, every flower, all five beds: the
-## three lower beds full of bloom with a few buds, the two upper beds younger).
+## [flower, bed, count, stage, (optional) slots]: the mid-game garden (46 stems, every flower, all
+## five beds: the three lower beds full of bloom with a few buds, the two upper beds younger).
+## Round 4 (QA r3: the left bed was the densest detail in the frame): bed_2 holds 8 stems in two
+## masses (back-left bells + primroses, front-right daisies + clover) with a rest gap between them.
 const MID_STEMS: Array[Array] = [
 	[&"sweet_clover", &"bed_1", 4, WorldSim.STAGE_BLOOM],
 	[&"button_daisy", &"bed_1", 4, WorldSim.STAGE_BLOOM],
 	[&"button_daisy", &"bed_1", 1, WorldSim.STAGE_BUD],
 	[&"forget_me_not", &"bed_1", 4, WorldSim.STAGE_BLOOM],
-	[&"bluebell", &"bed_2", 4, WorldSim.STAGE_BLOOM],
-	[&"primrose", &"bed_2", 3, WorldSim.STAGE_BLOOM],
-	[&"primrose", &"bed_2", 1, WorldSim.STAGE_BUD],
-	[&"button_daisy", &"bed_2", 2, WorldSim.STAGE_BLOOM],
-	[&"sweet_clover", &"bed_2", 2, WorldSim.STAGE_BLOOM],
+	[&"bluebell", &"bed_2", 3, WorldSim.STAGE_BLOOM, [12, 9, 8]],
+	[&"primrose", &"bed_2", 2, WorldSim.STAGE_BLOOM, [11, 14]],
+	[&"button_daisy", &"bed_2", 2, WorldSim.STAGE_BLOOM, [7, 10]],
+	[&"sweet_clover", &"bed_2", 1, WorldSim.STAGE_BLOOM, [4]],
 	[&"buttercup", &"bed_3", 4, WorldSim.STAGE_BLOOM],
 	[&"buttercup", &"bed_3", 1, WorldSim.STAGE_BUD],
 	[&"dandelion", &"bed_3", 3, WorldSim.STAGE_BLOOM],
@@ -59,7 +60,7 @@ const MID_STEMS: Array[Array] = [
 ]
 ## Décor copies per set (garden_mid; night_lanterns raises the lanterns to 5).
 const MID_DECOR := {
-	&"leaf_pinwheel": 3, &"pebble_cairn": 5, &"toadstool_seat": 4, &"stream_stones": 4,
+	&"leaf_pinwheel": 3, &"pebble_cairn": 3, &"toadstool_seat": 4, &"stream_stones": 4,
 	&"firefly_lantern": 3, &"wind_chime": 4,
 }
 const NIGHT_LANTERN_COUNT := 5
@@ -114,7 +115,8 @@ static func apply(content: GameContent, state: WorldState, name: String) -> bool
 		_plant_full(content, state)
 	else:
 		for row: Array in MID_STEMS:
-			_plant(content, state, StringName(row[0]), StringName(row[1]), int(row[2]), int(row[3]))
+			var slots: Array = row[4] if row.size() > 4 else []
+			_plant(content, state, StringName(row[0]), StringName(row[1]), int(row[2]), int(row[3]), slots)
 	for d: Dictionary in content.decor:
 		var id := StringName(d["id"])
 		var n := int(MID_DECOR.get(id, 0))
@@ -146,19 +148,22 @@ static func _plant_full(content: GameContent, state: WorldState) -> void:
 
 
 ## Plants [param count] stems of [param flower] in [param bed] (rules 2-3 pick the slot) at [param stage].
+## [param slots] (optional) pins the stems to those bed slots when they are free (fixture composition).
 static func _plant(content: GameContent, state: WorldState, flower: StringName, bed: StringName, count: int,
-		stage: int) -> void:
+		stage: int, slots: Array = []) -> void:
 	var f: Dictionary = content.flowers_by_id.get(flower, {})
 	if f.is_empty():
 		return
 	var times := PackedFloat64Array([float(f["sprout_at_s"]), float(f["bud_at_s"]), float(f["bloom_at_s"])])
-	for _i in count:
+	for i in count:
 		var b := bed
 		if b == &"" or not GardenRules.has_room(content, state.stems, b):
 			b = GardenRules.auto_bed(content, state.stems, flower)
 		if b == &"":
 			return
 		var slot := GardenRules.choose_slot(content, state.stems, b, flower)
+		if i < slots.size() and b == bed and GardenRules.free_slots(content, state.stems, b).has(int(slots[i])):
+			slot = int(slots[i])
 		state.stems.append({"flower": String(flower), "bed": String(b), "slot": slot,
 			"planted_t": state.t - age_for(times, stage), "tutorial": false, "stage": stage})
 		state.owned[String(flower)] = int(state.owned.get(String(flower), 0)) + 1

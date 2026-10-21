@@ -34,8 +34,19 @@ const RIPPLE_SHADER := "res://shaders/ui/ripple.gdshader"
 ## Light-fill ripple: primary at this share of ui.ring.alpha[0] (a white ripple on cream is
 ## invisible; a full-strength primary one is loud).
 const LIGHT_RIPPLE_SHARE := 0.8
+## Light ripple on dark glass (night dock): white capped at this alpha so the light labels keep
+## >= 4.5:1 under it (QA r3: a 0.35 white ripple took a label to 2.8:1).
+const ON_DARK_RIPPLE_MAX := 0.12
+## Primary pills (pressed fill primary_deep) splash in the lighter primary at this share of
+## ui.ring.alpha[0]: the fill under the white label stays darker than primary_pressed even at the
+## ripple's crest (>= 5.2:1; QA r3: a white ripple took the label to 2.8:1).
+const PILL_RIPPLE_SHARE := 1.5
 ## Squash: the width gives back this share of the height's press (1.0 + k x (1 - scale_y)).
 const SQUASH_WIDTH_K := 0.5
+
+## A Button's text colours (hidden while a ripple carries the label, see _label_over).
+const FONT_COLOR_KEYS: Array[StringName] = [&"font_color", &"font_hover_color", &"font_pressed_color",
+	&"font_hover_pressed_color", &"font_focus_color"]
 
 static var _ripple_shader: Shader
 
@@ -159,7 +170,8 @@ static func _ripple(c: Control, p: Vector2) -> ColorRect:
 		_ripple_shader = load(RIPPLE_SHADER) as Shader
 	var shape := _shape(c)
 	var radius := float(c.get_meta(META_RIPPLE_RADIUS, minf(shape.size.x, shape.size.y) * 0.5))
-	var dark := bool(c.get_meta(META_RIPPLE_ON_DARK, _is_dark_button(c)))
+	var pill := _is_dark_button(c)
+	var dark := bool(c.get_meta(META_RIPPLE_ON_DARK, false))
 	var alphas: Array = UiTokens.ui_block("ring").get("alpha", [0.35, 0.0])
 	var a0 := float(alphas[0]) if alphas.size() > 0 else 0.35
 	var rip := ColorRect.new()
@@ -178,8 +190,16 @@ static func _ripple(c: Control, p: Vector2) -> ColorRect:
 	for k: Vector2 in corners:
 		reach = maxf(reach, (p - shape.position).distance_to(k))
 	mat.set_shader_parameter(&"u_reach", reach)
-	mat.set_shader_parameter(&"u_color", UiTokens.color(&"surface_hi") if dark else UiTokens.color(&"primary"))
-	mat.set_shader_parameter(&"u_alpha", a0 if dark else a0 * LIGHT_RIPPLE_SHARE)
+	var col := UiTokens.color(&"primary")
+	var alpha := a0 * LIGHT_RIPPLE_SHARE
+	if pill:
+		col = UiTokens.color(&"primary")
+		alpha = a0 * PILL_RIPPLE_SHARE
+	elif dark:
+		col = UiTokens.color(&"surface_hi")
+		alpha = minf(a0, ON_DARK_RIPPLE_MAX)
+	mat.set_shader_parameter(&"u_color", col)
+	mat.set_shader_parameter(&"u_alpha", alpha)
 	mat.set_shader_parameter(&"u_progress", 0.0)
 	rip.material = mat
 	if c.has_meta(META_RIPPLE):
@@ -188,7 +208,34 @@ static func _ripple(c: Control, p: Vector2) -> ColorRect:
 			(old as Node).queue_free()
 	c.add_child(rip, false, Node.INTERNAL_MODE_FRONT)
 	c.set_meta(META_RIPPLE, rip)
+	if c is Button and (c as Button).text != "" and not (c as Button).flat:
+		_label_over(c as Button, rip)
 	return rip
+
+
+## A Button draws its text in its own draw, under every child, so a ripple would wash over the
+## label (QA r3: 2.8:1 mid-press). While the ripple lives, the button's text is hidden and the
+## same text is drawn by a Label riding above the ripple: the splash always sits UNDER the label.
+static func _label_over(b: Button, rip: Control) -> void:
+	var l := Label.new()
+	l.name = "RippleLabel"
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	l.text = b.text
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	l.add_theme_font_override(&"font", b.get_theme_font(&"font"))
+	l.add_theme_font_size_override(&"font_size", b.get_theme_font_size(&"font_size"))
+	var col := b.get_theme_color(&"font_pressed_color")
+	l.add_theme_color_override(&"font_color", col)
+	l.position = -rip.position
+	l.size = b.size
+	rip.add_child(l)
+	for key: StringName in FONT_COLOR_KEYS:
+		b.add_theme_color_override(key, Color(col, 0.0))
+	rip.tree_exiting.connect(func() -> void:
+		if is_instance_valid(b):
+			for key: StringName in FONT_COLOR_KEYS:
+				b.remove_theme_color_override(key))
 
 
 ## A default-variation, non-flat Button is a primary (dark) pill.

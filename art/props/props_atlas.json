@@ -228,9 +228,9 @@
 			"sort_y": -52,
 			"material": "stone_warm",
 			"shadow": [
-				126,
-				18,
-				1.6,
+				132,
+				22,
+				2.2,
 				56
 			],
 			"focal": 1.0

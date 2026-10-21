@@ -356,10 +356,10 @@ func show_leave(instant: bool = false) -> void:
 	var v: VBoxContainer = shell[1]
 	v.add_child(UiSheet.label(tr("LEAVE_TITLE"), &"TitleLabel", true))
 	v.add_child(UiSheet.label(tr("LEAVE_DESC"), &"BodyLabel", true))
-	var stay := UiSheet.pill_button(tr("LEAVE_NO"), true, ThemeBuilder.BUTTON_H)
+	var stay := UiSheet.pill_button(tr("LEAVE_NO"), true, ThemeBuilder.BUTTON_H, false)
 	stay.pressed.connect(func() -> void: close_modal())
 	v.add_child(stay)
-	var leave := UiSheet.pill_button(tr("LEAVE_YES"), false, ThemeBuilder.BUTTON_H)
+	var leave := UiSheet.pill_button(tr("LEAVE_YES"), false, ThemeBuilder.BUTTON_H, false)
 	leave.pressed.connect(func() -> void:
 		close_modal(true)
 		Game.leave_now())

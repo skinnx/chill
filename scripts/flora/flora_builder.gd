@@ -56,9 +56,9 @@ const FOLD_SCALE := 0.55
 ## A stamp whose pivot is this far from its centre has a forward axis (pivot -> centre).
 const PIVOT_AXIS_MIN := 0.2
 ## Sparkles: radius around the head, size at depth 1 (px).
-const SPARKLE_RING := 0.75
+const SPARKLE_RING := 1.0
 ## Round 3: unfurl sparkles read at 1:1 on a phone (14 px vanished in the touch-strip stills).
-const SPARKLE_PX := 22.0
+const SPARKLE_PX := 30.0
 ## Back petals of the 3/4 cup sit in the cup's shadow (lightness jitter units).
 const BACK_PETAL_DARK := 0.8
 ## Clusters: golden-angle spiral, slightly squashed for the 3/4 view.

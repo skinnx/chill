@@ -29,6 +29,10 @@ instance uniform vec4 i_albedo : source_color = vec4(0.651, 0.8, 0.584, 0.0);
 uniform float haze_k = 0.16;
 uniform float trunk_k = 0.55;
 uniform float moss_px = 34.0;
+// Round 4 (QA r3: the willow canopy out-contrasted the focal): object canopies (the willow crown,
+// mid-ground) keep a softer lit/shade split and a breath of aerial haze, so they sit back.
+uniform float object_shade_mix = 0.62;
+uniform float object_haze_k = 0.07;
 
 varying vec4 v_inst;
 varying vec4 v_custom;
@@ -44,7 +48,7 @@ void vertex() {
 	float k = v_custom.x;
 	float s = sin(TAU * k / LOOP_S * g_time + v_custom.z) + 0.3 * sin(TAU * k * 1.7 / LOOP_S * g_time + v_custom.z * 1.3);
 	float r_px = max(v_custom.w, 1.0);
-	VERTEX.x += s * v_custom.y / r_px * wind_k() * (1.0 + GUST_AMP * gust(world.x)) * g_motion * h * h * 0.5;
+	VERTEX.x += s * v_custom.y / r_px * wind_k() * (1.0 + GUST_AMP * gust_at(world)) * g_motion * h * h * 0.5;
 	v_canvas = (MODEL_MATRIX * vec4(VERTEX, 0.0, 1.0)).xy;
 	COLOR = vec4(1.0);
 }
@@ -93,6 +97,9 @@ void fragment() {
 	}
 	base *= 1.0 + (hs(seed, 9.0, 9.0) - 0.5) * 0.10;
 	vec3 shade = shade_of(base);
+	if (object) {
+		shade = mix(base, shade, object_shade_mix);
+	}
 	float back = g_backlight * g_celestial.x;
 	vec4 m = texture(moss_tex, p * r_px / moss_px + seed * 5.0);
 	vec2 mn = m.gb * 2.0 - 1.0;
@@ -158,6 +165,9 @@ void fragment() {
 	vec2 p_design = v_canvas - g_world_offset;
 	if (g_cloud_shadow > 0.001) {
 		c = mix(c, shade_of(c), cloud_shadow(p_design) * 1.4);
+	}
+	if (object) {
+		c = mix(c, g_sky_horizon.rgb, object_haze_k * (1.0 - g_lights));
 	}
 	c += sun_veil(v_canvas, mix(0.6, 0.25, depth));
 	c = mix(c, mix(g_sky_horizon.rgb, g_glow.rgb, 0.2), g_mist * 0.3 * (1.0 - depth));
