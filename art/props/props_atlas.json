@@ -4,7 +4,7 @@
 	"atlas": "res://art/props/props_atlas.svg",
 	"size": [
 		1024,
-		1088
+		768
 	],
 	"pad": 10,
 	"parts": [
@@ -12,7 +12,7 @@
 			"id": "willow_trunk",
 			"prop": "willow",
 			"region": [
-				510,
+				10,
 				10,
 				210,
 				330
@@ -31,53 +31,11 @@
 			]
 		},
 		{
-			"id": "willow_curtains",
-			"prop": "willow",
-			"region": [
-				10,
-				10,
-				480,
-				360
-			],
-			"centre": [
-				-10,
-				44
-			],
-			"sort_y": 223,
-			"material": "willow_leaf",
-			"sway": [
-				4.0,
-				76,
-				1.0
-			]
-		},
-		{
-			"id": "willow_crown",
-			"prop": "willow",
-			"region": [
-				10,
-				390,
-				480,
-				270
-			],
-			"centre": [
-				0,
-				-141
-			],
-			"sort_y": 225,
-			"material": "willow_leaf",
-			"sway": [
-				1.5,
-				47,
-				1.0
-			]
-		},
-		{
 			"id": "chime_branch",
 			"prop": "willow",
 			"region": [
-				508,
-				880,
+				348,
+				540,
 				286,
 				64
 			],
@@ -92,8 +50,8 @@
 			"id": "mailbox_post",
 			"prop": "mailbox",
 			"region": [
-				310,
-				880,
+				150,
+				540,
 				26,
 				84
 			],
@@ -115,8 +73,8 @@
 			"id": "mailbox_body",
 			"prop": "mailbox",
 			"region": [
-				878,
-				880,
+				718,
+				540,
 				76,
 				54
 			],
@@ -131,8 +89,8 @@
 			"id": "mailbox_roof",
 			"prop": "mailbox",
 			"region": [
-				620,
-				1016,
+				450,
+				670,
 				86,
 				30
 			],
@@ -147,8 +105,8 @@
 			"id": "mailbox_flag",
 			"prop": "mailbox",
 			"region": [
-				576,
-				1016,
+				406,
+				670,
 				24,
 				34
 			],
@@ -164,8 +122,8 @@
 			"id": "stump_back",
 			"prop": "stump",
 			"region": [
-				800,
-				390,
+				530,
+				10,
 				210,
 				180
 			],
@@ -186,8 +144,8 @@
 			"id": "stump_top",
 			"prop": "stump",
 			"region": [
-				10,
-				1016,
+				814,
+				540,
 				150,
 				52
 			],
@@ -202,8 +160,8 @@
 			"id": "stump_front",
 			"prop": "stump",
 			"region": [
+				760,
 				10,
-				680,
 				210,
 				180
 			],
@@ -218,8 +176,8 @@
 			"id": "stump_moss",
 			"prop": "stump",
 			"region": [
-				510,
-				390,
+				240,
+				10,
 				270,
 				190
 			],
@@ -235,8 +193,8 @@
 			"id": "basket",
 			"prop": "basket",
 			"region": [
-				10,
-				880,
+				754,
+				360,
 				140,
 				116
 			],
@@ -257,8 +215,8 @@
 			"id": "sun_stone",
 			"prop": "sun_stone_rock",
 			"region": [
-				500,
-				680,
+				270,
+				360,
 				264,
 				124
 			],
@@ -279,8 +237,8 @@
 			"id": "stone_moss",
 			"prop": "sun_stone_rock",
 			"region": [
-				272,
-				1016,
+				102,
+				670,
 				284,
 				46
 			],
@@ -297,8 +255,8 @@
 			"id": "spring_rock",
 			"prop": "spring_rock",
 			"region": [
-				784,
-				680,
+				554,
+				360,
 				180,
 				120
 			],
@@ -319,8 +277,8 @@
 			"id": "glow_mushrooms",
 			"prop": "",
 			"region": [
-				180,
-				1016,
+				10,
+				670,
 				72,
 				50
 			],
@@ -337,8 +295,8 @@
 			"id": "reeds",
 			"prop": "",
 			"region": [
-				170,
-				880,
+				10,
+				540,
 				120,
 				110
 			],
@@ -360,8 +318,8 @@
 			"id": "fern_clump",
 			"prop": "",
 			"region": [
-				330,
-				680,
+				100,
+				360,
 				150,
 				132
 			],
@@ -382,8 +340,8 @@
 			"id": "moon_rock",
 			"prop": "",
 			"region": [
-				356,
-				880,
+				196,
+				540,
 				132,
 				66
 			],
@@ -404,8 +362,8 @@
 			"id": "pebble_a",
 			"prop": "",
 			"region": [
-				780,
-				1016,
+				610,
+				670,
 				30,
 				18
 			],
@@ -421,8 +379,8 @@
 			"id": "pebble_b",
 			"prop": "",
 			"region": [
-				922,
-				1016,
+				752,
+				670,
 				22,
 				14
 			],
@@ -438,8 +396,8 @@
 			"id": "pebble_c",
 			"prop": "",
 			"region": [
-				726,
-				1016,
+				556,
+				670,
 				34,
 				20
 			],
@@ -455,8 +413,8 @@
 			"id": "pebble_d",
 			"prop": "",
 			"region": [
-				878,
-				1016,
+				708,
+				670,
 				24,
 				15
 			],
@@ -472,8 +430,8 @@
 			"id": "pebble_e",
 			"prop": "",
 			"region": [
-				830,
-				1016,
+				660,
+				670,
 				28,
 				17
 			],
@@ -489,8 +447,8 @@
 			"id": "lantern_stick",
 			"prop": "",
 			"region": [
-				240,
-				680,
+				10,
+				360,
 				70,
 				160
 			],
@@ -507,8 +465,8 @@
 			"id": "lantern_jar",
 			"prop": "",
 			"region": [
-				814,
-				880,
+				654,
+				540,
 				44,
 				58
 			],

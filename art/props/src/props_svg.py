@@ -593,19 +593,30 @@ def willow_trunk(svg: Svg) -> Part:
 
 
 def chime_branch(svg: Svg) -> Part:
-    """The low willow limb the wind chime hangs from (wood_bark, colour line: it is touchable)."""
+    """The low willow limb the wind chime hangs from (wood_bark). It grows OUT of the trunk: thick
+    where it joins (same bark, no outline at the junction), tapering to a twig. Tone edges only
+    (QA round 1: no dark ink outline on the felt-style world)."""
     p = Part(svg, 286, 64)
-    # Part frame: design x = local x + 112, design y = local y + 610.
-    limb = [(4, 52), (60, 38), (120, 32), (180, 30), (230, 34), (270, 42), (282, 50)]
-    p.path(smooth_path(limb, closed=False), "none", 1.0, stroke=LINE, sw=16 + LINE_W)
-    p.path(smooth_path(limb, closed=False), "none", 1.0, stroke=LIT, sw=16)
-    twig = [(200, 30), (214, 14), (230, 6)]
-    p.path(smooth_path(twig, closed=False), "none", 1.0, stroke=LINE, sw=6 + LINE_W)
-    p.path(smooth_path(twig, closed=False), "none", 1.0, stroke=LIT, sw=6)
-    p.path(smooth_path([(8, 56), (60, 44), (120, 38), (180, 37), (230, 40), (276, 50)], closed=False), "none", 0.7,
-           stroke=SHADE, sw=5)
-    p.path(smooth_path([(10, 48), (60, 34), (120, 28), (180, 26), (230, 30)], closed=False), "none", 0.6,
-           stroke=DETAIL, sw=2)
+    # Part frame: design x = local x + 112, design y = local y + 610; trunk joint at local ~(28, 48).
+    top = [(10, 40), (60, 33), (120, 28), (180, 27), (230, 31), (268, 40), (282, 47)]
+    bot = [(282, 51), (266, 47), (228, 41), (180, 38), (120, 41), (60, 49), (14, 60)]
+    limb = smooth_path(top + bot)
+    clip = svg.clip(limb)
+    p.path(limb, svg.lin(0, 27, 0, 58, [(0, LIT), (0.45, LIT), (1, SHADE)]))
+    # Bark grooves along the limb and a lit ridge on top.
+    for k, dy in enumerate((0.0, 6.0)):
+        p.path(smooth_path([(20, 46 + dy * 0.6), (90, 39 + dy * 0.5), (170, 34 + dy * 0.4), (240, 37 + dy * 0.3)],
+                           closed=False), "none", 0.45, svg.blur(0.8), SHADE, 2.2, clip)
+    p.path(smooth_path([(16, 42), (80, 33), (160, 29), (230, 32), (270, 41)], closed=False), "none", 0.6,
+           svg.blur(0.8), DETAIL, 2.0, clip)
+    # Soft shade under the limb where it leaves the trunk (it reads as attached, not laid across).
+    p.ellipse(22, 52, 18, 10, SHADE, 0.6, svg.blur(4), clip)
+    # A small twig with two leaves near the tip.
+    twig = [(206, 32), (220, 16), (236, 8)]
+    p.path(smooth_path(twig, closed=False), "none", 1.0, stroke=SHADE, sw=6)
+    p.path(smooth_path(twig, closed=False), "none", 1.0, stroke=LIT, sw=3.5)
+    p.ellipse(244, 8, 9, 4, DETAIL, 0.9, rot=-20)
+    p.ellipse(226, 12, 7, 3.2, DETAIL, 0.8, rot=30)
     return p
 
 
