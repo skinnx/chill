@@ -717,6 +717,21 @@ func _tap_bed(bv: BedView) -> void:
 		FrameGovernor.hold_for(TAP_SWAY_DECAY_S * 3.0)
 
 
+## True when a touch at [param pos] belongs to a bed that outranks décor (GDD §2.5 hit priority:
+## a bed with a ready bud, or the tutorial seed's bed).
+func claims(pos: Vector2) -> bool:
+	var bed := _bed_at(pos)
+	if bed == &"":
+		return false
+	var bv: BedView = _beds[bed]
+	if _seed != null and bv.hit.has_point(_seed.position):
+		return true
+	for v: StemView in _views.values():
+		if v.bed == bed and v.ready_s >= 0.0 and v.unfurl_s < 0.0:
+			return true
+	return false
+
+
 ## Design-px hit rect of a bed (UI: the bed card anchor).
 func bed_rect(bed_id: StringName) -> Rect2:
 	var bv: BedView = _beds.get(bed_id)
