@@ -24,6 +24,12 @@ signal globals_updated(values: Dictionary)
 
 const PUSH_INTERVAL_S := 0.5
 const EPSILON := 1e-4
+## Resume after a long absence (or any clock jump): palettes and celestial bodies crossfade over this
+## many seconds instead of popping (round-2 directive 4, >= 600 ms). A jump is a g_day step larger
+## than JUMP_G_DAY or a sun / moon move larger than JUMP_PX (design px) between two pushes.
+const JUMP_BLEND_S := 0.8
+const JUMP_G_DAY := 0.01
+const JUMP_PX := 24.0
 
 var phase: StringName = &""
 var weather: StringName = &"clear"
@@ -45,6 +51,13 @@ var _override_weather: StringName = &""
 var _mirror: Dictionary = {}
 var _accum: float = INF
 var _force: bool = true
+## Jump crossfade state: the globals / colours / scalars as last pushed, and the blend progress.
+var _blend_from: Dictionary = {}
+var _blend_colors: Dictionary = {}
+var _blend_scalars: Dictionary = {}
+var _blend_t: float = 1.0
+## world_offset that the last pushed sun / moon positions included.
+var _pushed_offset: Vector2 = Vector2.ZERO
 
 
 func _ready() -> void:
@@ -79,6 +92,11 @@ func set_install_seed(install_seed: int) -> void:
 func set_world_offset(offset: Vector2) -> void:
 	world_offset = offset
 	_set_global(&"g_world_offset", offset)
+	# g_sun_pos / g_moon_pos are canvas px (design + offset): push them in the same frame, so the
+	# sky never shows a body at its offset-less position (QA round 1: a 470 px sun pop at boot).
+	if _content != null:
+		_force = true
+		_update(0.0)
 
 
 ## QA / debug: pin g_day (NAN releases) and/or the weather (&"" releases).
@@ -129,23 +147,77 @@ func _update(delta: float) -> void:
 		weather = target
 		weather_changed.emit(weather)
 	var moving := weather_driver.step(target, delta)
+	var blending := _blend_t < 1.0
 	_accum += delta
-	if not (moving or _force or _accum >= PUSH_INTERVAL_S):
+	if not (moving or blending or _force or _accum >= PUSH_INTERVAL_S):
 		return
 	_accum = 0.0
 	_force = false
 	var values := evaluate(local_s)
+	if blending:
+		_blend_t = minf(1.0, _blend_t + delta / JUMP_BLEND_S)
+	elif _is_jump(values):
+		_blend_from = _mirror.duplicate()
+		_blend_colors = colors.duplicate()
+		_blend_scalars = scalars.duplicate()
+		_blend_t = 0.0
+	if _blend_t < 1.0:
+		_apply_blend(values, smoothstep(0.0, 1.0, _blend_t))
 	g_day = float(values[&"g_day"])
 	colors = values[&"_colors"]
 	scalars = values[&"_scalars"]
 	for key: StringName in values:
 		if not String(key).begins_with("_"):
 			_set_global(key, values[key])
+	_pushed_offset = world_offset
 	var ph := TodMath.phase_id_at(_content, local_s) if is_nan(_override_g_day) else _phase_for_g_day(g_day)
 	if ph != phase:
 		phase = ph
 		phase_changed.emit(phase)
 	globals_updated.emit(_mirror)
+
+
+## True when the new values jump from what is on screen (resume after an absence, a clock change).
+func _is_jump(values: Dictionary) -> bool:
+	if not _mirror.has(&"g_day"):
+		return false
+	if absf(float(values[&"g_day"]) - float(_mirror[&"g_day"])) > JUMP_G_DAY:
+		return true
+	for body: StringName in [&"g_sun_pos", &"g_moon_pos"]:
+		if _mirror.has(body):
+			var was := (_mirror[body] as Vector2) - _pushed_offset
+			var now := (values[body] as Vector2) - world_offset
+			if was.distance_to(now) > JUMP_PX:
+				return true
+	return false
+
+
+## Blends `values` (in place) from the snapshot taken at the jump; k = eased progress 0..1.
+func _apply_blend(values: Dictionary, k: float) -> void:
+	for key: StringName in values:
+		if _blend_from.has(key):
+			values[key] = _lerp_value(_blend_from[key], values[key], k)
+	var col: Dictionary = values[&"_colors"]
+	for slot: String in col:
+		if _blend_colors.has(slot):
+			col[slot] = _lerp_value(_blend_colors[slot], col[slot], k)
+	var sc: Dictionary = values[&"_scalars"]
+	for name: String in sc:
+		if _blend_scalars.has(name):
+			sc[name] = _lerp_value(_blend_scalars[name], sc[name], k)
+
+
+static func _lerp_value(a: Variant, b: Variant, k: float) -> Variant:
+	if typeof(a) != typeof(b):
+		return b
+	match typeof(a):
+		TYPE_FLOAT:
+			return lerpf(float(a), float(b), k)
+		TYPE_VECTOR2:
+			return (a as Vector2).lerp(b as Vector2, k)
+		TYPE_COLOR:
+			return (a as Color).lerp(b as Color, k)
+	return b
 
 
 func _target_weather() -> StringName:

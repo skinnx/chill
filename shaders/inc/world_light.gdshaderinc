@@ -6,6 +6,8 @@
 //   key_dir(p_canvas)             unit vector toward the light; turns toward the body with backlight
 //   light_elevation()             clamp((horizon_y - body_y) / 400, 0.05, 1) in design px
 //   shadow_length()               clamp(0.35 / elev, 0.35, 2.5): cast-shadow length factor
+//   cast_offset_k(kd)             cast-shadow offset per (height / 2) px, same as ShadowMath.cast_offset
+//                                 (away from the light, toward the viewer, longer with backlight)
 //   cloud_shadow(p_design)        0..~0.12 darkening from drifting fBm cloud shadows (§8.2)
 //   wind_k()                      sway amplitude factor (0.5 + g_wind) / 0.85
 //   gust(x_design)                travelling gust envelope 0..1 (k 62, 1742 px spacing, §3.4)
@@ -60,6 +62,15 @@ float light_elevation() {
 
 float shadow_length() {
 	return clamp(0.35 / light_elevation(), 0.35, 2.5);
+}
+
+// scripts/world/shadow_math.gd SIDE_K / TOWARD_VIEWER / BACKLIGHT_K (keep in sync).
+const float CAST_SIDE_K = 0.8;
+const float CAST_TOWARD_VIEWER = 0.10;
+const float CAST_BACKLIGHT_K = 0.60;
+
+vec2 cast_offset_k(vec2 kd) {
+	return vec2(-kd.x * CAST_SIDE_K, CAST_TOWARD_VIEWER + CAST_BACKLIGHT_K * g_backlight) * shadow_length();
 }
 
 float cloud_shadow(vec2 p_design) {

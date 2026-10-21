@@ -1,0 +1,684 @@
+{
+	"schema": 1,
+	"doc": "Generates art/decor/decor_atlas.svg (tone masks) + art/decor/decor_atlas.json (regions, layout).",
+	"atlas": "res://art/decor/decor_atlas.svg",
+	"size": [
+		1024,
+		448
+	],
+	"scale": 2,
+	"parts": {
+		"pinwheel_a": {
+			"region": [
+				586,
+				6,
+				128,
+				128
+			],
+			"size": [
+				64,
+				64
+			],
+			"pivot": [
+				0.5,
+				0.5
+			],
+			"material": "pinwheel_a",
+			"emission": 0.0,
+			"rim": 1
+		},
+		"pinwheel_b": {
+			"region": [
+				726,
+				6,
+				128,
+				128
+			],
+			"size": [
+				64,
+				64
+			],
+			"pivot": [
+				0.5,
+				0.5
+			],
+			"material": "pinwheel_b",
+			"emission": 0.0,
+			"rim": 1
+		},
+		"pinwheel_stick": {
+			"region": [
+				218,
+				6,
+				24,
+				184
+			],
+			"size": [
+				12,
+				92
+			],
+			"pivot": [
+				0.5,
+				0.99
+			],
+			"material": "wood_cut",
+			"emission": 0.0,
+			"rim": 0
+		},
+		"pebble_0": {
+			"region": [
+				298,
+				326,
+				116,
+				46
+			],
+			"size": [
+				58,
+				23
+			],
+			"pivot": [
+				0.5,
+				0.86
+			],
+			"material": "stone_cool",
+			"emission": 0.0,
+			"rim": 1
+		},
+		"pebble_1": {
+			"region": [
+				642,
+				326,
+				100,
+				42
+			],
+			"size": [
+				50,
+				21
+			],
+			"pivot": [
+				0.5,
+				0.86
+			],
+			"material": "pebble_alt",
+			"emission": 0.0,
+			"rim": 1
+		},
+		"pebble_2": {
+			"region": [
+				754,
+				326,
+				92,
+				38
+			],
+			"size": [
+				46,
+				19
+			],
+			"pivot": [
+				0.5,
+				0.86
+			],
+			"material": "stone_warm",
+			"emission": 0.0,
+			"rim": 1
+		},
+		"pebble_3": {
+			"region": [
+				858,
+				326,
+				84,
+				36
+			],
+			"size": [
+				42,
+				18
+			],
+			"pivot": [
+				0.5,
+				0.86
+			],
+			"material": "stone_cool",
+			"emission": 0.0,
+			"rim": 1
+		},
+		"pebble_4": {
+			"region": [
+				6,
+				398,
+				76,
+				32
+			],
+			"size": [
+				38,
+				16
+			],
+			"pivot": [
+				0.5,
+				0.86
+			],
+			"material": "stone_cool",
+			"emission": 0.0,
+			"rim": 0
+		},
+		"pebble_5": {
+			"region": [
+				122,
+				398,
+				68,
+				30
+			],
+			"size": [
+				34,
+				15
+			],
+			"pivot": [
+				0.5,
+				0.86
+			],
+			"material": "pebble_alt",
+			"emission": 0.0,
+			"rim": 0
+		},
+		"stream_stone": {
+			"region": [
+				174,
+				326,
+				112,
+				48
+			],
+			"size": [
+				56,
+				24
+			],
+			"pivot": [
+				0.5,
+				0.78
+			],
+			"material": "stone_cool",
+			"emission": 0.0,
+			"rim": 1
+		},
+		"toadstool_cap": {
+			"region": [
+				6,
+				326,
+				100,
+				60
+			],
+			"size": [
+				50,
+				30
+			],
+			"pivot": [
+				0.5,
+				0.9
+			],
+			"material": "toadstool_cap",
+			"emission": 0.0,
+			"rim": 1
+		},
+		"toadstool_stem": {
+			"region": [
+				118,
+				326,
+				44,
+				54
+			],
+			"size": [
+				22,
+				27
+			],
+			"pivot": [
+				0.5,
+				0.95
+			],
+			"material": "toadstool_stem",
+			"emission": 0.0,
+			"rim": 0
+		},
+		"lantern_crook": {
+			"region": [
+				6,
+				6,
+				80,
+				308
+			],
+			"size": [
+				40,
+				154
+			],
+			"pivot": [
+				0.3,
+				0.985
+			],
+			"material": "wood_bark",
+			"emission": 0.0,
+			"rim": 0
+		},
+		"lantern_core": {
+			"region": [
+				954,
+				6,
+				60,
+				68
+			],
+			"size": [
+				30,
+				34
+			],
+			"pivot": [
+				0.5,
+				0.0
+			],
+			"material": "lantern_light",
+			"emission": 0.85,
+			"rim": 0
+		},
+		"lantern_jar": {
+			"region": [
+				866,
+				6,
+				76,
+				104
+			],
+			"size": [
+				38,
+				52
+			],
+			"pivot": [
+				0.5,
+				0.04
+			],
+			"material": "lantern_jar",
+			"emission": 0.0,
+			"rim": 0
+		},
+		"chime_short": {
+			"region": [
+				254,
+				6,
+				28,
+				160
+			],
+			"size": [
+				14.0,
+				80
+			],
+			"pivot": [
+				0.5,
+				0.0
+			],
+			"material": "chime_ceramic",
+			"emission": 0.0,
+			"rim": 0
+		},
+		"chime_mid": {
+			"region": [
+				178,
+				6,
+				28,
+				192
+			],
+			"size": [
+				14.0,
+				96
+			],
+			"pivot": [
+				0.5,
+				0.0
+			],
+			"material": "chime_ceramic",
+			"emission": 0.0,
+			"rim": 0
+		},
+		"chime_long": {
+			"region": [
+				98,
+				6,
+				28,
+				224
+			],
+			"size": [
+				14.0,
+				112
+			],
+			"pivot": [
+				0.5,
+				0.0
+			],
+			"material": "chime_ceramic",
+			"emission": 0.0,
+			"rim": 0
+		},
+		"chime_paper": {
+			"region": [
+				138,
+				6,
+				28,
+				212
+			],
+			"size": [
+				14.0,
+				106
+			],
+			"pivot": [
+				0.5,
+				0.0
+			],
+			"material": "chime_ceramic",
+			"emission": 0.0,
+			"rim": 0
+		},
+		"gift_acorn_cup": {
+			"region": [
+				954,
+				326,
+				44,
+				36
+			],
+			"size": [
+				22,
+				18
+			],
+			"pivot": [
+				0.5,
+				0.9
+			],
+			"material": "wood_bark",
+			"emission": 0.0,
+			"rim": 0
+		},
+		"gift_petal_bundle": {
+			"region": [
+				538,
+				326,
+				44,
+				44
+			],
+			"size": [
+				22,
+				22
+			],
+			"pivot": [
+				0.5,
+				0.92
+			],
+			"material": "toadstool_cap",
+			"emission": 0.0,
+			"rim": 0
+		},
+		"gift_shiny_pebble": {
+			"region": [
+				278,
+				398,
+				36,
+				26
+			],
+			"size": [
+				18,
+				13
+			],
+			"pivot": [
+				0.5,
+				0.88
+			],
+			"material": "pebble_alt",
+			"emission": 0.0,
+			"rim": 0
+		},
+		"gift_seed_pouch": {
+			"region": [
+				594,
+				326,
+				36,
+				44
+			],
+			"size": [
+				18,
+				22
+			],
+			"pivot": [
+				0.5,
+				0.94
+			],
+			"material": "wood_painted",
+			"emission": 0.0,
+			"rim": 0
+		},
+		"gift_moon_drop": {
+			"region": [
+				238,
+				398,
+				28,
+				28
+			],
+			"size": [
+				14,
+				14
+			],
+			"pivot": [
+				0.5,
+				0.88
+			],
+			"material": "lantern_jar",
+			"emission": 0.3,
+			"rim": 0
+		},
+		"dew_drop": {
+			"region": [
+				202,
+				398,
+				24,
+				30
+			],
+			"size": [
+				12,
+				15
+			],
+			"pivot": [
+				0.5,
+				0.92
+			],
+			"material": "pinwheel_b",
+			"emission": 0.0,
+			"rim": 0
+		},
+		"basket_rim": {
+			"region": [
+				294,
+				6,
+				280,
+				128
+			],
+			"size": [
+				140,
+				64
+			],
+			"pivot": [
+				0.5,
+				0.0
+			],
+			"material": "wicker",
+			"emission": 0.0,
+			"rim": 0
+		},
+		"leaf_boat": {
+			"region": [
+				426,
+				326,
+				100,
+				44
+			],
+			"size": [
+				50,
+				22
+			],
+			"pivot": [
+				0.5,
+				0.8
+			],
+			"material": "leaf_boat",
+			"emission": 0.0,
+			"rim": 1
+		},
+		"candle": {
+			"region": [
+				94,
+				398,
+				16,
+				32
+			],
+			"size": [
+				8,
+				16
+			],
+			"pivot": [
+				0.5,
+				0.97
+			],
+			"material": "lantern_light",
+			"emission": 0.85,
+			"rim": 0
+		},
+		"dust_dot": {
+			"region": [
+				326,
+				398,
+				16,
+				16
+			],
+			"size": [
+				8,
+				8
+			],
+			"pivot": [
+				0.5,
+				0.5
+			],
+			"material": "string",
+			"emission": 0.0,
+			"rim": 0
+		}
+	},
+	"layout": {
+		"doc": "Placement data for scripts/garden/decor_layer.gd (design px at depth 1). Art Bible \u00a76.6-6.8.",
+		"lantern_hook": [
+			30.0,
+			28.0
+		],
+		"lantern_core_dy": 14.0,
+		"pinwheel_head_dy": -86.0,
+		"chime_parts": [
+			"chime_paper",
+			"chime_mid",
+			"chime_long",
+			"chime_short"
+		],
+		"cairn_parts": [
+			"pebble_0",
+			"pebble_1",
+			"pebble_2",
+			"pebble_3",
+			"pebble_4",
+			"pebble_5"
+		],
+		"basket_frame": [
+			140,
+			116
+		],
+		"set_scale": {
+			"leaf_pinwheel": 1.1,
+			"pebble_cairn": 1.0,
+			"toadstool_seat": 1.25,
+			"stream_stones": 1.0,
+			"firefly_lantern": 1.0,
+			"wind_chime": 1.0
+		},
+		"toadstool_cap_dy": -20.0,
+		"jar_centre_dy": 28.0,
+		"toadstool_ring": {
+			"centre": [
+				345.6,
+				825.6
+			],
+			"radii": [
+				72.0,
+				34.0
+			],
+			"motes": 6
+		},
+		"chime_sort_y": 806.0,
+		"basket_rim_y": 0.0,
+		"gift_parts": {
+			"acorn_cup": "gift_acorn_cup",
+			"petal_bundle": "gift_petal_bundle",
+			"shiny_pebble": "gift_shiny_pebble",
+			"seed_pouch": "gift_seed_pouch",
+			"moon_drop": "gift_moon_drop"
+		},
+		"gift_slots": [
+			[
+				50,
+				47
+			],
+			[
+				88,
+				46
+			],
+			[
+				70,
+				44
+			]
+		],
+		"dew_slots": [
+			[
+				36,
+				47
+			],
+			[
+				104,
+				47
+			],
+			[
+				60,
+				49
+			],
+			[
+				80,
+				49
+			],
+			[
+				46,
+				45
+			],
+			[
+				94,
+				45
+			],
+			[
+				70,
+				50
+			],
+			[
+				28,
+				48
+			],
+			[
+				112,
+				48
+			],
+			[
+				56,
+				44
+			],
+			[
+				84,
+				44
+			],
+			[
+				70,
+				46
+			]
+		]
+	}
+}

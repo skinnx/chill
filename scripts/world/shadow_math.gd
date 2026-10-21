@@ -17,7 +17,7 @@ const LEN_K := 0.35
 const LEN_MAX := 2.5
 const SIDE_K := 0.8
 const TOWARD_VIEWER := 0.10
-const BACKLIGHT_K := 0.30
+const BACKLIGHT_K := 0.60
 
 
 ## Elevation 0.05..1 of the brighter body.

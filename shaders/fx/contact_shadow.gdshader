@@ -14,7 +14,7 @@ instance uniform vec4 i_shadow = vec4(40.0, 10.0, 80.0, 1.0);
 instance uniform vec4 i_cast = vec4(0.0, 10.0, 1.0, 0.0);
 
 uniform float soft_px = 18.0;
-uniform float cast_alpha = 0.6;
+uniform float cast_alpha = 0.85;
 uniform float rain_fade = 0.4;
 uniform float cast_fade = 0.75;
 
