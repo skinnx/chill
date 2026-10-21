@@ -32,7 +32,12 @@ const ARG_DEBUG_LAMPS := "--debug-lamps"
 const DEBUG_LAMP_COUNT := 5
 ## Art Bible §8.3: lantern pools r 150 px; the lamp sits at the lantern head (~120 px above the foot).
 const LANTERN_POOL_R := 150.0
-const LANTERN_HEAD_DY := -20.0
+## The jar's glowing core relative to the lantern foot (props_svg.py lantern_jar), and its halo
+## (Art Bible §6.6: halo_add r0 18 px).
+const LANTERN_JAR_OFFSET := Vector2(36.0, -92.0)
+const LANTERN_HALO_R0 := 18.0
+const LANTERN_HALO_QUAD := 108.0
+const LANTERN_HALO_ALPHA := 0.6
 ## Art Bible §8.3: the glow mushrooms are the night focal; their warm pool (design px, radius, intensity).
 const MUSHROOM_LAMP := &"glow_mushrooms"
 const MUSHROOM_LAMP_POS := Vector2(490, 1166)
@@ -59,6 +64,7 @@ const FROND_SORT_Y := 805.0
 
 var _atlas: Texture2D
 var _mat: ShaderMaterial
+var _debug_parts: Array[Dictionary] = []
 var _shadows: Array[ContactShadow] = []
 ## prop id -> {hit: float radius px, centre: Vector2, action: StringName, sprites: Array[Sprite2D]}
 var _touchables: Dictionary = {}
@@ -75,6 +81,9 @@ func _ready() -> void:
 	var mats: Dictionary = ContentRegistry.palettes()["materials"]
 	var lk: Dictionary = ContentRegistry.motion_tokens()["loops_k"]
 	for part: Dictionary in doc["parts"]:
+		if int(part.get("debug", 0)) != 0:
+			_debug_parts.append(part)
+			continue
 		_add_part(part, content, mats)
 	_build_fronds(mats, lk)
 	_build_halos(lk)
@@ -88,10 +97,10 @@ func _ready() -> void:
 	set_process(false)
 
 
-func _add_part(part: Dictionary, content: GameContent, mats: Dictionary) -> void:
+func _add_part(part: Dictionary, content: GameContent, mats: Dictionary, offset: Vector2 = Vector2.ZERO) -> void:
 	var c := PackedFloat64Array(part["centre"] as Array)
-	var centre := Vector2(c[0], c[1])
-	var sort_y := float(part["sort_y"])
+	var centre := Vector2(c[0], c[1]) + offset
+	var sort_y := float(part["sort_y"]) + offset.y
 	var prop := StringName(String(part["prop"]))
 	if prop != &"":
 		var origin := prop_centre(content, prop)
@@ -151,10 +160,25 @@ static func current_light() -> Dictionary:
 func _debug_lamps(content: GameContent) -> void:
 	var anchors: Dictionary = content.anchors_by_decor.get(&"firefly_lantern", {})
 	var pos: Array = anchors.get("positions", [])
+	var mats: Dictionary = ContentRegistry.palettes()["materials"]
+	var lk: Dictionary = ContentRegistry.motion_tokens()["loops_k"]
+	var bk: Array = lk["lantern_breath"]
 	for i in mini(DEBUG_LAMP_COUNT, pos.size()):
 		var q := PackedFloat64Array(pos[i] as Array)
-		var p := GardenRules.frame_to_px(content, Vector2(q[0], q[1])) + Vector2(0.0, LANTERN_HEAD_DY)
-		LampRegistry.set_lamp(StringName("debug_lantern_%d" % i), p, LANTERN_POOL_R, 1.0)
+		var foot := GardenRules.frame_to_px(content, Vector2(q[0], q[1]))
+		# A lantern stamp at each lamp so every pool has a visible source (QA round 1).
+		for part: Dictionary in _debug_parts:
+			_add_part(part, content, mats, foot)
+		var head := foot + LANTERN_JAR_OFFSET
+		var node := Node2D.new()
+		node.name = "debug_lantern_halo_%d" % i
+		node.position = Vector2(head.x, foot.y + 2.0)
+		add_child(node)
+		var h := HaloSprite.new().setup(LANTERN_HALO_R0, LANTERN_HALO_QUAD, Color(1, 1, 1, LANTERN_HALO_ALPHA),
+				float(bk[0]), HaloSprite.FLAG_NIGHT + HaloSprite.FLAG_ACCENT, float(i) * 1.7)
+		h.position = head - node.position
+		node.add_child(h)
+		LampRegistry.set_lamp(StringName("debug_lantern_%d" % i), Vector2(head.x, foot.y - 4.0), LANTERN_POOL_R, 1.0)
 
 
 ## spots.json prop centre in design px.

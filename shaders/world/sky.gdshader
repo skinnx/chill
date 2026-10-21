@@ -39,7 +39,9 @@ const float DISC_AA_PX = 1.5;
 const float SUN_INNER_ALPHA = 0.6;
 // The disc is the glow colour lifted toward white, never darker than its own halo [J].
 const float SUN_WHITE = 0.7;
-const float MOON_INNER_ALPHA = 0.35;
+const float MOON_INNER_ALPHA = 0.22;
+// The moon is a quiet light (QA round 1: it outranked the warm night focal): disc near L* 80.
+const float MOON_DIM = 0.88;
 const float MOON_OUTER_MUL = 0.6;
 const float MARIA_SCALE_PX = 18.0;
 const float MARIA_THRESHOLD = 0.62;
@@ -54,6 +56,9 @@ const float MILKY_K = 0.1;
 // Overcast drift: 16 px/s (palettes weather.cloud_autoscroll_px_s.rain) over a 1920 px tile.
 const float OVERCAST_SPEED = 16.0;
 const float OVERCAST_CELL = 240.0;
+// Overcast shape: y scale (1.3 = masses only slightly wider than tall) and domain-warp strength.
+const float OVERCAST_ASPECT = 1.3;
+const float OVERCAST_WARP = 0.9;
 const float OVERCAST_TILE = 1920.0;
 
 varying vec2 v_design;
@@ -118,7 +123,7 @@ void fragment() {
 		float mn = vnoise(dm / MARIA_SCALE_PX + 3.1) * 0.6 + vnoise(dm / (MARIA_SCALE_PX * 0.45) + 8.7) * 0.4;
 		float m = smoothstep(MARIA_THRESHOLD - 0.12, MARIA_THRESHOLD + 0.12, mn);
 		vec3 mc = mix(moon_color.rgb, moon_maria.rgb, 0.4 * m);
-		mc *= 1.0 - LIMB_DARKEN * smoothstep(R - LIMB_PX, R, r);
+		mc *= (1.0 - LIMB_DARKEN * smoothstep(R - LIMB_PX, R, r)) * MOON_DIM;
 		vec3 mhalo = g_glow.rgb * clamp((inner + outer) * g_celestial.y, 0.0, 1.0);
 		c = c + mhalo * (1.0 - c);
 		c = mix(c, mc, d * g_celestial.y);
@@ -152,18 +157,24 @@ void fragment() {
 		}
 	}
 
-	// Overcast cloud banks (rain): soft fBm masses lit along their upper edges, drifting left.
+	// Overcast (rain): soft felt-grey wool. Near-isotropic, domain-warped fBm grouped into large
+	// banks by a low-frequency mask; lit along upper edges with a small value range; never darker
+	// than the clear sky it covers at night (QA round 1). Drifts left at 16 px/s (1920 px tile).
 	float oc = clamp(overcast_rain * g_rain + overcast_cloud * max(g_cloud - 0.3, 0.0), 0.0, 1.0);
 	if (oc > 0.01) {
-		vec2 q = vec2((p.x + OVERCAST_SPEED * g_time) / OVERCAST_CELL, p.y / (OVERCAST_CELL * 0.62));
+		vec2 q = vec2(p.x + OVERCAST_SPEED * g_time, p.y * OVERCAST_ASPECT) / OVERCAST_CELL;
 		vec2 per = vec2(OVERCAST_TILE / OVERCAST_CELL, 4096.0);
-		float n = overcast_noise(q, per);
-		float n_up = overcast_noise(q + vec2(0.0, -0.16), per);
-		float lift = (1.0 - t) * 0.20;
-		float bank = smoothstep(0.30, 0.62, n + lift) * oc;
-		float lit = clamp((n - n_up) * 4.0 + 0.5, 0.0, 1.0);
-		vec3 cc = mix(cloud_shade.rgb, cloud_lit.rgb, 0.3 + lit * 0.55);
-		c = mix(c, cc, bank * 0.85);
+		vec2 warp = vec2(vnoise_tiled(q * 0.5 + vec2(3.1, 0.0), per * 0.5), vnoise_tiled(q * 0.5 + vec2(7.7, 5.3), per * 0.5));
+		vec2 wq = q + (warp - 0.5) * OVERCAST_WARP;
+		float n = overcast_noise(wq, per);
+		float n_up = overcast_noise(wq + vec2(0.0, -0.14), per);
+		float banks = vnoise_tiled(q * 0.25 + vec2(1.7, 2.9), per * 0.25);
+		float lift = (1.0 - t) * 0.16;
+		float bank = smoothstep(0.30, 0.58, n * 0.7 + banks * 0.3 + lift) * oc;
+		float lit = clamp((n - n_up) * 3.0 + 0.5, 0.0, 1.0);
+		vec3 cc = mix(cloud_shade.rgb, cloud_lit.rgb, 0.42 + 0.30 * lit + 0.12 * (n - 0.5));
+		cc = max(cc, c + vec3(0.04) * g_stars);
+		c = mix(c, cc, bank * 0.88);
 	}
 
 	COLOR = vec4(finish(c, p / PX_PER_DP, FRAGCOORD.xy, GRAIN_SKY), 1.0);

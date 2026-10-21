@@ -4,7 +4,7 @@
 	"atlas": "res://art/props/props_atlas.svg",
 	"size": [
 		1024,
-		1152
+		1088
 	],
 	"pad": 10,
 	"parts": [
@@ -115,7 +115,7 @@
 			"id": "mailbox_body",
 			"prop": "mailbox",
 			"region": [
-				814,
+				878,
 				880,
 				76,
 				54
@@ -131,8 +131,8 @@
 			"id": "mailbox_roof",
 			"prop": "mailbox",
 			"region": [
-				144,
-				1088,
+				620,
+				1016,
 				86,
 				30
 			],
@@ -147,8 +147,8 @@
 			"id": "mailbox_flag",
 			"prop": "mailbox",
 			"region": [
-				100,
-				1088,
+				576,
+				1016,
 				24,
 				34
 			],
@@ -257,7 +257,7 @@
 			"id": "sun_stone",
 			"prop": "sun_stone_rock",
 			"region": [
-				410,
+				500,
 				680,
 				264,
 				124
@@ -297,7 +297,7 @@
 			"id": "spring_rock",
 			"prop": "spring_rock",
 			"region": [
-				694,
+				784,
 				680,
 				180,
 				120
@@ -360,7 +360,7 @@
 			"id": "fern_clump",
 			"prop": "",
 			"region": [
-				240,
+				330,
 				680,
 				150,
 				132
@@ -377,95 +377,6 @@
 				0.97
 			],
 			"ground": 0.8
-		},
-		{
-			"id": "clover_a",
-			"prop": "",
-			"region": [
-				696,
-				1016,
-				70,
-				38
-			],
-			"centre": [
-				430,
-				1290
-			],
-			"sort_y": 1300,
-			"material": "willow_leaf",
-			"rim": 0,
-			"ground": 1.0
-		},
-		{
-			"id": "clover_b",
-			"prop": "",
-			"region": [
-				786,
-				1016,
-				70,
-				38
-			],
-			"centre": [
-				700,
-				1225
-			],
-			"sort_y": 1236,
-			"material": "willow_leaf",
-			"rim": 0,
-			"ground": 1.0
-		},
-		{
-			"id": "clover_c",
-			"prop": "",
-			"region": [
-				876,
-				1016,
-				70,
-				38
-			],
-			"centre": [
-				905,
-				1385
-			],
-			"sort_y": 1396,
-			"material": "willow_leaf",
-			"rim": 0,
-			"ground": 1.0
-		},
-		{
-			"id": "clover_bank",
-			"prop": "",
-			"region": [
-				10,
-				1088,
-				70,
-				38
-			],
-			"centre": [
-				702,
-				1152
-			],
-			"sort_y": 1135,
-			"material": "willow_leaf",
-			"rim": 0,
-			"ground": 1.0
-		},
-		{
-			"id": "moss_mound",
-			"prop": "",
-			"region": [
-				576,
-				1016,
-				100,
-				46
-			],
-			"centre": [
-				378,
-				1150
-			],
-			"sort_y": 1134,
-			"material": "moss",
-			"ground": 0.7
 		},
 		{
 			"id": "moon_rock",
@@ -493,8 +404,8 @@
 			"id": "pebble_a",
 			"prop": "",
 			"region": [
-				304,
-				1088,
+				780,
+				1016,
 				30,
 				18
 			],
@@ -510,8 +421,8 @@
 			"id": "pebble_b",
 			"prop": "",
 			"region": [
-				446,
-				1088,
+				922,
+				1016,
 				22,
 				14
 			],
@@ -527,8 +438,8 @@
 			"id": "pebble_c",
 			"prop": "",
 			"region": [
-				250,
-				1088,
+				726,
+				1016,
 				34,
 				20
 			],
@@ -544,8 +455,8 @@
 			"id": "pebble_d",
 			"prop": "",
 			"region": [
-				402,
-				1088,
+				878,
+				1016,
 				24,
 				15
 			],
@@ -561,8 +472,8 @@
 			"id": "pebble_e",
 			"prop": "",
 			"region": [
-				354,
-				1088,
+				830,
+				1016,
 				28,
 				17
 			],
@@ -573,6 +484,43 @@
 			"sort_y": 1546,
 			"material": "pebble_alt",
 			"rim": 0
+		},
+		{
+			"id": "lantern_stick",
+			"prop": "",
+			"region": [
+				240,
+				680,
+				70,
+				160
+			],
+			"centre": [
+				19,
+				-78
+			],
+			"sort_y": 0,
+			"material": "wood_bark",
+			"debug": 1,
+			"rim": 0
+		},
+		{
+			"id": "lantern_jar",
+			"prop": "",
+			"region": [
+				814,
+				880,
+				44,
+				58
+			],
+			"centre": [
+				36,
+				-101
+			],
+			"sort_y": 1,
+			"material": "lantern_light",
+			"debug": 1,
+			"rim": 0,
+			"emission": 0.85
 		}
 	]
 }

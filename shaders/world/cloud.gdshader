@@ -15,6 +15,10 @@ uniform vec4 cloud_shade : source_color = vec4(0.545, 0.749, 0.875, 1.0);
 uniform float edge_px = 8.0;
 uniform float base_alpha = 0.85;
 uniform float billow = 0.08;
+uniform float rain_edge_px = 56.0;
+uniform float rain_alpha_max = 0.55;
+// Night: clouds sit at least this much above the local sky value (about +6 L* on the navy sky).
+uniform float night_lift = 0.05;
 
 // x seed, y alpha multiplier, z flatten (0..1), w 1 = rain-only cloud.
 instance uniform vec4 i_cloud = vec4(0.0, 1.0, 0.5, 0.0);
@@ -55,7 +59,11 @@ void fragment() {
 	d = -smin(-d, -(q.y - BASE_Y) * (0.6 + i_cloud.z), 0.12);
 	d += (fbm2(q * 3.0 + seed * 3.0) - 0.5) * 2.0 * billow;
 	float px = d * i_size.y * 0.5;
-	float a = 1.0 - smoothstep(-edge_px, edge_px * 0.25, px);
+	// Rain clouds are soft felt-grey masses that dissolve into the overcast (QA round 1: never
+	// hard-edged "boulders").
+	float edge = mix(edge_px, rain_edge_px, rain_only);
+	float a = 1.0 - smoothstep(-edge, edge * 0.25, px);
+	vis = min(vis, mix(1.0, rain_alpha_max, rain_only));
 	if (a <= 0.0) {
 		discard;
 	}
@@ -72,6 +80,11 @@ void fragment() {
 	float lit = clamp(lam * 0.55 + top * 0.45 - (1.0 - depth) * 0.08, 0.0, 1.0);
 	vec3 col = mix(cloud_shade.rgb, cloud_lit.rgb, lit);
 	col += sun_veil(v_canvas, 0.8);
-	col = mix(col, cloud_shade.rgb, g_rain * 0.35);
+	col = mix(col, cloud_shade.rgb, g_rain * 0.35 * (1.0 - rain_only));
+	col = mix(col, mix(cloud_shade.rgb, cloud_lit.rgb, 0.55), 0.6 * rain_only);
+	// A cloud is never darker than the sky behind it (night clouds are moonlit wool, not holes).
+	vec2 p_design = v_canvas - g_world_offset;
+	vec3 sky_local = mix(g_sky_mid.rgb, g_sky_top.rgb, clamp((560.0 - p_design.y) / 700.0, 0.0, 1.0));
+	col = max(col, sky_local + vec3(night_lift) * g_stars);
 	COLOR = vec4(finish(col, v_local / PX_PER_DP, FRAGCOORD.xy, GRAIN_SKY), a * vis);
 }

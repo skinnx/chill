@@ -117,7 +117,7 @@ def shade_of(lit, dL=0.12, t=0.30, cap=25.0, cmul=0.85):
 
 # ---------- derivations ----------
 def derive_tod(p, scal, soil_detail):
-	back = mix_ok(mix_ok(p['near'], p['mid'], 0.35), p['sky_horizon'], 0.06)
+	back = mix_ok(mix_ok(p['near'], p['mid'], 0.20), p['sky_horizon'], 0.06)
 	front = p['near']
 	k = scal['ground_light']
 	back_lit = mix_ok(back, p['key'], k)
@@ -125,7 +125,7 @@ def derive_tod(p, scal, soil_detail):
 		'ground_back': back, 'ground_front': front, 'ground_back_lit': back_lit,
 		'ground_front_lit': mix_ok(front, p['key'], k),
 		'ground_path': mix_ok(mix_ok(back_lit, p['sky_horizon'], 0.18), soil_detail, 0.22),
-		'grass_tip': mix_ok(p['mid'], p['key'], 0.25), 'grass_root': mix_ok(p['near'], p['shadow'], 0.25),
+		'grass_tip': mix_ok(mix_ok(p['near'], p['mid'], 0.15), p['key'], 0.28), 'grass_root': mix_ok(p['near'], p['shadow'], 0.25),
 		'water_deep': mix_ok(mix_ok(p['near'], p['shadow'], 0.40), p['sky_top'], 0.30),
 		'water_shallow': mix_ok(p['sky_mid'], p['sky_horizon'], 0.55), 'water_bank': mix_ok(p['near'], p['shadow'], 0.30),
 		'cloud_lit': mix_ok(p['sky_horizon'], p['glow'], 0.60), 'cloud_shade': mix_ok(p['sky_mid'], p['shadow'], 0.18),

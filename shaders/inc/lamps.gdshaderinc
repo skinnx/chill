@@ -1,8 +1,17 @@
 // Warm local light pools (Art Bible §4.1 u_lamps, §4.5 step 8, §8.3). Material uniforms set by
 // LampRegistry (scripts/world/lamp_registry.gd) only when a lamp changes.
 //   u_lamps[i] = (design x, design y, radius px, intensity 0..1); u_lamp_count active entries.
-// lamp_weight(p) = sum of pool alphas at p (alpha 0.25..0.40 by intensity, breathing +-5 % at
-// k 181), already x g_lights; apply_lamp(c, w) lights a colour with the shared g_accent.
+//
+// Each lamp lights a DISCRETE pool on the ground: a flattened ellipse (ground plane, y x 1/0.62)
+// whose alpha falls as peak * (1 - smoothstep(0.12, 1, d / r))^2 plus a small hot core at the
+// source, breathing +-5 % at k 181. Pools combine with max(), never a sum, so a row of lanterns
+// reads as separate pools with darker gaps between them, never one flat slab (QA round 1).
+// LampRegistry.weight_at() mirrors this falloff on the CPU (creatures light themselves with it).
+//
+//   lamp_weight(p)      0..~0.5 pool alpha at design px p, already x g_lights
+//   apply_lamp(c, w)    screen-blends g_accent over c: lifts value and warms the hue, never
+//                       passes through brown and never clips to white
+//   lamp_fill(alb, w)   additive warm fill for lit objects (props, fronds, grass)
 #ifndef MM_LAMPS_INC
 #define MM_LAMPS_INC
 #include "res://shaders/inc/globals.gdshaderinc"
@@ -10,6 +19,14 @@
 const int MAX_LAMPS = 12;
 const float LAMP_BREATH_K = 181.0;
 const float LAMP_BREATH_AMP = 0.05;
+// Ground-plane squash of a pool (matches the 0.62 depth foreshortening of the meadow).
+const float LAMP_POOL_SQUASH = 0.62;
+const float LAMP_PEAK_MIN = 0.30;
+const float LAMP_PEAK_MAX = 0.40;
+const float LAMP_CORE_Q = 0.16;
+const float LAMP_CORE_K = 0.22;
+// Rain: pools read better on wet ground (Art Bible §8.4, +0.05).
+const float LAMP_RAIN_ADD = 0.05;
 
 uniform vec4 u_lamps[12];
 uniform int u_lamp_count = 0;
@@ -21,28 +38,36 @@ float lamp_weight(vec2 p_design) {
 			break;
 		}
 		vec4 l = u_lamps[i];
-		float d = distance(p_design, l.xy);
+		vec2 d = p_design - l.xy;
+		d.y /= LAMP_POOL_SQUASH;
 		float r = max(l.z, 1.0);
-		float q = d / r;
-		float breath = sin(TAU * LAMP_BREATH_K / 600.0 * g_time + float(i) * 1.7);
-		float a = (0.25 + 0.15 * clamp(l.w, 0.0, 1.0)) * (1.0 + LAMP_BREATH_AMP * breath);
-		w += a * exp(-q * q * 1.25);
+		float q = length(d) / r;
+		if (q >= 1.0) {
+			continue;
+		}
+		float breath = 1.0 + LAMP_BREATH_AMP * sin(TAU * LAMP_BREATH_K / 600.0 * g_time + float(i) * 1.7);
+		float peak = mix(LAMP_PEAK_MIN, LAMP_PEAK_MAX, clamp(l.w, 0.0, 1.0)) + LAMP_RAIN_ADD * g_rain;
+		float f = 1.0 - smoothstep(0.12, 1.0, q);
+		float core = LAMP_CORE_K * exp(-(q * q) / (LAMP_CORE_Q * LAMP_CORE_Q));
+		w = max(w, (peak * f * f + core) * breath);
 	}
-	return w * g_lights * (1.0 + 0.2 * g_rain);
+	return w * g_lights;
 }
 
-// Overlapping pools add up softly (a row of lanterns makes a warm band, never a flat blob).
+// Kept for older call sites: the pool alpha is already soft (no plateau), so this is identity
+// with a ceiling.
 float lamp_soft(float w) {
-	return 0.6 * (1.0 - exp(-w * 2.5));
+	return min(w, 0.6);
 }
 
-// Warm pool over a (dark) surface colour: shifts hue toward the lamp and lifts value without
-// clipping to white (§4.5 acceptance).
 vec3 apply_lamp(vec3 c, float w) {
-	vec3 warm = g_accent.rgb;
-	float e = lamp_soft(w);
-	vec3 lit = mix(c, warm * 0.7, e * 1.2);
-	return lit + warm * e * 0.18 * (1.0 - lit * 0.5);
+	vec3 a = g_accent.rgb * clamp(w, 0.0, 0.6);
+	// Screen blend: 1 - (1 - c)(1 - a). Warm, value-lifting, cannot exceed 1.
+	return 1.0 - (1.0 - c) * (1.0 - a);
+}
+
+vec3 lamp_fill(vec3 albedo, float w) {
+	return albedo * g_accent.rgb * clamp(w, 0.0, 0.6) * 1.6;
 }
 
 #endif

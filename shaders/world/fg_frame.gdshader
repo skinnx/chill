@@ -1,7 +1,9 @@
-// L5 foreground frame (Art Bible §4.16): tone-mask corner pieces (reeds, clover, bough) sampled at
-// mip LOD 2 so they read as out of focus, pulled toward g_fg (about -15 L*), a faint rim from the
-// key, a gentle shear sway (k from flower_sway), grain + dither. Same instance-uniform layout as
-// prop_tone for the material and region.
+// L5 foreground frame (Art Bible §4.16; QA round 1): dark, out-of-focus corner foliage framing the
+// hollow like an intentional depth-of-field vignette. The tone masks are blurred inside the SVG
+// (props_svg.py FG_BLUR), so the texture is sampled at mip 0: smooth, never blocky. Colour is
+// pulled strongly toward g_fg (the darkest value of the frame, Art Bible §1.2 "darkest are the L5
+// corners"), keeps a little of its material through the ambient multiply, and catches a soft
+// backlit glow on the side facing the light. Gentle shear sway (k from flower_sway); grain + dither.
 shader_type canvas_item;
 render_mode blend_mix, unshaded;
 
@@ -15,10 +17,11 @@ instance uniform vec4 i_detail : source_color = vec4(0.824, 0.902, 0.761, 0.0);
 instance uniform vec4 i_sway = vec4(6.0, 120.0, 1.0, 0.0);
 instance uniform vec4 i_region = vec4(0.0, 0.0, 1.0, 1.0);
 
-uniform float blur_lod = 2.0;
-uniform float fg_mix = 0.55;
-uniform float rim_k = 0.3;
-uniform float rim_px = 10.0;
+uniform float fg_mix = 0.74;
+uniform float rim_k = 0.55;
+uniform float rim_px = 9.0;
+uniform float glow_k = 0.10;
+uniform float max_alpha = 0.96;
 
 varying vec2 v_luv;
 varying vec2 v_canvas;
@@ -33,16 +36,20 @@ void vertex() {
 }
 
 void fragment() {
-	vec4 m = textureLod(TEXTURE, UV, blur_lod);
-	if (m.a < 0.003) {
+	vec4 m = texture(TEXTURE, UV);
+	if (m.a < 0.004) {
 		discard;
 	}
-	vec3 w = m.rgb;
+	// Blurred masks carry premultiplied-looking edges: renormalise the tones by coverage.
+	vec3 w = m.rgb / max(m.r + m.g + m.b, 1e-3) * clamp(m.r + m.g + m.b, 0.0, 1.0);
 	float o = clamp(1.0 - (w.r + w.g + w.b), 0.0, 1.0);
 	vec3 alb = w.r * i_lit.rgb + w.g * i_shade.rgb + w.b * i_detail.rgb + o * i_shade.rgb * 0.72;
 	vec3 c = mix(alb * g_ambient.rgb, g_fg.rgb, fg_mix);
+	// Lit tone reads a little lighter (leaf volume survives the blur).
+	c *= 0.92 + 0.16 * w.r;
 	vec2 kd = key_dir(v_canvas);
-	float ahead = textureLod(TEXTURE, UV + kd * rim_px * TEXTURE_PIXEL_SIZE, blur_lod).a;
-	c += g_key.rgb * g_rim * rim_k * m.a * (1.0 - ahead) * 0.6;
-	COLOR = vec4(finish(c, v_luv / TEXTURE_PIXEL_SIZE * i_region.zw / PX_PER_DP, FRAGCOORD.xy, GRAIN_OBJECT), m.a);
+	float ahead = texture(TEXTURE, UV + kd * rim_px * TEXTURE_PIXEL_SIZE).a;
+	float rim = clamp(m.a - ahead, 0.0, 1.0);
+	c += g_key.rgb * (g_rim * rim_k * rim + g_backlight * glow_k * w.r * m.a);
+	COLOR = vec4(finish(c, v_luv / TEXTURE_PIXEL_SIZE * i_region.zw / PX_PER_DP, FRAGCOORD.xy, GRAIN_OBJECT), m.a * max_alpha);
 }

@@ -34,7 +34,7 @@ OUT_SVG = ROOT / "art/props/props_atlas.svg"
 OUT_JSON = ROOT / "art/props/props_atlas.json"
 OUT_FG_SVG = ROOT / "art/props/fg_atlas.svg"
 OUT_FG_JSON = ROOT / "art/props/fg_atlas.json"
-FG_PAD = 24  # mip LOD 2 blur (Art Bible §4.16) reads ~16 px around each texel
+FG_PAD = 24  # room for the in-SVG blur (FG_BLUR * 3) around each piece
 ATLAS_W = 1024
 PAD = 10
 LINE_W = 6.0  # 2 dp colour line on touchable props (§4.9 outline policy)
@@ -458,6 +458,31 @@ def moon_rock(svg: Svg) -> Part:
     return p
 
 
+def lantern_stick(svg: Svg) -> Part:
+    """Firefly-lantern shepherd's crook (wood_bark): foot at local (16, 158), crook top right."""
+    p = Part(svg, 70, 160)
+    crook = [(16, 158), (15, 110), (16, 60), (18, 26), (28, 10), (44, 8), (52, 18), (52, 30)]
+    p.path(smooth_path(crook, closed=False), "none", 1.0, stroke=SHADE, sw=8)
+    p.path(smooth_path([(a - 1.5, b) for a, b in crook], closed=False), "none", 1.0, stroke=LIT, sw=5)
+    p.path(smooth_path([(14, 150), (14, 70)], closed=False), "none", 0.5, stroke=DETAIL, sw=1.6)
+    return p
+
+
+def lantern_jar(svg: Svg) -> Part:
+    """The glass jar with its warm firefly light (lantern_light; detail = the glowing core)."""
+    p = Part(svg, 44, 58)
+    # Wire handle, lid, jar body; the core glows (detail) behind a vertical gloss.
+    p.path(smooth_path([(10, 14), (22, 2), (34, 14)], closed=False), "none", 0.9, stroke=SHADE, sw=2.2)
+    body = smooth_path([(8, 18), (36, 18), (40, 30), (38, 48), (30, 56), (14, 56), (6, 48), (4, 30)])
+    p.path(body, svg.lin(4, 0, 40, 0, [(0, SHADE), (0.35, LIT), (0.7, LIT), (1, SHADE)]))
+    clip = svg.clip(body)
+    p.ellipse(22, 38, 12, 14, DETAIL, 1.0, svg.blur(3.0), clip)
+    p.ellipse(22, 38, 6, 7, DETAIL, 1.0, clip=clip)
+    p.path(smooth_path([(12, 24), (11, 36), (13, 48)], closed=False), "none", 0.8, stroke=LIT, sw=2.4, clip=clip)
+    p.path(smooth_path([(6, 18), (22, 13), (38, 18), (22, 21)]), SHADE)
+    return p
+
+
 # Willow (design frame: willow centre (130, 576), 420x510 -> x -80..340, y 321..831).
 def _leaf_mass(p: Part, svg: Svg, rng: random.Random, pts: list, cx: float, cy: float, r: float) -> None:
     """One soft leaf mass: lit from the top-left, speckled leaves on the lit half, shade below."""
@@ -584,72 +609,120 @@ def chime_branch(svg: Svg) -> Part:
     return p
 
 
-# Foreground frame (L5, Art Bible §2.3, §4.16): dark, blurred (mip LOD 2) corner pieces.
-def fg_reeds(svg: Svg) -> Part:
-    """Bottom-left reeds and grass leaning in from the frame edge (willow_leaf)."""
-    p = Part(svg, 300, 240)
-    rng = random.Random(51)
-    for i in range(16):
-        bx = rng.uniform(-10, 170)
-        h = rng.uniform(110, 230) * (1.0 - bx / 400)
-        lean = rng.uniform(10, 70)
-        w = rng.uniform(7, 12)
-        tip = (bx + lean, 240 - h)
-        mid = (bx + lean * 0.35, 240 - h * 0.55)
-        d = smooth_path([(bx - w, 242), (mid[0] - w * 0.55, mid[1]), tip, (mid[0] + w * 0.55, mid[1]), (bx + w, 242)])
-        p.path(d, svg.lin(bx - w, 0, bx + w, 0, [(0, LIT), (1, SHADE)]))
-    for _ in range(5):
-        cx, cy = rng.uniform(150, 290), rng.uniform(205, 235)
-        for k in range(5):
-            a = -math.pi / 2 + (k - 2) * 0.38
-            ln = rng.uniform(30, 55)
-            tip = (cx + math.cos(a) * ln, cy + math.sin(a) * ln)
-            p.path(smooth_path([(cx - 4, 242), (tip[0] - 2, tip[1] + 6), tip, (tip[0] + 2, tip[1] + 6), (cx + 4, 242)]),
-                   svg.lin(cx - 6, 0, cx + 6, 0, [(0, LIT), (1, SHADE)]))
+# Foreground frame (L5, Art Bible §2.3, §4.16; QA round 1): dark, out-of-focus corner foliage.
+# Each piece is authored large enough to overscan the frame edges by >= 150 px (camera drift x
+# parallax 1.3) and is blurred INSIDE the SVG (feGaussianBlur on the whole piece), so the raster is
+# a smooth depth-of-field silhouette sampled at mip 0 (no blocky LOD blur).
+FG_BLUR = 4.0
+
+
+def _blade(p: Part, svg: Svg, base: tuple[float, float], tip: tuple[float, float], w: float, bend: float) -> None:
+    """A long rounded grass blade from base to tip (lit on its left edge, shade on its right)."""
+    bx, by = base
+    tx, ty = tip
+    dx, dy = tx - bx, ty - by
+    ln = math.hypot(dx, dy)
+    nx, ny = -dy / ln, dx / ln
+    mx, my = bx + dx * 0.55 + nx * bend, by + dy * 0.55 + ny * bend
+    d = smooth_path([(bx - nx * w, by - ny * w), (mx - nx * w * 0.6, my - ny * w * 0.6), (tx, ty),
+                     (mx + nx * w * 0.6, my + ny * w * 0.6), (bx + nx * w, by + ny * w)])
+    p.path(d, svg.lin(bx - nx * w, by - ny * w, bx + nx * w, by + ny * w, [(0, LIT), (0.55, LIT), (1, SHADE)]))
+
+
+def _leaf(p: Part, svg: Svg, cx: float, cy: float, length: float, width: float, ang: float, vein: bool = True) -> None:
+    """A broad rounded leaf (ellipse-ish blob) with a soft midrib."""
+    ca, sa = math.cos(ang), math.sin(ang)
+    pts = []
+    for i in range(14):
+        t = math.tau * i / 14
+        x = math.cos(t) * length * 0.5
+        y = math.sin(t) * width * 0.5 * (1.0 - 0.25 * max(0.0, math.cos(t)))
+        pts.append((cx + x * ca - y * sa, cy + x * sa + y * ca))
+    d = smooth_path(pts)
+    p.path(d, svg.lin(cx - sa * width * 0.5, cy + ca * width * 0.5, cx + sa * width * 0.5, cy - ca * width * 0.5,
+                      [(0, SHADE), (0.6, LIT), (1, LIT)]))
+    if vein:
+        x0, y0 = cx - ca * length * 0.42, cy - sa * length * 0.42
+        x1, y1 = cx + ca * length * 0.42, cy + sa * length * 0.42
+        p.path(smooth_path([(x0, y0), (x1, y1)], closed=False), "none", 0.55, stroke=DETAIL, sw=3.0)
+
+
+def fg_left(svg: Svg) -> Part:
+    """Bottom-left corner: tall felted grass blades leaning in, a fern frond and two broad leaves."""
+    p = Part(svg, 540, 420)
+    rng = random.Random(61)
+    inner = Part(svg, 540, 420)
+    for i in range(14):
+        bx = rng.uniform(10, 300)
+        h = rng.uniform(170, 330) * (1.0 - bx / 700)
+        lean = rng.uniform(30, 120)
+        _blade(inner, svg, (bx, 430), (bx + lean, 430 - h), rng.uniform(9, 15), rng.uniform(-14, 14))
+    # Fern frond arching up and to the right.
+    pts = []
+    for i in range(12):
+        t = i / 11
+        pts.append((60 + t * 330, 420 - math.sin(t * 2.3) * 190 - t * 40))
+    for i in range(1, 12):
+        x, y = pts[i]
+        px_, py_ = pts[i - 1]
+        ang = math.atan2(y - py_, x - px_)
+        sz = 26 * (1.0 - i / 14)
+        for side in (-1, 1):
+            a = ang + side * 1.1
+            _leaf(inner, svg, x + math.cos(a) * sz * 0.6, y + math.sin(a) * sz * 0.6, sz * 1.25, sz * 0.5, a, False)
+    inner.path(smooth_path(pts, closed=False), "none", 1.0, stroke=SHADE, sw=6)
+    _leaf(inner, svg, 120, 380, 230, 110, -0.55)
+    _leaf(inner, svg, 260, 400, 200, 90, -0.2)
+    p.group(inner.items, filt=svg.blur(FG_BLUR))
     return p
 
 
-def fg_clover(svg: Svg) -> Part:
-    """Bottom-right clover cushion: big soft trifoliate leaves (moss)."""
-    p = Part(svg, 250, 210)
-    rng = random.Random(52)
-    for i in range(14):
-        cx = rng.uniform(40, 245)
-        cy = rng.uniform(70, 200) + (245 - cx) * 0.1
-        s_ = rng.uniform(16, 26) * (0.7 + cy / 400)
-        p.path(smooth_path([(cx - 2, 214), (cx + rng.uniform(-8, 8), cy + s_ * 0.6), (cx + 2, 214)], closed=False),
-               "none", 1.0, stroke=SHADE, sw=4)
+def fg_right(svg: Svg) -> Part:
+    """Bottom-right corner: broad leaves and clover leaning in from the edge."""
+    p = Part(svg, 520, 400)
+    rng = random.Random(62)
+    inner = Part(svg, 520, 400)
+    for i in range(10):
+        bx = rng.uniform(240, 520)
+        h = rng.uniform(140, 280) * (0.5 + bx / 1040)
+        lean = -rng.uniform(30, 110)
+        _blade(inner, svg, (bx, 410), (bx + lean, 410 - h), rng.uniform(9, 14), rng.uniform(-12, 12))
+    for i in range(7):
+        cx = rng.uniform(170, 500)
+        cy = rng.uniform(150, 330) + (cx - 170) * -0.05
+        s_ = rng.uniform(34, 52)
         rot = rng.uniform(0, math.tau)
+        inner.path(smooth_path([(cx + rng.uniform(-10, 10), 410), (cx, cy + s_ * 0.4)], closed=False), "none", 1.0,
+                   stroke=SHADE, sw=6)
         for j in range(3):
             a = rot + j * math.tau / 3
-            lx, ly = cx + math.cos(a) * s_ * 0.85, cy + math.sin(a) * s_ * 0.6
-            p.ellipse(lx, ly, s_, s_ * 0.8, svg.lin(lx, ly - s_, lx, ly + s_, [(0, LIT), (1, SHADE)]), 1.0,
-                      rot=math.degrees(a))
-            p.ellipse(lx, ly, s_ * 0.45, s_ * 0.16, DETAIL, 0.6, rot=math.degrees(a))
+            lx, ly = cx + math.cos(a) * s_ * 0.8, cy + math.sin(a) * s_ * 0.55
+            inner.ellipse(lx, ly, s_, s_ * 0.78, svg.lin(lx, ly - s_, lx, ly + s_, [(0, LIT), (1, SHADE)]), 1.0,
+                          rot=math.degrees(a))
+            inner.ellipse(lx, ly, s_ * 0.42, s_ * 0.15, DETAIL, 0.5, rot=math.degrees(a))
+    _leaf(inner, svg, 420, 370, 260, 120, -2.55)
+    p.group(inner.items, filt=svg.blur(FG_BLUR))
     return p
 
 
 def fg_bough(svg: Svg) -> Part:
-    """Top-right leafy bough hanging into the frame from the right edge (willow_leaf)."""
-    p = Part(svg, 280, 320)
-    rng = random.Random(53)
-    twig = [(290, 30), (230, 52), (170, 70), (120, 96), (84, 130)]
-    p.path(smooth_path(twig, closed=False), "none", 1.0, stroke=SHADE, sw=9)
-    for _ in range(34):
-        t = rng.random()
+    """Top-right: a leafy bough entering from beyond the corner (its branch starts off-frame)."""
+    p = Part(svg, 560, 380)
+    rng = random.Random(63)
+    inner = Part(svg, 560, 380)
+    twig = [(600, 10), (520, 40), (430, 70), (340, 110), (250, 160), (170, 230)]
+    inner.path(smooth_path(twig, closed=False), "none", 1.0, stroke=SHADE, sw=13)
+    for _ in range(30):
+        t = rng.random() ** 0.8
         i = min(int(t * (len(twig) - 1)), len(twig) - 2)
         u = t * (len(twig) - 1) - i
         x = twig[i][0] + (twig[i + 1][0] - twig[i][0]) * u
         y = twig[i][1] + (twig[i + 1][1] - twig[i][1]) * u
-        ln = rng.uniform(40, 120)
-        ang = math.radians(rng.uniform(70, 125))
-        tip = (x + math.cos(ang) * ln, y + math.sin(ang) * ln)
-        w = rng.uniform(7, 12)
-        nx, ny = -math.sin(ang) * w, math.cos(ang) * w
-        mid = ((x + tip[0]) / 2, (y + tip[1]) / 2)
-        d = smooth_path([(x, y), (mid[0] + nx, mid[1] + ny), tip, (mid[0] - nx, mid[1] - ny)])
-        p.path(d, svg.lin(x + nx, y + ny, x - nx, y - ny, [(0, LIT), (1, SHADE)]))
-        p.path(smooth_path([(x, y), mid, tip], closed=False), "none", 0.5, stroke=DETAIL, sw=1.5)
+        ln = rng.uniform(70, 130) * (1.1 - t * 0.4)
+        ang = math.radians(rng.uniform(60, 135))
+        cx, cy = x + math.cos(ang) * ln * 0.55, y + math.sin(ang) * ln * 0.55
+        _leaf(inner, svg, cx, cy, ln, ln * rng.uniform(0.38, 0.5), ang)
+    p.group(inner.items, filt=svg.blur(FG_BLUR))
     return p
 
 
@@ -679,17 +752,16 @@ PARTS = [
     ("glow_mushrooms", glow_mushrooms, "", (488, 1158), 1182, "glow_mushroom", {"emission": 0.55, "rim": 0}),
     ("reeds", reeds, "", (1030, 1352), 1396, "willow_leaf", {"sway": [5.0, 141, 0.95], "rim": 0, "ground": 0.5}),
     ("fern_clump", fern_clump, "", (66, 1108), 1104, "moss", {"sway": [4.0, 133, 0.97], "ground": 0.8}),
-    ("clover_a", lambda s: clover_patch(s, 31, 8), "", (430, 1290), 1300, "willow_leaf", {"rim": 0, "ground": 1.0}),
-    ("clover_b", lambda s: clover_patch(s, 32, 7), "", (700, 1225), 1236, "willow_leaf", {"rim": 0, "ground": 1.0}),
-    ("clover_c", lambda s: clover_patch(s, 33, 9), "", (905, 1385), 1396, "willow_leaf", {"rim": 0, "ground": 1.0}),
-    ("clover_bank", lambda s: clover_patch(s, 34, 9), "", (702, 1152), 1135, "willow_leaf", {"rim": 0, "ground": 1.0}),
-    ("moss_mound", moss_mound, "", (378, 1150), 1134, "moss", {"ground": 0.7}),
     ("moon_rock", moon_rock, "", (800, 764), 730, "stone_cool", {"shadow": [60, 9, 1.0, 795]}),
     ("pebble_a", lambda s: pebble(s, 41, 30, 18), "", (176, 1470), 1470, "pebble_alt", {"rim": 0}),
     ("pebble_b", lambda s: pebble(s, 42, 22, 14), "", (318, 1459), 1459, "pebble_alt", {"rim": 0}),
     ("pebble_c", lambda s: pebble(s, 43, 34, 20), "", (468, 1451), 1451, "pebble_alt", {"rim": 0}),
     ("pebble_d", lambda s: pebble(s, 44, 24, 15), "", (790, 1436), 1436, "pebble_alt", {"rim": 0}),
     ("pebble_e", lambda s: pebble(s, 45, 28, 17), "", (640, 1546), 1546, "pebble_alt", {"rim": 0}),
+    # Debug-only stamps (props_layer --debug-lamps): a firefly lantern at each debug lamp, so every
+    # night pool has a visible source. Centre/sort are relative to the lantern foot.
+    ("lantern_stick", lantern_stick, "", (19, -78), 0, "wood_bark", {"debug": 1, "rim": 0}),
+    ("lantern_jar", lantern_jar, "", (36, -101), 1, "lantern_light", {"debug": 1, "rim": 0, "emission": 0.85}),
 ]
 
 
@@ -733,30 +805,35 @@ def main() -> int:
     return 0
 
 
-# (id, builder, anchor, design rect origin (x, y) of the part's top-left, material). anchor "top" =
-# the y is measured from the VISIBLE top of the viewport (tall phones), "bottom" = design frame.
+# (id, builder, anchor, design rect origin (x, y) of the part's top-left, material, sway). anchor
+# "top" = y is measured from the VISIBLE top of the viewport (tall phones), "bottom" = design frame.
+# Every piece overscans its frame edges by >= 150 px (camera drift 86 px x parallax 1.3 + margin).
 FG_PARTS = [
-    ("fg_reeds", fg_reeds, "bottom", (-20, 1684), "willow_leaf", [6.0, 133, 0.95]),
-    ("fg_clover", fg_clover, "bottom", (846, 1716), "moss", [3.0, 120, 0.9]),
-    ("fg_bough", fg_bough, "top", (812, -16), "willow_leaf", [5.0, 76, 0.0]),
+    ("fg_left", fg_left, "bottom", (-190, 1560), "willow_leaf", [5.0, 133, 0.95]),
+    ("fg_right", fg_right, "bottom", (790, 1580), "moss", [3.5, 120, 0.95]),
+    ("fg_bough", fg_bough, "top", (740, -110), "willow_leaf", [5.0, 76, 0.0]),
 ]
 
 
 def write_fg() -> None:
-    svg = Svg(1024, 16)
+    svg = Svg(1216, 16)
     x = FG_PAD
+    y = FG_PAD
+    shelf = 0
     layout = []
-    hmax = 0
     for pid, builder, anchor, origin, mat, sway in FG_PARTS:
         pt = builder(svg)
-        cell = svg.clip(f"M{x - 2},{FG_PAD - 2}h{pt.w + 4}v{pt.h + 4}h{-(pt.w + 4)}Z")
-        svg.body.append(f'<g clip-path="{cell}"><g transform="translate({x},{FG_PAD})">' + "".join(pt.items) + "</g></g>")
-        layout.append({"id": pid, "region": [x, FG_PAD, pt.w, pt.h], "anchor": anchor, "origin": list(origin),
+        if x + pt.w + FG_PAD > svg.w:
+            x = FG_PAD
+            y += shelf + FG_PAD * 2
+            shelf = 0
+        cell = svg.clip(f"M{x - 2},{y - 2}h{pt.w + 4}v{pt.h + 4}h{-(pt.w + 4)}Z")
+        svg.body.append(f'<g clip-path="{cell}"><g transform="translate({x},{y})">' + "".join(pt.items) + "</g></g>")
+        layout.append({"id": pid, "region": [x, y, pt.w, pt.h], "anchor": anchor, "origin": list(origin),
                        "material": mat, "sway": sway})
         x += pt.w + FG_PAD * 2
-        hmax = max(hmax, pt.h)
-    svg.w = 1024
-    svg.h = (hmax + FG_PAD * 2 + 63) // 64 * 64
+        shelf = max(shelf, pt.h)
+    svg.h = (y + shelf + FG_PAD + 63) // 64 * 64
     OUT_FG_SVG.write_text(svg.to_string())
     OUT_FG_JSON.write_text(json.dumps({"schema": 1, "doc": "L5 foreground frame atlas (props_svg.py)",
                                        "atlas": "res://art/props/fg_atlas.svg", "size": [svg.w, svg.h],

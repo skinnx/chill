@@ -24,7 +24,7 @@ signal tapped(design_pos: Vector2)
 const SHADER_PATH := "res://shaders/world/water.gdshader"
 ## Art Bible §4.7: one segment per 12 px of arc length; 10 px damp banks.
 const SEGMENT_PX := 12.0
-const BANK_PX := 10.0
+const BANK_PX := 14.0
 ## Wide-screen bleed on the left (the brook leaves at the left edge, Art Bible §2.1).
 const LEFT_BLEED_X := -420.0
 const MAX_RIPPLES := 4

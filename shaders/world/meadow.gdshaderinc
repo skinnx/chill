@@ -1,45 +1,72 @@
-// Shared body of the L4 meadow ground (Art Bible §4.5): crest -> brook value gradient lit by the
-// key, a soft path, felt dapple, drifting cloud shadows, the darker near bank, rain sheen, warm
-// lamp pools, the sun veil, low mist bands, a backlit crest, then grain + dither.
-// meadow.gdshader (feather strip, blend_mix) and meadow_core.gdshader (blend_disabled) include it.
+// Shared body of the L4 meadow ground (Art Bible §4.5, round-2 directives 1 and 3): a soft FELTED
+// MOSS meadow in every phase. The palette keeps a green hue identity that the light only tints.
+//   1. depth gradient crest -> brook (ground_back_lit -> ground_front_lit), richer near ground;
+//   2. the hollow's relief (art/fx/meadow_relief.png: a bowl, broad moss mounds, banks sloping into
+//      the brook) lit by the key: sun-facing slopes catch warm light, the others sink into the
+//      tinted shadow, longer and cooler when the light is low (golden, dawn);
+//   3. moss cushions (art/fx/moss_tile.png, perspective-mapped onto the ground plane) lit by the
+//      same key, crevices toward the shadow tint, plus fine felt fibres;
+//   4. a key pool on the focal floor around the sun stone, a darker frame toward the near ground
+//      and the bottom corners, a worn moss path, drifting cloud shadows, rain sheen, the backlit
+//      crest, the sun veil, low mist, discrete lamp pools; grain + dither.
+// meadow.gdshader (crest feather, blend_mix) and meadow_core.gdshader (blend_disabled) include it.
 // Mesh contract as silhouette.gdshaderinc (VERTEX design px, UV.x depth, UV.y px below crest).
 #include "res://shaders/inc/world_light.gdshaderinc"
 #include "res://shaders/inc/lamps.gdshaderinc"
 #include "res://shaders/inc/finish.gdshaderinc"
 
 // Palette-derived slots (PaletteFeed, OKLab exact, after the rain transform).
-uniform vec4 ground_back_lit : source_color = vec4(0.522, 0.733, 0.553, 1.0);
+uniform vec4 ground_back_lit : source_color = vec4(0.502, 0.718, 0.537, 1.0);
 uniform vec4 ground_front_lit : source_color = vec4(0.447, 0.686, 0.490, 1.0);
-uniform vec4 path_color : source_color = vec4(0.627, 0.749, 0.624, 1.0);
-uniform vec4 grass_tip : source_color = vec4(0.624, 0.800, 0.616, 1.0);
+uniform vec4 path_color : source_color = vec4(0.616, 0.741, 0.612, 1.0);
+uniform vec4 grass_tip : source_color = vec4(0.537, 0.729, 0.537, 1.0);
 uniform vec4 grass_root : source_color = vec4(0.286, 0.576, 0.471, 1.0);
+uniform sampler2D moss_tex : filter_linear_mipmap, repeat_enable;
+uniform sampler2D relief_tex : filter_linear, repeat_disable;
 // Path knots (design y, centre x, half width px, strength 0..1), sorted by y; count <= 10.
 uniform vec4 u_path[10];
 uniform int u_path_count = 0;
-uniform float path_alpha = 0.42;
+uniform float path_alpha = 0.40;
 // Brook centre line as a linear fit y = a + b * x (spots.json stream polyline) and its half
-// width incl. banks: the near bank below it is mixed 10 % toward g_shadow.
+// width incl. banks.
 uniform vec2 brook_fit = vec2(1531.0, -0.0866);
 uniform float brook_half_px = 44.5;
-uniform float dapple_k = 0.035;
-uniform float fine_k = 0.015;
-uniform float fibre_k = 0.012;
-uniform float tint_k = 0.10;
-uniform float near_bank_k = 0.10;
+// Moss cushions: tile size at depth 1, ground-plane squash, light / crevice / fibre contrast.
+uniform float moss_px = 95.0;
+uniform float moss_squash = 0.6;
+uniform float moss_lit_k = 0.22;
+uniform float moss_shade_k = 0.20;
+uniform float moss_crevice_k = 0.10;
+uniform float fibre_k = 0.07;
+// Relief: slope light, slope shade, bowl occlusion.
+uniform float relief_lit_k = 0.22;
+uniform float relief_shade_k = 0.38;
+uniform float occlusion_k = 0.30;
+uniform float height_tint_k = 0.16;
+uniform float dapple_k = 0.03;
 uniform float wet_sheen_k = 0.15;
 uniform float crest_rim_px = 10.0;
 uniform float crest_glow_px = 70.0;
 uniform vec2 crest_band = vec2(760.0, 880.0);
 uniform vec2 brook_band = vec2(1400.0, 1540.0);
 uniform float mist_sigma = 40.0;
-uniform float hollow_shade_k = 0.12;
-uniform float relief_k = 1.6;
-uniform float focal_pool_k = 0.35;
+uniform float focal_pool_k = 0.55;
+// Depth frame: near ground below the brook and the bottom corners sink toward the shadow tint.
+uniform float near_frame_k = 0.22;
+uniform float corner_k = 0.30;
+uniform float far_haze_k = 0.10;
 
 const vec2 FOCAL = vec2(540.0, 1123.0);
-const float RELIEF_STEP = 40.0;
 const float T_TOP = 760.0;
 const float T_BOTTOM = 1500.0;
+// Ground-plane depth scale s(y) = 0.62 + K (y - 760) (Art Bible §2.4), not clamped at 1 here:
+// the near ground keeps growing toward the viewer.
+const float DEPTH_S0 = 0.62;
+const float DEPTH_Y0 = 760.0;
+const float DEPTH_K = 0.38 / 740.0;
+const float VANISH_X = 540.0;
+// art/fx/meadow_relief.png covers design x -400..1488, y 700..1980 (meadow_relief.py).
+const vec4 RELIEF_RECT = vec4(-400.0, 700.0, 1888.0, 1280.0);
 const float MIST_DRIFT_PX_S = 6.0;
 const float MIST_TILE_PX = 1800.0;
 
@@ -78,12 +105,6 @@ float path_mask(vec2 p) {
 	return (1.0 - smoothstep(0.45, 1.0, dx)) * k.w;
 }
 
-// Gentle hummocks: a soft height field whose slopes facing the key light read lighter and the
-// others sink toward the tinted shadow, so the meadow has relief instead of a flat gradient [J].
-float relief(vec2 p) {
-	return vnoise(p / vec2(300.0, 165.0));
-}
-
 float mist_band(vec2 p) {
 	float a = (p.y - 0.5 * (crest_band.x + crest_band.y)) / mist_sigma;
 	float b = (p.y - 0.5 * (brook_band.x + brook_band.y)) / mist_sigma;
@@ -92,39 +113,76 @@ float mist_band(vec2 p) {
 	return band * smoothstep(0.25, 0.85, n);
 }
 
+// Ground-plane depth scale at design y.
+float ground_scale(float y) {
+	return max(DEPTH_S0 + DEPTH_K * (y - DEPTH_Y0), 0.3);
+}
+
+// Perspective moss UV: x converges toward the vanishing column, y is the integral of
+// 1 / (squash * s(y)), so cushions shrink smoothly toward the crest with no distortion.
+vec2 moss_uv(vec2 p) {
+	float s = ground_scale(p.y);
+	float v = log(s) / (DEPTH_K * moss_squash);
+	return vec2((p.x - VANISH_X) / s, v) / moss_px;
+}
+
 vec3 meadow_color(vec2 uv, vec2 frag) {
 	vec2 p = v_design;
 	float t = smoothstep(T_TOP, T_BOTTOM, p.y);
 	vec3 c = mix(ground_back_lit.rgb, ground_front_lit.rgb, t);
-	// Relief: one soft height field, lit by the key direction (screen space), softer at night; the
-	// same field gives the grass-tone drifts (lighter/warmer tips vs cooler roots) [J].
-	float h0 = relief(p);
-	float drift = h0 - 0.5;
-	c = mix(c, drift > 0.0 ? grass_tip.rgb : grass_root.rgb, abs(drift) * 2.0 * tint_k);
 	vec2 kd = key_dir(v_canvas);
-	float slope = (relief(p + kd * RELIEF_STEP) - h0) * relief_k * (0.45 + 0.55 * (1.0 - g_lights));
-	c = mix(c, c * g_shadow.rgb * SHADE_K, clamp(-slope, 0.0, 0.08));
-	c += g_key.rgb * clamp(slope, 0.0, 0.12) * 0.5;
-	// The hollow: its sides fall into soft tinted shade, the floor around the sun stone (the focal)
-	// gathers a gentle pool of key light by day (Art Bible §1.1 "sunlit hollow", §2.5) [J].
-	float side = smoothstep(260.0, 660.0, abs(p.x - FOCAL.x)) * (0.6 + 0.4 * t);
-	c = mix(c, c * g_shadow.rgb * SHADE_K, side * hollow_shade_k);
-	vec2 fd = (p - FOCAL) / vec2(430.0, 300.0);
-	c += g_key.rgb * g_ground_light * focal_pool_k * exp(-dot(fd, fd) * 1.6);
-	// Path.
-	// The path is quieter at night: value contrast is compressed after dark (Art Bible §3.9) [J].
-	c = mix(c, path_color.rgb, path_alpha * path_mask(p) * (1.0 - 0.55 * g_lights));
-	// Felt dapple: a broad and a fine octave (the fine one slightly elongated, like fibres).
-	float dap = (vnoise(p / 90.0) - 0.5) * 2.0 * dapple_k
-			+ (vnoise(p * vec2(1.0 / 14.0, 1.0 / 26.0) + 9.2) - 0.5) * 2.0 * (fine_k + fibre_k);
-	c *= 1.0 + dap;
+	float elev = light_elevation();
+	float low = 1.0 - smoothstep(0.25, 0.85, elev);  // 1 when the light is low (long shading)
+	float night = g_lights;
+	vec3 shade_c = c * g_shadow.rgb * SHADE_K;
+
+	// 2. Relief: the hollow's bowl and moss mounds, lit by the key.
+	vec4 rel = texture(relief_tex, (p - RELIEF_RECT.xy) / RELIEF_RECT.zw);
+	vec2 rn = rel.gb * 2.0 - 1.0;
+	float rl = dot(rn, kd);
+	float relief_light = (0.55 + 0.45 * low) * (1.0 - 0.5 * night);
+	c = mix(c, shade_c, clamp(-rl, 0.0, 1.0) * relief_shade_k * relief_light);
+	c += g_key.rgb * clamp(rl, 0.0, 1.0) * relief_lit_k * relief_light * (0.35 + g_ground_light * 2.5);
+	// Higher ground leans toward the lit grass tone, hollows toward the cool root tone.
+	float hh = rel.r - 0.5;
+	c = mix(c, hh > 0.0 ? grass_tip.rgb : grass_root.rgb, abs(hh) * 2.0 * height_tint_k);
+	c = mix(c, c * g_shadow.rgb * SHADE_K, (1.0 - rel.a) * occlusion_k);
+
+	// 4a. The focal floor around the sun stone gathers a pool of key light; the open floor of the
+	// hollow is lighter than its walls, leading the eye to the stone.
+	vec2 fd = (p - FOCAL) / vec2(420.0, 260.0);
+	c += g_key.rgb * (g_ground_light + 0.04) * focal_pool_k * exp(-dot(fd, fd) * 1.4) * (1.0 - 0.6 * night);
+
+	// 4b. Worn moss path (quieter at night).
+	float path = path_mask(p) * (1.0 - 0.55 * night);
+	c = mix(c, path_color.rgb, path_alpha * path);
+
+	// 3. Moss cushions + felt fibres, perspective-mapped; lit by the same key.
+	vec4 m = texture(moss_tex, moss_uv(p));
+	vec2 mn = m.gb * 2.0 - 1.0;
+	float ml = dot(mn, kd);
+	float moss_amt = (1.0 - 0.6 * path) * (1.0 - 0.45 * night) * mix(0.75, 1.15, t);
+	// Lumps read through directional light only (soft lit side, soft shaded side) and a faint,
+	// wide occlusion in the deepest gaps; never dark crevice lines (they read as cracked earth).
+	float gap = 1.0 - smoothstep(0.0, 0.42, m.r);
+	c = mix(c, c * g_shadow.rgb * SHADE_K, (gap * moss_crevice_k + clamp(-ml, 0.0, 1.0) * moss_shade_k) * moss_amt);
+	c += (g_key.rgb * 0.6 + c * 0.4) * clamp(ml, 0.0, 1.0) * moss_lit_k * moss_amt * (0.6 + 0.4 * low);
+	c *= 1.0 + (m.a - 0.5) * 2.0 * fibre_k * moss_amt;
+	// Broad dapple so wide areas never read as one flat value.
+	c *= 1.0 + (vnoise(p / vec2(140.0, 80.0)) - 0.5) * 2.0 * dapple_k;
+
 	// Drifting cloud shadows toward the tinted shadow (off at dusk, night and in rain).
 	if (g_cloud_shadow > 0.001) {
-		c = mix(c, c * g_shadow.rgb * SHADE_K, cloud_shadow(p));
+		c = mix(c, c * g_shadow.rgb * SHADE_K, cloud_shadow(p) * 1.6);
 	}
-	// Near bank, below the brook: 10 % toward the shadow tint.
+	// 4c. Depth frame: the near ground below the brook and the bottom corners sink toward the
+	// shadow tint (richer, darker foreground; the far meadow keeps a touch of aerial haze).
 	float bank_y = brook_fit.x + brook_fit.y * p.x + brook_half_px;
-	c = mix(c, g_shadow.rgb, near_bank_k * smoothstep(bank_y - 10.0, bank_y + 40.0, p.y));
+	float near = smoothstep(bank_y, 1960.0, p.y);
+	vec2 cq = vec2(abs(p.x - 540.0) / 620.0, (p.y - 1150.0) / 820.0);
+	float corner = smoothstep(0.55, 1.35, length(cq)) * step(1150.0, p.y);
+	c = mix(c, c * g_shadow.rgb * SHADE_K, clamp(near * near_frame_k + corner * corner_k, 0.0, 0.6));
+	c = mix(c, g_sky_horizon.rgb, far_haze_k * (1.0 - smoothstep(T_TOP, 980.0, p.y)) * (1.0 - night));
 	// Wet sheen in rain (sky reflection), stronger toward the crest.
 	c += g_rain * wet_sheen_k * (g_sky_mid.rgb - c) * (1.0 - t * 0.5);
 	// Backlit crest: thin rim + broad glow, both from the key.
