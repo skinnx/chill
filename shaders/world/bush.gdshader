@@ -23,6 +23,9 @@ uniform sampler2D moss_tex : filter_linear_mipmap, repeat_enable;
 uniform bool use_instance_uniforms = false;
 instance uniform vec4 i_bush = vec4(0.5, 1.0, 0.0, 1.0);
 instance uniform vec4 i_sway = vec4(120.0, 2.0, 0.0, 60.0);
+// Object mode (BushSprite only, a = 1): the canopy is a lit object with this day albedo (the
+// willow crown, palettes.json materials), multiplied by g_ambient like every object (§3.1).
+instance uniform vec4 i_albedo : source_color = vec4(0.651, 0.8, 0.584, 0.0);
 uniform float haze_k = 0.16;
 uniform float trunk_k = 0.55;
 uniform float moss_px = 34.0;
@@ -101,9 +104,14 @@ void fragment() {
 		discard;
 	}
 
-	// Colours by depth: hedge (between mid and near, hazed) .. edge shrubs (near family).
+	// Colours by depth: hedge (between mid and near, hazed) .. edge shrubs (near family); objects
+	// (the willow crown) use their albedo x ambient.
 	vec3 base = mix(mix(g_mid.rgb, g_near.rgb, 0.55), g_near.rgb * 1.04, depth);
 	base = mix(base, g_sky_horizon.rgb, haze_k * (1.0 - depth));
+	bool object = use_instance_uniforms && i_albedo.a > 0.5;
+	if (object) {
+		base = i_albedo.rgb * g_ambient.rgb;
+	}
 	base *= 1.0 + (hs(seed, 9.0, 9.0) - 0.5) * 0.10;
 	vec3 shade = base * g_shadow.rgb * SHADE_K;
 	// Lobe light: the lobe's own normal toward the key plus a top-lit bias for the whole canopy.
