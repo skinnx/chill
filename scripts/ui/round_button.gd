@@ -19,6 +19,8 @@ const RING_DP := 3.0
 const ASLEEP_ALPHA := 0.5
 ## Gap between the icon and the in-plate label, px.
 const LABEL_GAP := 2.0
+## Label colour when active (dock tab: the selected label takes the primary, 5.0:1 on primary_tint).
+const ACTIVE_LABEL_TOKEN := &"primary_pressed"
 
 var plate_px: float = 168.0:
 	set(v):
@@ -39,6 +41,7 @@ var active: bool = false:
 		if active != v:
 			active = v
 			_refresh_icon()
+			_refresh_label_color()
 			_changed()
 var asleep: bool = false:
 	set(v):
@@ -60,7 +63,18 @@ var force_pressed: bool = false:
 var draw_plate: bool = true
 ## Optional icon textures (an atlas region), normal and active: icons from one atlas batch.
 var icon_textures: Array[Texture2D] = []
+## Label box width (px; below 0 = the plate width) and the icon-to-label gap.
+var label_w: float = -1.0
+var label_gap: float = LABEL_GAP
+## The active label takes ACTIVE_LABEL_TOKEN (dock tabs).
+var tint_active_label: bool = false
 var label: Label
+## The icon's z_index (the dock lifts its icons to the HUD icon layer so they batch).
+var icon_z: int = 0:
+	set(v):
+		icon_z = v
+		if _icon != null:
+			_icon.z_index = v
 var _icon: TextureRect
 var _box: StyleBoxFlat
 
@@ -94,6 +108,8 @@ func set_label(text: String) -> void:
 		label.clip_text = false
 		add_child(label)
 	label.text = text
+	_refresh_alpha()
+	_refresh_label_color()
 	_relayout()
 
 
@@ -145,6 +161,17 @@ func _refresh_icon() -> void:
 func _refresh_alpha() -> void:
 	if _icon != null:
 		_icon.modulate.a = ASLEEP_ALPHA if asleep else 1.0
+	if label != null:
+		label.modulate.a = ASLEEP_ALPHA if asleep else 1.0
+
+
+func _refresh_label_color() -> void:
+	if label == null or not tint_active_label:
+		return
+	if active:
+		label.add_theme_color_override(&"font_color", UiTokens.color(ACTIVE_LABEL_TOKEN))
+	else:
+		label.remove_theme_color_override(&"font_color")
 
 
 func _relayout() -> void:
@@ -155,13 +182,24 @@ func _relayout() -> void:
 	var lh := 0.0
 	if label != null:
 		lh = label.get_combined_minimum_size().y
-		stack_h += LABEL_GAP + lh
+		stack_h += label_gap + lh
 	var top := c.y - stack_h * 0.5
 	_icon.size = Vector2(icon_px, icon_px)
 	_icon.position = Vector2(c.x - icon_px * 0.5, top)
 	if label != null:
-		var w := plate_px
+		var w := plate_px if label_w < 0.0 else label_w
 		label.size = Vector2(w, lh)
-		label.position = Vector2(c.x - w * 0.5, top + icon_px + LABEL_GAP)
+		label.position = Vector2(c.x - w * 0.5, top + icon_px + label_gap)
+	# The ripple and the press scale follow the plate (a 56 dp plate in a 76 dp hit), unless an
+	# owner set its own shape (the dock's tab capsule).
+	if not has_meta(&"ripple_owner_shape"):
+		var r := plate_px * 0.5
+		set_meta(PressFeedback.META_RIPPLE_RECT, Rect2(c - Vector2(r, r), Vector2(r, r) * 2.0))
+		set_meta(PressFeedback.META_RIPPLE_RADIUS, r)
 	pivot_offset = c
 	_changed()
+
+
+## The icon's centre in local px (badges and rings sit around it).
+func icon_center() -> Vector2:
+	return _icon.position + _icon.size * 0.5 if _icon != null else center()

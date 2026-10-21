@@ -201,6 +201,12 @@ def icons(p: Pen, accent_of) -> dict[str, str]:
     hull = "M8 40 Q36 34 64 40 Q60 56 36 56 Q12 56 8 40 Z"
     out["leaf_boat"] = (lb.acc(hull) + lb.line(hull) + lb.line("M36 38 V12") + lb.acc("M38 14 Q54 22 38 32 Z")
                         + lb.line("M38 14 Q54 22 38 32", THIN))
+    # paw (a friend dropped by; recap "visited" rows): a soft pad under four toes, accent pad
+    pw = accent_of("album")
+    pad = "M36 64 C26 64 18 59 18 51 C18 42 27 36 36 36 C45 36 54 42 54 51 C54 59 46 64 36 64 Z"
+    out["paw"] = (pw.acc(pad) + pw.line(pad, THIN)
+                  + pw.circle_fill(14.5, 33, 5.6) + pw.circle_fill(26, 18.5, 6.2)
+                  + pw.circle_fill(46, 18.5, 6.2) + pw.circle_fill(57.5, 33, 5.6))
     out["sparkle"] = g.acc_full("M36 8 Q39 33 64 36 Q39 39 36 64 Q33 39 8 36 Q33 33 36 8 Z")
     return out
 

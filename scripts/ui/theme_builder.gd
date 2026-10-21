@@ -67,8 +67,12 @@ static func build(palettes: Dictionary, text_scale: float = 1.0, vietnamese: boo
 	var surface := Color.html(String(ui["surface"]))
 	var surface_hi := Color.html(String(ui["surface_hi"]))
 	var primary := Color.html(String(ui["primary"]))
-	var primary_pressed := Color.html(String(uid["primary_pressed"]))
 	var primary_tint := Color.html(String(uid["primary_tint"]))
+	# Round 3 (QA X2): primary pills are a flat primary_pressed (surface_hi text 5.86:1, never a
+	# lighter top) and press to primary_deep (7.6:1); secondary text is ink_soft (9.2:1 on cards).
+	var primary_fill := Color.html(String(uid.get("primary_pressed", ui["primary"])))
+	var primary_down := Color.html(String(uid.get("primary_deep", uid["primary_pressed"])))
+	var ink_soft := Color.html(String(uid.get("ink_soft", ui["ink_2"])))
 	var glass_fill := 1.0 if reduce_transparency else float(ua["glass_faux_fill"])
 	var e1 := [float(ua["shadow_e1"])] + E1_SHAPE
 	var e2 := [float(ua["shadow_e2"])] + E2_SHAPE
@@ -96,8 +100,8 @@ static func build(palettes: Dictionary, text_scale: float = 1.0, vietnamese: boo
 			_spacing(strong, SIZE_LABEL, text_scale, vietnamese))
 	_label_variation(t, &"CaptionLabel", strong, _px(SIZE_CAPTION, text_scale), ink,
 			_spacing(strong, SIZE_CAPTION, text_scale, vietnamese))
-	# ink_2 only on opaque surface / surface_hi, never on glass (Art Bible A7).
-	_label_variation(t, &"SecondaryLabel", strong, _px(SIZE_CAPTION, text_scale), ink_2,
+	# Secondary text only on opaque surface / surface_hi, never on glass (Art Bible A7).
+	_label_variation(t, &"SecondaryLabel", strong, _px(SIZE_CAPTION, text_scale), ink_soft,
 			_spacing(strong, SIZE_CAPTION, text_scale, vietnamese))
 	_label_variation(t, &"HudNumeral", numerals, _px(SIZE_HUD, text_scale), ink, 0)
 	_label_variation(t, &"PriceLabel", title, _px(SIZE_PRICE, text_scale), ink, 0)
@@ -109,11 +113,11 @@ static func build(palettes: Dictionary, text_scale: float = 1.0, vietnamese: boo
 
 	# --- buttons: primary pill by default (no focus ring after taps; 4.6 separates focus kinds)
 	var pill := roundi(BUTTON_H * 0.5)
-	t.set_stylebox(&"normal", &"Button", _box(primary, pill, e1, ink, BUTTON_PAD_X))
-	t.set_stylebox(&"hover", &"Button", _box(primary, pill, e1, ink, BUTTON_PAD_X))
-	t.set_stylebox(&"pressed", &"Button", _box(primary_pressed, pill, e1, ink, BUTTON_PAD_X))
-	t.set_stylebox(&"hover_pressed", &"Button", _box(primary_pressed, pill, e1, ink, BUTTON_PAD_X))
-	t.set_stylebox(&"disabled", &"Button", _box(primary, pill, [], ink, BUTTON_PAD_X))
+	t.set_stylebox(&"normal", &"Button", _box(primary_fill, pill, e1, ink, BUTTON_PAD_X))
+	t.set_stylebox(&"hover", &"Button", _box(primary_fill, pill, e1, ink, BUTTON_PAD_X))
+	t.set_stylebox(&"pressed", &"Button", _box(primary_down, pill, e1, ink, BUTTON_PAD_X))
+	t.set_stylebox(&"hover_pressed", &"Button", _box(primary_down, pill, e1, ink, BUTTON_PAD_X))
+	t.set_stylebox(&"disabled", &"Button", _box(primary_fill, pill, [], ink, BUTTON_PAD_X))
 	t.set_stylebox(&"focus", &"Button", StyleBoxEmpty.new())
 	t.set_font(&"font", &"Button", heavy)
 	t.set_font_size(&"font_size", &"Button", _px(SIZE_LABEL, text_scale))

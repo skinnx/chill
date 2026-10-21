@@ -459,7 +459,10 @@
 		"coral_tint": "#FFECE1",
 		"gold_tint": "#FFF3D8",
 		"toggle_off_track": "#C4C2C5",
-		"toggle_off_border": "#5D596E"
+		"toggle_off_border": "#5D596E",
+		"primary_deep": "#2E4CA6",
+		"ink_soft": "#47445A",
+		"hud_night_tint": "#BEC2D6"
 	},
 	"ui_alpha": {
 		"glass_live_tint": 0.66,

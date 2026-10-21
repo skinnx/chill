@@ -28,6 +28,19 @@ uniform float ripple_s = 0.38;
 uniform float ripple_radius_px = 108.0;
 uniform float rain_cell_px = 48.0;
 uniform float rain_ring_k = 76.0;
+// Body and reflection balance (round 3: a darker body with bright reflection streaks).
+uniform float body_dark = 0.80;
+uniform float body_shadow_k = 0.22;
+uniform float shallow_k = 0.22;
+uniform float refl_base = 0.16;
+uniform float refl_far = 0.82;
+uniform float refl_streak_k = 0.30;
+uniform float mirror_k = 0.72;
+uniform float column_px = 46.0;
+uniform float column_k = 1.0;
+uniform float lamp_streak_px = 9.0;
+uniform float lamp_streak_k = 1.0;
+uniform float bank_edge_k = 0.25;
 
 const float FLOW_A_SPEED = 54.0;
 const float FLOW_A_TILE = 540.0;
@@ -36,9 +49,14 @@ const float FLOW_B_SPEED = 30.0;
 const float FLOW_B_TILE = 360.0;
 const float FLOW_B_CELL = 60.0;
 const float GLINT_FADE_S = 0.4;
+// Sky-reflection streak cells (px along the flow, px across): long, thin, anisotropic.
+const float REFL_CELL_X = 108.0;
+const float REFL_CELL_Y = 9.0;
+// Lantern streak wobble loop (k per 600 s) - a slow sin ripple, well under 3 Hz.
+const float LAMP_WOBBLE_K = 420.0;
 const float RIPPLE_SQUASH = 0.35;
 const float RIPPLE_WIDTH_PX = 3.0;
-const float RIPPLE_ALPHA = 0.6;
+const float RIPPLE_ALPHA = 0.75;
 const float RIPPLE_BEND_PX = 4.0;
 const float RAIN_RING_LIFE_S = 1.1;
 const float RAIN_RING_R_PX = 20.0;
@@ -102,45 +120,67 @@ void fragment() {
 	}
 	float vr = clamp(v + bendv + (flow - 0.5) * 2.0 * 2.5 / water_px, 0.0, 1.0);
 
-	// Surface: the far half mirrors the sky (grazing view, bright), the near half looks down into
-	// the cooler, deeper water (Fresnel-like ramp across the channel).
-	float fres = 1.0 - smoothstep(0.0, 0.85, vr);
-	vec3 sky = mix(mix(g_sky_mid.rgb, g_sky_horizon.rgb, 0.65), g_water_shallow.rgb, 0.45);
-	vec3 deep = mix(g_water_deep.rgb, g_sky_top.rgb, 0.18);
-	// Low light (golden, dawn) grazes the surface: more of the warm sky is mirrored.
-	float refl = mix(0.18 + 0.72 * fres * fres, 0.50 + 0.45 * fres, g_backlight * g_celestial.x);
-	vec3 c = mix(deep, sky, refl);
-	// The far bank mirrored: a soft darker band just under the far edge, broken by the flow.
-	float mirror = (1.0 - smoothstep(0.0, 0.22, vr)) * smoothstep(0.0, 0.05, vr);
-	c = mix(c, c * g_shadow.rgb * SHADE_K, 0.38 * mirror * (0.7 + 0.3 * fb));
-	// Flow streaks: light dashes aligned with the current, stronger where the sky is mirrored.
+	// Surface (round-3 directive 2: it must read unmistakably as WATER at every hour): a dark,
+	// cool body (deep water darkened toward the shadow tint) carrying a thin mirrored sky band under
+	// the far bank and long anisotropic sky-reflection streaks (x:y about 10:1) that drift with the
+	// flow; the bright reflections are streaks ON a dark body, never a pale flat ribbon.
+	float fres = 1.0 - smoothstep(0.0, 0.9, vr);
+	vec3 body = mix(g_water_deep.rgb, g_shadow.rgb, body_shadow_k) * body_dark;
+	// The near half looks down into the water: slightly lighter and greener (shallows over moss).
+	body = mix(body, mix(g_water_deep.rgb, g_near.rgb, 0.35), shallow_k * smoothstep(0.55, 1.0, vr));
+	// What the surface mirrors: the sky, flipped. Under the far bank it shows the band just above
+	// the horizon (warm and bright at golden / dawn), toward the near bank the higher, cooler sky;
+	// the reflectance falls toward the viewer (Fresnel), so the near half shows the dark body.
+	float vs = smoothstep(0.04, 0.98, vr);
+	vec3 sky_low = mix(g_sky_horizon.rgb, g_glow.rgb, 0.30 * g_celestial.x * g_backlight);
+	vec3 sky_high = mix(g_sky_mid.rgb, g_sky_top.rgb, 0.45);
+	vec3 sky = mix(sky_low, mix(g_sky_mid.rgb, sky_high, vs), smoothstep(0.22, 0.85, vs));
+	float rs_a = vnoise_tiled(vec2((s - FLOW_A_SPEED * g_time) / REFL_CELL_X + 1.7, y_px / REFL_CELL_Y),
+			vec2(FLOW_A_TILE / REFL_CELL_X, 4096.0));
+	float rs_b = vnoise_tiled(vec2((s - FLOW_B_SPEED * g_time) / (REFL_CELL_X * 0.6) + 9.2, y_px / (REFL_CELL_Y * 0.7) + 2.0),
+			vec2(FLOW_B_TILE / (REFL_CELL_X * 0.6), 4096.0));
+	float refl_streak = smoothstep(0.50, 0.80, rs_a * 0.65 + rs_b * 0.35);
+	float refl = mix(refl_far, refl_base, vs) + refl_streak * refl_streak_k * (1.0 - 0.4 * vs);
+	refl *= 1.0 - 0.35 * g_rain;
+	vec3 c = mix(body, sky, clamp(refl, 0.0, 0.94));
+	// The far bank mirrored: a darker band of moss + grass just under the far edge, its lower edge
+	// rippled and broken by the flow (the strongest single "this is water" cue).
+	float mband_edge = 0.20 + 0.06 * (rs_b - 0.5) + 0.03 * sin(s * 0.09 + g_time * TAU * 31.0 / LOOP_S);
+	float mirror = (1.0 - smoothstep(mband_edge - 0.05, mband_edge, vr)) * smoothstep(0.0, 0.035, vr);
+	vec3 bank_ref = mix(g_near.rgb, g_shadow.rgb, 0.45) * mix(vec3(1.0), g_ambient.rgb, 0.5);
+	c = mix(c, bank_ref, mirror_k * mirror * (0.75 + 0.25 * fb));
+	// Fine flow dashes: thin light lines aligned with the current.
 	float dash_a = smoothstep(0.66, 0.86, fa) * (1.0 - smoothstep(0.0, 0.08, abs(fract(y_px / 9.0 + fb * 0.6) - 0.5) - 0.22));
-	float dash_b = smoothstep(0.70, 0.90, fb);
+	float dash_b = smoothstep(0.72, 0.92, fb);
 	float streak = clamp(dash_a * 0.7 + dash_b * 0.45, 0.0, 1.0);
-	vec3 hi = mix(g_water_shallow.rgb, g_glow.rgb, 0.5);
-	c = mix(c, hi, streak * (0.22 + 0.25 * fres) * (1.0 - 0.5 * g_lights));
+	vec3 hi = mix(sky_low, vec3(1.0), 0.45);
+	c = mix(c, hi, streak * (0.20 + 0.25 * fres) * (1.0 - 0.6 * g_lights));
 	c *= 1.0 + (flow - 0.5) * 0.10;
 
-	// Light path on the water under the low sun / the moon: a bright column with sparkles.
-	vec2 body = light_body();
-	float vis = max(g_celestial.x, g_celestial.y * 0.6) * (1.0 - g_rain);
-	float colx = (v_canvas.x - body.x) / (60.0 + 40.0 * g_backlight);
-	float column = exp(-colx * colx) * (0.35 + 0.65 * g_backlight);
-	c = mix(c, mix(g_glow.rgb, g_water_shallow.rgb, 0.3), column * vis * 0.42 * (0.55 + 0.45 * flow));
+	// The light path under the low sun / the moon: a bright vertical glint column built from the
+	// same flow streaks (broken, shimmering), the signature of water at golden hour.
+	vec2 body_pos = light_body();
+	float vis = max(g_celestial.x, g_celestial.y * 0.7) * (1.0 - g_rain);
+	float colx = (v_canvas.x - body_pos.x) / (column_px + 40.0 * g_backlight);
+	// (At night with lanterns lit the moon path steps back so the warm streaks lead, §1.3.)
+	float column = exp(-colx * colx) * (0.30 + 0.70 * max(g_backlight, g_celestial.y)) * (1.0 - 0.45 * g_lights * g_celestial.y);
+	float col_break = smoothstep(0.35, 0.75, rs_a * 0.5 + fa * 0.5);
+	vec3 col_c = mix(g_glow.rgb, vec3(1.0), 0.30);
+	c = mix(c, col_c, clamp(column * vis * (0.25 + 0.75 * col_break) * column_k, 0.0, 0.9));
 	float glint_light = (g_celestial.x * (0.35 + 0.65 * g_backlight) + g_celestial.y * 0.55) * (1.0 - g_rain * 0.7);
-	// Column sparkles: small cells inside the light path, each breathing softly (never off/on).
-	vec2 sc = vec2(s, y_px) / vec2(16.0, 9.0);
+	// Column sparkles: small cells inside the light path (3x denser there), each breathing softly.
+	vec2 sc = vec2(s, y_px) / vec2(12.0, 8.0);
 	vec2 sci = floor(sc);
 	vec2 sj = h22(sci + 3.7);
 	float sk = floor(mix(glint_k.x, glint_k.y + 1.0, sj.x));
 	float sph = fract(g_time * sk / LOOP_S + sj.y);
 	float dt_s = (sph - 0.5) * LOOP_S / sk;
 	float bell = exp(-(dt_s * dt_s) / (0.45 * 0.45));
-	vec2 sp = (sci + 0.25 + 0.5 * h22(sci + 9.1)) * vec2(16.0, 9.0);
+	vec2 sp = (sci + 0.25 + 0.5 * h22(sci + 9.1)) * vec2(12.0, 8.0);
 	vec2 sd = vec2(s, y_px) - sp;
-	float spark = exp(-dot(sd, sd) / 2.2) + 0.35 * exp(-sd.y * sd.y / 0.8) * exp(-sd.x * sd.x / 30.0);
-	float sparkle_mask = column * step(0.55, h12(sci + 1.3));
-	c += g_glow.rgb * spark * (0.25 + 0.75 * bell) * sparkle_mask * glint_light * 0.9 * water;
+	float spark = exp(-dot(sd, sd) / 2.2) + 0.45 * exp(-sd.y * sd.y / 0.8) * exp(-sd.x * sd.x / 40.0);
+	float sparkle_mask = column * step(0.40, h12(sci + 1.3));
+	c += mix(g_glow.rgb, vec3(1.0), 0.4) * spark * (0.35 + 0.65 * bell) * sparkle_mask * glint_light * 1.1 * water;
 
 	// Edge foam and the spring's churn.
 	float edge = 1.0 - smoothstep(0.0, 0.12, min(v, 1.0 - v));
@@ -163,7 +203,9 @@ void fragment() {
 	vec3 foam_col = mix(ripple_color.rgb, g_glow.rgb, 0.25);
 	c = mix(c, foam_col, clamp(foam, 0.0, 0.8) * water);
 
-	// Lantern reflections: vertical streaks under lamps on the far bank, broken by the flow.
+	// Lantern reflections (Art Bible §1.3, §4.7 step 7): each lamp near the water doubles as a long
+	// vertical streak (about 12 px wide, spanning the water) wobbled by a sin ripple and broken by
+	// the flow, breathing with its pool (+-5 %, 3.3 s); a hot core near the far edge.
 	if (g_lights > 0.001) {
 		float lw = 0.0;
 		for (int i = 0; i < MAX_LAMPS; i++) {
@@ -171,10 +213,16 @@ void fragment() {
 				break;
 			}
 			vec4 l = u_lamps[i];
-			float near = 1.0 - smoothstep(60.0, 160.0, abs(p.y - l.y));
-			lw += exp(-pow((p.x - l.x) / 12.0, 2.0)) * near * l.w * smoothstep(0.25, 0.75, fa + 0.3 * fb);
+			float near = 1.0 - smoothstep(90.0, 200.0, abs(p.y - l.y));
+			float wob = sin(y_px * 0.55 + g_time * TAU * LAMP_WOBBLE_K / LOOP_S + float(i) * 2.3) * 2.2;
+			float xs = (p.x + wob - l.x) / lamp_streak_px;
+			float breath = 1.0 + LAMP_BREATH_AMP * sin(TAU * LAMP_BREATH_K / LOOP_S * g_time + float(i) * 1.7);
+			float brk = 0.45 + 0.55 * smoothstep(0.30, 0.70, rs_a * 0.6 + fa * 0.4);
+			float fall = 1.0 - 0.55 * smoothstep(0.0, 1.0, vr);
+			lw += exp(-xs * xs) * near * clamp(l.w, 0.0, 1.0) * brk * fall * breath;
 		}
-		c = mix(c, g_accent.rgb, clamp(lw * g_lights * 0.5, 0.0, 0.7) * water);
+		float la = clamp(lw * g_lights * lamp_streak_k, 0.0, 0.85) * water;
+		c = mix(c, mix(g_accent.rgb, vec3(1.0, 0.97, 0.88), 0.25 * clamp(lw - 0.6, 0.0, 1.0)), la);
 	}
 
 	// Sparse glints along the whole brook: one cell per 70 px, each flashes once per 600/k s.
@@ -201,7 +249,7 @@ void fragment() {
 			d.y /= RIPPLE_SQUASH;
 			float ur = rage / RAIN_RING_LIFE_S;
 			float rr = RAIN_RING_R_PX * (1.0 - (1.0 - ur) * (1.0 - ur));
-			rip += (1.0 - smoothstep(0.0, 1.6, abs(length(d) - rr))) * 0.3 * (1.0 - ur) * g_rain;
+			rip += (1.0 - smoothstep(0.0, 1.8, abs(length(d) - rr))) * 0.42 * (1.0 - ur) * g_rain;
 		}
 	}
 	c = mix(c, ripple_color.rgb, clamp(rip, 0.0, 0.85) * water);
@@ -214,6 +262,9 @@ void fragment() {
 	c = mix(bank, c, water);
 	// Inner wet shadow under the far bank (the bank overhangs the water).
 	c = mix(c, c * g_shadow.rgb * SHADE_K, (1.0 - smoothstep(0.0, 0.10, v)) * 0.30 * water);
+	// Both bank edges: a 6-8 px band of water darkened by ~25 % (wet moss overhang, shadowed shallows).
+	float edge_px = min(v, 1.0 - v) * water_px;
+	c *= 1.0 - bank_edge_k * (1.0 - smoothstep(2.0, 8.0, edge_px)) * water;
 	float far_rim = (1.0 - smoothstep(0.0, 2.0 / water_px, abs(v - 0.035))) * water;
 	c = mix(c, mix(hi, vec3(1.0), 0.25), far_rim * (0.45 + 0.25 * fres) * (1.0 - 0.6 * g_lights));
 	float near_rim = (1.0 - smoothstep(0.0, 2.5 / water_px, abs(v - 0.975))) * water;

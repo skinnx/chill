@@ -32,8 +32,9 @@ uniform float tap_tint = 0.06;
 uniform float backlight_k = 0.38;
 uniform float ground_k = 0.18;
 uniform float ground_backlight_k = 0.3;
-uniform float focal_k = 0.05;
-uniform float focal_back_k = 0.08;
+uniform float focal_k = 0.08;
+uniform float focal_front_k = 0.40;
+uniform float focal_back_k = 0.12;
 
 varying vec2 v_canvas;
 varying vec2 v_size;
@@ -71,6 +72,9 @@ void fragment() {
 			* (1.0 - 0.7 * i_focal.x * m.r));
 	// The focal's lit top plane: a warm key wash (strongest at golden), a cooler front face.
 	c += (g_key.rgb * 0.75 + alb * 0.25) * i_focal.x * m.r * (focal_k + focal_back_k * g_backlight) * (1.0 - 0.6 * g_lights);
+	// Round 3 (QA r2: the stone barely separated from the meadow): the focal's front / shade faces
+	// sink toward the tinted shadow, so its lit top reads as the highest local contrast.
+	c = mix(c, c * g_shadow.rgb * SHADE_K, i_focal.x * m.g * focal_front_k);
 	c = mix(c, c * g_shadow.rgb * SHADE_K, i_fx.w * (ground_k + ground_backlight_k * g_backlight));
 	// Rim: inside the shape, with empty space toward the light (one extra, slightly blurred read).
 	if (i_fx.z > 0.5) {

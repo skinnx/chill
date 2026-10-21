@@ -20,11 +20,17 @@ const FILL := 0.78
 ## Feet sit this far up from the bottom of the well (fraction of its height).
 const FEET_FRAC := 0.14
 const SILHOUETTE_ALPHA := 0.10
+## Magnified portraits keep the fur's felt grain at 1 screen dp (mossling_fur u_grain_density =
+## the magnification): one fur material per density step, so same-size portraits still batch.
+const GRAIN_PARAM := &"u_grain_density"
+const GRAIN_STEP := 0.25
 
 static var _rig: MosslingRig
 static var _fur: ShaderMaterial
 static var _shadow: ShaderMaterial
 static var _fx: Dictionary = {}
+## Fur materials by grain density step (1.0 = the shared _fur).
+static var _fur_by_density: Dictionary = {}
 
 var species: StringName = &""
 var known: bool = true
@@ -88,6 +94,9 @@ func _fit() -> void:
 		var k := minf(size.y * FILL / maxf(tall, 1.0), size.x * FILL / maxf(wide, 1.0))
 		mossling.place_at(Vector2(size.x * 0.5, size.y * (1.0 - FEET_FRAC)))
 		mossling.scale_override(k)
+		var body := mossling.get_node_or_null(^"Visual/Body") as CanvasItem
+		if body != null:
+			body.material = _fur_for(k)
 	if _silhouette != null:
 		_silhouette.position = Vector2.ZERO
 		_silhouette.size = size
@@ -98,8 +107,21 @@ func _fit() -> void:
 static func release_shared() -> void:
 	_rig = null
 	_fur = null
+	_fur_by_density = {}
 	_shadow = null
 	_fx = {}
+
+
+## The fur material whose grain density matches a magnification of [param k] (k <= 1: shared).
+static func _fur_for(k: float) -> ShaderMaterial:
+	var step := maxf(1.0, snappedf(k, GRAIN_STEP))
+	if is_equal_approx(step, 1.0):
+		return _fur
+	if not _fur_by_density.has(step):
+		var m := _fur.duplicate() as ShaderMaterial
+		m.set_shader_parameter(GRAIN_PARAM, step)
+		_fur_by_density[step] = m
+	return _fur_by_density[step] as ShaderMaterial
 
 
 static func _ensure_rig() -> void:

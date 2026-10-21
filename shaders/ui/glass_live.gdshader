@@ -11,6 +11,8 @@ render_mode unshaded;
 
 #include "res://shaders/ui/glass.gdshaderinc"
 
+uniform vec2 u_size = vec2(120.0, 120.0);          // the sheet's size, px (one live surface)
+
 uniform sampler2D screen_tex : hint_screen_texture, filter_linear_mipmap, repeat_disable;
 uniform float u_lod = 3.5;              // ui_alpha.glass_lod
 uniform float u_saturation = 1.15;      // ui_alpha.backdrop_saturation
@@ -26,7 +28,7 @@ void vertex() {
 }
 
 void fragment() {
-	float d = glass_sd();
+	float d = glass_sd(u_size);
 	float cov = clamp(0.5 - d, 0.0, 1.0);
 	vec2 px = SCREEN_PIXEL_SIZE * TAP_SPREAD_PX;
 	vec3 b = textureLod(screen_tex, SCREEN_UV + vec2(px.x, px.y * 0.35), u_lod).rgb;
@@ -38,8 +40,8 @@ void fragment() {
 	b = clamp(mix(vec3(l), b, u_saturation), 0.0, 1.0);
 	float tint = mix(u_tint_max, u_tint_min, smoothstep(u_luma_lo, u_luma_hi, l));
 	vec3 c = mix(b, u_surface.rgb, tint);
-	vec4 g = glass_dress(c, 1.0, d);
-	vec4 o = over_shadow(g.rgb, cov, glass_shadow());
+	vec4 g = glass_dress(c, 1.0, d, u_size);
+	vec4 o = over_shadow(g.rgb, cov, glass_shadow(u_size));
 	c = finish(o.rgb, v_local / PX_PER_DP, FRAGCOORD.xy, GRAIN_GLASS);
 	COLOR = vec4(c, o.a * COLOR.a);
 }

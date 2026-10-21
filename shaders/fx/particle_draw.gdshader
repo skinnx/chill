@@ -16,7 +16,9 @@ const int KIND_FIREFLIES = 4;
 const int KIND_RAIN = 5;
 const int KIND_SPLASH = 6;
 const float HALO_GAIN = 0.9;
-const float SPLASH_ALPHA = 0.55;
+const float SPLASH_ALPHA = 0.8;
+const float RAIN_SHEATH_A = 0.45;
+const float RAIN_SHEATH_DARK = 0.55;
 
 uniform int kind = 0;
 uniform bool additive = true;
@@ -99,9 +101,14 @@ void fragment() {
 		glow = true;
 	} else if (kind == KIND_RAIN) {
 		float across = abs(q.x);
-		// Soft 3 px streak, brightest at its leading (lower) end, fading up its tail.
-		a = (1.0 - smoothstep(0.7, 1.0, across)) * mix(0.35, 1.0, smoothstep(-0.9, 0.7, q.y))
-				* (1.0 - smoothstep(0.88, 1.0, abs(q.y)));
+		// A bright ~3 px core (of the 7 px quad), brightest at its leading (lower) end and fading up
+		// its tail, inside a faint darker sheath so a streak reads on light skies and dark ground
+		// alike (round 3: QA r2 could not see the rain).
+		float len = mix(0.35, 1.0, smoothstep(-0.9, 0.7, q.y)) * (1.0 - smoothstep(0.88, 1.0, abs(q.y)));
+		float core = 1.0 - smoothstep(0.22, 0.45, across);
+		float sheath = (1.0 - smoothstep(0.45, 1.0, across)) * (1.0 - core);
+		a = (core + sheath * RAIN_SHEATH_A) * len;
+		c = mix(tint.rgb * RAIN_SHEATH_DARK, tint.rgb, core / max(core + sheath * RAIN_SHEATH_A, 1e-4));
 	} else if (kind == KIND_SPLASH) {
 		float u = clamp(v_custom.y / 0.6, 0.0, 1.0);
 		float rad = 0.25 + 0.7 * (1.0 - (1.0 - u) * (1.0 - u));

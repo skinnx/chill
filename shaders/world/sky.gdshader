@@ -30,6 +30,18 @@ uniform vec4 cloud_lit : source_color = vec4(0.937, 0.949, 0.890, 1.0);
 uniform vec4 cloud_shade : source_color = vec4(0.545, 0.749, 0.875, 1.0);
 uniform float overcast_rain = 0.92;
 uniform float overcast_cloud = 0.25;
+// Round 3 (QA r2: "the sky is a large, nearly empty gradient"): a soft cumulus bank resting on the
+// horizon behind the far hills (lit tops, hazed base, parted around the sun so it still sits in the
+// gap) and faint high cirrus wisps in the upper sky, both drifting slowly (seamless at 600 s).
+uniform float bank_height_px = 220.0;
+uniform float bank_alpha = 0.85;
+uniform float bank_cell_px = 300.0;
+uniform float bank_speed = 4.0;
+uniform float bank_sun_gap_px = 170.0;
+uniform float cirrus_alpha = 0.15;
+uniform vec2 cirrus_cell_px = vec2(450.0, 34.0);
+uniform float cirrus_speed = 3.0;
+uniform vec2 cirrus_band = vec2(-420.0, 420.0);
 // L1 parallax: the celestial bodies and stars shift by 0.02 x the camera offset.
 uniform vec2 u_cam_offset = vec2(0.0);
 
@@ -65,6 +77,9 @@ const float OVERCAST_NIGHT_DIM = 0.45;
 const float RAIN_DISC_HIDE = 0.95;
 const float RAIN_HALO_HIDE = 0.6;
 const float OVERCAST_TILE = 1920.0;
+// Bank / cirrus loops: tile = speed x 600 s (2400 px and 1800 px).
+const float BANK_TILE = 2400.0;
+const float CIRRUS_TILE = 1800.0;
 
 varying vec2 v_design;
 
@@ -99,6 +114,57 @@ void fragment() {
 	c = mix(c, haze, haze_amp * exp(-hy * hy) + haze_wide_amp * exp(-hw * hw) * (1.0 - g_rain * 0.5));
 
 	vec2 pc = p + g_world_offset + u_cam_offset * 0.02;  // canvas px of this fragment (L1)
+	vec3 cl_lit = mix(cloud_lit.rgb, g_glow.rgb, 0.25 * g_celestial.x * g_backlight);
+	float clear_k = 1.0 - g_rain;
+
+	// High cirrus: long, thin, broken streaks well above the horizon (texture for 1:1 crops).
+	if (cirrus_alpha > 0.0 && p.y < cirrus_band.y && p.y > cirrus_band.x) {
+		vec2 cq = vec2((p.x + cirrus_speed * g_time) / cirrus_cell_px.x, p.y / cirrus_cell_px.y);
+		vec2 cper = vec2(CIRRUS_TILE / cirrus_cell_px.x, 4096.0);
+		float cn = vnoise_tiled(cq + vec2(0.0, 0.35 * vnoise_tiled(cq * vec2(2.0, 0.25), cper * 2.0)), cper) * 0.7
+				+ vnoise_tiled(cq * vec2(3.0, 1.0) + vec2(5.1, 2.2), cper * vec2(3.0, 1.0)) * 0.3;
+		float cband = smoothstep(cirrus_band.x, cirrus_band.x + 160.0, p.y) * (1.0 - smoothstep(cirrus_band.y - 220.0, cirrus_band.y, p.y));
+		float cm = smoothstep(0.62, 0.86, cn) * cband * cirrus_alpha * clear_k;
+		vec3 cc = mix(cl_lit, vec3(1.0), 0.25);
+		cc = max(cc * mix(vec3(1.0), g_ambient.rgb, 0.5), c + vec3(0.03));
+		c = mix(c, cc, cm * (1.0 - 0.6 * g_stars));
+	}
+
+	// Horizon cumulus bank: a billowing top profile over the horizon, lit along its top, hazed
+	// toward the horizon colour at its base; it parts around the sun's x.
+	float above = horizon_y - p.y;
+	if (above > -20.0 && above < bank_height_px * 1.3) {
+		float bx = (p.x + bank_speed * g_time) / bank_cell_px;
+		vec2 bper = vec2(BANK_TILE / bank_cell_px, 4096.0);
+		float prof = vnoise_tiled(vec2(bx, 0.5), bper) * 0.6 + vnoise_tiled(vec2(bx * 2.7 + 3.3, 1.5), bper * 2.7) * 0.4;
+		// Round billows: two scalloped layers of irregular bumps (domain-warped cells, per-cell size),
+		// united with max() so small puffs ride on the shoulders of big ones (cumulus, not arches).
+		float wv = 0.8 * vnoise_tiled(vec2(bx * 1.3, 4.5), bper * 1.3);
+		float sa = bx * 2.3 + wv;
+		float fa_ = fract(sa) * 2.0 - 1.0;
+		float dome_a = sqrt(max(1.0 - fa_ * fa_, 0.0));
+		float bump_a = dome_a * (0.45 + 0.55 * h12(vec2(floor(sa), 9.7)));
+		float sb = bx * 5.9 + 1.7 * wv + 0.37;
+		float fb_ = fract(sb) * 2.0 - 1.0;
+		float bump_b = sqrt(max(1.0 - fb_ * fb_, 0.0)) * (0.4 + 0.6 * h12(vec2(floor(sb), 3.1)));
+		float gap = 1.0 - 0.85 * exp(-pow((pc.x - g_sun_pos.x) / bank_sun_gap_px, 2.0)) * g_celestial.x;
+		float base = 0.18 + 0.42 * prof;
+		float top = bank_height_px * max(base + 0.34 * bump_a, base + 0.20 + 0.16 * bump_b - 0.12 * (1.0 - bump_a)) * gap;
+		float inside = top - above;
+		float bm = smoothstep(-1.5, 3.0, inside);
+		// Lit from above (and toward the sun at golden), shaded body, hazed only near its base.
+		// Lit from above: lighter with height above the horizon (no per-billow columns), plus a
+		// bright rim along the upward-facing top edge.
+		float lit = smoothstep(0.0, bank_height_px * 0.75, above);
+		// The bright top rim only where the billow faces up (never down the valley walls).
+		lit = max(lit * lit, (1.0 - smoothstep(0.0, 14.0, inside)) * smoothstep(0.35, 0.8, dome_a));
+		vec3 bc = mix(cloud_shade.rgb, cl_lit, clamp(0.2 + 0.8 * lit, 0.0, 1.0));
+		bc = mix(bc, mix(g_sky_horizon.rgb, g_glow.rgb, 0.2), 0.6 * (1.0 - smoothstep(0.0, 110.0, above)) * smoothstep(-20.0, 60.0, inside));
+		bc *= mix(vec3(1.0), g_ambient.rgb, 0.4);
+		// At night the bank stays a dim moonlit grey just above the sky (never a hole in it).
+		bc = mix(bc, max(bc, c + vec3(0.02)), g_stars);
+		c = mix(c, bc, bm * bank_alpha * clear_k * (1.0 - 0.6 * g_stars));
+	}
 
 	// Sun: disc + inner halo + wide outer halo (1 / (1 + (r / r0)^2)), additive, clamped.
 	if (g_celestial.x > 0.001) {

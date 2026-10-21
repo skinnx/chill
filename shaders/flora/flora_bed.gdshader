@@ -47,7 +47,8 @@ const int ROW_FX = 9;
 // 8 x 10 RGBA8, nearest; built at boot from palettes.json (FloraBuilder.build_lut).
 // Per bed (PlotsLayer): x = tap sway impulse px at the tip, z = touch-down tint 0..1.
 instance uniform vec4 i_bed = vec4(0.0);
-uniform float tap_tint = 0.06;
+// Touch-down brighten (round 3: raised so a touch-strip still shows the press).
+uniform float tap_tint = 0.10;
 
 uniform sampler2D flora_lut : filter_nearest, repeat_disable;
 // Atlas px per design px (flora_atlas.json "scale").

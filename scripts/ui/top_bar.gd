@@ -94,6 +94,10 @@ func _ready() -> void:
 		_dew_visible = _dew_target > 0 or Game.sim.state.last_collect_t > 0.0
 		_dew_label.text = format_dew(_dew_shown)
 	dew_chip.visible = _dew_visible
+	# The theme may already be at a large text size before the bar exists (no THEME_CHANGED
+	# follows), so the caps apply now and on every rebuild.
+	_cap_text()
+	UiTheme.theme_rebuilt.connect(func(_t: Theme) -> void: _cap_text.call_deferred())
 	set_process(false)
 
 
@@ -288,12 +292,7 @@ func dew_target_point() -> Vector2:
 ## labels batch (Art Bible §4.19 budget).
 func _icon(name: StringName, px: float) -> Texture2D:
 	if _atlas.is_empty():
-		var entries: Array = [[&"dew", ICON_PX, false], [&"watch", ICON_PX, false], [&"watch_closed", ICON_PX, false]]
-		for k: StringName in PHASE_ICONS:
-			entries.append([PHASE_ICONS[k], ICON_PX, false])
-		for k: StringName in WEATHER_ICONS:
-			entries.append([WEATHER_ICONS[k], BADGE_ICON_PX, false])
-		_atlas = Icons.atlas(entries)
+		_atlas = Icons.hud_atlas()
 	var t: Variant = _atlas.get(Icons.atlas_key(name, px))
 	return t if t is Texture2D else Icons.texture(name, px)
 
@@ -347,6 +346,7 @@ func _build_time() -> void:
 				Rect2(Vector2.ZERO, Vector2(BADGE_PX, BADGE_PX))))
 	time_chip.add_child(_badge)
 	_badge_icon = _icon_rect(&"breeze", BADGE_ICON_PX)
+	_badge_icon.z_index = Z_ICONS - Z_BADGE  # relative to the badge plate: absolute Z_ICONS
 	_badge_icon.position = Vector2((BADGE_PX - BADGE_ICON_PX) * 0.5, (BADGE_PX - BADGE_ICON_PX) * 0.5)
 	_badge.add_child(_badge_icon)
 

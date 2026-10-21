@@ -10,6 +10,12 @@ extends Node2D
 ##
 ## Deterministic per install (seeded), so a capture is reproducible; under Reduce Motion they
 ## glide (no flapping) at 0.3 x speed.
+##
+## Round 3 (Director: "a sparkle of life near flowers" visible at a glance): when the garden is
+## first seen with blooms, the butterflies are already there, perched on flowers (one arriving),
+## instead of all flying in from the edges over the first seconds; and a few pollen motes hang
+## over open blooms (1 per POLLEN_PER_BLOOMS heads, max POLLEN_MAX), drifting on slow Lissajous
+## orbits and twinkling (both from g_time, so frozen in stills). Same mesh, same draw call.
 
 # Data boundary: values read from JSON / Dictionaries are Variants and each one is converted
 # explicitly (int(), float(), String() ...) where it is read; the analyzer still flags every
@@ -42,6 +48,19 @@ const SPAWN_GAP_S := 2.5
 const DEPTH := Vector3(0.62, 760.0, 740.0)
 ## FrameGovernor quality tier at which butterflies stay away.
 const LOW_TIER := 2
+## Pollen motes over open blooms (day, golden, dawn; not in rain).
+const POLLEN_PHASES: Array[StringName] = [&"dawn", &"day", &"golden"]
+const POLLEN_MAX := 7
+const POLLEN_PER_BLOOMS := 4
+const POLLEN_ORBIT_PX := Vector2(14.0, 9.0)
+const POLLEN_RISE_PX := 26.0
+const POLLEN_HZ := 0.09
+const POLLEN_SCALE := 1.7
+## Twinkle: alpha range and rate (x the orbit rate).
+const POLLEN_ALPHA := Vector2(0.45, 1.0)
+const POLLEN_TWINKLE := 9.0
+## Seeded start: this many perched (the rest arrive), wings at rest.
+const START_FLYING := 1
 
 var _builder: FloraBuilder
 var _mesh: MeshInstance2D
@@ -50,6 +69,8 @@ var _flies: Array[Fly] = []
 var _rows: Array[int] = []
 var _spawn_t: float = 0.0
 var _tips: Callable
+var _seeded: bool = false
+var _pollen_seed: int = 0
 
 
 class Fly:
@@ -73,6 +94,7 @@ func setup(builder: FloraBuilder, material: ShaderMaterial, atlas: Texture2D, co
 	_builder = builder
 	_tips = tips
 	_rng.seed = hash([install_seed, "butterflies"])
+	_pollen_seed = hash([install_seed, "pollen"])
 	for id: StringName in COLOUR_FLOWERS:
 		_rows.append(FloraBuilder.row_of(content, id))
 	position = Vector2(0.0, SORT_Y)
@@ -100,6 +122,9 @@ func _process(delta: float) -> void:
 		return
 	var tips: Array = _tips.call()
 	var want := _wanted(tips.size())
+	if not _seeded and want > 0:
+		_seeded = true
+		_seed_perched(want, tips)
 	_spawn_t -= delta
 	if _flies.size() < want and _spawn_t <= 0.0:
 		_spawn()
@@ -116,7 +141,26 @@ func _process(delta: float) -> void:
 		_step(f, delta * motion, tips)
 		if f.leaving and (f.pos.x < OFFSCREEN_X.x or f.pos.x > OFFSCREEN_X.y):
 			_flies.remove_at(i)
-	_draw_mesh()
+	_draw_mesh(tips)
+
+
+## The garden as the player finds it: butterflies already on the flowers (one still arriving).
+func _seed_perched(n: int, tips: Array) -> void:
+	for i in n:
+		_spawn()
+		var f := _flies[_flies.size() - 1]
+		f.alpha = 1.0
+		f.t = _rng.randf() * GLIDE_EVERY_S
+		var tip := tips[_rng.randi_range(0, tips.size() - 1)] as Vector2 + Vector2(0.0, PERCH_DY)
+		if i < n - START_FLYING:
+			f.pos = tip
+			f.target = tip
+			f.has_target = true
+			f.land_left = _rng.randf_range(LAND_S.x, LAND_S.y)
+		else:
+			f.pos = tip + Vector2(_rng.randf_range(-160.0, 160.0), _rng.randf_range(-120.0, -60.0))
+			f.vel = (tip - f.pos).normalized() * f.speed * 0.5
+	_spawn_t = SPAWN_GAP_S
 
 
 func _spawn() -> void:
@@ -158,12 +202,31 @@ func _step(f: Fly, dt: float, tips: Array) -> void:
 		f.land_left = _rng.randf_range(LAND_S.x, LAND_S.y)
 
 
-func _draw_mesh() -> void:
-	if _flies.is_empty():
+func _pollen_count(blooms: int) -> int:
+	if not POLLEN_PHASES.has(TimeOfDay.phase) or TimeOfDay.weather == &"rain" or FrameGovernor.tier >= LOW_TIER:
+		return 0
+	return mini(POLLEN_MAX, blooms / POLLEN_PER_BLOOMS)
+
+
+func _draw_mesh(tips: Array) -> void:
+	var pollen := _pollen_count(tips.size())
+	if _flies.is_empty() and pollen == 0:
 		if _mesh.mesh != null:
 			_mesh.mesh = null
 		return
 	_builder.begin()
+	var gt := Clock.g_time * (0.3 if Motion.reduce_motion else 1.0)
+	for i in pollen:
+		var h := hash([_pollen_seed, i])
+		var tip: Vector2 = tips[posmod(h, tips.size())]
+		var ph := float(h % 1000) / 1000.0 * TAU
+		var depth := clampf(DEPTH.x + (1.0 - DEPTH.x) * (tip.y - DEPTH.y) / DEPTH.z, DEPTH.x, 1.0)
+		var w := TAU * POLLEN_HZ * gt
+		var off := Vector2(sin(w + ph) * POLLEN_ORBIT_PX.x, -POLLEN_RISE_PX * (0.6 + 0.4 * sin(w * 0.71 + ph * 1.9))
+				+ cos(w * 1.37 + ph) * POLLEN_ORBIT_PX.y) * depth
+		var tw := POLLEN_ALPHA.x + (POLLEN_ALPHA.y - POLLEN_ALPHA.x) * (0.5 + 0.5 * sin(w * POLLEN_TWINKLE + ph * 3.0))
+		_builder.add_stamp("glint", tip + off, 0.0, Vector2.ONE * POLLEN_SCALE * depth, FloraBuilder.PART_SPARKLE,
+				FloraBuilder.ROW_FX, tw)
 	for f: Fly in _flies:
 		var depth := clampf(DEPTH.x + (1.0 - DEPTH.x) * (f.pos.y - DEPTH.y) / DEPTH.z, DEPTH.x, 1.0)
 		var open := 1.0

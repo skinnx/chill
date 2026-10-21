@@ -21,6 +21,11 @@ uniform vec4 u_c : source_color = vec4(1.0);   // detail colour
 const float RING_STROKE = 0.085;   // ring stroke as a fraction of the radius
 const float RING_TRACK_A = 0.28;
 const float AMBIENT_MIX = 0.35;
+const vec2 UMB_P0 = vec2(0.55, -0.95);   // petiole foot (the pivot, at the paw)
+const vec2 UMB_P1 = vec2(0.58, -0.15);
+const vec2 UMB_P2 = vec2(0.44, 0.30);
+const vec2 UMB_P3 = vec2(0.12, 0.44);    // attaches under the canopy
+const vec2 UMB_PAW = vec2(0.53, -0.80);
 const float UMB_FRINGE_PX = 3.0;    // umbrella felt fringe length (local px)    // feedback stamps keep their colour at night (readability)
 
 varying vec2 v_local;
@@ -53,13 +58,24 @@ float sd_vesica(vec2 p, float hl, float hw) {
 	return ((p.y - b) * d > p.x * b) ? length(p - vec2(0.0, b)) : length(p - vec2(-d, 0.0)) - r;
 }
 
+float smin_fx(float a, float b, float k) {
+	float h = clamp(0.5 + 0.5 * (b - a) / k, 0.0, 1.0);
+	return mix(b, a, h) - k * h * (1.0 - h);
+}
+
+float sd_ellipse_fx(vec2 p, vec2 r) {
+	float k0 = length(p / r);
+	float k1 = length(p / (r * r));
+	return k0 * (k0 - 1.0) / max(k1, 1e-4);
+}
+
 void vertex() {
 	v_local = VERTEX;
 }
 
 void fragment() {
 	float kind = u_kind;
-	float alpha = COLOR.a;
+	float alpha = COLOR.a;   // the umbrella reads COLOR.rgb as the paw (fur) colour
 	float prog = COLOR.r;
 	vec2 p = vec2(v_local.x, -v_local.y) / max(u_half, 1e-3);   // -1..1, y up
 	float aa = max(length(fwidth(p)), 1e-3) * 0.8;
@@ -105,36 +121,60 @@ void fragment() {
 		a = ra * mix(RING_TRACK_A, 1.0, fill);
 		col = u_a.rgb;
 	} else {
-		// leaf umbrella (QA round 1: same felt hand as the creatures): a round leaf in the tone mask
-		// (lit / shade / detail), midrib and veins, a short petiole; felted fibre fringe on the leaf
-		// edge, the underside in shade, key rim, ambient multiply and object-anchored grain.
-		vec2 lp = p - vec2(0.0, 0.18);
-		float dl = sd_vesica(vec2(lp.x * 0.62, lp.y * 1.55 + 0.02), 0.62, 0.5) - 0.02;
-		float dpet = sd_segment(p, vec2(0.0, 0.05), vec2(0.03, -0.95)) - mix(0.022, 0.034, smoothstep(-0.95, 0.0, p.y));
+		// leaf umbrella (QA r2: held, not floating): a felt leaf canopy seen from the side - a dome
+		// whose two tips droop down (a crescent of two ellipses), radiating veins, the underside in
+		// shade, a key rim on the top; a curved petiole down to the paw that grips it (the paw is
+		// the creature's own fur colour, COLOR.rgb). Tone mask u_a lit / u_b shade / u_c detail.
+		// geometry for a paw on the right (+x); MosslingFx mirrors the pivot for the left hand
+		vec2 cq = p - vec2(0.0, 0.30);
+		float d_out = sd_ellipse_fx(cq, vec2(0.95, 0.50));
+		float d_in = sd_ellipse_fx(p - vec2(0.0, 0.14), vec2(0.80, 0.30));
+		float dl = max(d_out, -d_in);
+		// a little drip tip on the far end (leaf apex), so it reads as a leaf, not a bowl
+		dl = smin_fx(dl, sd_segment(p, vec2(-0.80, 0.20), vec2(-0.98, 0.04)) - 0.03, 0.05);
+		// petiole: up along the body's edge from the paw, then a cane bend in to the canopy
+		float r_pet = 0.032;
+		float dpet = min(min(sd_segment(p, UMB_P0, UMB_P1), sd_segment(p, UMB_P1, UMB_P2)), sd_segment(p, UMB_P2, UMB_P3)) - r_pet;
+		vec2 pawq = (p - UMB_PAW) / vec2(0.15, 0.125);
+		float dpaw = (length(pawq) - 1.0) * 0.125;
 		float px = u_half;                                   // local px per unit
 		float dl_px = dl * px;
-		// fibre fringe: anisotropic noise along the edge, 2-3 px long
-		float ang = atan(lp.y, lp.x);
+		// felt fibre fringe on the canopy edge, 2-3 px
+		float ang = atan(cq.y, cq.x);
 		float fib = smoothstep(0.4, 0.85, vnoise(vec2(ang * 38.0, dl_px * 0.6)));
 		float fr_t = clamp(dl_px / UMB_FRINGE_PX, 0.0, 1.0);
 		float fringe = dl_px > 0.0 ? fib * (1.0 - fr_t) * (1.0 - fr_t) * 0.8 : 0.0;
 		float wob = (vnoise(vec2(ang * 6.0, 1.7)) - 0.5) * 1.2;
 		float core_l = 1.0 - smoothstep(-aa, aa, dl + wob / px);
 		float core_p = 1.0 - smoothstep(-aa, aa, dpet);
-		a = max(max(core_l, core_p), fringe);
-		float under = smoothstep(0.05, -0.2, lp.y);       // the underside reads in shade
-		col = mix(u_a.rgb, u_b.rgb, under * 0.6 + 0.25 * smoothstep(-0.2, 0.0, dl));
-		float rib = 1.0 - smoothstep(0.012, 0.03, abs(lp.x));
-		float veins = 1.0 - smoothstep(0.015, 0.035, abs(fract((lp.y + abs(lp.x) * 0.7) * 3.2) - 0.5) * 0.3);
-		veins *= step(0.0, -dl) * smoothstep(0.05, 0.2, abs(lp.x));
-		col = mix(col, u_c.rgb, max(rib * step(dl, 0.0), veins * 0.35) * 0.6);
-		col = mix(col, u_b.rgb * 0.92, core_p * (1.0 - core_l) * 0.6);
-		// felt mottling + lighter fibre tips in the fringe
-		col *= 1.0 + (vnoise(lp * 7.0) - 0.5) * 0.06;
-		col = mix(col, mix(col, u_c.rgb, 0.5), (1.0 - core_l) * core_p * 0.0 + fringe * (1.0 - core_l) * 0.6);
+		float core_w = 1.0 - smoothstep(-aa, aa, dpaw);
+		a = max(max(max(core_l, core_p), fringe), core_w);
+		// canopy: lit dome, the underside (near the inner curve) in shade
+		float under = smoothstep(0.10, 0.0, d_in + 0.10);
+		col = mix(u_a.rgb, u_b.rgb, under * 0.7 + 0.2 * smoothstep(-0.12, 0.0, dl));
+		// radiating veins from the stem's attach point + the midrib along the dome
+		vec2 vq = p - vec2(0.0, 0.40);
+		float va = atan(vq.x, vq.y);
+		float vcell = abs(fract(va / (PI / 7.0)) - 0.5) * length(vq);
+		float veins = (1.0 - smoothstep(0.008, 0.022, vcell)) * smoothstep(0.05, 0.25, length(vq));
+		float rib = 1.0 - smoothstep(0.010, 0.026, abs(d_out + 0.12));
+		col = mix(col, u_c.rgb, max(veins * 0.5, rib * 0.35) * core_l * (1.0 - under * 0.5));
+		col *= 1.0 + (vnoise(p * 7.0) - 0.5) * 0.06;
+		col = mix(col, mix(col, u_c.rgb, 0.5), fringe * (1.0 - core_l) * 0.6);
+		// petiole under the canopy, the paw over the petiole
+		vec3 pet_col = mix(u_b.rgb, u_a.rgb, 0.3) * (0.9 + 0.1 * smoothstep(-0.02, 0.02, dpet + r_pet * 0.5));
+		col = mix(col, pet_col, core_p * (1.0 - core_l));
+		vec3 fur = COLOR.rgb;
+		// a felt mitten: lit on top, a soft darker rim so it separates from the same-coloured body
+		vec3 paw_col = fur * (0.84 + 0.16 * smoothstep(-0.7, 0.7, pawq.y));
+		paw_col *= 1.0 - 0.16 * smoothstep(0.55, 1.0, length(pawq));
+		paw_col += fur * 0.08 * (1.0 - smoothstep(0.0, 0.5, length(pawq - vec2(-0.25, 0.45))));
+		col = mix(col, paw_col, core_w);
+		a = max(a, core_w);
 		// rim from the key so the umbrella belongs to the same light as the creatures
-		float rim = smoothstep(-0.12, 0.0, dl) * clamp(dot(normalize(lp + 1e-4), normalize(vec2(g_sun_dir.x, -g_sun_dir.y))), 0.0, 1.0);
-		col += g_key.rgb * rim * g_rim * 0.35;
+		float top = smoothstep(-0.12, 0.0, d_out) * step(0.0, -d_in);
+		float rim = top * clamp(dot(normalize(cq + 1e-4), normalize(vec2(g_sun_dir.x, -g_sun_dir.y))) * 0.6 + 0.4, 0.0, 1.0);
+		col += g_key.rgb * rim * g_rim * 0.35 * core_l;
 		col *= g_ambient.rgb;
 		col = finish(col, p * px / PX_PER_DP, FRAGCOORD.xy, GRAIN_OBJECT);
 	}

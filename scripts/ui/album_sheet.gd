@@ -22,7 +22,15 @@ const COLUMNS := 3
 const COLUMNS_LARGE_TEXT := 2
 const LARGE_TEXT := 150
 const GAP := 24
-const DETAIL_WELL := 480.0
+const DETAIL_WELL := 420.0
+## Friend detail push: the page slides in from this far right (`standard`).
+const PUSH_PX := 96.0
+## The back pill (a compact secondary: chevron + "Friends").
+const BACK_H := 144.0
+const BACK_PILL_H := 120.0
+const BACK_PAD_L := 30
+const BACK_PAD_R := 42
+const BACK_ICON := 42.0
 const POLAROID_H := 336.0
 const MAX_PHOTOS := 12
 const POSTCARD_ROW_H := 168.0
@@ -32,6 +40,8 @@ const POSE_SLEEP := "nap"
 const CUE_PET := &"S03"
 
 var _tabs: Segmented
+## Friend detail: a back pill takes the tabs' place (no "Friends" tab + "Friends" back twice).
+var _back: Button
 var _list: VBoxContainer
 var _scroll: ScrollContainer
 var _count: Label
@@ -65,6 +75,7 @@ func build_body() -> void:
 	body.add_child(_tabs)
 	_tabs.setup(_tab_texts(), _tab)
 	_tabs.selected.connect(func(i: int) -> void: select_tab(i))
+	_back = _make_back()
 	_list = make_scroll(Segmented.HEIGHT + 24.0)
 	_scroll = _list.get_parent().get_parent() as ScrollContainer
 	_fill()
@@ -74,6 +85,9 @@ func refresh_texts() -> void:
 	super.refresh_texts()
 	if _tabs != null:
 		_tabs.set_texts(_tab_texts())
+		if _back != null:
+			_back.queue_free()
+			_back = _make_back()
 		_fill()
 
 
@@ -102,9 +116,11 @@ func show_friend(species: StringName) -> void:
 	_friend = species
 	_fill()
 	_scroll.scroll_vertical = 0
+	# The ScrollContainer is free-positioned inside the fade mask (the list itself is laid out by
+	# its MarginContainer, which would snap it back mid-tween and leave it off-centre).
 	if not Motion.reduce_motion:
-		_list.position.x += 96.0
-		Motion.tween(_list, "position:x", _list.position.x - 96.0, &"standard")
+		_scroll.position.x = PUSH_PX
+		Motion.tween(_scroll, "position:x", 0.0, &"standard")
 	_list.modulate.a = 0.0
 	Motion.tween(_list, "modulate:a", 1.0, &"standard")
 
@@ -118,6 +134,8 @@ func _fill() -> void:
 		_list.remove_child(c)
 		c.queue_free()
 	_name_edit = null
+	_tabs.visible = _friend == &""
+	_back.visible = _friend != &""
 	if Game.sim == null:
 		return
 	_count.text = "%d / %d" % [Game.sim.met_count(), ContentRegistry.content.species.size()]
@@ -189,6 +207,7 @@ func _friend_card(sp: StringName, s: Dictionary, w: float) -> Control:
 		v.add_child(n)
 		v.add_child(_hearts(Game.sim.hearts_of(sp), true))
 		b.pressed.connect(show_friend.bind(sp))
+		b.set_meta(PressFeedback.META_RIPPLE_RADIUS, float(ThemeBuilder.R_L))
 		PressFeedback.attach(b)
 	else:
 		var n2 := label(tr("ALBUM_NOT_MET"), &"StrongLabel")
@@ -235,22 +254,6 @@ func _hearts(n: int, center: bool) -> Control:
 func _build_detail(sp: StringName) -> void:
 	var s: Dictionary = ContentRegistry.content.species_by_id.get(sp, {})
 	var sim := Game.sim
-	var back := Button.new()
-	back.flat = true
-	back.focus_mode = Control.FOCUS_NONE
-	back.text = tr("COMMON_BACK")
-	back.icon = Icons.texture(&"back", 48.0)
-	back.alignment = HORIZONTAL_ALIGNMENT_LEFT
-	back.add_theme_color_override(&"font_color", UiTokens.color(&"ink"))
-	back.add_theme_color_override(&"font_pressed_color", UiTokens.color(&"ink"))
-	back.add_theme_color_override(&"font_hover_color", UiTokens.color(&"ink"))
-	back.custom_minimum_size = Vector2(0.0, MIN_TARGET)
-	back.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	back.pressed.connect(func() -> void:
-		_friend = &""
-		_fill())
-	PressFeedback.attach(back)
-	_list.add_child(back)
 	var c := card(30, ThemeBuilder.R_L, UiTokens.E1)
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override(&"separation", 18)
@@ -312,6 +315,49 @@ func _build_detail(sp: StringName) -> void:
 		var date := Time.get_date_string_from_unix_time(int(met_unix + sim.state.tz_offset_s))
 		v.add_child(label(I18n.fmt(&"ALBUM_FIRST_MET", {"date": date}), &"SecondaryLabel", true))
 	v.add_child(label(tr(String(s.get("desc_key", ""))), &"BodyLabel", true))
+
+
+## The back pill: a 48 dp hit (the tabs' row) holding a 40 dp secondary pill with a chevron.
+func _make_back() -> Button:
+	var b := Button.new()
+	b.flat = true
+	b.focus_mode = Control.FOCUS_NONE
+	b.visible = _friend != &""
+	b.tooltip_text = tr("COMMON_BACK")
+	body.add_child(b)
+	var pill := PanelContainer.new()
+	var box := UiTokens.fill_box(UiTokens.color(&"surface_hi"), BACK_PILL_H * 0.5, UiTokens.E1)
+	box.border_color = UiTokens.tinted(&"ink", UiTokens.alpha(&"divider"))
+	box.set_border_width_all(roundi(UiTokens.PX_PER_DP))
+	box.content_margin_left = BACK_PAD_L
+	box.content_margin_right = BACK_PAD_R
+	pill.add_theme_stylebox_override(&"panel", box)
+	pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	b.add_child(pill)
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override(&"separation", 12)
+	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pill.add_child(h)
+	var ic := Icons.rect(&"back", BACK_ICON)
+	ic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	h.add_child(ic)
+	var l := label(tr("ALBUM_TAB_FRIENDS"), &"StrongLabel")
+	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	h.add_child(l)
+	var w := pill.get_combined_minimum_size().x
+	pill.position = Vector2(0.0, (BACK_H - BACK_PILL_H) * 0.5)
+	pill.size = Vector2(w, BACK_PILL_H)
+	b.position = Vector2(SIDE, 0.0)
+	b.size = Vector2(w, BACK_H)
+	b.set_meta(PressFeedback.META_RIPPLE_RECT, Rect2(pill.position, pill.size))
+	b.set_meta(PressFeedback.META_RIPPLE_RADIUS, BACK_PILL_H * 0.5)
+	PressFeedback.attach(b)
+	b.pressed.connect(func() -> void:
+		_friend = &""
+		_fill()
+		_list.modulate.a = 0.0
+		Motion.tween(_list, "modulate:a", 1.0, &"short"))
+	return b
 
 
 func _spot_text(sp: StringName, s: Dictionary) -> String:

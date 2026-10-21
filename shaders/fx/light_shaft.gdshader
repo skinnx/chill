@@ -12,6 +12,8 @@ render_mode blend_add, unshaded;
 
 uniform float sway_deg = 2.0;
 uniform float cloud_k = 0.8;
+uniform float streak_k = 0.45;
+uniform float streak_cells = 6.0;
 
 varying vec4 v_data;
 varying vec2 v_design;
@@ -32,7 +34,9 @@ void fragment() {
 	float across = abs(UV.x * 2.0 - 1.0);
 	float shape = smoothstep(0.0, 0.15, along) * (1.0 - smoothstep(0.6, 1.0, along)) * (1.0 - smoothstep(0.4, 1.0, across));
 	float dapple = mix(1.0, smoothstep(0.35, 0.75, vnoise(vec2(UV.x * 7.0, along * 2.0) + 3.7)), v_data.g);
+	// Rays within the ray: soft lengthwise streaks so a shaft reads as lit air, never a flat band.
+	float rays = 1.0 - streak_k + streak_k * smoothstep(0.2, 0.8, vnoise(vec2(UV.x * streak_cells + v_data.b * 17.0, along * 0.8)));
 	float a = v_data.r * g_shafts * (1.0 - cloud_k * g_cloud) * (1.0 - g_rain) * g_celestial.x;
-	vec3 c = g_glow.rgb * a * shape * dapple;
+	vec3 c = g_glow.rgb * a * shape * dapple * rays;
 	COLOR = vec4(max(c + tpdf(FRAGCOORD.xy), vec3(0.0)), 1.0);
 }

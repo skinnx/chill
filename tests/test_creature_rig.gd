@@ -148,7 +148,7 @@ func test_long_press_pets_with_hearts_on_release() -> void:
 	assert_signal_emitted(m, "petted")
 	_run(m, 0.5)
 	var fx: MosslingFx = m.get("_fx")
-	assert_eq(fx.hearts_alive(), 3, "three hearts rise on release")
+	assert_gte(fx.hearts_alive(), 3, "three hearts rise on release (plus the little petting hearts)")
 
 
 func test_stroke_pets_too() -> void:
@@ -243,13 +243,13 @@ func test_nestle_is_off_on_props_and_while_hopping() -> void:
 	assert_almost_eq(float(m.call("_nestle_now")), 0.0, 1e-4, "no grass while in the air")
 
 
-func test_umbrella_is_held_behind_the_body_and_rooted_at_the_paw() -> void:
+func test_umbrella_is_held_over_the_body_and_rooted_at_the_paw() -> void:
 	var m := _mossling(&"buttonbud")
 	m.set_rain(true, false, true)
 	_run(m, 0.6)
 	var back: Node2D = m.get("_umbrella_back")
 	var body: Node2D = m.get("_body")
-	assert_lt(back.get_index(), body.get_index(), "umbrella draws before (behind) the body")
+	assert_gt(back.get_index(), body.get_index(), "the held umbrella draws over the body (QA r2: no floating)")
 	var fx: MosslingFx = m.get("_fx")
 	assert_true(fx.umbrella_visible(), "umbrella fades in in rain")
 	var pivot := back.get_child(0) as Node2D
@@ -272,3 +272,66 @@ func test_zzz_starts_beside_the_head_not_above_it() -> void:
 	for s: MosslingFx.Stamp in fx.get("_zs"):
 		if s.active:
 			assert_gt(absf(s.from.x), w * 0.3, "z starts at the side of the head")
+
+
+func test_touch_down_answers_on_the_first_frame_with_a_ripple() -> void:
+	var m := _mossling(&"pebblepaw")
+	var fx: MosslingFx = m.get("_fx")
+	m.touch_down(Vector2(540, 1040))
+	assert_true(fx.ripple_active(), "the ripple starts on touch-down (seen within 100 ms)")
+	_run(m, 0.05)
+	m.touch_up(Vector2(540, 1040))
+	_run(m, 0.05)
+	assert_eq(int(m.get("_closed")), MosslingRig.CLOSED_HAPPY, "a tap gives a happy ^ ^ beat")
+
+
+func test_little_hearts_float_while_petting() -> void:
+	var m := _mossling(&"puffmoss")
+	var fx: MosslingFx = m.get("_fx")
+	m.touch_down(Vector2(540, 1040))
+	_run(m, 1.2)
+	assert_true(bool(m.get("_petting")), "long-press pets")
+	assert_gt(fx.hearts_alive(), 0, "hearts float up during the pet, before the release")
+
+
+func test_freeze_holds_the_pose_for_touch_strip_stills() -> void:
+	var m := _mossling(&"puffmoss")
+	m.touch_down(Vector2(540, 1040))
+	_run(m, 0.06)
+	m.freeze(true)
+	var sq := float(m.get("_squash").value)
+	_run(m, 0.5)
+	assert_almost_eq(float(m.get("_squash").value), sq, 1e-6, "frozen: the squash stays mid-feedback")
+
+
+func test_nibble_holds_a_clover_and_packs_it_with_the_eye_state() -> void:
+	var m := _mossling(&"buttonbud")
+	m.perform(&"nibble", &"clover_bank", {"lean_dir": 1.0})
+	_run(m, 1.0)
+	var misc: Vector4 = m.get("_u_misc")
+	var closed := int(fposmod(misc.w + 0.25, 3.0))
+	var leaf_steps := floori((misc.w + 0.25) / 3.0)
+	assert_eq(closed, int(m.get("_closed")), "the closed-eye id survives the packing")
+	assert_eq(leaf_steps, int(Mossling.LEAF_STEPS), "a full clover while nibbling")
+
+
+func test_umbrella_alpha_is_packed_beside_the_feet_flag() -> void:
+	var m := _mossling(&"puffmoss")
+	m.set_rain(true, false, true)
+	_run(m, 1.0)
+	var misc: Vector4 = m.get("_u_misc")
+	assert_almost_eq(misc.z, 1.0 + Mossling.UMB_CODE, 1e-3, "feet nubs (1) + umbrella fully up")
+
+
+func test_meadow_shadows_share_one_host_and_follow_the_feet() -> void:
+	var host := Node2D.new()
+	host.position = Vector2(0.0, -100000.0)
+	add_child_autofree(host)
+	var m := _mossling(&"pebblepaw")
+	m.place_at(Vector2(400, 1300))
+	m.set_shadow_host(host)
+	var sh: Node2D = m.get("_shadow")
+	assert_eq(sh.get_parent(), host, "the shadow moved to the shared host")
+	assert_almost_eq(sh.position.y - 100000.0, 1300.0, 1e-3, "it sits at the feet in layer space")
+	m.set_shadow_host(null)
+	assert_eq(sh.get_parent(), m.get("_visual"), "and back into the creature's subtree on a perch")

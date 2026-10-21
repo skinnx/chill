@@ -29,10 +29,15 @@ const CUE_NEW_FRIEND := &"S09"
 const CUE_OPEN := &"S07"
 const CUE_CLOSE := &"S08"
 ## Recap line key -> icon (palettes icon set).
-const RECAP_ICONS := {&"RECAP_NEW_FRIEND": &"heart", &"RECAP_ONE_VISITED": &"album", &"RECAP_FRIENDS_VISITED": &"album",
+const RECAP_ICONS := {&"RECAP_NEW_FRIEND": &"heart", &"RECAP_ONE_VISITED": &"paw", &"RECAP_FRIENDS_VISITED": &"paw",
 	&"RECAP_NAPPED": &"moon", &"RECAP_BLOOMED": &"garden", &"RECAP_GIFTS": &"basket", &"RECAP_PHOTOS": &"photo",
 	&"RECAP_POSTCARD": &"postcard", &"RECAP_RAINED": &"rain"}
 const PORTRAIT := 360.0
+const PENCIL_HIT := 144.0
+## Title gutters (each side): the pencil's 96 px plate fits; its 144 px hit reaches into the
+## card padding.
+const PENCIL_GUTTER := 108.0
+const PENCIL_REACH := 24.0
 const Z_OVERLAY := 4
 const RECAP_BAR_H := 9.0
 ## --qa-recap holds the card with this much of the auto-continue line left.
@@ -375,27 +380,41 @@ func show_new_friend(species: StringName, instant: bool = false) -> void:
 	tag.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	v.add_child(tag)
 	v.add_child(_portrait_well(species, &"happy"))
+	# The title is centred on the card on its own; the rename pencil floats at the right edge in
+	# a reserved gutter (round-2 QA: the pencil pushed "This is Bumble" off-centre).
 	var name_row := HBoxContainer.new()
-	name_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	name_row.add_theme_constant_override(&"separation", 6)
+	name_row.add_theme_constant_override(&"separation", 0)
 	name_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var name_l := UiSheet.label(I18n.fmt(&"NEWFRIEND_THIS_IS", {"name": Game.display_name(species)}), &"TitleLabel")
+	var left := Control.new()
+	left.custom_minimum_size = Vector2(PENCIL_GUTTER, 0.0)
+	left.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	name_row.add_child(left)
+	var name_l := UiSheet.label(I18n.fmt(&"NEWFRIEND_THIS_IS", {"name": Game.display_name(species)}), &"TitleLabel", true)
 	name_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	name_l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	name_l.custom_minimum_size = Vector2(0.0, PENCIL_HIT)
 	name_row.add_child(name_l)
+	var right := Control.new()
+	right.custom_minimum_size = Vector2(PENCIL_GUTTER, 0.0)
+	right.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	name_row.add_child(right)
 	var pencil := RoundButton.new()
 	pencil.plate_px = 96.0
 	pencil.icon_px = 42.0
 	pencil.icon_name = &"pencil"
 	pencil.fill_token = &"primary_tint"
 	pencil.elevation = UiTokens.E0
-	pencil.custom_minimum_size = Vector2(144.0, 144.0)
+	pencil.size = Vector2(PENCIL_HIT, PENCIL_HIT)
 	pencil.tooltip_text = tr("ALBUM_RENAME")
 	PressFeedback.attach(pencil)
 	pencil.pressed.connect(func() -> void:
 		close_modal(true)
 		if hud != null:
 			hud.open_friend(species))
-	name_row.add_child(pencil)
+	# a plain Control slot: the pencil is placed by hand (its hit reaches into the card padding)
+	right.add_child(pencil)
+	right.resized.connect(func() -> void:
+		pencil.position = Vector2(PENCIL_GUTTER - PENCIL_HIT + PENCIL_REACH, (right.size.y - PENCIL_HIT) * 0.5))
 	v.add_child(name_row)
 	var sp: Dictionary = ContentRegistry.content.species_by_id.get(species, {})
 	var desc := UiSheet.label(tr(String(sp.get("desc_key", ""))), &"BodyLabel", true)

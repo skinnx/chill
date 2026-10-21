@@ -36,13 +36,15 @@ const SYSTEMS := {
 		"alpha": Vector2(1.0, 1.0), "speed": Vector2(15.0, 45.0), "drift": Vector2(0.0, 0.0),
 		"hz": Vector2(0.03, 0.08), "rect": Rect2(40.0, 880.0, 1000.0, 570.0), "steer": 0.35},
 	&"rain": {"kind": 5, "add": false, "life": 3.6, "peak": 120, "size": Vector2(1.0, 1.0),
-		"alpha": Vector2(0.25, 0.4), "speed": Vector2(360.0, 720.0), "drift": Vector2(0.0, 0.0),
+		"alpha": Vector2(0.4, 0.6), "speed": Vector2(360.0, 720.0), "drift": Vector2(0.0, 0.0),
 		"hz": Vector2(0.0, 0.0), "rect": Rect2(-100.0, -700.0, 1280.0, 2620.0), "steer": 0.0, "fade": 0.3},
-	&"splash": {"kind": 6, "add": false, "life": 1.0, "peak": 6, "size": Vector2(24.0, 48.0),
+	&"splash": {"kind": 6, "add": false, "life": 1.0, "peak": 6, "size": Vector2(30.0, 54.0),
 		"alpha": Vector2(1.0, 1.0), "speed": Vector2(0.0, 0.0), "drift": Vector2(0.0, 0.0),
 		"hz": Vector2(0.0, 0.0), "rect": Rect2(20.0, 830.0, 1040.0, 660.0), "steer": 0.0, "fade": 0.12},
 }
 const FADE_IN_S := 0.4
+## Rain streak tint: cloud_lit lifted toward the sparkle white (round 3: QA r2 could not see rain).
+const RAIN_WHITE := 0.7
 const FIREFLY_BIAS := 0.45
 const FIREFLY_POINT_R := 130.0
 const MAX_POINTS := 8
@@ -231,7 +233,8 @@ func _apply_colors() -> void:
 	if _draw_mats.has(&"dust"):
 		(_draw_mats[&"dust"] as ShaderMaterial).set_shader_parameter(&"tint", cols["glow"])
 	if _draw_mats.has(&"rain"):
-		var streak := PaletteMath.mix_oklab(cols["sky_horizon"], white, 0.30)
+		var base: Color = cols["cloud_lit"] if cols.has("cloud_lit") else cols["sky_horizon"]
+		var streak := PaletteMath.mix_oklab(base, white, RAIN_WHITE)
 		(_draw_mats[&"rain"] as ShaderMaterial).set_shader_parameter(&"tint", streak)
 	if _draw_mats.has(&"splash"):
 		var ring := PaletteMath.mix_oklab(cols["water_shallow"], white, 0.50)

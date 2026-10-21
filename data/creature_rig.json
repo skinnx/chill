@@ -1133,6 +1133,8 @@
 			"willow_root": 24,
 			"stream_stones": 16
 		},
+		"shadow_batch_max_bias_px": 32,
+		"focal_spot": "sun_stone",
 		"behaviour": {
 			"bout_s": [
 				120,
@@ -1178,6 +1180,7 @@
 			},
 			"nibble_lean_deg": 6.0,
 			"nibble_chew_hz": 2.0,
+			"nibble_leaf_ms": 320,
 			"nibble_chew_squash": 0.97,
 			"nibble_chew_s": 1.5,
 			"nibble_pause_s": [
@@ -1229,7 +1232,17 @@
 			"heart_life_s": 1.1,
 			"name_tag_ms": 2000,
 			"name_tag_rise_px": 18,
-			"umbrella_tilt_deg": 12.0,
+			"umbrella_tilt_deg": 4.0,
+			"umbrella_sway_deg": 12,
+			"touch_kick": 2.4,
+			"stir_ripple_k": 0.55,
+			"tap_ripple_ms": 320,
+			"tap_ripple_alpha": 0.9,
+			"tap_happy_ms": 650,
+			"tap_sparkles": 4,
+			"pet_first_heart_s": 0.25,
+			"pet_heart_every_s": 0.8,
+			"pet_heart_scale": 0.7,
 			"umbrella_fade_ms": 400,
 			"follow_accel_gain": 0.0009,
 			"follow_vel_gain": 0.0006,
@@ -1278,11 +1291,13 @@
 			"drift_px": 34
 		},
 		"umbrella": {
-			"doc": "round 2: the leaf umbrella's stem foot sits at the paw (front side), drawn behind the body and tilted umbrella_tilt_deg in over the head",
-			"paw_x_bu": 0.38,
-			"paw_y_bu": 0.5,
+			"doc": "round 3: the leaf umbrella is held - drawn over the body, its stem gripped by a fur paw at the body's front edge (paw_x/y_bu), tilted umbrella_tilt_deg in over the crown and swaying on the follow spring within umbrella_sway_deg; scaled by body height x (1 + top_extent x top_k) / ref_height_px so the canopy clears the ears",
+			"paw_x_bu": 0.44,
+			"paw_y_bu": 0.42,
 			"chroma_keep": 0.85,
-			"ref_width_px": 150.0
+			"ref_width_px": 150.0,
+			"ref_height_px": 170.0,
+			"top_k": 0.5
 		},
 		"lamp": {
 			"doc": "round 2: lantern light on creatures (i_light) - a body stands out of the pool, so it catches a lamp up to reach_mul x the pool radius; weight = peak x intensity x (1 - q)^falloff_pow",

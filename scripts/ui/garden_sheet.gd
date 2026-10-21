@@ -18,6 +18,11 @@ const WELL_RADIUS := 48.0
 const DROP_PX := 33.0
 const PRICE_ICON := 48.0
 const CHIP_PAD := 18
+## Large text (Art Bible §9.1: cards grow and reflow at >= 150 %): the well stacks on top.
+const STACK_AT_TEXT := 150
+const WELL_BANNER_H := 216.0
+const DONE_CHIP_H := 96.0
+const DONE_ICON := 36.0
 const CUE_NOT_YET := &"S11"
 const LEAF_BOAT := &"leaf_boat"
 ## Number of yield drops for the flowers' dew_per_hour terciles (Art Bible §9.4: 1-3 drops).
@@ -132,11 +137,13 @@ func _item_card(id: StringName, d: Dictionary, flower: bool) -> Control:
 		text = tr("GARDEN_ALL_PLANTED") if flower else tr("GARDEN_ALL_PLACED")
 	elif not affordable:
 		text = tr("GARDEN_MORE_DEW")
-	var room := not flower or not GardenRules.beds_with_room(ContentRegistry.content, sim.state.stems).is_empty()
-	var b := pill_button(text, affordable and not maxed and room)
-	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	if maxed:
-		b.disabled = true
+		# Done is a quiet state, not a dead button (round-2 QA: a full-width grey "All planted").
+		info.add_child(_done_chip(text))
+		return shell[0]
+	var room := not flower or not GardenRules.beds_with_room(ContentRegistry.content, sim.state.stems).is_empty()
+	var b := pill_button(text, affordable and room)
+	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	b.pressed.connect(_on_buy.bind(id, flower, b, chip))
 	info.add_child(b)
 	return shell[0]
@@ -161,15 +168,17 @@ func _boat_card() -> Control:
 	return shell[0]
 
 
-## [card, info VBox]: a surface_hi row card with the leaf_tint live-render well on the left.
+## [card, info VBox]: a surface_hi row card with the live-render well on the left; at large
+## text (>= 150 %) the well becomes a banner on top so the text keeps the full card width.
 func _card_frame(item: StringName) -> Array:
 	var c := card(24, ThemeBuilder.R_L, UiTokens.E1)
-	var h := HBoxContainer.new()
-	h.add_theme_constant_override(&"separation", 30)
+	var stacked := Settings.get_int(Settings.TEXT_SCALE) >= STACK_AT_TEXT
+	var h: BoxContainer = VBoxContainer.new() if stacked else HBoxContainer.new()
+	h.add_theme_constant_override(&"separation", 24 if stacked else 30)
 	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	c.add_child(h)
 	var prev := ItemPreview.new()
-	var well := LiveWell.wrap(prev, Vector2(WELL, WELL), WELL_RADIUS)
+	var well := LiveWell.wrap(prev, Vector2(0.0, WELL_BANNER_H) if stacked else Vector2(WELL, WELL), WELL_RADIUS)
 	well.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	h.add_child(well)
 	prev.show_item(item)
@@ -201,6 +210,31 @@ func _price_chip(price: int, affordable: bool) -> Control:
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	if not affordable:
 		l.add_theme_color_override(&"font_color", UiTokens.color(&"ink_2"))
+	h.add_child(l)
+	return p
+
+
+## "All planted ✓": a leaf_tint pill with a check (leaf ink on leaf_tint, 5.3:1).
+func _done_chip(text: String) -> Control:
+	var p := PanelContainer.new()
+	var box := UiTokens.fill_box(UiTokens.color(&"leaf_tint"), DONE_CHIP_H * 0.5)
+	box.content_margin_left = 30
+	box.content_margin_right = 36
+	p.add_theme_stylebox_override(&"panel", box)
+	p.custom_minimum_size = Vector2(0.0, DONE_CHIP_H)
+	p.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	p.size_flags_vertical = Control.SIZE_SHRINK_END
+	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override(&"separation", 12)
+	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	p.add_child(h)
+	var ic := Icons.rect(&"check", DONE_ICON)
+	ic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	h.add_child(ic)
+	var l := label(text, &"StrongLabel")
+	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	l.add_theme_color_override(&"font_color", UiTokens.color(&"leaf"))
 	h.add_child(l)
 	return p
 

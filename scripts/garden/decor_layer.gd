@@ -20,6 +20,16 @@ extends Node2D
 ## A newly placed piece fades in over 300 ms with a pop (0.6 -> 1), a 4-mote dust puff and S05.
 ## Touch-down on a tappable piece: squash 0.94 + tint + S01 in the same frame; the action fires on
 ## release. Children: [BasketFill] (gifts and dew in the basket) and [LeafBoats] (the brook ritual).
+## Every piece is a décor stamp (DecorKit, shaders/flora/decor_stamp.gdshader): one MeshInstance2D
+## per pinwheel / lantern, one per static group (cairn, ring halves, stones, the chime tubes).
+## Touch-down also spawns the world TouchRing (bloom + eased ring + sparkles) at the piece.
+##
+## Touch strip (Director R3 #1): --qa-garden=<kind>:<ms> acts QA_TOUCH_AT_S after the world is ready
+## and FREEZES the décor <ms> later (default --frames=90; ms <= 1500). Kinds: lantern (tap the
+## first lantern: <ms> after the release, the +60 % brighten; try --tod=1.0 --fixture=night_lanterns),
+## pinwheel (tap: the spin burst and dust puff), chime (the willow branch tap: tubes mid-swing),
+## place (a new pinwheel pops in with its dust puff, as after buying it). PlotsLayer handles bed,
+## unfurl and ready.
 
 # Data boundary: values read from JSON / Dictionaries are Variants and each one is converted
 # explicitly (int(), float(), String() ...) where it is read; the analyzer still flags every
@@ -78,6 +88,11 @@ const RING_MIN := 3
 ## Cairn jitter (Art Bible §6.6) and pebbles carrying moss (copies 2 and 6).
 const CAIRN_JITTER_PX := 4.0
 const CAIRN_TILT_DEG := 5.0
+## Touch strip timeline (matches PlotsLayer): act this long after the world is ready, tap length.
+const ARG_QA_GARDEN := "--qa-garden="
+const QA_KINDS: Array[String] = ["lantern", "pinwheel", "chime", "place"]
+const QA_TOUCH_AT_S := 1.2
+const QA_TAP_S := 0.08
 ## Hit radii (GDD §8.4: >= 60 dp, 64 dp in the look zone) in dp.
 const HIT_DP := 64.0
 const DRAG_CANCEL_PX := 24.0
@@ -109,7 +124,7 @@ var _shadows: Node2D
 var _chime_set: Node2D
 var _motes: Node2D
 var _glow: Node2D
-var _units: Dictionary = {}           # unit key -> Node2D (one y-sort unit = one batch)
+var _units: Dictionary = {}           # unit key -> Unit (one y-sort unit = one stamp)
 var _wind: float = 0.35
 var _light: Dictionary = {}
 var _dp: float = 3.0
@@ -119,15 +134,25 @@ var _press_pos := Vector2.ZERO
 var _chime_own_s: float = -1.0
 var _puffs: Array[Dictionary] = []
 var _pop_s: float = 0.3
+var _qa_kind: String = ""
+var _qa_ms: float = 0.0
+var _qa_t: float = -1.0
+var _qa_step: int = 0
+var _qa_frozen: bool = false
+var _qa_ring: TouchRing
 
 
 class Piece:
 	extends RefCounted
 	var decor: StringName
 	var index: int
+	## The piece's own node (standalone pieces; a unit piece only while it pops in).
 	var node: Node2D
-	var sprites: Array[Sprite2D] = []
-	var head: Node2D
+	## The piece's own stamp (null once a unit piece is merged into its unit's stamp).
+	var stamp: MeshInstance2D
+	var unit: String = ""
+	var merged: bool = false
+	var head_pivot := Vector2.ZERO
 	var foot := Vector2.ZERO
 	var depth: float = 1.0
 	var hit := Vector2.ZERO
@@ -135,14 +160,24 @@ class Piece:
 	var burst_t: float = -1.0
 	var pend: Spring
 	var boost_t: float = -1.0
+	var boost_k: float = 1.0
 	var halo: HaloSprite
-	var core: Sprite2D
 	var lamp: StringName = &""
 	var press: Spring
 	var tint: float = 0.0
 	var appear_t: float = -1.0
 	var pop: Spring
 	var shadow: ContactShadow
+
+
+## A static group drawn as one stamp (the cairn, each half of the toadstool ring, the stones).
+class Unit:
+	extends RefCounted
+	var key: String
+	var node: Node2D
+	var stamp: MeshInstance2D
+	## Quads in piece order (cairn: stacking order) or by foot y (ring halves, stones).
+	var by_y: bool = true
 
 
 func _ready() -> void:
@@ -180,6 +215,13 @@ func _ready() -> void:
 	AudioDirector.cue_played.connect(_on_cue_played)
 	tree_exiting.connect(_on_exit)
 	_connect_branch.call_deferred()
+	for a: String in OS.get_cmdline_user_args():
+		if a.begins_with(ARG_QA_GARDEN):
+			var kv := a.trim_prefix(ARG_QA_GARDEN).split(":")
+			if QA_KINDS.has(kv[0]):
+				_qa_kind = kv[0]
+				_qa_ms = kv[1].to_float() if kv.size() > 1 else 0.0
+				_qa_t = 0.0
 	if Game.is_ready:
 		_build_all()
 
@@ -253,87 +295,211 @@ func _add_piece(id: StringName, i: int, animate: bool) -> Piece:
 	p.depth = depth_scale(p.foot.y) * float(_set_scale.get(String(id), 1.0))
 	p.press = Motion.spring(&"press", 1.0)
 	p.pop = Motion.spring(&"pop", 1.0)
-	p.node = Node2D.new()
-	p.node.name = "%s_%d" % [id, i]
-	p.node.position = p.foot
+	p.unit = _unit_key(p)
 	match id:
 		PINWHEEL:
-			_build_pinwheel(p)
-		CAIRN:
-			_build_cairn(p)
-		TOADSTOOL:
-			_build_toadstool(p)
-		STONES:
-			_build_stone(p)
+			_setup_pinwheel(p)
 		LANTERN:
-			_build_lantern(p)
+			_setup_lantern(p)
 		CHIME:
-			_build_chime(p)
-	if p.node.get_parent() == null:
-		var unit := _unit_for(p)
-		if unit != null:
-			_add_to_unit(unit, p.node)
-		else:
-			add_child(p.node)
+			p.pend = Motion.spring(&"follow", 0.0)
+			p.hit = p.foot
+		STONES:
+			p.hit = p.foot
+			if BrookLayer.current != null:
+				BrookLayer.current.set_stone(_stone_key(p.index), p.foot, kit.size_of("stream_stone").x * 0.5 * p.depth)
+		_:
+			p.hit = p.foot
+	var list: Array = _pieces.get(id, [])
+	list.append(p)
+	_pieces[id] = list
+	if p.unit == "" or animate:
+		_make_own_stamp(p)
+	else:
+		p.merged = true
+		_rebuild_unit(p.unit)
 	if SHADOWS.has(id) and (id != CAIRN or i == 0):
 		var s: Vector3 = SHADOWS[id]
 		p.shadow = ContactShadow.new(Vector2(s.x, s.y) * p.depth, s.z * p.depth, 1.0)
 		p.shadow.position = p.foot
 		_shadows.add_child(p.shadow)
 		p.shadow.set_light(_light)
-	var list: Array = _pieces.get(id, [])
-	list.append(p)
-	_pieces[id] = list
 	if animate:
 		p.appear_t = 0.0
 		p.pop = Motion.spring(&"pop", PLACE_FROM_SCALE)
 		p.pop.target = 1.0
-		for sp: Sprite2D in p.sprites:
-			sp.modulate.a = 0.0
+		p.node.modulate.a = 0.0
 		_puff(_piece_top(p))
 		AudioDirector.play_cue(CUE_PLACE, {"world": true, "position": _canvas_of(p.foot)})
 		FrameGovernor.hold_for(Motion.duration(&"emphasized"))
 	return p
 
 
-## Stepping stones (in the water, no one stands behind them) and each half of the toadstool ring
+## The piece's own node + stamp: standalone pieces always, unit pieces while they pop in (then
+## they merge into the unit's stamp).
+func _make_own_stamp(p: Piece) -> void:
+	var q := DecorKit.Quads.new()
+	_piece_quads(p, q, p.foot)
+	p.stamp = kit.stamp(q)
+	p.stamp.name = "Stamp"
+	p.node = Node2D.new()
+	p.node.position = p.foot
+	p.node.add_child(p.stamp)
+	add_child(p.node)
+	p.node.name = "%s_%d" % [p.decor, p.index]
+	if p.decor == PINWHEEL:
+		DecorKit.set_stamp_head(p.stamp, p.head_pivot, p.angle)
+
+
+## Appends the quads of piece [param p] to [param q], in px relative to [param origin].
+func _piece_quads(p: Piece, q: DecorKit.Quads, origin: Vector2) -> void:
+	var o := p.foot - origin
+	var d := p.depth
+	match p.decor:
+		PINWHEEL:
+			kit.add_quad(q, "pinwheel_stick", o, d)
+			kit.add_quad(q, "pinwheel_a", o + p.head_pivot, d, 0.0, "", -1.0, DecorKit.GROUP_HEAD)
+			kit.add_quad(q, "pinwheel_b", o + p.head_pivot, d, 0.0, "", -1.0, DecorKit.GROUP_HEAD)
+		LANTERN:
+			var mats: Dictionary = _content.palettes["materials"]
+			var em := float((mats["lantern_light"] as Dictionary).get("night_emission", 0.85))
+			kit.add_quad(q, "lantern_crook", o, d)
+			var g := DecorKit.GROUP_TUBE + mini(p.index, DecorKit.MAX_TUBES - 1)
+			kit.add_quad(q, "lantern_core", o + p.head_pivot + Vector2(0.0, float(kit.layout.get("lantern_core_dy", 14.0)) * d),
+					d, 0.0, "", em, g)
+			kit.add_quad(q, "lantern_jar", o + p.head_pivot, d, 0.0, "", -1.0, g)
+		CHIME:
+			var parts: Array = kit.layout.get("chime_parts", ["chime_mid"])
+			kit.add_quad(q, String(parts[p.index % parts.size()]), o, d, 0.0, "", -1.0,
+					DecorKit.GROUP_TUBE + mini(p.index, DecorKit.MAX_TUBES - 1))
+		CAIRN:
+			var cparts: Array = kit.layout.get("cairn_parts", ["pebble_0"])
+			var base: Piece = (_pieces.get(CAIRN, []) as Array)[0]
+			var rng := RandomNumberGenerator.new()
+			rng.seed = hash([String(CAIRN), p.index])
+			var part := String(cparts[mini(p.index, cparts.size() - 1)])
+			var shrink := 1.0 - 0.05 * float(maxi(0, p.index - cparts.size() + 1))
+			var off := base.foot - origin + (p.foot - base.foot) + Vector2(rng.randf_range(-1.0, 1.0) * CAIRN_JITTER_PX, 0.0)
+			kit.add_quad(q, part, off, base.depth * shrink, deg_to_rad(rng.randf_range(-1.0, 1.0) * CAIRN_TILT_DEG))
+		TOADSTOOL:
+			kit.add_quad(q, "toadstool_stem", o, d)
+			kit.add_quad(q, "toadstool_cap", o + Vector2(0.0, float(kit.layout.get("toadstool_cap_dy", -20.0)) * d), d)
+		STONES:
+			kit.add_quad(q, "stream_stone", o, d)
+
+
+func _setup_pinwheel(p: Piece) -> void:
+	p.head_pivot = Vector2(0.0, float(kit.layout.get("pinwheel_head_dy", -86.0)) * p.depth)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash([String(PINWHEEL), p.index])
+	p.angle = rng.randf() * TAU
+	p.hit = p.foot + p.head_pivot
+
+
+func _setup_lantern(p: Piece) -> void:
+	var hook: Array = kit.layout.get("lantern_hook", [30, 28])
+	p.head_pivot = kit.frame_point("lantern_crook", Vector2(float(hook[0]), float(hook[1]))) * p.depth
+	var lk: Dictionary = _content.motion["loops_k"]
+	p.halo = HaloSprite.new().setup(LANTERN_HALO.x * p.depth, LANTERN_HALO.y * p.depth,
+			Color(1, 1, 1, LANTERN_HALO_ALPHA), float((lk["lantern_breath"] as Array)[0]),
+			HaloSprite.FLAG_NIGHT + HaloSprite.FLAG_ACCENT, float(p.index) * 1.7)
+	var jar_centre := p.foot + p.head_pivot + Vector2(0.0, float(kit.layout.get("jar_centre_dy", 28.0)) * p.depth)
+	p.halo.position = jar_centre - _glow.position
+	_glow.add_child(p.halo)
+	p.pend = Motion.spring(&"follow", 0.0)
+	p.hit = jar_centre
+	if p.index < MAX_LANTERN_POOLS:
+		p.lamp = StringName("lantern_%d" % p.index)
+		LampRegistry.set_lamp(p.lamp, Vector2(p.foot.x + p.head_pivot.x, p.foot.y + LANTERN_POOL_DY),
+				LANTERN_POOL_R, LANTERN_POOL_I)
+
+
+## Stepping stones (in the water, no one stands behind them), the cairn, the chime tubes (each
+## swings on its own about its hanging point, in the shader) and each half of the toadstool ring
 ## (back half behind a mossling sitting in the ring, front half in front of it) are single sort
-## units, so their sprites batch into one draw call each (synthesis §3 <= 100 draw calls).
-func _unit_for(p: Piece) -> Node2D:
-	var key := ""
+## units drawn as ONE stamp each (synthesis §3 <= 100 draw calls).
+func _unit_key(p: Piece) -> String:
+	match p.decor:
+		CHIME:
+			return "chimes"
+		LANTERN:
+			return "lanterns"
+		STONES:
+			return "stones"
+		CAIRN:
+			return "cairn"
+		TOADSTOOL:
+			return "toadstools_back" if p.foot.y < _ring_centre().y else "toadstools_front"
+	return ""
+
+
+func _ring_centre() -> Vector2:
+	var ring: Dictionary = kit.layout.get("toadstool_ring", {})
+	var c: Array = ring.get("centre", [345.6, 825.6])
+	return Vector2(float(c[0]), float(c[1]))
+
+
+func _unit(key: String) -> Unit:
+	var u: Unit = _units.get(key)
+	if u != null:
+		return u
+	u = Unit.new()
+	u.key = key
 	var sort_y := 0.0
-	if p.decor == STONES:
-		key = "stones"
-		sort_y = _max_anchor_y(STONES)
-	elif p.decor == TOADSTOOL:
-		var ring: Dictionary = kit.layout.get("toadstool_ring", {})
-		var cy := float((ring.get("centre", [0.0, 825.6]) as Array)[1])
-		if p.foot.y < cy:
-			key = "toadstools_back"
-			sort_y = cy - 1.0
-		else:
-			key = "toadstools_front"
+	match key:
+		"stones":
+			sort_y = _max_anchor_y(STONES)
+		"cairn":
+			sort_y = _anchor(CAIRN, 0).y
+			u.by_y = false
+		"lanterns":
+			sort_y = _max_anchor_y(LANTERN)
+		"toadstools_back":
+			sort_y = _ring_centre().y - 1.0
+		_:
 			sort_y = _max_anchor_y(TOADSTOOL)
-	if key == "":
-		return null
-	var unit: Node2D = _units.get(key)
-	if unit == null:
-		unit = Node2D.new()
-		unit.name = key
-		unit.position = Vector2(0.0, sort_y)
-		add_child(unit)
-		_units[key] = unit
-	return unit
+	if key == "chimes":
+		u.node = _chime_set
+	else:
+		u.node = Node2D.new()
+		u.node.name = key
+		u.node.position = Vector2(_anchor(CAIRN, 0).x if key == "cairn" else 0.0, sort_y)
+		add_child(u.node)
+	u.stamp = kit.stamp()
+	u.stamp.name = "Stamp"
+	u.node.add_child(u.stamp)
+	_units[key] = u
+	return u
 
 
-func _add_to_unit(unit: Node2D, node: Node2D) -> void:
-	node.position -= unit.position
-	unit.add_child(node)
-	var at := 0
-	for c: Node in unit.get_children():
-		if c != node and (c as Node2D).position.y <= node.position.y:
-			at += 1
-	unit.move_child(node, at)
+## Rebuilds a unit's stamp from its merged pieces.
+func _rebuild_unit(key: String) -> void:
+	var u := _unit(key)
+	var members: Array[Piece] = []
+	for list: Array in _pieces.values():
+		for p: Piece in list:
+			if p.unit == key and p.merged:
+				members.append(p)
+	if u.by_y:
+		members.sort_custom(func(a: Piece, b: Piece) -> bool: return a.foot.y < b.foot.y)
+	else:
+		members.sort_custom(func(a: Piece, b: Piece) -> bool: return a.index < b.index)
+	var q := DecorKit.Quads.new()
+	for p: Piece in members:
+		_piece_quads(p, q, u.node.position)
+	u.stamp.mesh = DecorKit.build_mesh(q)
+
+
+## A unit piece that finished popping in joins its unit's stamp.
+func _merge(p: Piece) -> void:
+	if p.unit == "" or p.merged:
+		return
+	p.merged = true
+	if p.node != null:
+		p.node.queue_free()
+	p.node = null
+	p.stamp = null
+	_rebuild_unit(p.unit)
 
 
 func _max_anchor_y(id: StringName) -> float:
@@ -344,104 +510,8 @@ func _max_anchor_y(id: StringName) -> float:
 	return y
 
 
-func _add_sprite(p: Piece, parent: Node2D, part: String, pos: Vector2, material_id: String = "",
-		emission: float = -1.0) -> Sprite2D:
-	var sp := kit.sprite(part, p.depth, material_id, emission)
-	sp.position = pos
-	parent.add_child(sp)
-	p.sprites.append(sp)
-	return sp
-
-
-func _build_pinwheel(p: Piece) -> void:
-	_add_sprite(p, p.node, "pinwheel_stick", Vector2.ZERO)
-	p.head = Node2D.new()
-	p.head.position = Vector2(0.0, float(kit.layout.get("pinwheel_head_dy", -86.0)) * p.depth)
-	p.node.add_child(p.head)
-	_add_sprite(p, p.head, "pinwheel_a", Vector2.ZERO)
-	_add_sprite(p, p.head, "pinwheel_b", Vector2.ZERO)
-	var rng := RandomNumberGenerator.new()
-	rng.seed = hash([String(PINWHEEL), p.index])
-	p.angle = rng.randf() * TAU
-	p.head.rotation = p.angle
-	p.hit = p.foot + p.head.position
-
-
-func _build_cairn(p: Piece) -> void:
-	# All pebbles live under the base copy's node (one sort unit); later copies add sprites to it.
-	var parts: Array = kit.layout.get("cairn_parts", ["pebble_0"])
-	var base: Piece = p
-	var list: Array = _pieces.get(CAIRN, [])
-	if p.index > 0 and not list.is_empty():
-		base = list[0]
-		p.node.free()  # never entered the tree: the pebble joins the base copy's node
-		p.node = base.node
-	else:
-		p.node.y_sort_enabled = false
-	var rng := RandomNumberGenerator.new()
-	rng.seed = hash([String(CAIRN), p.index])
-	var part := String(parts[mini(p.index, parts.size() - 1)])
-	var shrink := 1.0 - 0.05 * float(maxi(0, p.index - parts.size() + 1))
-	var off := _anchor(CAIRN, p.index) - base.foot + Vector2(rng.randf_range(-1.0, 1.0) * CAIRN_JITTER_PX, 0.0)
-	var sp := kit.sprite(part, base.depth * shrink)
-	sp.position = off
-	sp.rotation = deg_to_rad(rng.randf_range(-1.0, 1.0) * CAIRN_TILT_DEG)
-	base.node.add_child(sp)
-	p.sprites.append(sp)
-	p.hit = p.foot
-
-
-func _build_toadstool(p: Piece) -> void:
-	_add_sprite(p, p.node, "toadstool_stem", Vector2.ZERO)
-	_add_sprite(p, p.node, "toadstool_cap", Vector2(0.0, float(kit.layout.get("toadstool_cap_dy", -20.0)) * p.depth))
-	p.hit = p.foot
-
-
-func _build_stone(p: Piece) -> void:
-	_add_sprite(p, p.node, "stream_stone", Vector2.ZERO)
-	p.hit = p.foot
-	if BrookLayer.current != null:
-		BrookLayer.current.set_stone(_stone_key(p.index), p.foot, kit.size_of("stream_stone").x * 0.5 * p.depth)
-
-
 func _stone_key(i: int) -> StringName:
 	return StringName("decor_stone_%d" % i)
-
-
-func _build_lantern(p: Piece) -> void:
-	_add_sprite(p, p.node, "lantern_crook", Vector2.ZERO)
-	var hook: Array = kit.layout.get("lantern_hook", [30, 28])
-	p.head = Node2D.new()
-	p.head.position = kit.frame_point("lantern_crook", Vector2(float(hook[0]), float(hook[1]))) * p.depth
-	p.node.add_child(p.head)
-	var mats: Dictionary = _content.palettes["materials"]
-	var em := float((mats["lantern_light"] as Dictionary).get("night_emission", 0.85))
-	p.core = _add_sprite(p, p.head, "lantern_core", Vector2(0.0, float(kit.layout.get("lantern_core_dy", 14.0)) * p.depth),
-			"", em)
-	_add_sprite(p, p.head, "lantern_jar", Vector2.ZERO)
-	var lk: Dictionary = _content.motion["loops_k"]
-	p.halo = HaloSprite.new().setup(LANTERN_HALO.x * p.depth, LANTERN_HALO.y * p.depth,
-			Color(1, 1, 1, LANTERN_HALO_ALPHA), float((lk["lantern_breath"] as Array)[0]),
-			HaloSprite.FLAG_NIGHT + HaloSprite.FLAG_ACCENT, float(p.index) * 1.7)
-	var jar_centre := p.foot + p.head.position + Vector2(0.0, float(kit.layout.get("jar_centre_dy", 28.0)) * p.depth)
-	p.halo.position = jar_centre - _glow.position
-	_glow.add_child(p.halo)
-	p.pend = Motion.spring(&"follow", 0.0)
-	p.hit = jar_centre
-	if p.index < MAX_LANTERN_POOLS:
-		p.lamp = StringName("lantern_%d" % p.index)
-		LampRegistry.set_lamp(p.lamp, Vector2(p.foot.x + p.head.position.x, p.foot.y + LANTERN_POOL_DY),
-				LANTERN_POOL_R, LANTERN_POOL_I)
-
-
-func _build_chime(p: Piece) -> void:
-	var parts: Array = kit.layout.get("chime_parts", ["chime_mid"])
-	p.node.position = p.foot - _chime_set.position
-	_chime_set.add_child(p.node)
-	_add_sprite(p, p.node, String(parts[p.index % parts.size()]), Vector2.ZERO)
-	p.head = p.node
-	p.pend = Motion.spring(&"follow", 0.0)
-	p.hit = p.foot
 
 
 func _refresh_ring() -> void:
@@ -469,8 +539,8 @@ func _refresh_ring() -> void:
 
 
 func _piece_top(p: Piece) -> Vector2:
-	if p.head != null and p.decor != CHIME:
-		return p.foot + p.head.position
+	if p.head_pivot != Vector2.ZERO:
+		return p.foot + p.head_pivot
 	return p.foot + Vector2(0.0, -PUFF_RADIUS * p.depth)
 
 
@@ -531,6 +601,12 @@ func _kick_chimes(deg: float) -> void:
 # ================================================================= frame
 
 func _process(delta: float) -> void:
+	if _qa_frozen:
+		return
+	if _qa_kind != "":
+		_step_qa(delta)
+		if _qa_frozen:
+			return
 	var gt := Clock.g_time
 	var motion := 0.3 if Motion.reduce_motion else 1.0
 	if _chime_own_s >= 0.0:
@@ -545,14 +621,19 @@ func _process(delta: float) -> void:
 			if p.burst_t > PW_BURST_TAU * 5.0:
 				p.burst_t = -1.0
 		p.angle = fposmod(p.angle + rev * TAU * delta, TAU)
-		p.head.rotation = p.angle
+		if p.stamp != null:
+			DecorKit.set_stamp_head(p.stamp, p.head_pivot, p.angle)
 	var force := deg_to_rad(lerpf(CHIME_FORCE_DEG.x, CHIME_FORCE_DEG.y, clampf(_wind, 0.0, 1.0))) * motion
+	var chimes: Unit = _units.get("chimes")
+	var lanterns: Unit = _units.get("lanterns")
 	for p: Piece in _pieces.get(CHIME, []):
 		p.pend.target = force * (0.35 + 0.65 * gust_at(p.foot.x, gt))
-		p.head.rotation = p.pend.step(delta)
+		p.angle = p.pend.step(delta)
+		_swing(p, chimes)
 	for p: Piece in _pieces.get(LANTERN, []):
 		p.pend.target = deg_to_rad(JAR_SWAY_DEG) * _wind * gust_at(p.foot.x, gt) * motion
-		p.head.rotation = p.pend.step(delta)
+		p.angle = p.pend.step(delta)
+		_swing(p, lanterns)
 		if p.boost_t >= 0.0:
 			_step_boost(p, delta)
 	for list: Array in _pieces.values():
@@ -565,16 +646,39 @@ func _step_piece(p: Piece, delta: float) -> void:
 	if p.appear_t >= 0.0:
 		p.appear_t += delta
 		var s := p.pop.step(delta)
-		for sp: Sprite2D in p.sprites:
-			sp.modulate.a = clampf(p.appear_t / _pop_s, 0.0, 1.0)
-			sp.scale = Vector2.ONE * s * p.depth / kit.atlas_scale
+		if p.node != null:
+			p.node.modulate.a = clampf(p.appear_t / _pop_s, 0.0, 1.0)
+			p.node.scale = Vector2.ONE * s
 		if p.appear_t >= _pop_s and p.pop.is_at_rest():
 			p.appear_t = -1.0
-	if not p.press.is_at_rest() or p.press.target < 1.0 or p.tint > 0.0:
+			if p.node != null:
+				p.node.scale = Vector2.ONE
+				p.node.modulate.a = 1.0
+	if not p.press.is_at_rest() or p.press.target < 1.0 or p.tint > 0.0 or p.boost_t >= 0.0:
 		var v := p.press.step(delta)
 		p.tint = maxf(0.0, p.tint - delta / Motion.duration(&"short"))
-		for sp: Sprite2D in p.sprites:
-			DecorKit.set_press(sp, p.tint, v)
+		if p.stamp != null:
+			DecorKit.set_stamp_fx(p.stamp, p.tint, v, p.boost_k)
+	elif p.unit != "" and not p.merged and p.appear_t < 0.0 and _press != p:
+		_merge(p)  # popped in / touched and settled: back into the unit's single stamp
+
+
+## Swings a GROUP_TUBE piece (chime tube, lantern jar) in whichever stamp holds it.
+func _swing(p: Piece, u: Unit) -> void:
+	var pivot := p.head_pivot
+	if p.merged and u != null:
+		DecorKit.set_stamp_tube(u.stamp, p.index, p.foot + pivot - u.node.position, p.angle)
+	elif p.stamp != null:
+		DecorKit.set_stamp_tube(p.stamp, p.index, pivot, p.angle)
+
+
+## A touched unit piece leaves the unit's stamp for its own while it squashes and glows.
+func _detach(p: Piece) -> void:
+	if p.unit == "" or not p.merged:
+		return
+	p.merged = false
+	_make_own_stamp(p)
+	_rebuild_unit(p.unit)
 
 
 func _step_boost(p: Piece, delta: float) -> void:
@@ -593,10 +697,11 @@ func _step_boost(p: Piece, delta: float) -> void:
 	var c: Color = p.halo.get_instance_shader_parameter(&"i_color")
 	c.a = LANTERN_HALO_ALPHA * k
 	p.halo.set_instance_shader_parameter(&"i_color", c)
-	var mats: Dictionary = _content.palettes["materials"]
-	DecorKit.set_emission(p.core, float((mats["lantern_light"] as Dictionary).get("night_emission", 0.85)) * k)
+	p.boost_k = k
+	if p.stamp != null:
+		DecorKit.set_stamp_fx(p.stamp, p.tint, p.press.value, k)
 	if p.lamp != &"":
-		LampRegistry.set_lamp(p.lamp, Vector2(p.foot.x + p.head.position.x, p.foot.y + LANTERN_POOL_DY),
+		LampRegistry.set_lamp(p.lamp, Vector2(p.foot.x + p.head_pivot.x, p.foot.y + LANTERN_POOL_DY),
 				LANTERN_POOL_R, LANTERN_POOL_I * k)
 
 
@@ -661,17 +766,30 @@ func _unhandled_input(event: InputEvent) -> void:
 		var p := _piece_at(pos)
 		if p == null:
 			return
-		_press = p
-		_press_pos = pos
-		p.press = Motion.spring(&"press", p.press.value)
-		p.press.target = float(_content.motion["ui"]["world_touch_squash"])
-		p.tint = 1.0
-		AudioDirector.play_cue(CUE_TOUCH, {"world": true, "position": _canvas_of(p.hit)})
-		FrameGovernor.hold_for(Motion.duration(&"short"))
+		_touch_down(p, pos)
 		get_viewport().set_input_as_handled()
 	elif released and _press != null:
 		_end_press(pos.distance_to(_press_pos) <= DRAG_CANCEL_PX)
 		get_viewport().set_input_as_handled()
+
+
+## Touch-down on a tappable piece: squash 0.94 + tint + touch ring + S01 (with its haptic) at once.
+func _touch_down(p: Piece, pos: Vector2) -> void:
+	_detach(p)
+	_press = p
+	_press_pos = pos
+	p.press = Motion.spring(&"press", p.press.value)
+	p.press.target = float(_content.motion["ui"]["world_touch_squash"])
+	p.tint = 1.0
+	_ring(pos)
+	AudioDirector.play_cue(CUE_TOUCH, {"world": true, "position": _canvas_of(p.hit)})
+	FrameGovernor.hold_for(Motion.duration(&"short"))
+	set_process(true)
+
+
+func _ring(pos: Vector2) -> void:
+	_qa_ring = TouchRing.spawn(self, pos)
+	_qa_ring.z_index = 1
 
 
 func _piece_at(pos: Vector2) -> Piece:
@@ -710,3 +828,38 @@ func _end_press(act: bool) -> void:
 ## Number of pieces built for a décor set (tests, QA).
 func piece_count(id: StringName) -> int:
 	return (_pieces.get(id, []) as Array).size()
+
+
+# ================================================================= QA touch strip
+
+## --qa-garden timeline: act at QA_TOUCH_AT_S (taps release QA_TAP_S later), freeze <ms> after the
+## release (lantern, pinwheel) or the action (chime, place).
+func _step_qa(delta: float) -> void:
+	if _qa_t < 0.0 or not Game.is_ready:
+		return
+	_qa_t += delta
+	var act_at := QA_TOUCH_AT_S
+	var tap := _qa_kind == "lantern" or _qa_kind == "pinwheel"
+	if _qa_step == 0 and _qa_t >= act_at:
+		_qa_step = 1
+		match _qa_kind:
+			"lantern", "pinwheel":
+				var list: Array = _pieces.get(LANTERN if _qa_kind == "lantern" else PINWHEEL, [])
+				if list.is_empty():
+					push_warning("--qa-garden=%s: no such décor placed (use --fixture=garden_mid)" % _qa_kind)
+					_qa_kind = ""
+					return
+				_touch_down(list[0], (list[0] as Piece).hit)
+			"chime":
+				_ring(_anchor(CHIME, 0))
+				_on_prop_tapped(CHIME_BRANCH, RING_CHIME, Vector2.ZERO)
+			"place":
+				_add_piece(PINWHEEL, piece_count(PINWHEEL), true)
+	if tap and _qa_step == 1 and _qa_t >= act_at + QA_TAP_S:
+		_qa_step = 2
+		_end_press(true)
+	var freeze_at := act_at + (QA_TAP_S if tap else 0.0) + _qa_ms / 1000.0
+	if _qa_step >= 1 and _qa_t >= freeze_at:
+		_qa_frozen = true
+		if is_instance_valid(_qa_ring):
+			_qa_ring.freeze_at(minf(_qa_t - act_at, _qa_ring.duration_s * 0.9))

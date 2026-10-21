@@ -15,6 +15,7 @@ const POOL_SQUASH := 0.70
 const PEAK_RANGE := Vector2(0.30, 0.40)
 const CORE_Q := 0.16
 const CORE_K := 0.22
+const PLATEAU := 0.25
 
 static var _lamps: Dictionary = {}
 static var _materials: Array[ShaderMaterial] = []
@@ -54,8 +55,8 @@ static func light_at(p_design: Vector2) -> Vector3:
 		var q := Vector2(d.x, d.y / POOL_SQUASH).length() / maxf(l.z, 1.0)
 		if q >= 1.0:
 			continue
-		var f := 1.0 - q * q
-		var w := lerpf(PEAK_RANGE.x, PEAK_RANGE.y, clampf(l.w, 0.0, 1.0)) * f * f + CORE_K * exp(-(q * q) / (CORE_Q * CORE_Q))
+		var f := 1.0 - smoothstep(PLATEAU, 1.0, q)
+		var w := lerpf(PEAK_RANGE.x, PEAK_RANGE.y, clampf(l.w, 0.0, 1.0)) * f + CORE_K * exp(-(q * q) / (CORE_Q * CORE_Q))
 		if w > best.z:
 			var dir := (-d).normalized() if d.length_squared() > 1.0 else Vector2(0.0, -1.0)
 			best = Vector3(dir.x, dir.y, w)

@@ -19,6 +19,10 @@ const ICON_PX := 60.0
 const STEP_PLATE := 108.0
 const STEP_HIT := 150.0
 const GROUP_GAP := 12
+## A tapped row ripples inside the row (corner radius) and the switch dips half a press.
+const ROW_RIPPLE_RADIUS := 36.0
+const ICONLESS_AT_TEXT := 150
+const TOGGLE_PRESS_DEPTH := 0.5
 const VERSION_SETTING := "application/config/version"
 
 var _list: VBoxContainer
@@ -139,7 +143,9 @@ func _row(icon: StringName, key: String, desc_key: String, hit: bool) -> Array:
 	h.add_theme_constant_override(&"separation", 24)
 	h.mouse_filter = Control.MOUSE_FILTER_IGNORE if hit else Control.MOUSE_FILTER_PASS
 	m.add_child(h)
-	if icon != &"":
+	# At large text the row icons step aside so the label keeps the width (the icons only echo
+	# the label; Art Bible §9.1 "rows grow and reflow").
+	if icon != &"" and Settings.get_int(Settings.TEXT_SCALE) < ICONLESS_AT_TEXT:
 		var ic := Icons.rect(icon, ICON_PX)
 		ic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		h.add_child(ic)
@@ -170,8 +176,16 @@ func _toggle_row(icon: StringName, key: String, desc_key: String, setting: Strin
 	hit.pressed.connect(func() -> void:
 		t.button_pressed = not t.button_pressed
 		Settings.set_value(setting, t.button_pressed))
-	hit.button_down.connect(func() -> void: PressFeedback.down(t, 0.5))
-	hit.button_up.connect(func() -> void: PressFeedback.up(t))
+	hit.set_meta(PressFeedback.META_RIPPLE_RADIUS, ROW_RIPPLE_RADIUS)
+	hit.set_meta(PressFeedback.META_DEPTH, 0.0)
+	hit.button_down.connect(func() -> void:
+		t.force_pressed = true
+		PressFeedback.down(hit)
+		PressFeedback.down(t, TOGGLE_PRESS_DEPTH))
+	hit.button_up.connect(func() -> void:
+		t.force_pressed = false
+		PressFeedback.up(hit)
+		PressFeedback.up(t))
 	return parts[0]
 
 

@@ -44,7 +44,8 @@
 				66
 			],
 			"sort_y": 226,
-			"material": "wood_bark"
+			"material": "wood_bark",
+			"touch": "wind_chime_branch"
 		},
 		{
 			"id": "mailbox_post",
@@ -228,8 +229,8 @@
 			"material": "stone_warm",
 			"shadow": [
 				126,
-				16,
-				1.2,
+				18,
+				1.6,
 				56
 			],
 			"focal": 1.0

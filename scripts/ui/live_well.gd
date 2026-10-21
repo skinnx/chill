@@ -11,6 +11,9 @@ const SHADER := "res://shaders/ui/well.gdshader"
 func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	color = Color.WHITE
+	# The subject's contact shadow and grass never spill out of the window (round-2 QA: a grey
+	# blob under the friend portrait bled into the name row).
+	clip_contents = true
 	var mat := ShaderMaterial.new()
 	mat.shader = load(SHADER) as Shader
 	mat.set_shader_parameter(&"u_surface", UiTokens.color(&"surface_hi"))

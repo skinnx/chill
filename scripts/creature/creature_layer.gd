@@ -17,6 +17,12 @@ extends Node2D
 ## favourite spots), --qa-pet=<species> (that mossling is petted during the capture, hearts at
 ## ~3 s; add --qa-pet-hold to capture it mid-pet), --qa-walk (fixture creatures enter from their
 ## entries instead of starting in place).
+## Touch strip (Director R3 #1): --qa-touch=<species>:<kind>:<ms> touches that mossling at
+## QA_TOUCH_AT_S after the fixture spawns and FREEZES it (and its stamps) <ms> later, so a still
+## proves the feedback. Kinds: tap (down, up after 80 ms: ripple, squash, ^ ^ eyes, sparkles,
+## name tag; a napper only stirs), hold (down, never up: ripple, fill ring < 450 ms, then the pet
+## squash 0.88 with happy eyes and little hearts), release (pet for QA_RELEASE_HOLD_S, then up:
+## <ms> after the release, the heart bouquet and the overshoot). Needs --frames >= 90.
 
 # Data boundary: values read from JSON / Dictionaries are Variants and each one is converted
 # explicitly (int(), float(), String() ...) where it is read; the analyzer still flags every
@@ -32,9 +38,17 @@ const ARG_QA_CREATURES := "--qa-creatures="
 const ARG_QA_PET := "--qa-pet="
 const ARG_QA_WALK := "--qa-walk"
 const ARG_QA_PET_HOLD := "--qa-pet-hold"
+const ARG_QA_TOUCH := "--qa-touch="
+const QA_TOUCH_AT_S := 1.0
+const QA_TAP_UP_S := 0.08
+const QA_RELEASE_HOLD_S := 1.2
+const QA_PARTNER_MAX_PX := 360.0
 const ARG_TOD := "--tod="
 const ARG_WEATHER := "--weather="
 const BEHIND_CREST := "BehindCrest"
+const SHADOWS := "CreatureShadows"
+## The shadow host's y: far above the frame, so the y-sorted Play draws it first.
+const SHADOW_SORT_Y := -100000.0
 const GROUND := "Ground"
 ## QA fixture: species, behaviour and spot, in the order --qa-creatures takes them (only spots
 ## that exist without décor, so a fresh install shows them).
@@ -72,6 +86,9 @@ var _extras: Array[Mossling] = []        # peeks and leavers
 var _commanded: Dictionary = {}          # species -> Bout last commanded
 var _override_until: Dictionary = {}     # species -> world t (boat watching)
 var _behind: Node2D
+var _shadows: Node2D
+var _shadow_batch_bias: float = 0.0
+var _focal_spot: StringName = &""
 var _crest: PackedVector2Array = PackedVector2Array()
 var _touch: Mossling = null
 var _last_tap: Dictionary = {}           # species -> ticks s
@@ -81,6 +98,8 @@ var _qa_walk: bool = false
 var _qa_pet_hold: bool = false
 var _qa_t: float = 0.0
 var _qa_pet_state: int = 0
+var _qa_touch: PackedStringArray = PackedStringArray()   # species, kind, ms
+var _qa_touch_t: float = -1.0
 var _pinned_env: bool = false
 var _rain: bool = false
 var _sleepers: PackedStringArray = PackedStringArray()
@@ -122,6 +141,11 @@ func _ready() -> void:
 			_qa_walk = true
 		elif a == ARG_QA_PET_HOLD:
 			_qa_pet_hold = true
+		elif a.begins_with(ARG_QA_TOUCH):
+			_qa_touch = a.trim_prefix(ARG_QA_TOUCH).split(":")
+			if _qa_touch.size() < 3:
+				push_warning("--qa-touch=<species>:<tap|hold|release>:<ms>")
+				_qa_touch = PackedStringArray()
 		elif a.begins_with(ARG_TOD) or a.begins_with(ARG_WEATHER):
 			_pinned_env = true
 	Game.sim_event.connect(_on_sim_event)
@@ -266,6 +290,8 @@ func _process(delta: float) -> void:
 	_report_sleepers()
 	if _qa_count > 0 or _qa_pet != &"":
 		_qa_tick(delta)
+	if not _qa_touch.is_empty():
+		_qa_touch_tick(delta)
 
 
 func _command(m: Mossling, bout: CreatureBrain.Bout) -> void:
@@ -474,13 +500,31 @@ func crest_y(x: float) -> float:
 
 
 func _update_depth_parents() -> void:
-	if _behind == null:
-		return
+	_ensure_shadows()
 	for m: Mossling in _all():
-		var behind := m.feet().y < crest_y(m.feet().x) - CREST_MARGIN_PX
+		var behind := _behind != null and m.feet().y < crest_y(m.feet().x) - CREST_MARGIN_PX
 		var want: Node = _behind if behind else self
-		if m.get_parent() != want:
+		if _behind != null and m.get_parent() != want:
 			m.reparent(want, false)
+		# meadow creatures draw their shadows from one batch under everything on the meadow;
+		# creatures perched on a prop (sort bias above view.shadow_batch_max_bias_px) and behind
+		# the crest keep theirs in their own subtree, so it lands on the prop / behind the hill
+		var batch := not behind and m.sort_bias() <= _shadow_batch_bias
+		m.set_shadow_host(_shadows if batch else null)
+		m.set_focal(m.spot_id == _focal_spot and not m.is_walking() and not m.leaving)
+
+
+## The shared shadow host (Art Bible §4.19 batching): sorts before every prop and creature in
+## Play, its children draw in tree order with one material and no instance uniforms.
+func _ensure_shadows() -> void:
+	if _shadows != null and is_instance_valid(_shadows):
+		return
+	_shadow_batch_bias = float(rig.view().get("shadow_batch_max_bias_px", 0.0))
+	_focal_spot = StringName(String(rig.view().get("focal_spot", "sun_stone")))
+	_shadows = Node2D.new()
+	_shadows.name = SHADOWS
+	_shadows.position = Vector2(0.0, SHADOW_SORT_Y)
+	add_child(_shadows)
 
 
 func _all() -> Array[Mossling]:
@@ -591,6 +635,15 @@ func _spawn_fixture() -> void:
 		var params := {"shelter": bout.shelter, "look": -0.6}
 		if bout.behaviour == CreatureBrain.NIBBLE:
 			params["lean_dir"] = 1.0
+		elif bout.behaviour == CreatureBrain.PLAY:
+			# a lively still: players face their nearest friend (two friends chatting)
+			var near: Mossling = null
+			for other: StringName in _mosslings:
+				var o: Mossling = _mosslings[other]
+				if o != m and (near == null or o.feet().distance_to(bout.pos) < near.feet().distance_to(bout.pos)):
+					near = o
+			if near != null and near.feet().distance_to(bout.pos) <= QA_PARTNER_MAX_PX:
+				params["partner"] = near
 		if _qa_walk:
 			var entry := _entry_px(sp)
 			m.enter_from(entry, _path(entry, bout.pos, m.seed01), func() -> void:
@@ -603,6 +656,37 @@ func _spawn_fixture() -> void:
 			if bout.behaviour == CreatureBrain.NAP:
 				m.debug_pose(&"asleep")
 	_qa_t = maxf(_qa_t, 1e-3)
+
+
+## --qa-touch timeline (see the header): touch at QA_TOUCH_AT_S, freeze <ms> after the touch
+## (tap / hold) or after the release (release).
+func _qa_touch_tick(delta: float) -> void:
+	var sp := StringName(_qa_touch[0])
+	if not _mosslings.has(sp):
+		return
+	var m: Mossling = _mosslings[sp]
+	if _qa_touch_t < 0.0:
+		_qa_touch_t = 0.0
+	var t0 := _qa_touch_t - QA_TOUCH_AT_S
+	_qa_touch_t += delta
+	var t1 := _qa_touch_t - QA_TOUCH_AT_S
+	var kind := _qa_touch[1]
+	var ms := _qa_touch[2].to_float() * MS
+	var at := m.feet() - Vector2(0.0, rig.body_px(sp) * 0.55 * m.depth)
+	if t0 < 0.0 and t1 >= 0.0:
+		_touch = m
+		m.touch_down(at)
+	if kind == "tap" and t0 < QA_TAP_UP_S and t1 >= QA_TAP_UP_S:
+		m.touch_up(at)
+		_touch = null
+	if kind != "tap" and t1 > 0.0 and t1 < QA_RELEASE_HOLD_S:
+		m.touch_move(at + Vector2(sin(t1 * 5.0) * 6.0, 0.0))
+	if kind == "release" and t0 < QA_RELEASE_HOLD_S and t1 >= QA_RELEASE_HOLD_S:
+		m.touch_up(at)
+		_touch = null
+	var freeze_at := ms + (QA_RELEASE_HOLD_S if kind == "release" else 0.0)
+	if t0 < freeze_at and t1 >= freeze_at:
+		m.freeze(true)
 
 
 func _qa_tick(delta: float) -> void:

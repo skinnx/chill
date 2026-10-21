@@ -56,6 +56,14 @@ const TAP_MAX_MOVE_PX := 18.0
 const UNIFORM_EPS := 1e-4
 const NAP_SETTLE_EASE := 2.0
 const HEAD_BU := 1.05
+## Sheltered spots (under the willow, in the stump) halve the shadow (§4.12).
+const SHELTER_SHADOW_K := 0.5
+## mossling_fur.gdshader packing (UMB_CODE, LEAF_STEPS): keep in sync.
+const UMB_CODE := 0.4
+const LEAF_STEPS := 8.0
+## Shadow quad in body units (x body widths, y body heights from the feet): room for the 2.5x
+## golden-hour cast toward the viewer and its sideways offset (creature_shadow.gdshader).
+const SHADOW_RECT_BU := Rect2(-2.4, -0.5, 4.8, 3.0)
 
 var species_id: StringName = &""
 var seed01: float = 0.0
@@ -174,6 +182,8 @@ var _touch_from: Vector2 = Vector2.ZERO
 var _touch_at: Vector2 = Vector2.ZERO
 var _petting: bool = false
 var _pet_t: float = 0.0
+var _pet_heart_t: float = 0.0
+var _frozen: bool = false
 var _last_tap_s: float = -INF
 var _reopen_t: float = -1.0
 var _overshoot_hold: float = 0.0
@@ -187,11 +197,14 @@ var _u_follow: Vector4 = Vector4(-1, 0, 0, 0)
 var _u_state: Vector4 = Vector4(-1, 0, 0, 0)
 var _u_misc: Vector4 = Vector4.ZERO
 var _u_shadow: Vector4 = Vector4(-1, 0, 0, 0)
-var _u_shadow2: Vector4 = Vector4(-1, 0, 0, 0)
 var _u_light: Vector4 = Vector4(-1, 0, 0, 0)
 var _light: Vector4 = Vector4.ZERO
 var _lamp_t: float = 0.0
 var _nestle: float = 0.0
+var _shadow_host: Node2D = null
+var _feet_nubs: bool = false
+var _leaf: float = 0.0
+var _focal: float = 0.0
 
 
 ## Builds the node tree for [param p_species]. Materials are shared across all mosslings.
@@ -216,18 +229,20 @@ func setup(p_rig: MosslingRig, p_species: StringName, p_seed01: float, fur: Shad
 	_shadow = SdfQuad.new()
 	_shadow.name = "Shadow"
 	_shadow.material = shadow_mat
-	_shadow.rect = Rect2(-2.2 * _w_px, -0.5 * _s_px, 4.4 * _w_px, 2.2 * _s_px)
+	# body units (creature_shadow.gdshader): the node scale carries the body size in px
+	_shadow.rect = SHADOW_RECT_BU
+	_shadow.scale = Vector2(_w_px, _s_px)
 	_visual.add_child(_shadow)
-	# the leaf umbrella draws BEHIND the body: its stem rises from behind the paw side, never
-	# across the face (QA round 1)
-	_umbrella_back = Node2D.new()
-	_umbrella_back.name = "UmbrellaBack"
-	_visual.add_child(_umbrella_back)
 	_body = SdfQuad.new()
 	_body.name = "Body"
 	_body.material = fur
 	_body.rect = rig.quad_rect(p_species)
 	_visual.add_child(_body)
+	# the leaf umbrella is HELD (QA r2): drawn over the body, its stem gripped by a paw on the
+	# front side at the body's edge, the canopy over the crown (never across the face)
+	_umbrella_back = Node2D.new()
+	_umbrella_back.name = "UmbrellaHeld"
+	_visual.add_child(_umbrella_back)
 	_fx = MosslingFx.new()
 	_fx.name = "Fx"
 	_visual.add_child(_fx)
@@ -259,6 +274,8 @@ func setup(p_rig: MosslingRig, p_species: StringName, p_seed01: float, fur: Shad
 	for k: StringName in params:
 		_body.set_instance_shader_parameter(k, params[k])
 	_u_misc = params[MosslingRig.I_MISC]
+	_fx.set_paw_colour(params[MosslingRig.I_FUR])
+	_feet_nubs = _u_misc.z > 0.5
 	_push_uniforms(true)
 
 
@@ -275,6 +292,42 @@ func place_at(p: Vector2) -> void:
 	_hop_state = Hop.NONE
 	_hop_h = 0.0
 	_apply_position()
+
+
+## Draws the contact / cast shadow from [param host] (a plain Node2D in the layer's space that
+## sorts before every prop and creature) instead of from this creature's own subtree, so all the
+## shadows on the meadow share one draw batch (Art Bible §4.19). null puts it back in the
+## subtree (creatures on props or behind the crest, where the shadow must sort with the body).
+func set_shadow_host(host: Node2D) -> void:
+	if host == _shadow_host or _shadow == null:
+		return
+	_shadow_host = host
+	if host != null:
+		_shadow.reparent(host, false)
+	else:
+		_shadow.reparent(_visual, false)
+		_visual.move_child(_shadow, 0)
+		_shadow.position = Vector2.ZERO
+	_apply_position()
+	_push_uniforms(true)
+
+
+func shadow_host() -> Node2D:
+	return _shadow_host
+
+
+func sort_bias() -> float:
+	return _sort_bias
+
+
+## The focal friend (the one on the sun stone, Art Bible §2.5): a stronger rim and a warm lift.
+func set_focal(on: bool) -> void:
+	_focal = 1.0 if on else 0.0
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_PREDELETE and _shadow_host != null and is_instance_valid(_shadow):
+		_shadow.queue_free()
 
 
 ## Sort bias (px): the node sorts at feet.y + bias, so a creature on a prop's top draws in front of
@@ -437,7 +490,10 @@ func touch_down(point: Vector2) -> void:
 	# first visual answer this frame: squash 0.94 (stir 0.97 when napping)
 	var tap: Dictionary = _cr.get("tap", {})
 	_squash.target = float(_b.get("stir_squash", 0.97)) if asleep else float(tap.get("squash", 0.94))
-	_squash.velocity -= 1.2
+	_squash.velocity -= float(_b.get("touch_kick", 2.4))
+	# seen on the first frame: a soft ripple round the body and the ears flick back
+	_fx.ripple(_ring_center(), _ring_radius(), float(_b.get("stir_ripple_k", 0.55)) if asleep else 1.0)
+	_ear.kick(-0.9)
 	touched.emit(self)
 
 
@@ -476,18 +532,25 @@ func _on_tap() -> void:
 		# a napping mossling only stirs: ear twitch, z's pause (never wakes abruptly)
 		_ear.kick(1.6)
 		_zzz_pause = float(_b.get("stir_zzz_pause_s", 2.0))
+		_fx.sparkles(_head_local() + Vector2(_facing * _w_px * 0.3, _s_px * 0.15), 1)
 	else:
 		look_at_camera()
 		_ear.kick(-1.2)
 		_ant.kick(1.5 * (1.0 if rng.randf() < 0.5 else -1.0))
 		_act_next = maxf(_act_next, 1.5)
 		_look_next = maxf(_look_next, 2.5)
+		# a happy "^ ^" beat and a little burst of sparkles (delight, GDD §3.1)
+		_happy_to = 1.0
+		_closed = MosslingRig.CLOSED_HAPPY
+		_reopen_t = float(_b.get("tap_happy_ms", 650.0)) * MS
+		_fx.sparkles(_head_local() + Vector2(0.0, _s_px * 0.25), int(_b.get("tap_sparkles", 4)))
 	tapped.emit(self)
 
 
 func _begin_pet() -> void:
 	_petting = true
 	_pet_t = 0.0
+	_pet_heart_t = float(_b.get("pet_first_heart_s", 0.25))
 	var pet: Dictionary = _cr.get("pet", {})
 	_squash.target = float(pet.get("hold_squash", 0.88))
 	_happy_to = 1.0
@@ -524,6 +587,12 @@ func scale_override(k: float) -> void:
 	_apply_position()
 
 
+## QA: holds the creature and its stamps exactly where they are (a touch-feedback still).
+func freeze(on: bool) -> void:
+	_frozen = on
+	_fx.set_process(not on)
+
+
 ## No blinks or fidgets (deterministic close-up stills).
 func set_still(on: bool) -> void:
 	_still = on
@@ -557,7 +626,7 @@ func debug_pose(kind: StringName) -> void:
 # ================================================================= frame
 
 func _process(delta: float) -> void:
-	if rig == null:
+	if rig == null or _frozen:
 		return
 	delta = minf(delta, 0.1)
 	_update_touch(delta)
@@ -592,6 +661,12 @@ func _update_touch(delta: float) -> void:
 		_fx.set_ring(_ring_center(), _ring_radius(), 1.0, false)
 		var hz := float(pet.get("wiggle_hz", 1.6))
 		_wiggle = deg_to_rad(float(pet.get("wiggle_deg", 2.0))) * sin(TAU * hz * _pet_t) * _motion_k()
+		# little hearts float up while the friend is being petted (the big bouquet is on release)
+		_pet_heart_t -= delta
+		if _pet_heart_t <= 0.0:
+			_pet_heart_t = float(_b.get("pet_heart_every_s", 0.8))
+			var side := 1.0 if int(_pet_t / maxf(_pet_heart_t, 0.1)) % 2 == 0 else -1.0
+			_fx.hearts(_head_local() + Vector2(side * _w_px * 0.28, 0.0), 1, 0.0, float(_b.get("pet_heart_scale", 0.7)))
 
 
 func _update_walk(delta: float) -> void:
@@ -801,6 +876,9 @@ func _update_act(delta: float) -> void:
 			_tick_peek(delta)
 	if _act != Act.NAP and not _walking and not _petting and not _still:
 		_tick_fidget(delta)
+	# a clover in the mouth while nibbling (grows in / is eaten over nibble_leaf_ms)
+	var leaf_to := 1.0 if _act == Act.NIBBLE and not _walking else 0.0
+	_leaf = move_toward(_leaf, leaf_to, delta * 1000.0 / maxf(float(_b.get("nibble_leaf_ms", 320.0)), 1.0))
 
 
 func _tick_nap(delta: float) -> void:
@@ -1080,7 +1158,9 @@ func _update_fx(_delta: float) -> void:
 	# rooted at the paw on the front-facing side, held up behind the head
 	var side := _facing
 	var base := Vector2(side * _w_px * float(u.get("paw_x_bu", 0.42)), -_s_px * float(u.get("paw_y_bu", 0.5)) - _hop_h)
-	var size_k := _w_px / float(u.get("ref_width_px", 150.0))
+	# sized by the body height, so the canopy always clears the crown (and ears)
+	var tall := 1.0 + rig.top_extent_bu(species_id) * float(u.get("top_k", 0.5))
+	var size_k := _s_px * tall / float(u.get("ref_height_px", 170.0))
 	_fx.set_umbrella(show_umbrella, base, _ear.value * 0.6 + _lean.value, side, size_k)
 
 
@@ -1131,6 +1211,9 @@ func _apply_position() -> void:
 		_visual.position = Vector2(0.0, -_sort_bias)
 		_visual.scale = Vector2.ONE * depth
 		_body.position = Vector2(0.0, -_hop_h)
+		if _shadow_host != null:
+			_shadow.position = _feet - _shadow_host.position
+			_shadow.scale = Vector2(_w_px, _s_px) * depth
 
 
 func _depth_at(y: float) -> float:
@@ -1158,22 +1241,28 @@ func _push_uniforms(force: bool) -> void:
 	if force or not _vec_eq(state, _u_state):
 		_u_state = state
 		_body.set_instance_shader_parameter(MosslingRig.I_STATE, state)
-	var misc := Vector4(_u_misc.x, _nestle_now(), _u_misc.z, float(_closed))
+	# i_misc.z = feet + UMB_CODE x umbrella alpha; i_misc.w = closed id + 3 x leaf step
+	# (mossling_fur.gdshader decodes both)
+	var feet_flag := 1.0 if _feet_nubs else 0.0
+	var misc := Vector4(_u_misc.x, _nestle_now(), feet_flag + UMB_CODE * _fx.umbrella_alpha(),
+		float(_closed) + 3.0 * roundf(_leaf * LEAF_STEPS))
 	if force or misc != _u_misc:
 		_u_misc = misc
 		_body.set_instance_shader_parameter(MosslingRig.I_MISC, misc)
-	if force or not _vec_eq(_light, _u_light):
-		_u_light = _light
-		_body.set_instance_shader_parameter(MosslingRig.I_LIGHT, _light)
+	var light := Vector4(_light.x, _light.y, _light.z, -_focal)
+	if force or not _vec_eq(light, _u_light):
+		_u_light = light
+		_body.set_instance_shader_parameter(MosslingRig.I_LIGHT, light)
+	# shadow (creature_shadow.gdshader): hop, squash, lean, alpha in one instance uniform; the
+	# modulate stays white so the meadow shadows batch (the host shadow carries the fade here)
 	var hop_n := clampf(_hop_h / maxf(_s_px * 0.3, 1.0), 0.0, 1.0)
-	var sh := Vector4(_w_px, _s_px, hop_n, 1.0)
+	var sh_a := (1.0 - SHELTER_SHADOW_K * (1.0 if _sheltered else 0.0)) * (_alpha if _shadow_host != null else 1.0)
+	var sh := Vector4(hop_n, squash, lean, sh_a)
 	if force or not _vec_eq(sh, _u_shadow):
 		_u_shadow = sh
 		_shadow.set_instance_shader_parameter(&"i_shadow", sh)
-	var sh2 := Vector4(squash, lean, 1.0 if _sheltered else 0.0, 0.0)
-	if force or not _vec_eq(sh2, _u_shadow2):
-		_u_shadow2 = sh2
-		_shadow.set_instance_shader_parameter(&"i_shadow2", sh2)
+	if _shadow_host != null:
+		_shadow.visible = is_visible_in_tree()
 
 
 func _build_tag() -> void:
@@ -1188,6 +1277,8 @@ func _build_tag() -> void:
 	_tag_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_tag.add_child(_tag_label)
 	_visual.add_child(_tag)
+	# theme propagation stops at the world's Node2Ds: attach the UI theme (rebuilt with text size)
+	UiTheme.attach(_tag)
 
 
 func _head_local() -> Vector2:

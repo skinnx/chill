@@ -81,16 +81,46 @@ func test_dock_matches_wireframe_and_mirrors() -> void:
 	add_child_autofree(dock)
 	dock.layout(SCREEN, SAFE_BOTTOM)
 	assert_eq(dock.pill_rect(), Rect2(24, 1541, 1032, 240), "dock pill 24..1056 x 1541..1781")
-	var centres := {&"settings": 135.0, &"garden": 405.0, &"basket": 675.0, &"album": 945.0}
+	# Four equal tabs (round 3): 252 x 216 each, inset 12 in the pill, centres 162 / 414 / 666 / 918.
+	var centres := {&"settings": 162.0, &"garden": 414.0, &"basket": 666.0, &"album": 918.0}
 	for id: StringName in centres:
 		var b := dock.button(id)
 		assert_almost_eq(b.position.x + b.size.x * 0.5, float(centres[id]), 0.01, "centre of %s" % id)
 		assert_almost_eq(b.position.y + b.size.y * 0.5, 1661.0, 0.01)
-		assert_true(b.size.x >= DockView.HIT and b.size.y >= DockView.HIT, "dock hit 76 dp")
+		assert_almost_eq(b.size.x, 252.0, 0.01, "equal tabs")
+		assert_true(b.size.x >= MIN_TARGET_PX and b.size.y >= MIN_TARGET_PX, "dock hit >= 48 dp")
 	dock.left_handed = true
 	dock.layout(SCREEN, SAFE_BOTTOM)
-	assert_almost_eq(dock.button(&"album").position.x + DockView.HIT * 0.5, 135.0, 0.01, "left-handed order reversed")
-	assert_almost_eq(dock.button(&"settings").position.x + DockView.HIT * 0.5, 945.0, 0.01)
+	var album := dock.button(&"album")
+	assert_almost_eq(album.position.x + album.size.x * 0.5, 162.0, 0.01, "left-handed order reversed")
+	var settings := dock.button(&"settings")
+	assert_almost_eq(settings.position.x + settings.size.x * 0.5, 918.0, 0.01)
+
+
+func test_dock_labels_fit_their_tab() -> void:
+	var dock := DockView.new()
+	add_child_autofree(dock)
+	dock.layout(SCREEN, SAFE_BOTTOM)
+	for id: StringName in DockView.ORDER:
+		var b := dock.button(id)
+		var font := b.label.get_theme_font(&"font")
+		var w := font.get_string_size(b.label.text, HORIZONTAL_ALIGNMENT_LEFT, -1,
+				b.label.get_theme_font_size(&"font_size")).x
+		assert_true(w <= b.size.x - DockView.LABEL_PAD * 2.0 + 0.5, "%s label fits its tab" % id)
+
+
+func test_dock_capsule_follows_the_open_sheet() -> void:
+	var dock := DockView.new()
+	add_child_autofree(dock)
+	dock.layout(SCREEN, SAFE_BOTTOM)
+	dock.set_active(&"basket")
+	dock.snap_active()
+	assert_almost_eq(dock.cap_x, dock.button(&"basket").position.x, 0.01, "capsule under Basket")
+	assert_eq(dock.cap_a, 1.0)
+	assert_true(dock.button(&"basket").active)
+	dock.set_active(&"")
+	dock.snap_active()
+	assert_eq(dock.cap_a, 0.0, "no sheet: no capsule")
 
 
 func test_sheet_rect_sits_above_the_dock() -> void:

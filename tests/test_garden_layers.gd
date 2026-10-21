@@ -235,3 +235,75 @@ func test_butterflies_only_with_blooms_by_day_and_never_in_rain() -> void:
 	assert_eq(b._wanted(9), 0, "not at night")
 	TimeOfDay.phase = phase
 	TimeOfDay.weather = weather
+
+
+## Round 3: décor are stamps (one mesh per piece / static group), so a full garden stays inside the
+## 4096-entry global/instance uniform buffer (16 entries per instance-uniform item) and the draw
+## budget: lanterns, chimes, stones, the cairn and the ring halves are one stamp each.
+func test_full_garden_decor_is_a_handful_of_stamps() -> void:
+	GardenFixture.apply(c, Game.sim.state, GardenFixture.FULL)
+	Game.sim = WorldSim.new(c, Game.sim.state)
+	var d := _decor()
+	var items := 0
+	var stack: Array[Node] = [d]
+	while not stack.is_empty():
+		var n: Node = stack.pop_back()
+		stack.append_array(n.get_children())
+		var m := (n as CanvasItem).material as ShaderMaterial if n is CanvasItem else null
+		if m != null and m.shader != null and m.shader.code.contains("\ninstance uniform"):
+			items += 1
+	var pinwheels := d.piece_count(&"leaf_pinwheel")
+	assert_eq(pinwheels, c.max_copies(&"leaf_pinwheel"))
+	# pinwheels + 6 unit stamps + halos + contact shadows + the basket's gifts, rim and dew stamp.
+	assert_lt(items, 80, "décor instance-uniform items stay a small share of the 256 the buffer holds")
+	var lanterns: DecorLayer.Unit = d._units["lanterns"]
+	var verts := (lanterns.stamp.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX] as PackedVector2Array).size()
+	assert_eq(verts, d.piece_count(&"firefly_lantern") * 3 * 4, "every lantern is 3 quads of one stamp")
+
+
+func test_a_touched_lantern_leaves_its_unit_and_returns() -> void:
+	GardenFixture.apply(c, Game.sim.state, GardenFixture.NIGHT_LANTERNS)
+	Game.sim = WorldSim.new(c, Game.sim.state)
+	var d := _decor()
+	var lantern: DecorLayer.Piece = (d._pieces[&"firefly_lantern"] as Array)[0]
+	assert_true(lantern.merged, "at rest the lantern is drawn by the row's stamp")
+	_touch(d, lantern.hit, true)
+	assert_false(lantern.merged, "touch-down: its own stamp squashes and glows")
+	assert_not_null(lantern.stamp)
+	_touch(d, lantern.hit, false)
+	_tick(d, DecorLayer.LANTERN_RISE_S + DecorLayer.LANTERN_HOLD_S + DecorLayer.LANTERN_FALL_S + 0.5)
+	assert_true(lantern.merged, "settled, it rejoins the row")
+	assert_lt(lantern.boost_k, 1.01)
+
+
+func test_kit_quads_carry_their_part_data() -> void:
+	var kit := DecorKit.new(c)
+	var q := DecorKit.Quads.new()
+	kit.add_quad(q, "stream_stone", Vector2(10.0, 20.0), 0.8, 0.0, "", -1.0, DecorKit.GROUP_TUBE + 3)
+	assert_eq(q.verts.size(), 4)
+	assert_eq(q.idx.size(), 6)
+	assert_eq(q.c1.size(), 16)
+	assert_eq(int(q.c1[3]), DecorKit.GROUP_TUBE + 3, "the group rides in CUSTOM1.w")
+	var mesh := DecorKit.build_mesh(q)
+	assert_not_null(mesh)
+	assert_eq((mesh.surface_get_arrays(0)[Mesh.ARRAY_CUSTOM0] as PackedFloat32Array).size(), 16)
+	kit.release()
+
+
+func test_pollen_motes_by_day_only_and_scaled_by_blooms() -> void:
+	var b := Butterflies.new()
+	add_child_autofree(b)
+	var phase := TimeOfDay.phase
+	var weather := TimeOfDay.weather
+	TimeOfDay.phase = &"golden"
+	TimeOfDay.weather = &"clear"
+	assert_eq(b._pollen_count(3), 0, "a few blooms: no motes")
+	assert_eq(b._pollen_count(12), 12 / Butterflies.POLLEN_PER_BLOOMS)
+	assert_eq(b._pollen_count(400), Butterflies.POLLEN_MAX)
+	TimeOfDay.phase = &"night"
+	assert_eq(b._pollen_count(40), 0, "fireflies own the night")
+	TimeOfDay.phase = &"day"
+	TimeOfDay.weather = &"rain"
+	assert_eq(b._pollen_count(40), 0, "none in rain")
+	TimeOfDay.phase = phase
+	TimeOfDay.weather = weather

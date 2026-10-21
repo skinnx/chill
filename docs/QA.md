@@ -438,3 +438,29 @@ Run before every milestone (synthesis R4; 02 §7). Record the results in `qa/rep
 - **Director:**
   - Ratify the policies of blessing goldens after R1 (§3.5) and keeping `gdformat` advisory (§1.5).
   - Decide whether the median+mean "lower level" rule (§5.3) is acceptable.
+
+---
+
+## 8. Garden QA flags (fixtures and touch strip; owner: Flora & Décor)
+
+Fixtures (`scripts/garden/garden_fixture.gd`, applied before the world layers bind; use ONE `--fixture`):
+`--fixture=garden_mid` (50 stems at mixed stages in all five beds, every décor set, 7 gifts in the basket),
+`--fixture=night_lanterns` (the same garden with 5 lanterns; pair with `--tod=1.0`),
+`--fixture=garden_full` (every stem and all 10 copies of every décor set: the draw-call / uniform-buffer stress case).
+
+Touch strip (`--qa-garden=<kind>:<ms>`): the touch happens 1.2 s after the world is ready and the garden FREEZES `<ms>` later,
+so keep the default `--frames=90` and `<ms>` ≤ 1500. Every touch-down shows the world TouchRing, a 0.94 squash and a tint in the
+same frame, and plays S01 (+ its haptic).
+
+| Frame | Command (add `--size=1080x2400 --seed=7 --qa-creatures=6 --out=...`) | Shows |
+|---|---|---|
+| bed press | `--tod=0.4 --fixture=garden_mid --qa-garden=bed:90` | bed_2 at peak squash + tint, ground ring |
+| ready buds | `--tod=0.4 --fixture=garden_mid --qa-garden=ready` | the 3 front-most blooms of bed_2 as ready buds (1.6× halo, α 0.4) |
+| bud unfurl | `--tod=0.4 --fixture=garden_mid --qa-garden=unfurl:220` | 220 ms into the 600 ms unfurl after a tap: petals opening, 3-5 sparkles |
+| lantern tap | `--tod=1.0 --fixture=night_lanterns --qa-garden=lantern:200` | the first lantern at the top of its +60 % brighten, ring |
+| pinwheel tap | `--tod=0.4 --fixture=garden_mid --qa-garden=pinwheel:200` | spin burst + dust puff, ring |
+| chime swing | `--tod=0.6 --fixture=garden_mid --qa-garden=chime:300` | the tubes mid-swing after the willow-branch tap |
+| décor placed | `--tod=0.4 --fixture=garden_mid --qa-garden=place:150` | a new pinwheel popping in (fade + pop 0.6 → 1) with its dust puff |
+
+`--qa-ready=<bed_id>` picks the bed for bed / ready / unfurl (default `bed_2`). Draw calls: add `--qa-drawcalls`
+(round 3: `garden_full` + HUD + 8 mosslings = 91-92 at golden).

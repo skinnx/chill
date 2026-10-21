@@ -23,13 +23,15 @@ const ARG_LABELS := "--lineup-labels="
 const BACKDROP_SHADER := "res://shaders/creature/lineup_backdrop.gdshader"
 const COLUMNS := 4
 ## Fraction of a cell the tallest creature may fill.
-const FILL := 0.62
+const FILL := 0.7
 const LABEL_GAP_PX := 18.0
+const LABEL_SCALE := 0.6
+const LABEL_MAX_W := 0.7
 ## Tallest cell height as a multiple of its width (keeps close-ups large and centred).
 const MAX_CELL_ASPECT := 1.5
 ## Fraction of a cell the widest creature (body + tail / ears allowance) may fill.
-const FILL_W := 0.78
-const WIDTH_PAD_BU := 0.5
+const FILL_W := 0.92
+const WIDTH_PAD_BU := 0.35
 
 var _rig: MosslingRig
 var _mosslings: Array[Mossling] = []
@@ -126,10 +128,17 @@ func _backdrop(size: Vector2) -> void:
 
 func _label(content: GameContent, id: StringName, feet: Vector2, cell: Vector2) -> void:
 	var sp: Dictionary = content.species_by_id.get(id, {})
+	# the name on a light chip (the in-game name tag style), legible over any meadow colour
+	var chip := PanelContainer.new()
+	chip.theme_type_variation = &"Chip"
 	var l := Label.new()
 	l.text = tr(String(sp.get("name_key", String(id))))
 	l.theme_type_variation = &"CaptionLabel"
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	l.size = Vector2(cell.x, 40.0)
-	l.position = Vector2(feet.x - cell.x * 0.5, feet.y + LABEL_GAP_PX)
-	add_child(l)
+	chip.add_child(l)
+	add_child(chip)
+	UiTheme.attach(chip)
+	chip.reset_size()
+	# a small caption chip: at most LABEL_MAX_W of the cell, so the friend stays the subject
+	chip.scale = Vector2.ONE * minf(LABEL_SCALE, cell.x * LABEL_MAX_W / maxf(chip.size.x, 1.0))
+	chip.position = Vector2(feet.x - chip.size.x * chip.scale.x * 0.5, feet.y + LABEL_GAP_PX)

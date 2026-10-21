@@ -102,13 +102,15 @@ func refresh() -> void:
 		c.queue_free()
 	var basket := Game.sim.state.basket
 	var n := basket.size()
+	# All dew drops are one stamp (one draw, no per-drop uniform-buffer entry).
 	var dew_slots: Array = _kit.layout.get("dew_slots", [])
+	var quads := DecorKit.Quads.new()
 	for i in mini(mini(n, MAX_DEW), dew_slots.size()):
 		var q: Array = dew_slots[i]
-		var sp := _kit.sprite("dew_drop", DEW_SCALE)
-		sp.position = _local(Vector2(float(q[0]), float(q[1])))
-		sp.rotation = deg_to_rad(float((i * 37) % 21 - 10))
-		_items.add_child(sp)
+		_kit.add_quad(quads, "dew_drop", _local(Vector2(float(q[0]), float(q[1]))), DEW_SCALE,
+				deg_to_rad(float((i * 37) % 21 - 10)))
+	if not quads.is_empty():
+		_items.add_child(_kit.stamp(quads))
 	var gift_slots: Array = _kit.layout.get("gift_slots", [])
 	var gift_parts: Dictionary = _kit.layout.get("gift_parts", {})
 	var shown := mini(mini(n, MAX_GIFTS), gift_slots.size())

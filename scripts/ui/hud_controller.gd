@@ -21,7 +21,14 @@ extends Control
 ##   --qa-toast            show a sample toast (choose-a-bed copy)
 ##   --qa-newfriend=<id>   show the new-friend card for that species
 ##   --qa-friend=<id>      open the Album on that friend's detail card
-##   --qa-press=<dock id>  hold that dock button pressed (touch feedback still)
+##   --qa-press=<target>   freeze a touch-down for the touch strip: a dock tab (settings, garden,
+##                         basket, album), eye, close (the open sheet's close), primary (the open
+##                         sheet's or modal's first enabled primary pill: Plant, Collect all, Say
+##                         hello), tab (the open sheet's second segment), card (the Album's first
+##                         friend card), toggle (Settings' first switch row)
+##   --qa-press-t=<ms>     time after touch-down to freeze at (default 60 = the press dip near its
+##                         peak with the ripple a sixth grown; 0..380 shows the whole ripple)
+##   --qa-drawcalls        print "qa-drawcalls: <n>" (RENDER_TOTAL_DRAW_CALLS_IN_FRAME) every 30 frames
 ##   --qa-captions         show a sample caption bubble (Captions on)
 ##   --qa-met=<n>          (with --no-save captures) mark the first n friends met, with hearts,
 ##                         photos and two postcards, so the Album shows a lived-in collection
@@ -41,6 +48,10 @@ const ARG_TOAST := "--qa-toast"
 const ARG_NEWFRIEND := "--qa-newfriend="
 const ARG_FRIEND := "--qa-friend="
 const ARG_PRESS := "--qa-press="
+const ARG_PRESS_T := "--qa-press-t="
+const ARG_DRAWCALLS := "--qa-drawcalls"
+const QA_PRESS_T_MS := 60.0
+const QA_DRAWCALL_EVERY := 30
 const ARG_CAPTIONS := "--qa-captions"
 const ARG_MET := "--qa-met="
 ## --qa-met: friends met this many days apart, hearts cycling 1..5, photos and two postcards.
@@ -67,6 +78,8 @@ var _garden_seen: bool = false
 var _choose_flower: StringName = &""
 var _choose_back := Callable()
 var _pending_friends: Array[StringName] = []
+var _night_tint := Color.WHITE
+var _qa_frames: int = 0
 
 @onready var _safe_area: SafeAreaContainer = $SafeArea
 @onready var _sheets_host: Control = $Sheets
@@ -108,6 +121,9 @@ func _ready() -> void:
 		_refresh_onboarding()
 		sheets.refresh())
 	Game.leave_requested.connect(func() -> void: overlays.show_leave())
+	_night_tint = UiTokens.color(&"hud_night_tint")
+	TimeOfDay.globals_updated.connect(_on_globals)
+	_on_globals({&"g_lights": float(TimeOfDay.scalars.get("lights", 0.0))})
 	AudioDirector.cue_played.connect(overlays.on_cue_played)
 	_connect_world.call_deferred()
 	top_bar.left_handed = Settings.get_bool(Settings.LEFT_HANDED)
@@ -124,9 +140,14 @@ func _exit_tree() -> void:
 	Icons.clear_cache()
 	ItemPreview.release_shared()
 	CreaturePortrait.release_shared()
+	GlassPanel.release_shared()
 
 
 func _process(delta: float) -> void:
+	if _qa.has(ARG_DRAWCALLS):
+		_qa_frames += 1
+		if _qa_frames % QA_DRAWCALL_EVERY == 0:
+			print("qa-drawcalls: %d" % int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)))
 	if ambient or sheets.is_open() or overlays.is_modal_open():
 		_idle_s = 0.0
 		return
@@ -169,6 +190,17 @@ func set_ambient(on: bool, instant: bool = false) -> void:
 		FrameGovernor.hold_for(dur)
 	chrome.visible = true
 	_set_chrome_input(not on)
+
+
+## After dark the whole HUD (glass, cards, ink, icons) dims toward hud_night_tint with the
+## palette's lantern level (g_lights: dusk 0.75, night 1.0), so the glass never outshines the
+## moon and the lantern pools (round-2 QA, Art Bible §1.3 night focal). A multiply keeps every
+## ink-on-glass pair above 4.5:1 (the darkest glass, L* ~74, still gives ink 8.0:1; the primary
+## pill label 4.6:1).
+func _on_globals(values: Dictionary) -> void:
+	var k := clampf(float(values.get(&"g_lights", 0.0)), 0.0, 1.0)
+	var c := Color.WHITE.lerp(_night_tint, k)
+	modulate = Color(c.r, c.g, c.b, modulate.a)
 
 
 func _set_chrome_input(enabled: bool) -> void:
@@ -338,10 +370,10 @@ func _on_bed_chosen(bed: StringName) -> void:
 
 func _parse_qa() -> void:
 	for a: String in OS.get_cmdline_user_args():
-		for key: String in [ARG_SHEET, ARG_TAB, ARG_NEWFRIEND, ARG_FRIEND, ARG_PRESS, ARG_MET]:
+		for key: String in [ARG_SHEET, ARG_TAB, ARG_NEWFRIEND, ARG_FRIEND, ARG_PRESS_T, ARG_PRESS, ARG_MET]:
 			if a.begins_with(key):
 				_qa[key] = a.trim_prefix(key)
-		for flag: String in [ARG_RECAP, ARG_PEEK, ARG_AMBIENT, ARG_LEAVE, ARG_TOAST, ARG_CAPTIONS]:
+		for flag: String in [ARG_RECAP, ARG_PEEK, ARG_AMBIENT, ARG_LEAVE, ARG_TOAST, ARG_CAPTIONS, ARG_DRAWCALLS]:
 			if a == flag:
 				_qa[flag] = true
 
@@ -373,13 +405,72 @@ func _apply_qa() -> void:
 				true)
 	if _qa.has(ARG_NEWFRIEND):
 		overlays.show_new_friend(StringName(String(_qa[ARG_NEWFRIEND])), true)
+	dock.snap_active()
 	if _qa.has(ARG_PRESS):
-		var b := dock.button(StringName(String(_qa[ARG_PRESS])))
-		if b != null:
-			b.force_pressed = true
-			PressFeedback.down(b)
+		# After the sheet / modal has laid out (containers sort on the next frame).
+		get_tree().process_frame.connect(_qa_press, CONNECT_ONE_SHOT)
 	if _qa.has(ARG_CAPTIONS):
 		overlays.show_caption(tr("CAPTION_CHIRP"), get_viewport_rect().size * Vector2(0.5, 0.55), true)
+
+
+## --qa-press: freeze the named target mid touch-down (see the header).
+func _qa_press() -> void:
+	await get_tree().process_frame
+	var target := StringName(String(_qa[ARG_PRESS]))
+	var t_s := float(String(_qa.get(ARG_PRESS_T, str(QA_PRESS_T_MS)))) * UiTokens.MS
+	var c: Control = null
+	var root: Node = overlays if overlays.is_modal_open() else sheets.current
+	match target:
+		&"eye":
+			c = top_bar.eye
+		&"close":
+			c = sheets.current.close_button if sheets.current != null else null
+		&"primary":
+			c = _find_control(root, func(n: Node) -> bool:
+				return n is Button and not (n as Button).flat and (n as Button).theme_type_variation == &"" \
+						and not (n as Button).disabled and (n as Button).text != "")
+		&"tab":
+			var seg := _find_control(root, func(n: Node) -> bool: return n is Segmented) as Segmented
+			if seg != null and seg.get_child_count() > 1:
+				c = seg.get_child(1) as Control
+		&"card":
+			c = _find_control(root, func(n: Node) -> bool:
+				return n is Button and (n as Button).flat and n.get_child_count() > 0 and n.get_child(0) is PanelContainer)
+		&"toggle":
+			var tg := _find_control(root, func(n: Node) -> bool: return n is UiToggle) as UiToggle
+			if tg != null:
+				tg.force_pressed = true
+				PressFeedback.pose(tg, t_s)
+				var row := tg.get_parent()
+				while row != null and not (row is PanelContainer):
+					row = row.get_parent()
+				if row != null and row.get_child(0) is Button:
+					c = row.get_child(0) as Control
+		_:
+			c = dock.button(target)
+	if c == null:
+		push_warning("HUD: --qa-press target %s not found" % target)
+		return
+	if c is RoundButton:
+		(c as RoundButton).force_pressed = true
+	var at := Vector2(-1, -1)
+	if c.has_meta(PressFeedback.META_RIPPLE_RECT):
+		var r: Rect2 = c.get_meta(PressFeedback.META_RIPPLE_RECT)
+		# a touch a little off-centre, as a thumb lands
+		at = r.get_center() + r.size * Vector2(0.12, 0.08)
+	PressFeedback.pose(c, t_s, at)
+
+
+static func _find_control(root: Node, pred: Callable) -> Control:
+	if root == null:
+		return null
+	for n: Node in root.get_children():
+		if pred.call(n):
+			return n as Control
+		var hit := _find_control(n, pred)
+		if hit != null:
+			return hit
+	return null
 
 
 ## QA only (captures run with --no-save): a lived-in Album without playing for days.

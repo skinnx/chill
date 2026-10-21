@@ -44,16 +44,25 @@ uniform float relief_shade_k = 0.48;
 uniform float occlusion_k = 0.30;
 uniform float height_tint_k = 0.16;
 uniform float dapple_k = 0.03;
-uniform float wet_sheen_k = 0.15;
+uniform float wet_sheen_k = 0.30;
+uniform float wet_dark_k = 0.22;
 uniform float crest_rim_px = 10.0;
 uniform float crest_glow_px = 70.0;
+// Round 3: the backlit crest is the brightest ridge line at golden (eye path sun -> crest -> stone).
+uniform float crest_rim_k = 0.32;
+uniform float crest_glow_k = 0.09;
 uniform vec2 crest_band = vec2(760.0, 880.0);
 uniform vec2 brook_band = vec2(1400.0, 1540.0);
 uniform float mist_sigma = 40.0;
-uniform float focal_pool_k = 0.42;
+uniform float focal_pool_k = 0.48;
 // Depth frame: near ground below the brook and the bottom corners sink toward the shadow tint.
-uniform float near_frame_k = 0.26;
-uniform float corner_k = 0.48;
+// (The ValueFrame multiply pass darkens the near band and the side wedges over everything; these
+// terms only shape the ground under it.)
+uniform float near_frame_k = 0.16;
+uniform float corner_k = 0.30;
+// Round 3 (directive 2): the open meadow outside the focal pool sits a few L* lower so the stone
+// and the creatures carry the value peak; the pool is warmer and brighter.
+uniform float open_shade_k = 0.16;
 uniform float far_haze_k = 0.10;
 
 const vec2 FOCAL = vec2(540.0, 1123.0);
@@ -151,7 +160,9 @@ vec3 meadow_color(vec2 uv, vec2 frag) {
 	// 4a. The focal floor around the sun stone gathers a pool of key light; the open floor of the
 	// hollow is lighter than its walls, leading the eye to the stone.
 	vec2 fd = (p - FOCAL) / vec2(420.0, 260.0);
-	c += g_key.rgb * (g_ground_light + 0.04) * focal_pool_k * exp(-dot(fd, fd) * 1.4) * (1.0 - 0.6 * night);
+	float pool = exp(-dot(fd, fd) * 1.4);
+	c = mix(c, shade_of(c), open_shade_k * (1.0 - pool) * (1.0 - 0.7 * night));
+	c += g_key.rgb * (g_ground_light + 0.04) * focal_pool_k * pool * (1.0 - 0.6 * night);
 
 	// 4b. Worn moss path (quieter at night).
 	float path = path_mask(p) * (1.0 - 0.55 * night);
@@ -183,13 +194,16 @@ vec3 meadow_color(vec2 uv, vec2 frag) {
 	float corner = smoothstep(0.55, 1.35, length(cq)) * step(1150.0, p.y);
 	c = mix(c, shade_of(c), clamp(near * near_frame_k + corner * corner_k, 0.0, 0.6));
 	c = mix(c, g_sky_horizon.rgb, far_haze_k * (1.0 - smoothstep(T_TOP, 980.0, p.y)) * (1.0 - night));
-	// Wet sheen in rain (sky reflection), stronger toward the crest.
-	c += g_rain * wet_sheen_k * (g_sky_mid.rgb - c) * (1.0 - t * 0.5);
+	// Rain: wet moss is darker and richer (QA r2: creatures must clear the meadow by dL* >= 9), and
+	// carries a sparse glossy sheen of sky reflection in the hollows (slow, puddle-like patches).
+	c = mix(c, shade_of(c), wet_dark_k * g_rain);
+	float sheen = smoothstep(0.55, 0.85, vnoise(p / vec2(90.0, 26.0) + vec2(3.3, 1.1))) * (0.5 + 0.5 * (1.0 - rel.r));
+	c += g_rain * wet_sheen_k * sheen * max(g_sky_horizon.rgb - c, vec3(0.0)) * (1.0 - t * 0.4);
 	// Backlit crest: thin rim + broad glow, both from the key.
 	float below = max(uv.y, 0.0);
 	float rim = 1.0 - smoothstep(0.0, crest_rim_px, below);
 	float glow = 1.0 - smoothstep(0.0, crest_glow_px, below);
-	c += g_key.rgb * g_backlight * (g_rim * 0.12 * rim * rim + 0.07 * glow);
+	c += g_key.rgb * g_backlight * (g_rim * crest_rim_k * rim * rim + crest_glow_k * glow);
 	// Warm veil from the sun.
 	c += sun_veil(v_canvas, 0.25);
 	// Low valley mist (dawn), drawn again by the water shader.

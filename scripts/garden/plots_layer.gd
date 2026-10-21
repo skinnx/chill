@@ -24,6 +24,13 @@ extends Node2D
 ## bloomed stems into ready buds (glow, swell); --qa-unfurl=<s> taps every ready bud that many
 ## seconds after the layer is ready (e.g. 2.7 with the default 90 frames = a still 0.3 s into the
 ## 600 ms unfurl; with tools/qa/capture.sh video, the whole unfurl).
+## Touch strip (Director R3 #1): --qa-garden=<kind>:<ms> touches a bed QA_TOUCH_AT_S after the world
+## is ready and FREEZES the garden <ms> later (needs the default --frames=90; ms <= 1500), so a
+## still proves the feedback. Kinds here: bed (touch-down held: squash 0.94 + tint + touch ring),
+## unfurl (the bed's blooms become ready buds, then a tap: <ms> after the release the 600 ms
+## unfurl with its sparkles), ready (ready buds glowing and swelling, no touch). The bed is
+## --qa-ready=<bed_id> (default QA_BED). DecorLayer handles the décor kinds (lantern, pinwheel,
+## chime, place).
 
 # Data boundary: values read from JSON / Dictionaries are Variants and each one is converted
 # explicitly (int(), float(), String() ...) where it is read; the analyzer still flags every
@@ -62,6 +69,14 @@ const TAP_SWAY_DECAY_S := 0.55
 const TAP_SWAY_HZ := 2.2
 ## Ready-bud and tutorial-seed halos (Art Bible §6.2: r0 14 px, alpha 0.25).
 const HALO_QUAD_K := 3.2
+## QA r2: the ready-bud glow was invisible at full scale. The halo is 1.6x the bud, alpha 0.25 x 1.6
+## = 0.4, and pulses every 2 s (k 300) instead of breathing with the slow k 76 loop.
+const READY_HALO_SCALE := 1.6
+const READY_HALO_ALPHA_K := 1.6
+const READY_PULSE_K := 300.0
+## --qa-ready / --qa-garden: at most this many stems of the bed become ready buds (in play a bed
+## rarely has more; a dozen stacked halos read as one white blob).
+const QA_READY_MAX := 3
 ## Garden dock button (Art Bible §2.6 dock centres x 405, pill y 1541-1781): where seeds come from.
 const SEED_FROM := Vector2(405.0, 1661.0)
 const SEED_ARC_LIFT := 160.0
@@ -76,6 +91,13 @@ const SOIL_PUFF_PX := 22.0
 const SORT_OFFSET_Y := 0.0
 const ARG_QA_READY := "--qa-ready="
 const ARG_QA_UNFURL := "--qa-unfurl="
+const ARG_QA_GARDEN := "--qa-garden="
+const QA_BED := &"bed_2"
+## Touch strip timeline: touch this long after the world is ready; a tap releases after QA_TAP_S.
+const QA_TOUCH_AT_S := 1.2
+const QA_TAP_S := 0.08
+## Touch rings on beds lie on the ground (flattened ellipse).
+const RING_SQUASH := 0.55
 
 static var current: PlotsLayer = null
 
@@ -110,6 +132,12 @@ var _bloom_tips: Dictionary = {}   # stem index -> design px of an open flower h
 var _butterflies: Butterflies
 var _qa_ready: StringName = &""
 var _qa_unfurl_s: float = -1.0
+var _qa_kind: String = ""
+var _qa_ms: float = 0.0
+var _qa_t: float = -1.0
+var _qa_step: int = 0
+var _qa_frozen: bool = false
+var _qa_ring: TouchRing
 
 
 class BedView:
@@ -216,6 +244,16 @@ func _ready() -> void:
 			_qa_ready = StringName(a.trim_prefix(ARG_QA_READY))
 		elif a.begins_with(ARG_QA_UNFURL):
 			_qa_unfurl_s = maxf(0.0, a.trim_prefix(ARG_QA_UNFURL).to_float())
+		elif a.begins_with(ARG_QA_GARDEN):
+			var kv := a.trim_prefix(ARG_QA_GARDEN).split(":")
+			_qa_kind = kv[0]
+			_qa_ms = kv[1].to_float() if kv.size() > 1 else 0.0
+	if _qa_kind in ["bed", "unfurl", "ready"]:
+		if _qa_ready == &"":
+			_qa_ready = QA_BED
+		_qa_t = 0.0
+	else:
+		_qa_kind = ""
 	_butterflies = Butterflies.new()
 	_butterflies.name = "Butterflies"
 	add_child(_butterflies)
@@ -276,10 +314,16 @@ func _sync_all() -> void:
 			h.queue_free()
 		bv.halos.clear()
 		bv.dirty = true
+	var qa_pick: Array[int] = []
 	for i in sim.state.stems.size():
 		var v := _view_for(i)
-		if v.bed == _qa_ready and int(sim.state.stems[i]["stage"]) == WorldSim.STAGE_BLOOM and v.open_target > 0.0:
-			v.ready_s = 0.0
+		if v.bed == _qa_ready and _qa_kind != "bed" and int(sim.state.stems[i]["stage"]) == WorldSim.STAGE_BLOOM \
+				and v.open_target > 0.0:
+			qa_pick.append(i)
+	# The front-most stems (largest on screen) are the ones a still should show.
+	qa_pick.sort_custom(func(a: int, b: int) -> bool: return _stem_root(a).y > _stem_root(b).y)
+	for k in mini(QA_READY_MAX, qa_pick.size()):
+		(_views[qa_pick[k]] as StemView).ready_s = 0.0
 	_update_seed_hint()
 	_refresh_choose_glow()
 	_setup_butterflies()
@@ -362,8 +406,12 @@ func _on_phase_changed(phase: StringName) -> void:
 # ================================================================= frame
 
 func _process(delta: float) -> void:
-	if Game.sim == null:
+	if Game.sim == null or _qa_frozen:
 		return
+	if _qa_kind != "":
+		_step_qa(delta)
+		if _qa_frozen:
+			return
 	var busy := false
 	_growth_t += delta
 	var refresh := _growth_t >= GROWTH_REFRESH_S
@@ -449,6 +497,7 @@ func _step_open(v: StemView, delta: float) -> bool:
 
 
 func _start_unfurl(v: StemView, rate: float, delay: float, sound: bool) -> void:
+	_remove_halo(v)  # the glow hands over to the unfurl's own sparkles
 	v.unfurl_s = 0.0
 	v.unfurl_rate = rate
 	v.unfurl_delay = delay
@@ -631,9 +680,10 @@ func _canvas_of(design: Vector2) -> Vector2:
 func _ensure_halo(bv: BedView, v: StemView, tip: Vector2) -> void:
 	var h: HaloSprite = bv.halos.get(v.index)
 	if h == null:
-		var r0 := 14.0 * depth_scale(bv.centre.y)
-		h = HaloSprite.new().setup(r0, r0 * HALO_QUAD_K, Color(1, 1, 1, float(_ready_cfg["glow_alpha"])),
-				float(_ready_cfg["glow_k"]), HaloSprite.FLAG_ACCENT, float(v.index))
+		var r0 := 14.0 * READY_HALO_SCALE * depth_scale(bv.centre.y)
+		h = HaloSprite.new().setup(r0, r0 * HALO_QUAD_K,
+				Color(1, 1, 1, float(_ready_cfg["glow_alpha"]) * READY_HALO_ALPHA_K), READY_PULSE_K,
+				HaloSprite.FLAG_ACCENT, float(v.index))
 		bv.node.add_child(h)
 		bv.halos[v.index] = h
 	h.position = tip
@@ -734,7 +784,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		_press_pos = pos
 		_press_t = 0.0
 		_press_long_sent = false
-		_touch_down(_beds[bed])
+		_touch_down(_beds[bed], pos)
 		get_viewport().set_input_as_handled()
 	elif moved and _press_bed != &"":
 		if pos.distance_to(_press_pos) > DRAG_CANCEL_PX:
@@ -758,7 +808,9 @@ func _bed_at(pos: Vector2) -> StringName:
 	return best
 
 
-func _touch_down(bv: BedView) -> void:
+func _touch_down(bv: BedView, pos: Vector2) -> void:
+	_qa_ring = TouchRing.spawn(self, pos, RING_SQUASH)
+	_qa_ring.z_index = 1
 	bv.press = Motion.spring(&"press", bv.press.value)
 	bv.press.target = float(_content.motion["ui"]["world_touch_squash"])
 	bv.tint = 1.0
@@ -820,3 +872,36 @@ func claims(pos: Vector2) -> bool:
 func bed_rect(bed_id: StringName) -> Rect2:
 	var bv: BedView = _beds.get(bed_id)
 	return bv.hit if bv != null else Rect2()
+
+
+# ================================================================= QA touch strip
+
+## --qa-garden timeline: touch at QA_TOUCH_AT_S, (tap: release after QA_TAP_S), freeze <ms> after
+## the touch (bed) or the release (unfurl). ready only waits for the glow.
+func _step_qa(delta: float) -> void:
+	if _qa_t < 0.0 or not Game.is_ready:
+		return
+	_qa_t += delta
+	var bv: BedView = _beds.get(_qa_ready)
+	if bv == null:
+		_qa_kind = ""
+		return
+	var touch_at := QA_TOUCH_AT_S
+	var release_at := touch_at + QA_TAP_S
+	if _qa_kind == "ready":
+		return
+	if _qa_step == 0 and _qa_t >= touch_at:
+		_qa_step = 1
+		_press_bed = bv.id
+		_press_pos = bv.centre
+		_press_t = 0.0
+		_press_long_sent = true  # a held QA touch never opens the bed card
+		_touch_down(bv, bv.centre)
+	if _qa_kind == "unfurl" and _qa_step == 1 and _qa_t >= release_at:
+		_qa_step = 2
+		_release_press(true)
+	var freeze_at := (release_at if _qa_kind == "unfurl" else touch_at) + _qa_ms / 1000.0
+	if _qa_step >= 1 and _qa_t >= freeze_at:
+		_qa_frozen = true
+		if is_instance_valid(_qa_ring):
+			_qa_ring.freeze_at(_qa_ms / 1000.0 if _qa_kind == "bed" else _qa_t - touch_at)

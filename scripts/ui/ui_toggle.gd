@@ -16,7 +16,15 @@ const THUMB_INSET := 9.0
 const BORDER_DP := 1.0
 const CHECK_PX := 36.0
 const CUE_TOGGLE := &"S15"
+## Touch-down: the thumb stretches toward the far side (M3-Expressive switch), a visible state on
+## the very first frame.
+const PRESS_STRETCH := 0.32
 
+## QA stills (--qa-press=toggle): draw the touch-down thumb without a touch.
+var force_pressed: bool = false:
+	set(v):
+		force_pressed = v
+		queue_redraw()
 var _t: float = 0.0
 var _tween: Tween
 
@@ -26,6 +34,8 @@ func _init() -> void:
 	focus_mode = Control.FOCUS_NONE
 	custom_minimum_size = Vector2(TRACK_W, TRACK_H)
 	toggled.connect(_on_toggled)
+	button_down.connect(queue_redraw)
+	button_up.connect(queue_redraw)
 
 
 func _ready() -> void:
@@ -69,9 +79,13 @@ func _draw() -> void:
 	var x1 := r.end.x - THUMB_INSET - d * 0.5
 	var c := Vector2(lerpf(x0, x1, _t), r.get_center().y)
 	var thumb := UiTokens.fill_box(UiTokens.color(&"surface_hi"), d * 0.5, UiTokens.E1)
-	draw_style_box(thumb, Rect2(c - Vector2(d, d) * 0.5, Vector2(d, d)))
+	var m := get_draw_mode()
+	var stretch := d * PRESS_STRETCH if force_pressed or m == DRAW_PRESSED or m == DRAW_HOVER_PRESSED else 0.0
+	# stretch toward the side the thumb will travel to
+	var sx := c.x - d * 0.5 - (stretch if _t > 0.5 else 0.0)
+	draw_style_box(thumb, Rect2(Vector2(sx, c.y - d * 0.5), Vector2(d + stretch, d)))
 	if _t > 0.5:
 		var tex := Icons.texture(&"check", CHECK_PX)
 		if tex != null:
-			var m := Color(1, 1, 1, clampf((_t - 0.5) * 2.0, 0.0, 1.0))
-			draw_texture_rect(tex, Rect2(c - Vector2(CHECK_PX, CHECK_PX) * 0.5, Vector2(CHECK_PX, CHECK_PX)), false, m)
+			var ck := Color(1, 1, 1, clampf((_t - 0.5) * 2.0, 0.0, 1.0))
+			draw_texture_rect(tex, Rect2(c - Vector2(CHECK_PX, CHECK_PX) * 0.5, Vector2(CHECK_PX, CHECK_PX)), false, ck)

@@ -18,11 +18,13 @@ const REBUILD_PX := 20.0
 const MIN_STRENGTH := 0.01
 ## Aim point of the fans: the focal sun stone (spots.json), Art Bible §2.5 light axis.
 const FOCAL := Vector2(540.0, 1123.0)
-## Per phase: [count, fan half-angle deg, start offset px, length px, width near px, width far px, dapple].
+## Per phase: [count, fan half-angle deg, start offset px, length px, width near px, width far px,
+## dapple, alpha scale]. Round 3: day shafts are quieter (QA r2: a milky veil over the stone), golden
+## shafts carry the signature backlit air through the willow / stump gap.
 const PLANS := {
-	&"day": [3, 14.0, 120.0, 1000.0, Vector2(90, 160), Vector2(200, 260), 0.0],
-	&"golden": [4, 25.0, 90.0, 760.0, Vector2(60, 70), Vector2(200, 240), 0.0],
-	&"dawn": [3, 18.0, 100.0, 950.0, Vector2(80, 120), Vector2(200, 240), 1.0],
+	&"day": [3, 14.0, 120.0, 1000.0, Vector2(90, 160), Vector2(200, 260), 0.0, 0.4],
+	&"golden": [4, 25.0, 70.0, 820.0, Vector2(50, 70), Vector2(170, 230), 0.0, 1.3],
+	&"dawn": [3, 18.0, 100.0, 950.0, Vector2(80, 120), Vector2(200, 240), 1.0, 1.1],
 }
 const ALPHA_RANGE := Vector2(0.07, 0.10)
 const SEGMENTS := 8
@@ -86,6 +88,7 @@ func _rebuild(sun: Vector2, plan: Array) -> void:
 	var w0: Vector2 = plan[4]
 	var w1: Vector2 = plan[5]
 	var dapple := float(plan[6])
+	var alpha_k := float(plan[7])
 	var base := (FOCAL - sun).angle()
 	var verts := PackedVector2Array()
 	var uvs := PackedVector2Array()
@@ -103,7 +106,7 @@ func _rebuild(sun: Vector2, plan: Array) -> void:
 		var ln := length * lerpf(0.85, 1.05, TerrainMath.hash01(i, 74))
 		var p0 := sun + dir * start
 		var p1 := sun + dir * (start + ln)
-		var alpha := lerpf(ALPHA_RANGE.x, ALPHA_RANGE.y, TerrainMath.hash01(i, 75))
+		var alpha := lerpf(ALPHA_RANGE.x, ALPHA_RANGE.y, TerrainMath.hash01(i, 75)) * alpha_k
 		var k := floorf(lerpf(_k_range.x, _k_range.y + 1.0, TerrainMath.hash01(i, 76)))
 		var col := Color(alpha, dapple, TerrainMath.hash01(i, 77), k / 100.0)
 		# Subdivided along the length so UV.x stays smooth across the trapezoid (no diagonal seam).

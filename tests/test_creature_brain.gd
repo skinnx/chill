@@ -274,3 +274,18 @@ func test_forced_bouts_carry_the_rain_umbrella_rule() -> void:
 	assert_true(dry.umbrella, "a forced bout in rain away from shelter holds a leaf")
 	var wet := b.force_bout(&"puddlewump", &"play", &"stream_bend", 10.0, 60.0)
 	assert_false(wet.umbrella, "puddlewump loves rain: no umbrella")
+
+
+func test_a_day_of_visits_shows_varied_behaviours() -> void:
+	# a lively hollow at a glance (Director R3 #4): over a few hours the five visitors use at least
+	# four different behaviours and more than one spot each on average
+	var b := _brain(SEED)
+	_populate(b, 4.0)
+	var behaviours := {}
+	var spots := {}
+	for v: CreatureBrain.Visit in b.visits():
+		for bout: CreatureBrain.Bout in v.bouts:
+			behaviours[bout.behaviour] = true
+			spots[bout.spot] = true
+	assert_gte(behaviours.size(), 4, "nap, nibble, play, wander, sit by the stream ... not one pose")
+	assert_gte(spots.size(), 5, "the visitors spread over the hollow")

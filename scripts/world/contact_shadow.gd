@@ -6,8 +6,8 @@ extends Node2D
 
 const SHADER_PATH := "res://shaders/fx/contact_shadow.gdshader"
 const MARGIN_PX := 40.0
-## contact_shadow.gdshader: the cast ellipse's half length = half_h + |offset| * 0.75.
-const CAST_LEN_K := 0.75
+## contact_shadow.gdshader: the cast ellipse's half length = half_h + |offset| * CAST_LEN_K.
+const CAST_LEN_K := 1.0
 
 static var _material: ShaderMaterial = null
 
@@ -37,7 +37,7 @@ func _ready() -> void:
 
 
 func set_light(values: Dictionary) -> void:
-	var off := ShadowMath.cast_offset(values, height_px)
+	var off := ShadowMath.cast_offset(values, height_px, global_position)
 	if off.is_equal_approx(_offset):
 		return
 	_offset = off

@@ -9,6 +9,11 @@ extends Node2D
 ## then [signal prop_tapped] for the owner of the action (UI: open_basket, open_postcards;
 ## décor: ring_chime).
 ##
+## Touch-down also spawns a TouchRing (bloom + eased ring + sparkles) at the touch.
+##
+## QA user arg: --qa-prop-tap=<prop_id>[@<ms>] presses that touchable prop (basket, mailbox,
+## wind_chime_branch) as if touched and freezes the feedback <ms> after touch-down (default 90 ms:
+## peak squash, ring a third grown, sparkles out), so a still proves the touch feedback.
 ## QA user arg: --debug-lamps registers lantern-sized lamps at the first 5 firefly_lantern anchors
 ## (spots.json) so the night light pools and brook reflections can be judged before décor is placed.
 
@@ -29,6 +34,11 @@ const MIN_RIM_PX := 40
 const TAP_TINT_DECAY_S := 0.25
 const CUE_TOUCH := &"S01"
 const ARG_DEBUG_LAMPS := "--debug-lamps"
+const ARG_QA_TAP := "--qa-prop-tap="
+const QA_TAP_DEFAULT_MS := 90.0
+const QA_TAP_STEP_S := 1.0 / 60.0
+## The touch ring draws above the y-sorted pieces.
+const RING_Z := 1
 const DEBUG_LAMP_COUNT := 5
 ## Art Bible §8.3: lantern pools r 150 px; the lamp sits at the lantern head (~120 px above the foot).
 const LANTERN_POOL_R := 150.0
@@ -89,6 +99,7 @@ const EDGE_SHRUBS: Array[Vector4] = [
 	Vector4(1118, 1002, 76, 1.1), Vector4(1112, 1256, 70, 0.95), Vector4(1126, 1690, 96, 1.05),
 ]
 const SHRUB_SWAY_K := Vector2(40.0, 56.0)
+const DESIGN_CENTRE_X := 540.0
 
 var _atlas: Texture2D
 var _mat: ShaderMaterial
@@ -98,6 +109,8 @@ var _shadows: Array[ContactShadow] = []
 var _touchables: Dictionary = {}
 var _squash: Dictionary = {}
 var _tint: Dictionary = {}
+var _qa_frozen: bool = false
+var _shadow_group: Node2D = null
 
 
 func _ready() -> void:
@@ -121,6 +134,9 @@ func _ready() -> void:
 	LampRegistry.set_lamp(MUSHROOM_LAMP, MUSHROOM_LAMP_POS, MUSHROOM_LAMP_R, MUSHROOM_LAMP_I)
 	if OS.get_cmdline_user_args().has(ARG_DEBUG_LAMPS):
 		_debug_lamps(content)
+	for a: String in OS.get_cmdline_user_args():
+		if a.begins_with(ARG_QA_TAP):
+			_qa_tap.call_deferred(a.trim_prefix(ARG_QA_TAP))
 	_update_light(current_light())
 	TimeOfDay.globals_updated.connect(_update_light)
 	tree_exiting.connect(func() -> void: LampRegistry.remove_lamp(MUSHROOM_LAMP))
@@ -146,8 +162,9 @@ func _add_part(part: Dictionary, content: GameContent, mats: Dictionary, offset:
 		var s := PackedFloat64Array(part["shadow"] as Array)
 		var foot_y := s[3] + (prop_centre(content, prop).y if prop != &"" else 0.0)
 		var sh := ContactShadow.new(Vector2(s[0], s[1]), region.size.y, s[2])
-		sh.position = Vector2(0.0, foot_y - sort_y)
-		node.add_child(sh)
+		sh.name = "%s_shadow" % String(part["id"])
+		sh.position = Vector2(centre.x, foot_y)
+		_shadow_root().add_child(sh)
 		_shadows.append(sh)
 	var sp := Sprite2D.new()
 	sp.texture = _atlas
@@ -175,11 +192,25 @@ func _add_part(part: Dictionary, content: GameContent, mats: Dictionary, offset:
 		var sw := PackedFloat64Array(part["sway"] as Array)
 		sp.set_instance_shader_parameter(&"i_sway", Vector4(sw[0], sw[1], sw[2], TerrainMath.hash01(
 				String(part["id"]).hash(), 5) * TAU))
-	if prop != &"":
-		var t: Dictionary = _touchables.get(prop, {})
+	# A part answers the touch of its own prop, or of the prop named by "touch" (the chime branch
+	# hangs from the willow but is the wind chime's touch target).
+	var touch := StringName(String(part.get("touch", String(prop))))
+	if touch != &"":
+		var t: Dictionary = _touchables.get(touch, {})
 		var list: Array = t.get("sprites", [])
 		list.append(sp)
-		_touchables[prop] = {"sprites": list}
+		_touchables[touch] = {"sprites": list}
+
+
+## Every prop shadow lies on the ground under everything (round-3 directive 5: one batch with the
+## décor shadows, which DecorLayer also groups at sort y 0, instead of a material switch per prop).
+func _shadow_root() -> Node2D:
+	if _shadow_group == null:
+		_shadow_group = Node2D.new()
+		_shadow_group.name = "Shadows"
+		_shadow_group.y_sort_enabled = false
+		add_child(_shadow_group)
+	return _shadow_group
 
 
 ## The light globals as TimeOfDay would push them now (its signal carries the same dictionary).
@@ -274,14 +305,26 @@ func _build_crown(mats: Dictionary) -> void:
 		node.add_child(b)
 
 
+## The edge shrubs batch per side (round-3 directive 5): each side is one sort node at its highest
+## shrub's root y, so the hedges draw in one call per side instead of one per shrub (they hug the
+## frame edges, where nothing else stands between them).
 func _build_shrubs() -> void:
+	var groups: Dictionary = {}
 	for i in EDGE_SHRUBS.size():
 		var e: Vector4 = EDGE_SHRUBS[i]
+		var side := &"left" if e.x < DESIGN_CENTRE_X else &"right"
+		if not groups.has(side):
+			var g := Node2D.new()
+			g.name = "edge_shrubs_%s" % side
+			g.position = Vector2(0.0, e.y)
+			add_child(g)
+			groups[side] = g
+		var group: Node2D = groups[side]
 		var b := BushSprite.new().setup(e.z, TerrainMath.hash01(i, 91), 1.0, e.w, false,
 				floorf(lerpf(SHRUB_SWAY_K.x, SHRUB_SWAY_K.y, TerrainMath.hash01(i, 92))), TerrainMath.hash01(i, 93) * TAU)
 		b.name = "edge_shrub_%d" % i
-		b.position = Vector2(e.x, e.y)
-		add_child(b)
+		b.position = Vector2(e.x, e.y - group.position.y)
+		group.add_child(b)
 
 
 func _build_fronds(mats: Dictionary, lk: Dictionary) -> void:
@@ -370,9 +413,37 @@ func _unhandled_input(event: InputEvent) -> void:
 	if best == &"":
 		return
 	_press(best)
+	_ring(pos)
 	AudioDirector.play_cue(CUE_TOUCH, {"world": true, "position": get_global_transform_with_canvas() * pos})
 	prop_tapped.emit(best, StringName(_touchables[best]["action"]), pos)
 	get_viewport().set_input_as_handled()
+
+
+func _ring(pos: Vector2) -> TouchRing:
+	var r := TouchRing.spawn(self, pos)
+	r.z_index = RING_Z
+	return r
+
+
+## QA: "<prop_id>[@<ms>]" -> press it, step the springs to <ms>, freeze squash, tint and ring.
+func _qa_tap(spec: String) -> void:
+	var parts := spec.split("@")
+	var id := StringName(parts[0])
+	if not _touchables.has(id):
+		push_warning("PropsLayer: --qa-prop-tap: %s is not a touchable prop" % id)
+		return
+	var age := (float(parts[1]) if parts.size() > 1 else QA_TAP_DEFAULT_MS) / 1000.0
+	var t: Dictionary = _touchables[id]
+	_press(id)
+	var ring := _ring(t["centre"] as Vector2)
+	var elapsed := 0.0
+	while elapsed < age:
+		var dt := minf(QA_TAP_STEP_S, age - elapsed)
+		_process(dt)
+		elapsed += dt
+	ring.freeze_at(age)
+	_qa_frozen = true
+	set_process(false)
 
 
 func _press(id: StringName) -> void:
@@ -385,6 +456,9 @@ func _press(id: StringName) -> void:
 
 
 func _process(delta: float) -> void:
+	if _qa_frozen:
+		set_process(false)
+		return
 	var busy := false
 	for id: StringName in _squash.keys():
 		var entry: Array = _squash[id]

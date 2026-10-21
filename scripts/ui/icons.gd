@@ -18,6 +18,16 @@ const ACCENT_ACTIVE := "fill-opacity=\"1\""
 ## px between atlas cells (no bleeding under bilinear filtering).
 const ATLAS_GAP := 4.0
 
+## [name, px, active] of every HUD icon (TopBarView ICON_PX 72 / badge 36, DockView 84, sparkle 30).
+const HUD_ATLAS: Array = [
+	[&"dew", 72.0, false], [&"watch", 72.0, false], [&"watch_closed", 72.0, false],
+	[&"dawn", 72.0, false], [&"sun", 72.0, false], [&"golden", 72.0, false], [&"dusk", 72.0, false],
+	[&"moon", 72.0, false], [&"breeze", 36.0, false], [&"rain", 36.0, false],
+	[&"settings", 84.0, false], [&"settings", 84.0, true], [&"garden", 84.0, false], [&"garden", 84.0, true],
+	[&"basket", 84.0, false], [&"basket", 84.0, true], [&"album", 84.0, false], [&"album", 84.0, true],
+	[&"sparkle", 30.0, false],
+]
+
 static var _cache: Dictionary = {}
 
 
@@ -92,6 +102,12 @@ static func atlas(entries: Array) -> Dictionary:
 		out[k] = a
 	_cache[cache_key] = out
 	return out
+
+
+## The one atlas every HUD icon comes from (top bar + dock + brim sparkles), so all HUD icons
+## draw in one batch (round 3 draw-call budget: HUD + dock = 6 calls).
+static func hud_atlas() -> Dictionary:
+	return atlas(HUD_ATLAS)
 
 
 static func atlas_key(name: StringName, px: float, active: bool = false) -> String:

@@ -28,8 +28,9 @@ uniform vec2 wander_hz = vec2(0.2, 0.5);
 uniform float fade_in_s = 0.4;
 uniform float spin_deg_s = 0.0;
 uniform float tilt_deg = 8.0;
-// Rain streak size (w, h) px; splash squash (perspective).
-uniform vec2 streak_px = vec2(3.0, 36.0);
+// Rain streak quad (w, h) px: a 3 px bright core inside a 7 px quad (the draw shader adds a faint
+// darker sheath so streaks read on light skies too); splash squash (perspective).
+uniform vec2 streak_px = vec2(7.0, 40.0);
 uniform float squash = 0.35;
 // Firefly lantern / flower bias: points in design px, fraction of spawns near them.
 uniform vec4 u_points[8];

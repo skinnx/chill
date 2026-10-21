@@ -27,6 +27,9 @@ uniform vec4 u_breath = vec4(0.010, 0.025, 0.015, 0.035);
 // motion_tokens loops_k: x ear_wind, y antenna_bob, z gust; w gust spacing px (loops_spatial).
 uniform vec4 u_wind_k = vec4(124.0, 76.0, 62.0, 1742.0);
 uniform float u_lod = 0.0;                           // FrameGovernor tier >= 1: drop fine detail
+// UI portraits (scripts/ui/creature_portrait.gd) draw a mossling magnified k x: k grain cells per
+// local dp keep the felt grain at 1 screen dp instead of 3k-px blocks. 1.0 in the world.
+uniform float u_grain_density = 1.0;
 // palette grass slots (PaletteFeed, 2 Hz): the nestle blades match the meadow dressing
 uniform vec4 u_grass_tip : source_color = vec4(0.565, 0.722, 0.549, 1.0);
 uniform vec4 u_grass_root : source_color = vec4(0.286, 0.576, 0.471, 1.0);
@@ -82,8 +85,25 @@ const float NIGHT_SHINE = 0.85;              // §5.4 highlights dim only x0.85 
 const float RIM_GAIN = 0.55;                 // §5.6.6 rim weight (0.45 in the spike; felt needs a bit more)
 const float RIM_BACKLIT_GAIN = 1.5;          // golden hour: the rim reaches L* >= 90 (QA round 1)
 const float NIGHT_RIM = 1.4;                 // extra rim when the ambient is dark
-const float MOON_RIM_A = 0.5;                // §1.3 B: moon rim alpha on the key-facing fringe
-const float MOON_RIM_PX = 3.0;               // 2-3 px moon rim band
+const float MOON_RIM_A = 0.62;               // §1.3 B: moon rim alpha on the moon-facing edge (QA r2: 0.5 read too faint)
+const float MOON_RIM_PX = 5.0;               // moon rim band (local px; x2 soft inner edge)
+const float MOON_RIM_GLOW = 0.22;            // additive lift so the moonlit edge reads luminous, not grey
+const float NIGHT_TIP = 0.4;                 // QA r2: the omnidirectional light fibre tips fade to 40 % at night
+const float NIGHT_GRAIN = 0.7;               // QA r2: felt grain -30 % at low ambient (dark values stay clean)
+// Near-camera creatures (depth scale > 0.9) sit back into the frame so the sun stone keeps the
+// top local contrast (Art Bible §2.5, QA r2): albedo x 0.92 and rim x 0.7 at full depth.
+const float NEAR_ALBEDO = 0.92;
+const float NEAR_RIM = 0.7;
+const vec2 NEAR_DEPTH = vec2(0.9, 1.0);      // depth-scale ramp; > 1.05 = lineup / UI portrait (off)
+// Focal creature (the sun-stone friend, i_light.w < 0): a stronger rim and a warm lift (§2.5).
+const float FOCAL_RIM = 0.45;
+const float FOCAL_LIFT = 0.06;
+const float FOCAL_CHROMA = 0.25;
+// Leaf umbrella (i_misc.z fraction): its soft shade on the crown, α 0.25 (QA r2).
+const float UMB_SHADE_A = 0.25;
+const float UMB_CODE = 0.4;                  // i_misc.z = feet (0 / 1) + UMB_CODE x umbrella alpha
+// Nibble leaf (i_misc.w = closed id + 3 x round(leaf x 8)): a clover leaf held at the mouth.
+const float LEAF_STEPS = 8.0;
 // Species identity survives the ambient tint: this share of the light keeps the fur's own hue at
 // its lit value (day / golden), more at night so friends stay tellable apart (QA round 1).
 const float HUE_KEEP_DAY = 0.18;
@@ -105,6 +125,7 @@ const float LID_DROWSY = 0.42;               // ... while drifting off
 varying vec2 v_local;
 varying flat vec3 v_key;   // xy: key direction in local space (y up); z: light elevation 0..1
 varying flat vec2 v_env;   // x: travelling gust 0..1 at the creature, y: cloud shadow at its origin
+varying flat float v_near; // 0..1: near-camera value compression (depth scale from the model matrix)
 
 // ------------------------------------------------------------------ creature SDF helpers
 // Value noise whose x cells wrap with an integer period (seamless fibres around a contour).
@@ -202,6 +223,8 @@ void vertex() {
 	v_key = vec3(l.x, -l.y, light_elevation());
 	vec2 design = origin - g_world_offset;
 	v_env = vec2(gust(design.x), cloud_shadow(design));
+	float k = length(MODEL_MATRIX[0].xy);
+	v_near = smoothstep(NEAR_DEPTH.x, NEAR_DEPTH.y, k) * (1.0 - step(1.05, k));
 }
 
 // ------------------------------------------------------------------ fragment
@@ -249,7 +272,13 @@ void fragment() {
 	// feet nubs: two soft bumps of the seat outline itself (no interior edge, so no crease
 	// artefacts in the normal field)
 	float w_feet = 0.0;
-	if (i_misc.z > 0.5) {
+	float feet_on = step(0.7, i_misc.z);
+	float umb = clamp((i_misc.z - feet_on) / UMB_CODE, 0.0, 1.0);
+	float misc_w = i_misc.w + 0.25;
+	float leaf_k = floor(misc_w / 3.0) / LEAF_STEPS;
+	float closed_id = floor(mod(misc_w, 3.0));
+	float focal = clamp(-i_light.w, 0.0, 1.0);
+	if (feet_on > 0.5) {
 		float fx = (abs(qb.x) - FEET_X * wh) / (FEET_W * min(wh, 1.15));
 		float bump = exp(-fx * fx * 2.2);
 		float low = 1.0 - smoothstep(0.0, 0.16, ps.y);
@@ -650,7 +679,7 @@ void fragment() {
 			nest_col = mix(mix(u_grass_root.rgb, u_ground.rgb, 0.6), u_grass_tip.rgb * 1.04, smoothstep(0.0, 0.85, best_t));
 			nest_col += g_key.rgb * g_backlight * g_rim * 0.25 * best_t * best_t;
 			nest_col = 1.0 - (1.0 - nest_col) * (1.0 - g_accent.rgb * clamp(i_light.z * g_lights * LAMP_FILL_K * 0.6, 0.0, LAMP_FILL_MAX));
-			nest_col = finish(nest_col, q * S / PX_PER_DP, FRAGCOORD.xy, GRAIN_OBJECT);
+			nest_col = finish(nest_col, q * S / PX_PER_DP * u_grain_density, FRAGCOORD.xy, GRAIN_OBJECT);
 			nest_a *= nestle;
 		}
 	}
@@ -668,6 +697,19 @@ void fragment() {
 		vec2 bel_r = vec2(0.62 * rb.x, 0.24) * mix(1.0, 1.0, big) * (0.55 + 0.45 * bsize);
 		float bn = (vnoise(fp * 24.0 + seed * 9.0) - 0.5) * 0.012;
 		float bel = 1.0 - smoothstep(-0.03, 0.03, sd_ellipse(fp - vec2(0.0, 0.27 * (0.8 + 0.2 * bsize)), bel_r) + bn);
+		if (pat_id == 1) {
+			// big belly = a deliberate "face + tummy" mask (QA r2: a straight edge just over the eyes
+			// read as a seam): two soft lobes over the eyes with a dip between them (a hamster face),
+			// widening into the tummy, feathered >= 0.08 so it reads as felt, never as a step
+			float ey_m = 1.0 - i_face.z;
+			float exm = i_face.y * 0.5 * wh;
+			vec2 lob_r = vec2(exm + 0.11, 0.16);
+			float d_l = min(sd_ellipse(fp - vec2(-exm * 0.95, ey_m + 0.005), lob_r),
+					sd_ellipse(fp - vec2(exm * 0.95, ey_m + 0.005), lob_r));
+			float d_t = sd_ellipse(fp - vec2(0.0, 0.22), vec2(0.66 * rb.x, 0.26));
+			float d_m = smin(d_l, d_t, 0.10) + bn * 1.5;
+			bel = 1.0 - smoothstep(-0.045, 0.045, d_m);
+		}
 		vec3 bel_col = pat_id == 1 ? i_fur2.rgb : i_belly.rgb;
 		alb = mix(alb, bel_col, bel * (pat_id == 1 ? i_fur2.a : 0.55));
 		// face anchors (shared by patterns and face)
@@ -688,8 +730,9 @@ void fragment() {
 			alb = mix(alb, i_accent.rgb, fr * 0.85);
 		} else if (pat_id == 3) {                                    // socks
 			float edge = 0.16 + 0.02 * sin(fp.x / (0.5 * wh) * PI * 3.0 + seed * 4.0) + (pn - 0.5) * 0.015;
-			float sock = 1.0 - smoothstep(edge - 0.012, edge + 0.012, ps.y);
-			alb = mix(alb, i_fur2.rgb, sock * i_fur2.a);
+			// QA r2: a soft cuff, lighter toward the belly tone and feathered >= 6 px (never a stain)
+			float sock = 1.0 - smoothstep(edge - 0.035, edge + 0.035, ps.y);
+			alb = mix(alb, mix(i_fur2.rgb, i_belly.rgb, 0.35), sock * i_fur2.a);
 		} else if (pat_id == 4) {                                    // back stripes over the head
 			vec2 a2 = max(abs(qb) / rb, vec2(1e-4));
 			float m = pow(pow(a2.x, n) + pow(a2.y, n), 1.0 / n);
@@ -749,15 +792,20 @@ void fragment() {
 		float mot = (vnoise(ps * 9.0 + seed * 13.0) * 0.05 - 0.025);
 		mot += lod > 0.5 ? 0.0 : (vnoise(ps * 31.0) * 0.03 - 0.015);
 		float hair = lod > 0.5 ? 0.0 : (vnoise(rot(dp, seed * 6.0) * vec2(1.6, 0.35)) - 0.5) * 0.035;
-		vec3 body_alb = alb * (1.0 + mot + hair);
+		float noise_k = mix(1.0, NIGHT_GRAIN, 1.0 - smoothstep(0.35, 0.8, luma(g_ambient.rgb)));
+		vec3 body_alb = alb * (1.0 + (mot + hair) * noise_k);
 		alb = mix(body_alb, alb_part * (1.0 + mot * 0.8), w_part);
 		// fibre tips are lighter (outer band and fringe)
 		float depth_in = clamp(-d_px / (0.35 * S), 0.0, 1.0);
-		float tipband = smoothstep(0.55, 1.0, 1.0 - depth_in) * i_tip.a * smoothstep(-0.85, 0.1, n2.y);
+		float night_k = 1.0 - smoothstep(0.35, 0.8, luma(g_ambient.rgb));
+		float tip_k = mix(1.0, NIGHT_TIP, night_k);
+		float tipband = smoothstep(0.55, 1.0, 1.0 - depth_in) * i_tip.a * smoothstep(-0.85, 0.1, n2.y) * tip_k;
 		vec3 tip_col = mix(alb, mix(i_tip.rgb, alb, w_part * 0.6), 0.85);
 		alb = mix(alb, tip_col, tipband * fz);
 		float in_fringe = 1.0 - core;
-		alb = mix(alb, tip_col, in_fringe * 0.7 * smoothstep(-0.9, -0.2, n2.y));
+		alb = mix(alb, tip_col, in_fringe * 0.7 * smoothstep(-0.9, -0.2, n2.y) * tip_k);
+		alb *= mix(1.0, NEAR_ALBEDO, v_near);
+		alb = max(mix(vec3(luma(alb)), alb, 1.0 + FOCAL_CHROMA * focal), vec3(0.0));
 
 		// 6. light: ambient multiply, felt pillow volume, wrapped key, hue-shifted shade, top light, AO
 		vec2 L2 = normalize(v_key.xy);
@@ -785,6 +833,9 @@ void fragment() {
 		float front = FRONT_DARK * g_backlight * smoothstep(0.05, 0.45, depth_in);
 		col = mix(col * (1.0 - front), col * g_shadow.rgb * SHADE_K, front * 0.5);
 		col = mix(col, col * g_shadow.rgb * SHADE_K, max(v_env.y, i_light.w));   // passing cloud shadows
+		// the leaf umbrella's soft shade on the crown (offset to the side it is held on)
+		vec2 uq = (ps - vec2(facing * 0.12 * wh, 1.02)) / vec2(0.42 * wh, 0.26);
+		col = mix(col, col * g_shadow.rgb * SHADE_K, UMB_SHADE_A * umb * exp(-dot(uq, uq) * 1.6));
 
 		// rim and backlit peach fuzz (§5.6.6); the bottom edge never lights up
 		float lam = clamp(dot(n2, L2), 0.0, 1.0);
@@ -795,12 +846,18 @@ void fragment() {
 		float rim = band * mix(lam * lam, rup * (0.35 + 0.65 * lam), g_backlight) * g_rim * smoothstep(-0.55, 0.0, n2.y);
 		// peach: the key warmed toward the glow of the sky around the sun
 		vec3 rim_col = mix(g_key.rgb, max(g_glow.rgb, g_key.rgb), 0.45 * g_backlight);
-		col += rim_col * rim * RIM_GAIN * (1.0 + RIM_BACKLIT_GAIN * g_backlight) * (1.0 - dark);
-		float fuzz_glow = clamp((fringe_a * in_fringe + band * 0.35 * rup) * g_backlight * rup, 0.0, 1.0);
+		float rim_k = mix(1.0, NEAR_RIM, v_near) * (1.0 + FOCAL_RIM * focal);
+		col += rim_col * rim * RIM_GAIN * (1.0 + RIM_BACKLIT_GAIN * g_backlight) * (1.0 - dark) * rim_k;
+		col += g_key.rgb * g_ambient.rgb * FOCAL_LIFT * focal * up;
+		float fuzz_glow = clamp((fringe_a * in_fringe + band * 0.35 * rup) * g_backlight * rup, 0.0, 1.0) * rim_k;
 		col = mix(col, mix(col, rim_col, 0.85) * 1.12, fuzz_glow * smoothstep(-3.0, 0.0, d_s) + fuzz_glow * 0.35 * band);
 		// night: a thin cool moon rim on the key-facing fringe separates friends from the navy meadow
-		float mband = smoothstep(-MOON_RIM_PX * 2.0, -0.5, d_s) * smoothstep(-0.2, 0.6, dot(n2, L2) * 0.7 + n2.y * 0.5);
-		col = mix(col, g_key.rgb * mix(0.8, 1.0, lam), clamp(mband * MOON_RIM_A * dark * (1.0 + 0.4 * NIGHT_RIM * lam), 0.0, 0.6));
+		// masked to the moon-facing (upper-right) edges, so the moonlight has a direction
+		float mface = smoothstep(0.15, 0.8, dot(n2, L2) * 0.9 + n2.y * 0.2);
+		float mband = smoothstep(-MOON_RIM_PX * 2.0, -0.5, d_s) * mface * (1.0 - smoothstep(0.6, 1.0, t));
+		float ma = clamp(mband * MOON_RIM_A * dark * (1.0 + 0.4 * NIGHT_RIM * lam), 0.0, 0.75);
+		col = mix(col, g_key.rgb * mix(0.85, 1.0, lam), ma);
+		col += g_key.rgb * MOON_RIM_GLOW * ma * mface;
 
 		// 7. lantern light (Mossling writes i_light from LampRegistry at 2 Hz): a warm screen fill
 		// stronger on the lamp-facing side, plus a warm rim on that edge (QA round 1)
@@ -821,7 +878,7 @@ void fragment() {
 		float night = 1.0 - smoothstep(0.35, 0.8, luma(g_ambient.rgb));
 		vec3 shine_col = u_shine.rgb * mix(1.0, NIGHT_SHINE, night) * mix(vec3(1.0), g_ambient.rgb, 0.25);
 		float lid = clamp(i_anim.z, 0.0, 1.0);
-		float closed = i_misc.w;
+		float closed = closed_id;
 		float hl_side = sign(L2.x + 1e-3);
 		float eye_id = i_face.x;
 		float eyes = 0.0;
@@ -918,9 +975,30 @@ void fragment() {
 		col = mix(col, ink, mline * 0.85 * on_body);
 		vec3 tongue = mix(ink, i_cheek.rgb * g_ambient.rgb, smoothstep(0.0, -0.025, mp.y));
 		col = mix(col, tongue, mfill * on_body);
+		// nibble: a little clover held in the mouth (a stem to a three-lobed leaf on the facing
+		// side), grows in with leaf_k; drawn over the tummy so it never leaves the silhouette
+		if (leaf_k > 0.01) {
+			float side = facing >= 0.0 ? 1.0 : -1.0;
+			float lk = leaf_k;
+			vec2 m0 = vec2(lx * 1.1, ey - 0.085);
+			vec2 lc = m0 + vec2(side * 0.15, -0.12) * lk;
+			float dstem = sd_capsule(ps, m0, lc, 0.012 * lk);
+			float dclov = 1e3;
+			for (int k = 0; k < 3; k++) {
+				float a = (float(k) - 1.0) * 2.1 + side * 0.5;
+				vec2 lob = lc + vec2(sin(a), cos(a)) * 0.046 * lk;
+				dclov = min(dclov, length(ps - lob) - 0.044 * lk);
+			}
+			float dl = min(dstem, dclov) * S;
+			float lcov = (1.0 - smoothstep(-aa * 0.8, aa * 0.8, dl)) * on_body;
+			float ledge = smoothstep(-2.2, 0.0, dl);
+			vec3 leaf_c = u_leaf.rgb * g_ambient.rgb * mix(1.0, 0.82, ledge);
+			leaf_c += g_key.rgb * g_ambient.rgb * 0.12 * smoothstep(0.0, 0.03, dot(ps - lc, vec2(-side, 1.0)));
+			col = mix(col, leaf_c, lcov);
+		}
 
 		// 10. finish: grain anchored to the creature + TPDF dither; premultiplied output + halo
-		col = finish(col, dp, FRAGCOORD.xy, GRAIN_OBJECT);
+		col = finish(col, dp * u_grain_density, FRAGCOORD.xy, GRAIN_OBJECT * mix(1.0, NIGHT_GRAIN, night));
 		COLOR = vec4((col * cover + halo_rgb) * (1.0 - nest_a) + nest_col * nest_a, cover + nest_a * (1.0 - cover)) * fade;
 	}
 }

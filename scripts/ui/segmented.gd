@@ -2,7 +2,7 @@ class_name Segmented
 extends Control
 ## Segmented control (Art Bible §9.5: Garden tabs, Album tabs, Music, Haptics, Language). A
 ## surface_hi track (never glass on glass) with a primary selection pill that glides on the `move`
-## spring; the selected label is surface_hi on primary (4.55:1), the others ink. Every segment is a
+## spring; the selected label is surface_hi on primary_pressed (5.86:1), the others ink. Every segment is a
 ## full-height hit; touch-down presses that segment (PressFeedback), the change plays S15 + TICK.
 
 # Data boundary: values read from JSON / Dictionaries are Variants and each one is converted
@@ -134,5 +134,5 @@ func _draw() -> void:
 	track.set_border_width_all(roundi(HAIRLINE_DP * UiTokens.PX_PER_DP))
 	draw_style_box(track, Rect2(Vector2.ZERO, size))
 	var ph := size.y - INSET * 2.0
-	var pill := UiTokens.fill_box(UiTokens.color(&"primary"), ph * 0.5, UiTokens.E1)
+	var pill := UiTokens.fill_box(UiTokens.color(&"primary_pressed"), ph * 0.5, UiTokens.E1)
 	draw_style_box(pill, Rect2(Vector2(_pill_x, INSET), Vector2(_seg_w(), ph)))

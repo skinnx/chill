@@ -242,7 +242,7 @@ def chime_tube(svg: Svg, tube_len: float, string_len: float, paper: bool) -> Par
     h = string_len + tube_len + (22 if paper else 4)
     p = Part(svg, w, h, (0.5, 0.0))
     cx = w / 2
-    p.line([(cx, 0.6), (cx, string_len + 1)], LINE, 1.0, 0.7)
+    p.line([(cx, 0.6), (cx, string_len + 1)], LINE, 1.8, 0.95)
     y0 = string_len
     tube = smooth_path([(cx - 4.0, y0 + 1.4), (cx, y0), (cx + 4.0, y0 + 1.4), (cx + 4.4, y0 + tube_len * 0.5),
                         (cx + 4.4, y0 + tube_len - 2.4), (cx + 2.6, y0 + tube_len - 0.4), (cx, y0 + tube_len),
