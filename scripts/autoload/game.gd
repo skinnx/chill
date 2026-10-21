@@ -57,6 +57,8 @@ var _greeter_left_s: float = -1.0
 var _session_rng := RandomNumberGenerator.new()
 var _seed_override: int = 0
 var _has_seed_override: bool = false
+## Species napping right now, reported by the creature layer (AUDIO_BIBLE §8.7 snores).
+var _sleepers: PackedStringArray = PackedStringArray()
 
 
 func _ready() -> void:
@@ -289,8 +291,18 @@ func _dispatch(events: Array[Dictionary], catch_up: bool) -> void:
 		basket_changed.emit(n, sim.basket_dew())
 
 
-## AudioDirector.set_world_state (AUDIO_BIBLE §8.7, §11): owned chime shells and the
-## voice_step of every mossling in the hollow. Sleepers stay 0 until the creature brain exists.
+## The creature layer reports who is napping (view-side state, ARCHITECTURE §5.4): sleepers
+## snore at night and do not coo.
+func report_sleepers(species: PackedStringArray) -> void:
+	if species == _sleepers:
+		return
+	_sleepers = species
+	if is_ready:
+		_push_audio_state()
+
+
+## AudioDirector.set_world_state (AUDIO_BIBLE §8.7, §11): owned chime shells, the voice_step of
+## every awake mossling in the hollow and the number of nappers (from report_sleepers).
 func _push_audio_state() -> void:
 	var shells := 0
 	for id: StringName in content.decor_by_id:
@@ -298,10 +310,14 @@ func _push_audio_state() -> void:
 		if fx.has(FX_CHIME_NOTE):
 			shells += sim.owned_count(id)
 	var awake := PackedInt32Array()
+	var sleeping := 0
 	for p: Dictionary in sim.state.present:
+		if _sleepers.has(String(p["species"])):
+			sleeping += 1
+			continue
 		var sp: Dictionary = content.species_by_id.get(StringName(p["species"]), {})
 		awake.append(int(sp.get("voice_step", 0)))
-	AudioDirector.set_world_state(shells, awake, 0)
+	AudioDirector.set_world_state(shells, awake, sleeping)
 
 
 func _rebase() -> void:

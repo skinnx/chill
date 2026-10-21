@@ -1,0 +1,7 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/world/silhouette_layer.gd" id="1_sil"]
+
+[node name="TreeLine" type="Node2D"]
+script = ExtResource("1_sil")
+kind = 1

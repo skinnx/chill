@@ -1,0 +1,71 @@
+{
+	"schema": 1,
+	"doc": "L5 foreground frame atlas (props_svg.py)",
+	"atlas": "res://art/props/fg_atlas.svg",
+	"size": [
+		1024,
+		384
+	],
+	"parts": [
+		{
+			"id": "fg_reeds",
+			"region": [
+				24,
+				24,
+				300,
+				240
+			],
+			"anchor": "bottom",
+			"origin": [
+				-20,
+				1684
+			],
+			"material": "willow_leaf",
+			"sway": [
+				6.0,
+				133,
+				0.95
+			]
+		},
+		{
+			"id": "fg_clover",
+			"region": [
+				372,
+				24,
+				250,
+				210
+			],
+			"anchor": "bottom",
+			"origin": [
+				846,
+				1716
+			],
+			"material": "moss",
+			"sway": [
+				3.0,
+				120,
+				0.9
+			]
+		},
+		{
+			"id": "fg_bough",
+			"region": [
+				670,
+				24,
+				280,
+				320
+			],
+			"anchor": "top",
+			"origin": [
+				812,
+				-16
+			],
+			"material": "willow_leaf",
+			"sway": [
+				5.0,
+				76,
+				0.0
+			]
+		}
+	]
+}

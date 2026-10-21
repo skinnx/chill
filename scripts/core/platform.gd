@@ -68,7 +68,10 @@ static func os_reduce_motion() -> int:
 		var r: Variant = JavaScriptBridge.eval("window.matchMedia('(prefers-reduced-motion: reduce)').matches", true)
 		return UNKNOWN if r == null else (1 if bool(r) else 0)
 	if DisplayServer.get_name() != "headless" and DisplayServer.has_method("accessibility_should_reduce_animation"):
-		return 1 if bool(DisplayServer.call("accessibility_should_reduce_animation")) else 0
+		# Returns -1 where unimplemented (4.7.2: everywhere but macOS/Windows, e.g. Linux/Xvfb);
+		# a plain bool() would turn that into "reduce motion on".
+		var v := int(DisplayServer.call("accessibility_should_reduce_animation"))
+		return UNKNOWN if v < 0 else v
 	return UNKNOWN
 
 

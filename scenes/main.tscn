@@ -1,12 +1,19 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=15 format=3]
 
 [ext_resource type="Script" path="res://scripts/main/main.gd" id="1_main"]
-[ext_resource type="Script" path="res://scripts/main/placeholder_band.gd" id="2_band"]
 [ext_resource type="Script" path="res://scripts/main/layout_debug.gd" id="3_dbg"]
 [ext_resource type="Script" path="res://scripts/ui/safe_area_container.gd" id="4_safe"]
 [ext_resource type="PackedScene" path="res://scenes/garden/plots_layer.tscn" id="5_plots"]
 [ext_resource type="PackedScene" path="res://scenes/garden/decor_layer.tscn" id="6_decor"]
 [ext_resource type="PackedScene" path="res://scenes/creatures/creature_layer.tscn" id="7_creatures"]
+[ext_resource type="PackedScene" path="res://scenes/world/sky.tscn" id="w1_sky"]
+[ext_resource type="PackedScene" path="res://scenes/world/far_hills.tscn" id="w2_far"]
+[ext_resource type="PackedScene" path="res://scenes/world/mid_hills.tscn" id="w3_mid"]
+[ext_resource type="PackedScene" path="res://scenes/world/meadow.tscn" id="w4_meadow"]
+[ext_resource type="PackedScene" path="res://scenes/world/stream.tscn" id="w5_stream"]
+[ext_resource type="PackedScene" path="res://scenes/world/props.tscn" id="w6_props"]
+[ext_resource type="PackedScene" path="res://scenes/world/foreground.tscn" id="w7_fg"]
+[ext_resource type="PackedScene" path="res://scenes/world/air.tscn" id="w8_air"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_main")
@@ -19,9 +26,7 @@ position = Vector2(540, 960)
 [node name="Sky" type="Parallax2D" parent="World"]
 scroll_scale = Vector2(0, 0)
 
-[node name="Placeholder" type="Node2D" parent="World/Sky"]
-script = ExtResource("2_band")
-rect = Rect2(-400, -800, 1880, 1520)
+[node name="SkyQuad" parent="World/Sky" instance=ExtResource("w1_sky")]
 
 [node name="Celestial" type="Parallax2D" parent="World"]
 scroll_scale = Vector2(0.02, 0.02)
@@ -29,40 +34,30 @@ scroll_scale = Vector2(0.02, 0.02)
 [node name="FarHills" type="Parallax2D" parent="World"]
 scroll_scale = Vector2(0.1, 0.1)
 
-[node name="Placeholder" type="Node2D" parent="World/FarHills"]
-script = ExtResource("2_band")
-slot = 1
-rect = Rect2(-400, 640, 1880, 180)
+[node name="FarLayer" parent="World/FarHills" instance=ExtResource("w2_far")]
 
 [node name="MidHills" type="Parallax2D" parent="World"]
 scroll_scale = Vector2(0.3, 0.3)
 
-[node name="Placeholder" type="Node2D" parent="World/MidHills"]
-script = ExtResource("2_band")
-slot = 2
-rect = Rect2(-400, 705, 1880, 120)
+[node name="TreeLine" parent="World/MidHills" instance=ExtResource("w3_mid")]
 
 [node name="Ground" type="Parallax2D" parent="World"]
 
 [node name="Meadow" type="Node2D" parent="World/Ground"]
 
-[node name="Placeholder" type="Node2D" parent="World/Ground/Meadow"]
-script = ExtResource("2_band")
-slot = 3
-rect = Rect2(-400, 780, 1880, 1160)
+[node name="MeadowGround" parent="World/Ground/Meadow" instance=ExtResource("w4_meadow")]
 
 [node name="Stream" type="Node2D" parent="World/Ground"]
 
-[node name="Placeholder" type="Node2D" parent="World/Ground/Stream"]
-script = ExtResource("2_band")
-slot = 4
-stream = true
+[node name="Brook" parent="World/Ground/Stream" instance=ExtResource("w5_stream")]
 
 [node name="Play" type="Node2D" parent="World/Ground"]
 y_sort_enabled = true
 
 [node name="Props" type="Node2D" parent="World/Ground/Play"]
 y_sort_enabled = true
+
+[node name="PropsLayer" parent="World/Ground/Play/Props" instance=ExtResource("w6_props")]
 
 [node name="Plots" type="Node2D" parent="World/Ground/Play"]
 y_sort_enabled = true
@@ -81,11 +76,15 @@ y_sort_enabled = true
 
 [node name="Particles" type="Node2D" parent="World/Ground"]
 
+[node name="Air" parent="World/Ground/Particles" instance=ExtResource("w8_air")]
+
 [node name="LayoutDebug" type="Node2D" parent="World/Ground"]
 script = ExtResource("3_dbg")
 
 [node name="Foreground" type="Parallax2D" parent="World"]
 scroll_scale = Vector2(1.3, 1.3)
+
+[node name="FrameLayer" parent="World/Foreground" instance=ExtResource("w7_fg")]
 
 [node name="HUD" type="CanvasLayer" parent="."]
 layer = 10

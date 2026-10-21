@@ -1,0 +1,578 @@
+{
+	"schema": 1,
+	"doc": "Generates art/props/props_atlas.svg (tone masks) + art/props/props_atlas.json (regions, layout).",
+	"atlas": "res://art/props/props_atlas.svg",
+	"size": [
+		1024,
+		1152
+	],
+	"pad": 10,
+	"parts": [
+		{
+			"id": "willow_trunk",
+			"prop": "willow",
+			"region": [
+				510,
+				10,
+				210,
+				330
+			],
+			"centre": [
+				-10,
+				94
+			],
+			"sort_y": 222,
+			"material": "wood_bark",
+			"shadow": [
+				64,
+				14,
+				1.0,
+				255
+			]
+		},
+		{
+			"id": "willow_curtains",
+			"prop": "willow",
+			"region": [
+				10,
+				10,
+				480,
+				360
+			],
+			"centre": [
+				-10,
+				44
+			],
+			"sort_y": 223,
+			"material": "willow_leaf",
+			"sway": [
+				4.0,
+				76,
+				1.0
+			]
+		},
+		{
+			"id": "willow_crown",
+			"prop": "willow",
+			"region": [
+				10,
+				390,
+				480,
+				270
+			],
+			"centre": [
+				0,
+				-141
+			],
+			"sort_y": 225,
+			"material": "willow_leaf",
+			"sway": [
+				1.5,
+				47,
+				1.0
+			]
+		},
+		{
+			"id": "chime_branch",
+			"prop": "willow",
+			"region": [
+				508,
+				880,
+				286,
+				64
+			],
+			"centre": [
+				125,
+				66
+			],
+			"sort_y": 226,
+			"material": "wood_bark"
+		},
+		{
+			"id": "mailbox_post",
+			"prop": "mailbox",
+			"region": [
+				310,
+				880,
+				26,
+				84
+			],
+			"centre": [
+				-2,
+				30
+			],
+			"sort_y": 62,
+			"material": "wood_bark",
+			"shadow": [
+				24,
+				7,
+				1.0,
+				72
+			],
+			"rim": 0
+		},
+		{
+			"id": "mailbox_body",
+			"prop": "mailbox",
+			"region": [
+				814,
+				880,
+				76,
+				54
+			],
+			"centre": [
+				-3,
+				-17
+			],
+			"sort_y": 63,
+			"material": "wood_painted"
+		},
+		{
+			"id": "mailbox_roof",
+			"prop": "mailbox",
+			"region": [
+				144,
+				1088,
+				86,
+				30
+			],
+			"centre": [
+				-3,
+				-45
+			],
+			"sort_y": 64,
+			"material": "roof_slate"
+		},
+		{
+			"id": "mailbox_flag",
+			"prop": "mailbox",
+			"region": [
+				100,
+				1088,
+				24,
+				34
+			],
+			"centre": [
+				36,
+				-24
+			],
+			"sort_y": 65,
+			"material": "toadstool_cap",
+			"rim": 0
+		},
+		{
+			"id": "stump_back",
+			"prop": "stump",
+			"region": [
+				800,
+				390,
+				210,
+				180
+			],
+			"centre": [
+				0,
+				0
+			],
+			"sort_y": -26,
+			"material": "wood_bark",
+			"shadow": [
+				100,
+				16,
+				1.0,
+				88
+			]
+		},
+		{
+			"id": "stump_top",
+			"prop": "stump",
+			"region": [
+				10,
+				1016,
+				150,
+				52
+			],
+			"centre": [
+				4,
+				-60
+			],
+			"sort_y": -25,
+			"material": "wood_cut"
+		},
+		{
+			"id": "stump_front",
+			"prop": "stump",
+			"region": [
+				10,
+				680,
+				210,
+				180
+			],
+			"centre": [
+				0,
+				0
+			],
+			"sort_y": 86,
+			"material": "wood_bark"
+		},
+		{
+			"id": "stump_moss",
+			"prop": "stump",
+			"region": [
+				510,
+				390,
+				270,
+				190
+			],
+			"centre": [
+				26,
+				-1
+			],
+			"sort_y": 87,
+			"material": "moss",
+			"ground": 0.5
+		},
+		{
+			"id": "basket",
+			"prop": "basket",
+			"region": [
+				10,
+				880,
+				140,
+				116
+			],
+			"centre": [
+				0,
+				-4
+			],
+			"sort_y": 48,
+			"material": "wicker",
+			"shadow": [
+				58,
+				10,
+				1.0,
+				52
+			]
+		},
+		{
+			"id": "sun_stone",
+			"prop": "sun_stone_rock",
+			"region": [
+				410,
+				680,
+				264,
+				124
+			],
+			"centre": [
+				0,
+				0
+			],
+			"sort_y": -52,
+			"material": "stone_warm",
+			"shadow": [
+				126,
+				16,
+				1.2,
+				56
+			]
+		},
+		{
+			"id": "stone_moss",
+			"prop": "sun_stone_rock",
+			"region": [
+				272,
+				1016,
+				284,
+				46
+			],
+			"centre": [
+				0,
+				50
+			],
+			"sort_y": 58,
+			"material": "moss",
+			"rim": 0,
+			"ground": 1.0
+		},
+		{
+			"id": "spring_rock",
+			"prop": "spring_rock",
+			"region": [
+				694,
+				680,
+				180,
+				120
+			],
+			"centre": [
+				0,
+				0
+			],
+			"sort_y": -10,
+			"material": "stone_cool",
+			"shadow": [
+				84,
+				12,
+				1.0,
+				56
+			]
+		},
+		{
+			"id": "glow_mushrooms",
+			"prop": "",
+			"region": [
+				180,
+				1016,
+				72,
+				50
+			],
+			"centre": [
+				488,
+				1158
+			],
+			"sort_y": 1182,
+			"material": "glow_mushroom",
+			"emission": 0.55,
+			"rim": 0
+		},
+		{
+			"id": "reeds",
+			"prop": "",
+			"region": [
+				170,
+				880,
+				120,
+				110
+			],
+			"centre": [
+				1030,
+				1352
+			],
+			"sort_y": 1396,
+			"material": "willow_leaf",
+			"sway": [
+				5.0,
+				141,
+				0.95
+			],
+			"rim": 0,
+			"ground": 0.5
+		},
+		{
+			"id": "fern_clump",
+			"prop": "",
+			"region": [
+				240,
+				680,
+				150,
+				132
+			],
+			"centre": [
+				66,
+				1108
+			],
+			"sort_y": 1104,
+			"material": "moss",
+			"sway": [
+				4.0,
+				133,
+				0.97
+			],
+			"ground": 0.8
+		},
+		{
+			"id": "clover_a",
+			"prop": "",
+			"region": [
+				696,
+				1016,
+				70,
+				38
+			],
+			"centre": [
+				430,
+				1290
+			],
+			"sort_y": 1300,
+			"material": "willow_leaf",
+			"rim": 0,
+			"ground": 1.0
+		},
+		{
+			"id": "clover_b",
+			"prop": "",
+			"region": [
+				786,
+				1016,
+				70,
+				38
+			],
+			"centre": [
+				700,
+				1225
+			],
+			"sort_y": 1236,
+			"material": "willow_leaf",
+			"rim": 0,
+			"ground": 1.0
+		},
+		{
+			"id": "clover_c",
+			"prop": "",
+			"region": [
+				876,
+				1016,
+				70,
+				38
+			],
+			"centre": [
+				905,
+				1385
+			],
+			"sort_y": 1396,
+			"material": "willow_leaf",
+			"rim": 0,
+			"ground": 1.0
+		},
+		{
+			"id": "clover_bank",
+			"prop": "",
+			"region": [
+				10,
+				1088,
+				70,
+				38
+			],
+			"centre": [
+				702,
+				1152
+			],
+			"sort_y": 1135,
+			"material": "willow_leaf",
+			"rim": 0,
+			"ground": 1.0
+		},
+		{
+			"id": "moss_mound",
+			"prop": "",
+			"region": [
+				576,
+				1016,
+				100,
+				46
+			],
+			"centre": [
+				378,
+				1150
+			],
+			"sort_y": 1134,
+			"material": "moss",
+			"ground": 0.7
+		},
+		{
+			"id": "moon_rock",
+			"prop": "",
+			"region": [
+				356,
+				880,
+				132,
+				66
+			],
+			"centre": [
+				800,
+				764
+			],
+			"sort_y": 730,
+			"material": "stone_cool",
+			"shadow": [
+				60,
+				9,
+				1.0,
+				795
+			]
+		},
+		{
+			"id": "pebble_a",
+			"prop": "",
+			"region": [
+				304,
+				1088,
+				30,
+				18
+			],
+			"centre": [
+				176,
+				1470
+			],
+			"sort_y": 1470,
+			"material": "pebble_alt",
+			"rim": 0
+		},
+		{
+			"id": "pebble_b",
+			"prop": "",
+			"region": [
+				446,
+				1088,
+				22,
+				14
+			],
+			"centre": [
+				318,
+				1459
+			],
+			"sort_y": 1459,
+			"material": "pebble_alt",
+			"rim": 0
+		},
+		{
+			"id": "pebble_c",
+			"prop": "",
+			"region": [
+				250,
+				1088,
+				34,
+				20
+			],
+			"centre": [
+				468,
+				1451
+			],
+			"sort_y": 1451,
+			"material": "pebble_alt",
+			"rim": 0
+		},
+		{
+			"id": "pebble_d",
+			"prop": "",
+			"region": [
+				402,
+				1088,
+				24,
+				15
+			],
+			"centre": [
+				790,
+				1436
+			],
+			"sort_y": 1436,
+			"material": "pebble_alt",
+			"rim": 0
+		},
+		{
+			"id": "pebble_e",
+			"prop": "",
+			"region": [
+				354,
+				1088,
+				28,
+				17
+			],
+			"centre": [
+				640,
+				1546
+			],
+			"sort_y": 1546,
+			"material": "pebble_alt",
+			"rim": 0
+		}
+	]
+}

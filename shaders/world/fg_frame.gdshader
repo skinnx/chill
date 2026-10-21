@@ -1,0 +1,48 @@
+// L5 foreground frame (Art Bible §4.16): tone-mask corner pieces (reeds, clover, bough) sampled at
+// mip LOD 2 so they read as out of focus, pulled toward g_fg (about -15 L*), a faint rim from the
+// key, a gentle shear sway (k from flower_sway), grain + dither. Same instance-uniform layout as
+// prop_tone for the material and region.
+shader_type canvas_item;
+render_mode blend_mix, unshaded;
+
+#include "res://shaders/inc/world_light.gdshaderinc"
+#include "res://shaders/inc/finish.gdshaderinc"
+
+instance uniform vec4 i_lit : source_color = vec4(0.651, 0.8, 0.584, 0.0);
+instance uniform vec4 i_shade : source_color = vec4(0.439, 0.659, 0.545, 0.0);
+instance uniform vec4 i_detail : source_color = vec4(0.824, 0.902, 0.761, 0.0);
+// x amp px, y k, z pivot UV.y (sways above it; 0 = hangs: sways below), w phase.
+instance uniform vec4 i_sway = vec4(6.0, 120.0, 1.0, 0.0);
+instance uniform vec4 i_region = vec4(0.0, 0.0, 1.0, 1.0);
+
+uniform float blur_lod = 2.0;
+uniform float fg_mix = 0.55;
+uniform float rim_k = 0.3;
+uniform float rim_px = 10.0;
+
+varying vec2 v_luv;
+varying vec2 v_canvas;
+
+void vertex() {
+	vec2 luv = (UV - i_region.xy) / max(i_region.zw, vec2(1e-6));
+	v_luv = luv;
+	float h = i_sway.z > 0.0 ? clamp((i_sway.z - luv.y) / i_sway.z, 0.0, 1.0) : luv.y;
+	float s = sin(TAU * i_sway.y / LOOP_S * g_time + i_sway.w) + 0.3 * sin(TAU * i_sway.y * 1.9 / LOOP_S * g_time + i_sway.w);
+	VERTEX.x += s * i_sway.x * wind_k() * g_motion * h * h;
+	v_canvas = (MODEL_MATRIX * vec4(VERTEX, 0.0, 1.0)).xy;
+}
+
+void fragment() {
+	vec4 m = textureLod(TEXTURE, UV, blur_lod);
+	if (m.a < 0.003) {
+		discard;
+	}
+	vec3 w = m.rgb;
+	float o = clamp(1.0 - (w.r + w.g + w.b), 0.0, 1.0);
+	vec3 alb = w.r * i_lit.rgb + w.g * i_shade.rgb + w.b * i_detail.rgb + o * i_shade.rgb * 0.72;
+	vec3 c = mix(alb * g_ambient.rgb, g_fg.rgb, fg_mix);
+	vec2 kd = key_dir(v_canvas);
+	float ahead = textureLod(TEXTURE, UV + kd * rim_px * TEXTURE_PIXEL_SIZE, blur_lod).a;
+	c += g_key.rgb * g_rim * rim_k * m.a * (1.0 - ahead) * 0.6;
+	COLOR = vec4(finish(c, v_luv / TEXTURE_PIXEL_SIZE * i_region.zw / PX_PER_DP, FRAGCOORD.xy, GRAIN_OBJECT), m.a);
+}
