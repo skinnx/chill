@@ -17,7 +17,9 @@ const STAGE_ALPHA := 0.02
 const QUAD_PX := 8.0
 const GRID_COLUMNS := 16
 const FONT_SAMPLE := "Mossling Meadow Thung lũng Ẫ Ỗ Ữ Ặ Ỵ đ — 0123456789 +−×"
-const FONT_SAMPLE_SIZES: Array[int] = [36, 42, 48, 66, 84]
+## The five type-scale sizes (synthesis §3), from the one place that defines them.
+const FONT_SAMPLE_SIZES: Array[int] = [ThemeBuilder.SIZE_CAPTION, ThemeBuilder.SIZE_LABEL, ThemeBuilder.SIZE_BODY,
+		ThemeBuilder.SIZE_HUD, ThemeBuilder.SIZE_TITLE]
 
 static var _registered: Array[Material] = []
 

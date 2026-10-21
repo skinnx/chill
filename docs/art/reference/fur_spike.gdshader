@@ -1,7 +1,7 @@
-// Feasibility spike for docs/ART_BIBLE.md §4.5 / §5 — reference only, NOT production code.
+// Feasibility spike for docs/ART_BIBLE.md §4.11 / §5 — reference only, NOT production code.
 // Verified 2026-10-20: compiles and renders on 4.7.2 opengl3_es (llvmpipe) with 16 instance uniforms,
 // blend_premul_alpha, global uniforms and dFdx/fwidth. Render: fur_spike_golden.png (golden-hour globals).
-// Production shader = shaders/creature/mossling_fur.gdshader per ART_BIBLE §4.5 (adds ears/tails/antennae
+// Production shader = shaders/creature/mossling_fur.gdshader per ART_BIBLE §4.11 / §5 (adds ears/tails/antennae
 // variants, patterns, eye types, lamp light, wind follow, LOD). Numbers here are the tuned starting values.
 shader_type canvas_item;
 render_mode blend_premul_alpha, unshaded;
@@ -17,7 +17,8 @@ global uniform vec4 g_shadow;
 global uniform float g_rim;
 global uniform float g_backlight;
 global uniform float g_lights;
-global uniform vec4 g_lamp0;
+// (The spike declared an unused `g_lamp0` global; it is not a project global. Lantern light comes
+// from the i_light instance uniform + g_accent, ART_BIBLE §5.5-5.6.)
 
 instance uniform vec4 i_fur : source_color = vec4(0.949, 0.890, 0.804, 0.5);
 instance uniform vec4 i_belly : source_color = vec4(0.984, 0.953, 0.906, 1.0);

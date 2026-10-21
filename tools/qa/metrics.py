@@ -37,7 +37,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import math
 import sys
 from pathlib import Path
 
@@ -68,8 +67,8 @@ BAND_MAX_SHARE = 0.005
 CONTRAST_MIN = 4.5
 CONTRAST_PERCENTILE = 5.0
 TEXT_EXTREME_SHARE = 0.02
-## A pixel is a glyph (or anti-aliasing) pixel when it is closer to the declared font colour than
-## this share of the rect-median-to-font distance (OKLab); everything else is backdrop.
+# A pixel is a glyph (or anti-aliasing) pixel when it is closer to the declared font colour than
+# this share of the rect-median-to-font distance (OKLab); everything else is backdrop.
 GLYPH_DISTANCE_SHARE = 0.5
 MIN_BG_PIXELS = 16
 
@@ -363,7 +362,8 @@ def selftest() -> int:
     night = np.zeros((200, 200, 3), dtype=np.uint8)
     night[:] = (0x26, 0x33, 0x5E)  # dark low-chroma night sky: fails HSV by design (A6)
     v = check_v2(night, "night", "auto")
-    expect("night sky fails HSV but passes the A6 OKLCh rule", (not v["hsv"]["pass"]) and v["oklch"]["pass"] and v["pass"], v)
+    expect("night sky fails HSV but passes the A6 OKLCh rule",
+           (not v["hsv"]["pass"]) and v["oklch"]["pass"] and v["pass"], v)
 
     panel = np.zeros((120, 400, 3), dtype=np.uint8)
     panel[:] = (0xF0, 0xEE, 0xE9)
@@ -375,7 +375,8 @@ def selftest() -> int:
     expect("ink on surface >= 4.5:1 (measured colour)", c["pass"], c)
     pale = panel.copy()
     pale[40:80, 20:380:6] = (0xC8, 0xC4, 0xBC)
-    c = check_contrast(pale, [{"name": "pale", "rect": [0, 0, 400, 120], "font_color": [0xC8 / 255, 0xC4 / 255, 0xBC / 255, 1]}], CONTRAST_MIN)
+    pale_ink = [0xC8 / 255, 0xC4 / 255, 0xBC / 255, 1.0]
+    c = check_contrast(pale, [{"name": "pale", "rect": [0, 0, 400, 120], "font_color": pale_ink}], CONTRAST_MIN)
     expect("pale text on surface fails", not c["pass"], c)
     print("selftest:", "ok" if ok else "FAILED")
     return 0 if ok else 1

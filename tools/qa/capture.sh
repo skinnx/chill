@@ -19,6 +19,11 @@
 #   tools/qa/capture.sh set [--out-dir=DIR] [--size=WxH]
 #       The Art Bible §11.2 rater set that the current build can show (5 phases + day rain), the
 #       metrics report and a contact sheet. Default qa/out/set at 1080x2400.
+#   tools/qa/capture.sh loudness [--minutes=M] [--skip=S] [--out-dir=DIR] [--movie-size=WxH] [game args]
+#       A1/A2 audio contract on real idle play: records M minutes (default 10) after an S-second
+#       pre-roll (default 30) with Movie Maker at a tiny frame size (default 270x600, set on a
+#       throw-away project copy so project.godot is untouched), then tools/audio/measure.py --gate.
+#       Writes DIR/loudness.{avi,txt,log} (default qa/out/loudness); exit 1 if A1/A2 fail.
 #
 # Environment: GODOT (default godot), CAPTURE_TIMEOUT seconds per Godot run (default 900),
 # PYTHON (default python3).
@@ -36,6 +41,8 @@ MOVIE_SCREEN=1280x2560
 FUZZ=2%
 MAX_DIFF_SHARE=0.001
 DRIVER=opengl3_es
+# Project directory Godot runs (cmd_loudness points it at a throw-away copy).
+PROJECT=.
 
 die() { echo "capture.sh: $*" >&2; exit 2; }
 
@@ -55,7 +62,7 @@ run_godot() {
 	mkdir -p "$(dirname "$log")"
 	XDG_DATA_HOME="$profile/data" XDG_CACHE_HOME="$profile/cache" \
 		timeout "$CAPTURE_TIMEOUT" xvfb-run -a -s "-screen 0 ${screen}x24" \
-		"$GODOT" --path . --rendering-driver "$DRIVER" "$@" > "$log" 2>&1 || status=$?
+		"$GODOT" --path "$PROJECT" --rendering-driver "$DRIVER" "$@" > "$log" 2>&1 || status=$?
 	rm -rf "$profile"
 	if grep -qE "SCRIPT ERROR|^ERROR:" "$log"; then
 		grep -E -A1 "SCRIPT ERROR|^ERROR:" "$log" >&2
@@ -237,8 +244,48 @@ cmd_set() {
 	echo "set: ${#imgs[@]} stills, $dir/metrics.json, $dir/contact_sheet.png"
 }
 
+# A1 loudness capture on a throw-away copy of the project whose .movie size is tiny: audio is
+# what is measured, and llvmpipe + MJPEG at 1080x2400 would take ~30 min for 10 min of play.
+cmd_loudness() {
+	local minutes=10 skip=30 dir=qa/out/loudness msize=270x600 pass=()
+	local a
+	for a in "$@"; do
+		case $a in
+			--minutes=*) minutes=${a#--minutes=} ;;
+			--skip=*) skip=${a#--skip=} ;;
+			--out-dir=*) dir=${a#--out-dir=} ;;
+			--movie-size=*) msize=${a#--movie-size=} ;;
+			--driver=*) DRIVER=${a#--driver=} ;;
+			*) pass+=("$a") ;;
+		esac
+	done
+	[[ $msize =~ ^[0-9]+x[0-9]+$ ]] || die "bad --movie-size=$msize"
+	[ -d .godot ] || die "no .godot import cache; run godot --headless --path . --import first"
+	has_arg --seed= "${pass[@]}" || pass+=("--seed=1")
+	local frames
+	frames=$(awk -v m="$minutes" -v s="$skip" -v f="$MOVIE_FPS" 'BEGIN { printf "%d", (m * 60 + s) * f }')
+	rm -rf "$dir"
+	mkdir -p "$dir"
+	local work abs_dir
+	work=$(mktemp -d)
+	abs_dir=$(realpath "$dir")
+	tar -cf - --exclude=./.git --exclude=./build --exclude=./qa --exclude=./reports \
+		--exclude=./tools/qa/web/node_modules --exclude='__pycache__' . | tar -xf - -C "$work"
+	sed -i -E "s#^window/size/window_width_override\.movie=.*#window/size/window_width_override.movie=${msize%x*}#; \
+		s#^window/size/window_height_override\.movie=.*#window/size/window_height_override.movie=${msize#*x}#" \
+		"$work/project.godot"
+	local status=0
+	PROJECT=$work run_godot "$MOVIE_SCREEN" "$dir/loudness.log" --write-movie "$abs_dir/loudness.avi" \
+		--fixed-fps "$MOVIE_FPS" -s res://tools/qa/capture.gd -- --no-save --out=none --animate \
+		--frames="$frames" "${pass[@]}" || status=$?
+	rm -rf "$work"
+	grep -E "^capture: |recorded in" "$dir/loudness.log" || true
+	[ "$status" -eq 0 ] || return "$status"
+	"$PYTHON" -I tools/audio/measure.py "$dir/loudness.avi" --gate --skip-s "$skip" | tee "$dir/loudness.txt"
+}
+
 sub=${1:-}
-[ -n "$sub" ] || { sed -n '2,24p' "$0"; exit 2; }
+[ -n "$sub" ] || { sed -n '2,29p' "$0"; exit 2; }
 shift
 case $sub in
 	still) cmd_still "$@" ;;
@@ -246,5 +293,6 @@ case $sub in
 	encode) cmd_encode "$@" ;;
 	determinism) cmd_determinism "$@" ;;
 	set) cmd_set "$@" ;;
-	*) die "unknown command '$sub' (still | video | encode | determinism | set)" ;;
+	loudness) cmd_loudness "$@" ;;
+	*) die "unknown command '$sub' (still | video | encode | determinism | set | loudness)" ;;
 esac

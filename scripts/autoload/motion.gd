@@ -150,12 +150,26 @@ func fade_out(item: CanvasItem, token: StringName = &"exit") -> Tween:
 ## A new analytic spring with a token's f and zeta (critically damped under Reduce Motion).
 func spring(token: StringName, value: float = 0.0) -> Spring:
 	var p := spring_params(token)
-	return Spring.new(p.x, p.y, value)
+	var s := Spring.new(p.x, p.y, value)
+	var eps := rest_epsilon()
+	s.rest_epsilon_x = float(eps.get("x", s.rest_epsilon_x))
+	s.rest_epsilon_v = float(eps.get("v", s.rest_epsilon_v))
+	return s
 
 
 func spring_2d(token: StringName, value: Vector2 = Vector2.ZERO) -> Spring2D:
 	var p := spring_params(token)
-	return Spring2D.new(p.x, p.y, value)
+	var s := Spring2D.new(p.x, p.y, value)
+	var eps := rest_epsilon()
+	s.rest_epsilon_x = float(eps.get("x", s.rest_epsilon_x))
+	s.rest_epsilon_v = float(eps.get("v", s.rest_epsilon_v))
+	return s
+
+
+## motion_tokens springs.integrator.rest_epsilon: {x, v}, the distance and speed below which a
+## spring counts as settled (empty when the tokens do not define it; the springs' defaults apply).
+func rest_epsilon() -> Dictionary:
+	return _sub(_sub(_sect("springs"), "integrator"), "rest_epsilon")
 
 
 ## (f_hz, zeta) of a spring token.

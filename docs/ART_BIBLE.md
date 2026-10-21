@@ -24,7 +24,7 @@ This document turns `docs/research/00-SYNTHESIS.md` (D2, D7, D8, D9 binding) and
 
 | # | Decision | Why |
 |---|---|---|
-| A1 | **World coordinates = the GDD's 1080×1920 design frame, bottom-anchored.** `World` root is translated by `g_world_offset = (0, viewport_h − 1920)`; taller phones get more sky above y = 0 | Matches `spots.json` (`anchor: bottom`) and 02 §1.3 (Z2 absorbs slack) |
+| A1 | **World coordinates = the GDD's 1080×1920 design frame, bottom-anchored.** `World` root is translated by `g_world_offset = (round((viewport_w − 1080)/2), viewport_h − 1920)`; taller phones get more sky above y = 0, wider screens centre the 1080 column | Matches `spots.json` (`anchor: bottom`) and 02 §1.3 (Z2 absorbs slack) |
 | A2 | **Creatures = one SDF quad per creature** (body, ears, tail, antennae, pattern, face in one `mossling_fur.gdshader`, 16 instance uniforms) + a separate contact-shadow quad. Feasibility verified on `opengl3_es` [V] | Seamless felt silhouette (smooth-union of parts), 1–2 draw calls per creature, crisp under squash, no SVG rasters (C11) |
 | A3 | **Flora = tone-mask SVG stamp atlas + procedurally built bed meshes** (one `MeshInstance2D` per bed, stems as tapered strips, petals/leaves as atlas quads); sway in the vertex shader; unfurl rebuilds the mesh for 600 ms | Hand-authored shapes, procedural variety, 1 draw call per bed |
 | A4 | **Palette gradient keyed by `g_day`** at 0.0/0.2/0.4/0.6/0.8/1.0 = night/dawn/day/golden/dusk/night; `world.json` owns how clock time drives `g_day` | The GDD already defined `g_day` per phase; one owner per fact |
@@ -69,7 +69,7 @@ What makes it ours (signature): **backlit peach-fuzz rims on felted creatures at
 
 ### 1.4 Reference frame C — Light rain, 11:00
 - **Palette:** day palette after the rain transform (§3.4): sky `#82A7C4` → `#A6C2D3` → `#D2DFE3`, key flattened to `#E3DDCB`, meadow `#97B49B` → `#88A88C`. There is no sun disc, no shafts and no dust.
-- **Sky:** soft cloud banks (cloud cover 0.85 from `world.json`) drift left at 4 dp/s and cover most of the sky.
+- **Sky:** soft cloud banks (cloud cover 0.85 from `world.json`) drift left at ≈ 5 dp/s (`palettes.json weather.cloud_autoscroll_px_s.rain` −16 px/s) and cover most of the sky.
 - **Rain:** 120 streaks (1×12 dp, α 0.25–0.40, tilted 8° downwind) fall at 360–720 px/s. 6 splash rings per second bloom on the meadow (flattened ×0.35 for perspective). The brook shows procedural rain rings, and the meadow gets a faint wet sheen (+15 % sky reflection).
 - **Creatures:**
   - Those at shelter spots (`fern_shade`, `willow_root`, `stump_hollow`, `toadstool_ring` with ≥ 3 toadstools) tuck in with ears flattened.
@@ -85,7 +85,7 @@ What makes it ours (signature): **backlit peach-fuzz rims on felted creatures at
 - **Units:**
   - design px in a 1080×1920 frame, x right, y down; 1 dp = 3 px (C2);
   - normalised GDD values are converted as `px = (x·1080, y·1920)`.
-- **Bottom-anchored world:** `World.position = (0, H − 1920)` with H = viewport height (1920–2600 on phones). Shaders receive the same offset as `g_world_offset`. All positions in this document are design px; add the offset to get canvas px.
+- **Bottom-anchored world:** `World.position = (round((W − 1080)/2), H − 1920)` with W, H = viewport size (W = 1080 and H = 1920–2600 on phones; `scripts/main/main.gd _layout`). Shaders receive the same offset as `g_world_offset`. All positions in this document are design px; add the offset to get canvas px.
 - **Taller screens (20:9 to 23:9):**
   - the extra 480–680 px are sky;
   - the sky gradient always spans from the *visible* top to the horizon (§4.3);
@@ -138,7 +138,7 @@ Camera: a static `Camera2D` with idle drift ≤ 4 dp/s on a 45 s sine path (`mot
 - **Meadow crest** (the walkable hill top):
   - through (0, 800), (300, 790), (600, 758), (800, 742), (1000, 790), (1080, 805), plus `6·fbm(f0 4, 6 oct, 0.68, seed 31)`;
   - plus a grass fringe of 140 bumps, radius 3–10 px.
-  - Creatures whose feet are above the crest line (`entry_hill` 605,682) are parented to `L4/BehindCrest` (drawn before the meadow), so they rise into view as they hop over.
+  - Creatures whose feet are above the crest line (`entry_hill` 605,682) are parented to `L4/BehindCrest` (a node the creature owner adds under `World/Ground`, drawn before `Meadow`), so they rise into view as they hop over.
 - **Brook:**
   - centre line = `spots.json stream.polyline`, (1123,1425) → (972,1444) → (821,1471) → (670,1486) → (540,1482) → (389,1494) → (238,1509) → (86,1517) → (−43,1526), Catmull-Rom;
   - water ribbon 69 px tall (`water_width` 0.036 read as a fraction of frame height; see §12);
@@ -151,8 +151,8 @@ Camera: a static `Camera2D` with idle drift ≤ 4 dp/s on a 45 s sine path (`mot
 | Prop | Centre | Size (px) | Tap | Art notes |
 |---|---|---|---|---|
 | `willow` | (130, 576) | 420×510 | — | Weeping willow, trunk at x ≈ 120, canopy y 321–831, 11 hanging frond strips. Frames the top-left (refuge) |
-| `wind_chime_branch` | (302, 645) | 120×180 | ring_chime | Low branch of the willow; chimes hang from it |
-| `mailbox` | (76, 758) | 90×144 | open_postcards | Flag rises and glows softly when a postcard is unread |
+| `wind_chime_branch` | (324, 645) | 120×180 | ring_chime | Low branch of the willow; chimes hang from it |
+| `mailbox` | (97, 758) | 90×144 | open_postcards | Flag rises and glows softly when a postcard is unread |
 | `stump` | (972, 854) | 210×180 | — | Old stump with a front hollow (`stump_hollow` spot), moss, a fern |
 | `basket` | (540, 922) | 132×108 | open_basket | Wicker basket; visibly fills with dew drops and gifts |
 | `sun_stone_rock` | (540, 1123) | 261×120 | — | **FOCAL**: broad warm flat stone; `sun_stone` spot on top (540, 1085) |
@@ -168,15 +168,15 @@ Camera: a static `Camera2D` with idle drift ≤ 4 dp/s on a 45 s sine path (`mot
 | moss_cushion | (378, 1142) | 0.82 |
 | clover_bank | (702, 1142) | 0.82 |
 | fern_shade | (86, 1123) | 0.81 |
-| stream_bend | (356, 1444) | 0.98 |
+| stream_bend | (356, 1444) | 0.97 |
 | willow_root | (140, 826) | 0.65 |
 | hill_crest | (605, 778) | 0.63 |
 | stump_hollow | (972, 839) | 0.66 |
 | moon_rock | (799, 739) | 0.62 |
 | toadstool_ring | (346, 826) | 0.65 |
-| stream_stones | (713, 1478) | 1.00 |
-| lantern_nook | (977, 1417) | 0.97 |
-| cairn_side | (162, 1425) | 0.97 |
+| stream_stones | (713, 1478) | 0.99 |
+| lantern_nook | (977, 1417) | 0.96 |
+| cairn_side | (162, 1425) | 0.96 |
 
 `moss_cushion` and `clover_bank` get small art-dressing mounds (moss cushion, clover patch) so the spot reads.
 
@@ -189,7 +189,7 @@ Camera: a static `Camera2D` with idle drift ≤ 4 dp/s on a 45 s sine path (`mot
 | `leaf_pinwheel` | scatter | On the slope below the crest, y 714–839 |
 | `toadstool_seat` | ring | Ring around (346, 826) |
 | `pebble_cairn` | stack | Upward at x 49, y 1398 → 1251 |
-| `wind_chime` | string | Along the branch, (259–346, 645–657) |
+| `wind_chime` | string | Along the branch, (280–368, 645–657) |
 
 **Entries:** `entry_fern_gap` (−86, 1123), `entry_stump` (1166, 874), `entry_hill` (605, 682, over the crest), `entry_streamside` (−86, 1430).
 
@@ -228,7 +228,7 @@ Camera: a static `Camera2D` with idle drift ≤ 4 dp/s on a 45 s sine path (`mot
 - **Dock:** pill x 24–1056, y 1541–1781 (240 tall), anchored `bottom = H − max(safe_bottom, 127) − 12`. Button centres x 135/405/675/945 (GDD); hit rects 228×228 at y 1547–1775.
 - **Sheets:** bottom = dock top − 24 (1517), height = round(0.56·H) (1075 → top 442), x 24–1056. The dock stays visible.
 
-The annotated guide is `docs/art/hollow_layout_guide.png`.
+The annotated guide is `docs/art/hollow_layout_guide.png`. It predates the 2026-10-21 I2 nudge (U6: mailbox and wind-chime branch +0.02 = +21.6 px to the right); `spots.json` wins, and `docs/gdd/hollow_layout.png` (`tools/sim/layout_preview.py`) is regenerated from the data.
 
 ---
 
@@ -458,7 +458,7 @@ Verified:
   - GLES3 defaults to `highp` [V `drivers/gles3/shader_gles3.cpp:219`].
   - Declare colour temporaries `mediump vec3`/`mediump float`.
   - **Never** do time, UV or position math in `mediump`.
-- **Time:** all motion reads `g_time` (wrapped at 600 s by the TimeDriver, C4). Every loop frequency is `k/600` Hz with an integer `k` (table in `motion_tokens.json loops_k`); spatial loops tile so that speed × 600 s is a whole number of tiles (`loops_spatial`). **Never** read `TIME`.
+- **Time:** all motion reads `g_time` (wrapped at 600 s by the TimeDriver = the `Clock` autoload, C4). Every loop frequency is `k/600` Hz with an integer `k` (table in `motion_tokens.json loops_k`); spatial loops tile so that speed × 600 s is a whole number of tiles (`loops_spatial`). **Never** read `TIME`.
 - **Finish:** every gradient, halo, fog or glass shader ends with `finish()` (grain + TPDF ±1 LSB, C6).
 - **Texture reads:** at most 2 per world fragment and 1 for glass (the mip LOD gives the blur).
 - **Branching:** branches only on uniforms or instance uniforms (coherent per draw) or on inside/outside tests (coherent regions).
@@ -497,7 +497,7 @@ g_cloud={"type":"float","value":0.15}                                  ; cloud c
 g_cloud_shadow={"type":"float","value":0.12}                           ; cloud-shadow darkening
 g_rain={"type":"float","value":0.0}                                    ; rain 0..1 (weather crossfade)
 g_mist={"type":"float","value":0.0}                                    ; low valley mist 0..1
-g_world_offset={"type":"vec2","value":Vector2(0, 0)}                   ; (0, viewport_h - 1920)
+g_world_offset={"type":"vec2","value":Vector2(0, 0)}                   ; (round((viewport_w - 1080)/2), viewport_h - 1920)
 ```
 
 Writers:
@@ -505,6 +505,7 @@ Writers:
 - **WeatherDriver:** `g_wind`, `g_cloud`, `g_rain`.
 - **TimeDriver:** `g_time`, `g_motion`.
 - **Root layout:** `g_world_offset`, on `size_changed`.
+- As built (ARCHITECTURE §7): the `TimeOfDay` autoload runs the PaletteDriver, WeatherDriver and celestial paths and is the only writer of those globals; the `Clock` autoload is the TimeDriver; `Main._layout()` passes the offset through `TimeOfDay.set_world_offset()`. `test_palette.gd` checks that every declared global has exactly one writer.
 
 Material (non-global) uniform sets:
 - `u_lamps[12]` (`vec4`: canvas x, y, radius px, intensity) + `u_lamp_count`, on meadow, grass and water.
@@ -627,7 +628,7 @@ Algorithm:
   - rain sheen is subtle (≤ 15 %).
 
 ### 4.6 `world/grass.gdshader` (meadow tufts)
-- **Node:** 4 `MultiMeshInstance2D` depth bands inside `L4/YSort`, each `origin.y` at its band centre (crest–1000, 1000–1200, 1200–1380, 1380–1500), so creatures sort against grass to ±90 px.
+- **Node:** 4 `MultiMeshInstance2D` depth bands inside `L4/YSort` (= the y-sorted `World/Ground/Play` node of `scenes/main.tscn`), each `origin.y` at its band centre (crest–1000, 1000–1200, 1200–1380, 1380–1500), so creatures sort against grass to ±90 px.
 - **Mesh:** a tuft = `ArrayMesh` strip, 3 blades × 4 segments (UV.y 1 at the root → 0 at the tip; 26 verts).
 - **Counts:** ≥ 260 tufts in total (V4), Poisson-disk placed (Bridson, r = 22 px × depth scale), 2.5× denser at the meadow edges and around props than in the open (rest areas). None inside bed ellipses or within 60 px of the path centre.
 - **Per instance:** transform with scale = depth scale × (0.85–1.15) and rotation ±4°; `use_colors = true` (rgb = tint t, phase, type); `use_custom_data = true` (x = sway k index, y = height 18–36 px, z = gust offset, w = lean). INSTANCE_CUSTOM is half-float in GLES3 canvas [V `drivers/gles3/shaders/canvas.glsl:192`]; 11-bit precision is fine for these.
@@ -865,7 +866,7 @@ Arc SDF with round caps, used for:
 
 ### 5.2 Node structure
 ```
-Mossling (Node2D, scripts/creature/mossling.gd)       origin = feet on the ground; child of L4/YSort (or L4/BehindCrest)
+Mossling (Node2D, scripts/creature/mossling.gd)       origin = feet on the ground; child of World/Ground/Play/Creatures (or L4/BehindCrest)
 ├─ Shadow   (Node2D + contact_shadow material)         drawn first; stays on the ground during hops
 ├─ Body     (SdfQuad: Node2D, _draw() → draw_texture_rect(WHITE_4x4, quad_rect))
 │            material = shared mossling_fur ShaderMaterial; position.y = −hop_height
@@ -1036,14 +1037,14 @@ All sizes are in bu; all joins use `smin` with the listed k; every tip is rounde
 - squash 0.88 shows no stretched-texture look;
 - every one of the 12 species is recognisable at 32 px in silhouette.
 
-### 5.7 Animation (all values in `data/motion_tokens.json creature`; springs from §10.2)
+### 5.7 Animation (springs from §10.2; numbers in `data/motion_tokens.json creature` win, and the rows not yet there — nap pose, nibble, play, wander, rain, facing — move into that block with the creature brain)
 
 | Behaviour | Spec |
 |---|---|
 | **Breathing** | In-shader. Awake k ∈ [134, 171] → 3.51–4.48 s; asleep k ∈ [100, 120] → 5.0–6.0 s. Inhale 40 %. Awake scale (0.99, 1.025), asleep (0.985, 1.035), pivot at the feet. Per-creature k and phase seeded. Reduce Motion: amplitude × `g_motion` (0.3) and k ≤ 150 (≥ 4 s) |
 | **Blink** | GDScript timer, interval uniform 2–6 s (seeded RNG for QA), 15 % double blink (110 ms gap). Close 50 ms, hold 20, open 70 (`micro`-like ease out). Suppressed while asleep, while being petted, and in the air |
 | **Follow-through** | Ears, antennae and tail run on spring `follow` (1.6 Hz, ζ 0.35) driven by −(body vertical acceleration)·0.0009 rad/(px/s²) and horizontal velocity·0.0006. They lag the body by 40–80 ms. The spring sleeps when \|x\| < 0.0005 and \|v\| < 0.002, after which only the in-shader wind term runs (zero CPU) |
-| **Tap (short)** (GDD §3.1) | Touch-down squash s → 0.94 in 80 ms, then spring `jelly` (2.6 Hz, ζ 0.4) back to 1. Ears lag via `follow`. It turns to look at you (`standard` 320 ms), chirps (S12) with a caption bubble, and its name tag (Label 42 on a faux-glass pill above the head) fades in for 2 s. A second tap within 2 s opens its card. A sleeping creature only *stirs* (s 0.97, ear twitch, z's pause 2 s) and never wakes abruptly |
+| **Tap (short)** (GDD §3.1) | Touch-down squash s → 0.94 in 80 ms, then spring `jelly` (2.6 Hz, ζ 0.4) back to 1. Ears lag via `follow`. It turns to look at you (`standard` 320 ms), chirps (S13) with a caption bubble, and its name tag (Label 42 on a faux-glass pill above the head) fades in for 2 s. A second tap within 2 s opens its card. A sleeping creature only *stirs* (s 0.97, ear twitch, z's pause 2 s; S14) and never wakes abruptly |
 | **Long-press or stroke → pet** (GDD §3.1) | Radial fill ring from 150 ms. At 450 ms (or a ≥ 24 px stroke starting on the creature): squash to 0.88 on `jelly`; lean toward the finger ≤ 4° (`move`); eyes → happy arc; cheek α +0.25; ears flatten −0.15 rad (`follow`); a 1.6 Hz ±2° wiggle (lean modulation); S03 purr loops while held. **Release:** spring `jelly` toward 1.0 with a 1.04 overshoot target, **3 hearts rise** (stagger 120 ms), eyes reopen after 300 ms, +1 affection (`celebrate` when a heart threshold is crossed) |
 | **Hop** (move between points) | Crouch s 0.92 for 90–120 ms → stretch s 1.10 in the air (300 ms parabola, height 0.18–0.30 bu, 40–70 px per hop) → land s 0.88 → `jelly`. Gaps of 180–420 ms between hops. The shadow stays on the ground, shrinking to 70 % and fading to 40 % at the apex. Under Reduce Motion: a glide with no stretch, plus a 300 ms position fade |
 | **Arrive / leave** | Fade in over 400 ms at the entry (never pop-in), then 2–4 hops to the spot, then S12. Over the crest: parented to `BehindCrest` until the feet cross the crest line. Leaving mirrors this |
@@ -1056,7 +1057,7 @@ All sizes are in bu; all joins use `smin` with the listed k; every tip is rounde
 | **Rain** | Away from shelter: LeafUmbrella appears (fade 400 ms), tilted 12°, sways on `follow`; ears flatten 0.2 rad. At shelter spots: tuck pose (squash 0.95) |
 | **Facing turn** | Look crossfades −1 ↔ +1 over 200 ms (`short`) with a 0.97 dip. The tail side changes when look crosses 0. Never a mirror flip |
 | **Debut** (new species) | A spotlight halo (r0 120 px, α 0.18) fades in for 900 ms, a sparkle burst of 5, S09; the album card pops later |
-| **Greeter** (economy `greeter_delay` 4–10 s) | On app open, one present creature hops 2 steps toward the viewer, does a happy squash with a heart, then returns |
+| **Greeter** (GDD §5.6; economy `greeter_delay_*` 4–10 s, `greeter_stay_s` 300) | When the app opens or resumes and nothing happened (or nobody is present), an already-met mossling that is **not** present strolls in from its `entry` like an arrival (400 ms fade, hops, S12), says hello with a happy squash and a heart, stays up to 5 min, then leaves like a visitor. It brings no gift |
 
 ### 5.8 Species notes (visual intent; data in `species.json` + `creature_rig.json`)
 
@@ -1179,12 +1180,12 @@ All sizes are in bu; all joins use `smin` with the listed k; every tip is rounde
 
 | Décor | Copy (px at depth 1) | Animation and effects |
 |---|---|---|
-| **leaf_pinwheel** (scatter on the slope) | A 4-blade pinwheel, Ø 60 head of leaf-shaped blades alternating `pinwheel_a`/`pinwheel_b` with a wooden centre pin, on a 90 px `wood_cut` stick | `spin_with_wind`: ω = (0.3 + 0.9·g_wind·(1 + 0.35·gust)) rev/s, idle spin capped at 1.2 rev/s. Tap `spin_burst`: ω peaks at 2.5 rev/s (below the 3.75 rev/s wagon-wheel limit of 4 blades at 30 fps), exponential decay τ 1.2 s, 3 leaf sparkles, S01 |
+| **leaf_pinwheel** (scatter on the slope) | A 4-blade pinwheel, Ø 60 head of leaf-shaped blades alternating `pinwheel_a`/`pinwheel_b` with a wooden centre pin, on a 90 px `wood_cut` stick | `spin_with_wind`: ω = (0.3 + 0.9·g_wind·(1 + 0.35·gust)) rev/s, idle spin capped at 1.2 rev/s. Tap `spin_burst`: ω peaks at 2.5 rev/s (below the 3.75 rev/s wagon-wheel limit of 4 blades at 30 fps), exponential decay τ 1.2 s, 3 leaf sparkles, S19 |
 | **pebble_cairn** (stack at x 49) | Each copy adds one flat rounded pebble on top: width 56 → 34 px going up, height 22 → 14, alternating `stone_cool`/`pebble_alt`/`stone_warm`, offset ±4 px, tilt ±5°, moss on pebbles 2 and 6 | New pebble drops 40 px with a 300 ms fade + `pop`, S05. Otherwise still (stillness is its charm) except a dew glint every 12.8 s |
 | **toadstool_seat** (ring) | A toadstool: domed cap Ø 48×28 in `toadstool_cap` with cream spots (detail), gills under the rim, a stout 20×24 stem in `toadstool_stem` | `ring_forms` (≥ 3): at dusk/night a faint ring of 6 static glow motes (`halo_add` r0 6 px, k 76 breathing) joins the caps. `rain_shelter`: creatures tuck under. Placement fade + `pop` |
 | **stream_stones** (path in the brook) | A flat stepping stone 54×22 in `stone_cool` with a moss cap (detail) and a wet darker band at the waterline | `water_riffle`: the water shader adds a foam wedge downstream (`u_stones`). Creatures can sit on the `stream_stones` spot |
-| **firefly_lantern** (path along the far bank) | A shepherd's-crook stick (150 px, `wood_bark`) holding a glass jar lantern (36×44, `lantern_jar` faux glass with a vertical gloss, `string` wire handle, a leaf-shaped lid). Inside: a `lantern_light` core and 2–3 tiny firefly dots drifting slowly (in-shader) | `glow_golden_dusk_night`: the core emits by `g_lights` (0.10 at golden, 1.0 at night); head halo `halo_add` r0 18 px; meadow pool r 150 px (`u_lamps`); brook reflection streak. Breath ±5 % at k 181. `fireflies_gather`: firefly emission is biased toward lantern positions. Tap `lantern_brighten`: +60 % over 200 ms, hold 2 s, back over 1.2 s, plus 2–3 fireflies released. 2 dp colour line on the jar |
-| **wind_chime** (string along the branch) | Each copy hangs one celadon ceramic tube (10 × 46–70 px, `chime_ceramic`) on a 30–40 px `string`. Copy 1 adds a paper wind strip (detail pink) | `rings_with_wind`: each tube is a pendulum on spring `follow`, forced by `g_wind`·gust (2–6°). Tap `ring_chime`: impulse 8° per tube, staggered 40 ms. `adds_chime_note` is the audio twin |
+| **firefly_lantern** (path along the far bank) | A shepherd's-crook stick (150 px, `wood_bark`) holding a glass jar lantern (36×44, `lantern_jar` faux glass with a vertical gloss, `string` wire handle, a leaf-shaped lid). Inside: a `lantern_light` core and 2–3 tiny firefly dots drifting slowly (in-shader) | `glow_golden_dusk_night`: the core emits by `g_lights` (0.10 at golden, 1.0 at night); head halo `halo_add` r0 18 px; meadow pool r 150 px (`u_lamps`); brook reflection streak. Breath ±5 % at k 181. `fireflies_gather`: firefly emission is biased toward lantern positions. Tap `lantern_brighten`: +60 % over 200 ms, hold 2 s, back over 1.2 s, plus 2–3 fireflies released, S20. 2 dp colour line on the jar |
+| **wind_chime** (string along the branch) | Each copy hangs one celadon ceramic tube (10 × 46–70 px, `chime_ceramic`) on a 30–40 px `string`. Copy 1 adds a paper wind strip (detail pink) | `rings_with_wind`: each tube is a pendulum on spring `follow`, forced by `g_wind`·gust (2–6°). Tap `ring_chime`: impulse 8° per tube, staggered 40 ms, S21. `adds_chime_note` is the audio twin |
 
 **Placement rule for all décor:**
 - appear with a 300 ms fade + `pop` scale 0.6 → 1.0 + a 4-sparkle dust puff + S05;
@@ -1296,7 +1297,7 @@ All sizes are in bu; all joins use `smin` with the listed k; every tip is rounde
 - **Flash safety:** brightness modulation everywhere < 3 Hz (lantern breath 0.30 Hz, mushrooms 0.13 Hz, fireflies 0.14–0.17 Hz per firefly), and < 3 onsets per second scene-wide (WCAG 2.3.1).
 
 ### 8.4 Rain lighting
-Flattened key and lower chroma (§3.4), no shafts, no dust, halos ×0.3, rim ×0.5, and a wet sheen on the meadow. Lanterns, if lit by time of day, glow normally: their pools read even better on the wet ground (pool α +0.05 under rain).
+Flattened key and lower chroma (§3.4), no shafts, no dust, halo α ×0.4, rim ×0.5, and a wet sheen on the meadow. Lanterns, if lit by time of day, glow normally: their pools read even better on the wet ground (pool α +0.05 under rain).
 
 ---
 
@@ -1312,7 +1313,7 @@ Flattened key and lower chroma (§3.4), no shafts, no dust, halos ×0.3, rim ×0
 | Label | 42 | Nunito 700 | Buttons, card names, chip labels, prices (prices: Baloo 2 700 48) |
 | Caption | 36 | Nunito 700 (minimum size anywhere) | Dock labels, hints, group captions |
 
-- **Line height:** 1.25 (en), 1.40 (vi, +12 %). Strings are NFC.
+- **Line height:** 1.25 (en), 1.40 (vi, +12 %). Strings are NFC. Godot's `line_spacing` is extra px on top of the font's ascent + descent (Nunito 1.36, Baloo 2 1.60), so `ThemeBuilder` derives it per style from the font (negative for en).
 - **Text scale:** 100 / 115 / 130 / 150 / 200 % (02 §5) rebuilds the Theme font sizes. Dock labels cap at 130 % (icons carry the meaning above that); everything in sheets scales fully and reflows (rows grow, cards grow taller, grids drop to 2 columns at ≥ 150 %).
 - **Colours:** text on glass is always `ink`. `ink_2` only on opaque `surface`/`surface_hi`. Never white text except `surface_hi` on `primary`/`leaf`.
 
@@ -1349,7 +1350,7 @@ Flattened key and lower chroma (§3.4), no shafts, no dust, halos ×0.3, rim ×0
 | **Dock** | Faux glass pill x 24–1056, y 1541–1781 (240 tall, r 120), e2. Order **[Settings] [Garden] [Basket] [Album]** (left-handed: [Album] [Basket] [Garden] [Settings]), centres x 135 / 405 / 675 / 945, centre y 1661. **Plates** (`surface_hi`, e1, not glass): Garden and Basket Ø 216 (72 dp), icon 84 + label Caption 36; Settings and Album Ø 168 (56 dp), icon 72 + label. Hit 228×228 per button (y 1547–1775). **Active** (its sheet open): plate `primary_tint` + 3 dp `primary` ring + icon accent at 100 %. **Basket badge**: coral pill (min Ø 48) at the plate's top-right with the gift count (Caption 36 ink, 6.96:1); a brim sparkle (3 sparkles every 7.9 s) when full; plus the gold ring_fill (count/24) around the icon. **Asleep** (onboarding): 50 % opacity, still tappable |
 | **Sheet** | Live glass, x 24–1056, bottom = dock top − 24 (**1517**), height = round(0.56·H) (**1075 → top 442**; at H 2400: 653–1997). r-xl 96 on all corners (floating above the dock), e3. The dock stays visible below it. Grabber 120×12 `ink` @ 0.25 at y 464 (swipe zone 442–574). Header 490–670: Title at x 72; close button Ø 108 `surface_hi` + × icon at x 900–1008, y 526–634 (hit 864–1044 × 490–670). Content scrolls with a 72 px fade mask at the bottom edge. **In:** rise 96 px + fade over `standard` 320 ms. **Out:** `exit` (≈ 210 ms). **Swap:** 200 ms crossfade. Scrim 0.24 covers the world only (HUD and dock stay crisp) |
 | **Scrim** | `scrim` @ 0.24 under sheets (fades with `short`), @ 0.40 under modal cards. Tap on the scrim closes |
-| **Primary button** | Pill, h 156 (52 dp; 132 inside cards), `primary` fill, Label 42 / Nunito 800 in `surface_hi`, e1. **Pressed:** instant `primary_pressed` + scale 0.96 in 80 ms; release `pop` |
+| **Primary button** | Pill, h 156 (52 dp; 132 inside cards, whose hit rect extends 12 px into the card padding to 156), `primary` fill, Label 42 / Nunito 800 in `surface_hi`, e1. **Pressed:** instant `primary_pressed` + scale 0.96 in 80 ms; release `pop` |
 | **Secondary button** | Pill, `surface_hi` fill, `ink` label, 1 dp `ink` @ 0.10 border. Also used for the not-yet-affordable state (below) |
 | **Garden item card** | A row card 936×300 (x 72–1008), `surface_hi`, r-l 72, e1, padding 24. Contents (GDD §8.1): **live mini-render** well 252×252 (`leaf_tint` backdrop; the real flower, décor piece or leaf boat drawn by its shader), name (Label 42), "{owned} of {max}" (Caption, `ink_2`), price chip (dew icon 48 + Baloo 48), dew-yield drops (1–3 small drops), bloom time (Caption `ink_2`), "Loved by {names}" (Caption `ink_2`). Primary **Plant / Place** 300×132 at the card's bottom-right. **Not affordable:** secondary style, label "A little more dew", price chip in `ink_2`; a press gives S11 and a ±2 dp lateral nudge on `follow` (never red, never a shake of the screen) |
 | **Choose-a-bed mode** (first copy) | The sheet exits; a toast "Choose a bed" sits at y 400; every bed with free stems shows a breathing ring (`primary` @ 0.5, 3 dp, its hit ellipse, k 124) and the rest of the world dims 10 %. Tap a bed → seed arc → planted. Back cancels |
@@ -1360,7 +1361,7 @@ Flattened key and lower chroma (§3.4), no shafts, no dust, halos ×0.3, rim ×0
 | **Modal cards** (postcard reader, new friend, recap, "Leave the hollow for now?") | `surface_hi` with paper grain 0.02, r-l 72, e3, scrim 0.40, x 72–1008. Postcard 936×1176 at y 372 (stamp illustration 360×360 = live creature portrait, text Body 48 ink, primary "Keep"). New friend: rises with `emphasized` 500 ms and shrinks into the Album button on close. Recap: 936×720, three rows (dew, visitors, blooms); tap or 5 s auto-dismiss. Leave: 936×560, [Stay a while] (primary) [Leave for now] (secondary) |
 | **Toast** | Faux glass pill h 96, Label 42, centred at y 400, auto-dismiss after 3 s |
 | **Long-press ring** | §4.18 |
-| **Tutorial hint ring** | Soft ring (2 dp, `surface_hi` @ 0.8) expanding 36 dp over 1.2 s every 2.4 s around the ready bud after 3 s (GDD §3.4) |
+| **Tutorial hint ring** | Soft ring (2 dp, `surface_hi` @ 0.8) expanding 36 dp over 1.2 s every 3 s (k 200, the GDD §3.4 period): around the tutorial seed from 6.5 s, and around a ready bud after 3 s (`motion_tokens.json ui.tutorial_hint_ring`) |
 
 ### 9.5 Wireframes (1080×1920; x and y in px)
 
@@ -1373,7 +1374,7 @@ y 0 +---------------------------------------------------------------------+  Z0 
 264 |  +-----------------------+               +--------+  +--------+      |  eye 912..1032, hit 864..1080 x 144..360
 336 |. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . |  Z2 look: sky, sun/moon, hills, optional taps
     | [willow canopy y 321-831]        sun day (780,380)       [L5 bough]  |
-645 |   [chime branch]                                                     |  wind_chime anchors 259..346 x 645..657
+645 |    [chime branch]                                                    |  wind_chime anchors 280..368 x 645..657
 758 | [mailbox]       far hills 610-790 / tree line 560-800                |
     |  (willow_root)(toadstool ring)   (hill_crest)  (moon_rock)  [stump]  |  crest 742..805
 845 |===================== Z3 tend =========================================|
@@ -1499,7 +1500,7 @@ Exact béziers go through `PropertyTweener.set_custom_interpolator()` with the t
 | `jelly` | 2.6 | 0.40 | 266.9 | 13.07 | 25.4 % | 612 ms | Creature body only, amplitude ≤ 12 % |
 | `follow` | 1.6 | 0.35 | 101.1 | 7.04 | 30.9 % | 1137 ms | Ears, leaves, antennae, chimes, bells |
 
-- **Integration:** semi-implicit Euler, sub-step ≤ 8 ms (stable at 30 fps).
+- **Integration:** analytic: each step applies the closed-form damped-oscillator solution over dt (`scripts/motion/spring.gd`), so it is exact at any frame rate, stable at 30 fps and through hitches, with no sub-steps; rest at |x| < 0.0005, |v| < 0.002 (`springs.integrator`).
 - **Interruptibility:** every animation retargets from the current value *and velocity* (05 §3.1). `TRANS_SPRING` is never used for interactive motion.
 
 ### 10.3 Interaction → token map (GDD loops, `economy.json`, 06 SFX ids)
@@ -1508,9 +1509,9 @@ Exact béziers go through `PropertyTweener.set_custom_interpolator()` with the t
 |---|---|---|
 | Touch-down (any) | `instant` tint +6 L* (lighter) + UI scale 0.96 in 80 ms (`micro` curve); world objects squash 0.94 | S01 / TICK (Full) |
 | Release (tap) | `release` (`pop`) → 1.0; ring to 36 dp over 380 ms (α 0.35 → 0); sparkles 3–5 on rewarding taps only | — |
-| Tap creature | Squash 0.94 → `jelly`; ears `follow`; look-at (`standard`); chirp bubble; name tag 2 s | S12 at `voice_step` / TICK |
+| Tap creature | Squash 0.94 → `jelly`; ears `follow`; look-at (`standard`); chirp bubble; name tag 2 s | S13 at `voice_step` / TICK (asleep: stirs, S14) |
 | Long-press / stroke creature (pet) | Ring fill 150 → 450 ms; squash 0.88 on `jelly` + lean; release `jelly` (target 1.04) + 3 hearts; `celebrate` on a heart threshold | S03 loop / TICK every 120 ms (Full) |
-| Tap bed / growing stem | Stems kicked 0.12 rad on `follow`; leaf rustle | S01 |
+| Tap bed / growing stem | Stems kicked 0.12 rad on `follow`; leaf rustle | S01 + S18 |
 | Tap a ready bud | The bed's ready buds unfurl (`unfurl` 600 ms, 30 ms stagger, 3–5 sparkles; §6.2); auto after 20 s as a 2.4 s slow unfurl | S04; TICK at the end |
 | Growth step in view | Stretch 1.08 (`move`); new parts `pop` + 300 ms fade | — |
 | Buy flower (Plant) | Sheet `exit` (first copy: choose-a-bed mode, §9.4); seed arc 320 ms (`emphasized_decel`) to the stem; soil puff 120 ms (`pop`) | S05; TICK |
@@ -1520,8 +1521,8 @@ Exact béziers go through `PropertyTweener.set_custom_interpolator()` with the t
 | Open sheet | Rise 96 px + fade, `standard` 320 ms; dock button → active state; scrim fade `short`; content `stagger` 30 ms | S07 |
 | Close sheet / Back / same dock button | `exit` (≈ 210 ms); swipe-down tracks the finger (`press`); release decides by > 25 % of height or > 1000 px/s, then `move` | S08 |
 | Swap sheet (other dock button) | 200 ms crossfade (`short`) | S07 |
-| Switch tab (segmented) | Selection pill `move`; content crossfade `short` | S01 |
-| Toggle | Thumb `micro`; track colour `short` | S01 / TICK |
+| Switch tab (segmented) | Selection pill `move`; content crossfade `short` | S15 / TICK |
+| Toggle | Thumb `micro`; track colour `short` | S15 / TICK |
 | Select card | `micro` press; lift −6 px + e2 (`standard`); footer slides in (`standard`) | S01 |
 | Postcard open / close (mailbox) | Flag pops; reader card `emphasized` (scale 0.92 → 1, rotate −2° → 0°, fade) / `exit` | S07 |
 | Welcome back (recap) | Recap card `emphasized`; tap or 5 s → `exit` | S10; MEDIUM once |
@@ -1530,11 +1531,11 @@ Exact béziers go through `PropertyTweener.set_custom_interpolator()` with the t
 | Creature arrives / leaves | 400 ms fade + hops (§5.7) | S12 |
 | Creature naps | 1200 ms settle; z's every 4.84 s | S12 (low) |
 | Stream tap | Ripple ring to 36 dp in 380 ms (eased out in-shader) + bubbles; nearby awake creatures glance | S06 |
-| Leaf boat | Appears at the spring rock (`pop`), drifts 40 s; creatures gather to watch | S06 + paper / TICK |
-| Pinwheel tap | Spin burst, τ 1.2 s decay | S01 |
-| Lantern tap | Brighten +60 % (200 ms in / 2 s hold / 1.2 s out, sine) + fireflies released | S01 |
-| Chime tap | Per-tube impulse 8° on `follow`, staggered 40 ms | Chime notes (06) |
-| Mailbox (postcard waiting) | Flag raise `pop`; glow `ambient` k 76 | S07 on open |
+| Leaf boat | Appears at the spring rock (`pop`), drifts 40 s; creatures gather to watch | S17 / TICK |
+| Pinwheel tap | Spin burst, τ 1.2 s decay | S19 |
+| Lantern tap | Brighten +60 % (200 ms in / 2 s hold / 1.2 s out, sine) + fireflies released | S20 |
+| Chime tap | Per-tube impulse 8° on `follow`, staggered 40 ms | S21 (owned shells) |
+| Mailbox (postcard waiting) | Flag raise `pop`; glow `ambient` k 76 | S16 on arrival; S07 on open |
 | Weather change | `world` 30 s colour crossfade; particles via `ParticleBudget` (≥ 4 s fade); chip icon `short` + label peek 4 s | Bed crossfade (06) |
 | Time-of-day change | `tod` 2400 s; chip icon `short` + label peek | Profile 90 s (06) |
 | Ambient mode in / out | HUD fade 600 ms / `short` | — |
@@ -1667,21 +1668,21 @@ Exact béziers go through `PropertyTweener.set_custom_interpolator()` with the t
 | `art/fx/fx_atlas.svg` | FX stamps |
 | `art/props/*.svg` | Props and décor (tone masks) |
 | `art/icons/*.svg` | Icons (DPITexture) |
-| `scripts/world/{palette_driver,time_driver,weather_driver,lamp_registry,shaft_controller,particle_budget}.gd` | Drivers and registries |
+| `scripts/world/{palette_driver,palette_math,weather_driver,celestial}.gd` (built; run by `scripts/autoload/time_of_day.gd`; the TimeDriver is `scripts/autoload/clock.gd`) + `{lamp_registry,shaft_controller,particle_budget}.gd` (to build) | Drivers and registries |
 | `scripts/world/silhouette_builder.gd`, `scripts/flora/flora_builder.gd` | Geometry builders |
 | `scripts/creature/{mossling,sdf_quad,rig_ids}.gd` | Creature node, quad, rig ids |
-| `scripts/motion/{tokens,spring,bezier}.gd` | Load `motion_tokens.json`; analytic spring; the 05 bézier helper |
+| `scripts/autoload/motion.gd` + `scripts/motion/{spring,spring_2d,cubic_bezier}.gd` (built) | Load `motion_tokens.json`; analytic springs; the 05 bézier helper |
 
 ### 12.2 Things other roles must know / unresolved
 
 | # | Item | Owner |
 |---|---|---|
-| U1 | **Add the 26 globals** (§4.1) to `project.godot [shader_globals]` | Director / Tech Lead |
+| U1 | ~~Add the 26 globals (§4.1) to `project.godot [shader_globals]`~~ **Done** (37 globals in `project.godot`) | — |
 | U2 | **Ratify V2 amendment A6** (dusk/night measured by OKLCh chroma) | Director |
 | U3 | **F1 overdraw risk:** content ≈ 1.9–2.0× + blit ≈ 1.0 → ≈ 2.9–3.0 vs the 2.5 low-tier budget. Mitigation: opaque cores + governor tier 1 (§4.19). Measure on Mali-G52 / Adreno 610 before M1 | Tech Lead, QA |
-| U4 | `spots.json stream.water_width` (0.036) is ambiguous: this bible reads it as a fraction of frame **height** (69 px), consistent with the tap band (73 px). If the GDD meant width (39 px), the brook gets thinner but nothing else changes | GDD |
+| U4 | **Resolved:** `spots.json stream.water_width` (0.036) is a fraction of frame **height** (69 px), the same height as the tap band (`tap_band_y0..y1`, 0.748–0.784); GDD §10 now says so | — |
 | U5 | The Z1 HUD band in `spots.json` ends at 336, but I2's 72 dp top hit needs 216 px → chip hits run to 360. Nothing else lives in 336–360 | GDD (note only) |
-| U6 | `mailbox` hit (192 px around x 76) extends past the left edge (x −20) and inside the 48 px margin. Suggest x ≥ 0.09 (97 px) | GDD |
+| U6 | **Resolved:** the `mailbox` hit (192 px) crossed the left edge (x −20, so only 57 dp was tappable). `mailbox` x 0.07 → 0.09 (97 px) and, to keep the 8 dp gap, `wind_chime_branch` and its 10 anchors x +0.02 (324 px). `validate_content.py` now fails any hit area that crosses a frame edge | — |
 | U7 | Resolved by GDD §3.1: a stem becomes a glowing *ready bud* when its bloom time arrives on screen; tap unfurls (600 ms), otherwise it opens by itself after 20 s (2.4 s). Visuals in §6.2 | — |
 | U12 | The GDD dock centres (x 135 / 945) put the outer 228 px hit rects at x 21–249 and 831–1059, inside the 48 px side margin. That is acceptable (bottom-edge targets, not side-edge drags), but QA should confirm no conflict with the Android back gesture | GDD, QA |
 | U8 | Three species pairs differ by only one *part* (puffmoss/pebblepaw, puffmoss/moonpuff, honeyhum/dandelfluff). Pattern, size and eye type still separate them (Hamming ≥ 2 once pattern counts; checked by `art_data.py`). No change requested. If the 32 px album silhouette test fails for a pair, change one part of one species in `species.json`, then re-run `resolve` | GDD, QA |

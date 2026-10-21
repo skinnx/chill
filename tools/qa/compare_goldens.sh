@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Golden-image regression check (synthesis D13: ImageMagick AE at fuzz 2 %, fail when more than
-# 0.1 % of the pixels differ; 03 §6.2). docs/QA.md §3.4.
+# 0.1 % of the pixels differ; 03 §6.2). docs/QA.md §3.5.
 #
 #   tools/qa/compare_goldens.sh <new_dir> <golden_dir> [--update]
 #

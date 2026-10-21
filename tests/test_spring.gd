@@ -139,3 +139,33 @@ func test_motion_token_durations() -> void:
 	assert_almost_eq(Motion.duration(&"short"), 0.2, 1e-9)
 	assert_almost_eq(Motion.stagger_delay(3), 0.09, 1e-9)
 	assert_almost_eq(Motion.stagger_delay(100), 0.24, 1e-9, "stagger is capped")
+
+
+func test_motion_springs_use_token_rest_epsilon() -> void:
+	var eps: Dictionary = tokens["springs"]["integrator"]["rest_epsilon"]
+	var s := Motion.spring(&"jelly")
+	var s2 := Motion.spring_2d(&"follow")
+	assert_almost_eq(s.rest_epsilon_x, float(eps["x"]), 1e-12)
+	assert_almost_eq(s.rest_epsilon_v, float(eps["v"]), 1e-12)
+	assert_almost_eq(s2.rest_epsilon_x, float(eps["x"]), 1e-12)
+	assert_almost_eq(s2.rest_epsilon_v, float(eps["v"]), 1e-12)
+
+
+## Synthesis V5 on the loop table: breathing 3.5-4.5 s awake / 5-6 s asleep, and the night's
+## 18 fireflies (Art Bible §7.1-7.2) start fewer than 3 glows per second scene-wide (WCAG 2.3.1).
+func test_loop_periods_meet_v5() -> void:
+	var k: Dictionary = tokens["loops_k"]
+	var wrap := float(tokens["time"]["g_time_wrap_s"])
+	for name: String in k:
+		var r: Array = k[name]
+		for v: Variant in r:
+			assert_eq(float(v), floorf(float(v)), "%s: k must be an integer (C4)" % name)
+	var awake: Array = k["breathe_awake"]
+	var asleep: Array = k["breathe_asleep"]
+	assert_between(wrap / float(awake[1]), 3.5, 4.5, "fastest awake breath")
+	assert_between(wrap / float(awake[0]), 3.5, 4.5, "slowest awake breath")
+	assert_between(wrap / float(asleep[1]), 5.0, 6.0, "fastest asleep breath")
+	assert_between(wrap / float(asleep[0]), 5.0, 6.0, "slowest asleep breath")
+	const NIGHT_FIREFLIES := 18
+	var fire: Array = k["firefly_cycle"]
+	assert_true(NIGHT_FIREFLIES * float(fire[1]) / wrap <= 3.0, "firefly glow onsets per second <= 3")

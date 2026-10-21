@@ -19,3 +19,5 @@ Thumbs.db
 # Python bytecode (tools/)
 __pycache__/
 *.pyc
+# Node tooling (tools/qa/web; package-lock.json is committed)
+node_modules/

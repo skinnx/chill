@@ -130,7 +130,7 @@ CUES = {
 		"trigger": "touch-down", "bus": "SFX", "heard_lufs_m": -26.0,
 		"layers": [{"bank": "chime", "pitch": {"rule": "fixed", "midi": 81}}],
 		"haptic": NO_HAPTIC, "caption": None, "max_voices": 2,
-		"visual_twin": "lantern glow +40 % for 1.2 s, fireflies drift in"},
+		"visual_twin": "lantern brightens +60 % (200 ms in, 2 s hold, 1.2 s out), 2-3 fireflies released (Art Bible §6.6)"},
 	"S21": {"name": "wind_chime", "event": "Tap the shell wind chime (falling run) / breeze gusts ring it",
 		"trigger": "touch-down / gust timer", "bus": "SFX", "gust_bus": "Ambience", "heard_lufs_m": -23.0,
 		"gust_heard_lufs_m": -31.0,

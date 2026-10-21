@@ -75,7 +75,7 @@ jobs:
           retention-days: 14
 
   export:
-    name: export Web + Android debug APK
+    name: export Web + Android debug APK, Web boot smoke
     needs: [lint, test]
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -90,6 +90,12 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
+      # Web smoke (tools/qa/web): puppeteer-core + the npm-packaged Chromium, pinned by package-lock.json.
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: tools/qa/web/package-lock.json
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/godot
@@ -107,14 +113,14 @@ jobs:
           keytool -genkeypair -keyalg RSA -keysize 2048 -validity 10000 -alias androiddebugkey \
             -keypass android -storepass android -keystore "$RUNNER_TEMP/debug.keystore" \
             -dname "CN=Android Debug,O=Android,C=US"
-      - name: Import + export
+      - name: Import, export, Web boot smoke
         env:
           GODOT_ANDROID_KEYSTORE_DEBUG_PATH: ${{ runner.temp }}/debug.keystore
           GODOT_ANDROID_KEYSTORE_DEBUG_USER: androiddebugkey
           GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
         run: |
           export PATH="$ANDROID_HOME/build-tools/36.1.0:$PATH"
-          tools/ci/run_ci.sh import export
+          tools/ci/run_ci.sh import export web
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: web-nothreads
@@ -127,9 +133,13 @@ jobs:
           path: build/android/
           if-no-files-found: error
           retention-days: 30
-      - name: Export logs
-        if: failure()
+      - name: Export logs and Web smoke report
+        if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: export-logs
-          path: reports/
+          path: |
+            reports/
+            qa/out/web/
+          if-no-files-found: warn
+          retention-days: 14

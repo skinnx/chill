@@ -245,6 +245,11 @@ def check_layout(spots: dict, rep: Report) -> None:
 		bottom = y + h * PX_PER_DP / FRAME_H / 2.0
 		if bottom > dock["y0"] - GAP_DP * PX_PER_DP / FRAME_H:
 			rep.err(f"target {name}: hit area reaches the dock")
+		# The frame is always fully visible (stretch aspect "expand"), so a hit area that crosses a
+		# side edge is clipped below its floor on every phone.
+		half_w = w * PX_PER_DP / FRAME_W / 2.0
+		if x - half_w < 0.0 or x + half_w > 1.0:
+			rep.err(f"target {name}: hit area crosses a side edge of the frame")
 		if required and in_look:
 			rep.err(f"target {name}: required target in the look zone")
 	for i in range(len(targets)):

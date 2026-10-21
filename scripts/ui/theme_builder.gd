@@ -36,10 +36,11 @@ const R_L := 72
 const R_XL := 96
 const CORNER_DETAIL_SMALL := 12
 const CORNER_DETAIL_LARGE := 16
-## Elevation (alpha, blur size, y offset) in ink, never black.
-const E1 := [0.06, 24, 6]
-const E2 := [0.12, 48, 18]
-const E3 := [0.16, 72, 24]
+## Elevation shape (blur size, y offset) in px; the shadow alpha is the palettes.json ui_alpha
+## token shadow_e1/e2/e3 (in ink, never black).
+const E1_SHAPE := [24, 6]
+const E2_SHAPE := [48, 18]
+const E3_SHAPE := [72, 24]
 ## Button heights (Art Bible §9.4): 156 px primary (52 dp), 132 inside cards.
 const BUTTON_H := 156
 const CARD_PADDING := 24
@@ -48,7 +49,10 @@ const BUTTON_PAD_X := 48
 const HAIRLINE_PX := 3
 const HAIRLINE_ALPHA := 0.10
 ## Dock labels stop scaling at 130 % (Art Bible §9.1); handled by the dock, not here.
-const LINE_SPACING_EN := 0.0
+## Art Bible §9.1: line height 1.25 x font size in English; Vietnamese x I18n.VI_LINE_SPACING_MUL
+## (1.12, synthesis §3) = 1.40 for stacked marks. Godot's line_spacing is the extra px on top of
+## the font's own ascent + descent (Nunito 1.36, Baloo 2 1.60), so it is derived from the font.
+const LINE_HEIGHT_EN := 1.25
 
 
 ## [param palettes] = data/palettes.json; [param text_scale] 1.0 .. 2.0 (X1);
@@ -66,6 +70,9 @@ static func build(palettes: Dictionary, text_scale: float = 1.0, vietnamese: boo
 	var primary_pressed := Color.html(String(uid["primary_pressed"]))
 	var primary_tint := Color.html(String(uid["primary_tint"]))
 	var glass_fill := 1.0 if reduce_transparency else float(ua["glass_faux_fill"])
+	var e1 := [float(ua["shadow_e1"])] + E1_SHAPE
+	var e2 := [float(ua["shadow_e2"])] + E2_SHAPE
+	var e3 := [float(ua["shadow_e3"])] + E3_SHAPE
 
 	var body := load(FONT_BODY) as Font
 	var strong := load(FONT_STRONG) as Font
@@ -80,17 +87,18 @@ static func build(palettes: Dictionary, text_scale: float = 1.0, vietnamese: boo
 	t.set_color(&"font_color", &"Label", ink)
 	t.set_font(&"font", &"Label", body)
 	t.set_font_size(&"font_size", &"Label", _px(SIZE_BODY, text_scale))
-	t.set_constant(&"line_spacing", &"Label", _spacing(SIZE_BODY, text_scale, vietnamese))
-	_label_variation(t, &"BodyLabel", body, _px(SIZE_BODY, text_scale), ink, _spacing(SIZE_BODY, text_scale, vietnamese))
+	t.set_constant(&"line_spacing", &"Label", _spacing(body, SIZE_BODY, text_scale, vietnamese))
+	_label_variation(t, &"BodyLabel", body, _px(SIZE_BODY, text_scale), ink,
+			_spacing(body, SIZE_BODY, text_scale, vietnamese))
 	_label_variation(t, &"TitleLabel", title, _px(SIZE_TITLE, text_scale), ink,
-			_spacing(SIZE_TITLE, text_scale, vietnamese))
+			_spacing(title, SIZE_TITLE, text_scale, vietnamese))
 	_label_variation(t, &"StrongLabel", strong, _px(SIZE_LABEL, text_scale), ink,
-			_spacing(SIZE_LABEL, text_scale, vietnamese))
+			_spacing(strong, SIZE_LABEL, text_scale, vietnamese))
 	_label_variation(t, &"CaptionLabel", strong, _px(SIZE_CAPTION, text_scale), ink,
-			_spacing(SIZE_CAPTION, text_scale, vietnamese))
+			_spacing(strong, SIZE_CAPTION, text_scale, vietnamese))
 	# ink_2 only on opaque surface / surface_hi, never on glass (Art Bible A7).
 	_label_variation(t, &"SecondaryLabel", strong, _px(SIZE_CAPTION, text_scale), ink_2,
-			_spacing(SIZE_CAPTION, text_scale, vietnamese))
+			_spacing(strong, SIZE_CAPTION, text_scale, vietnamese))
 	_label_variation(t, &"HudNumeral", numerals, _px(SIZE_HUD, text_scale), ink, 0)
 	_label_variation(t, &"PriceLabel", title, _px(SIZE_PRICE, text_scale), ink, 0)
 	t.set_color(&"font_color", &"RichTextLabel", ink)
@@ -101,10 +109,10 @@ static func build(palettes: Dictionary, text_scale: float = 1.0, vietnamese: boo
 
 	# --- buttons: primary pill by default (no focus ring after taps; 4.6 separates focus kinds)
 	var pill := roundi(BUTTON_H * 0.5)
-	t.set_stylebox(&"normal", &"Button", _box(primary, pill, E1, ink, BUTTON_PAD_X))
-	t.set_stylebox(&"hover", &"Button", _box(primary, pill, E1, ink, BUTTON_PAD_X))
-	t.set_stylebox(&"pressed", &"Button", _box(primary_pressed, pill, E1, ink, BUTTON_PAD_X))
-	t.set_stylebox(&"hover_pressed", &"Button", _box(primary_pressed, pill, E1, ink, BUTTON_PAD_X))
+	t.set_stylebox(&"normal", &"Button", _box(primary, pill, e1, ink, BUTTON_PAD_X))
+	t.set_stylebox(&"hover", &"Button", _box(primary, pill, e1, ink, BUTTON_PAD_X))
+	t.set_stylebox(&"pressed", &"Button", _box(primary_pressed, pill, e1, ink, BUTTON_PAD_X))
+	t.set_stylebox(&"hover_pressed", &"Button", _box(primary_pressed, pill, e1, ink, BUTTON_PAD_X))
 	t.set_stylebox(&"disabled", &"Button", _box(primary, pill, [], ink, BUTTON_PAD_X))
 	t.set_stylebox(&"focus", &"Button", StyleBoxEmpty.new())
 	t.set_font(&"font", &"Button", heavy)
@@ -113,7 +121,7 @@ static func build(palettes: Dictionary, text_scale: float = 1.0, vietnamese: boo
 			&"font_focus_color", &"font_disabled_color"]:
 		t.set_color(c, &"Button", surface_hi)
 	t.set_type_variation(&"SecondaryButton", &"Button")
-	var sec := _box(surface_hi, pill, E1, ink, BUTTON_PAD_X)
+	var sec := _box(surface_hi, pill, e1, ink, BUTTON_PAD_X)
 	sec.border_color = Color(ink, HAIRLINE_ALPHA)
 	sec.set_border_width_all(HAIRLINE_PX)
 	t.set_stylebox(&"normal", &"SecondaryButton", sec)
@@ -128,10 +136,10 @@ static func build(palettes: Dictionary, text_scale: float = 1.0, vietnamese: boo
 
 	# --- panels
 	t.set_stylebox(&"panel", &"PanelContainer", StyleBoxEmpty.new())
-	_panel_variation(t, &"Card", _box(surface_hi, R_L, E1, ink, CARD_PADDING))
-	_panel_variation(t, &"Sheet", _box(Color(surface, glass_fill), R_XL, E3, ink, R_L))
-	_panel_variation(t, &"Chip", _box(Color(surface, glass_fill), roundi(float(BUTTON_H) * 0.5), E2, ink, R_XS))
-	_panel_variation(t, &"ModalCard", _box(surface_hi, R_L, E3, ink, R_L))
+	_panel_variation(t, &"Card", _box(surface_hi, R_L, e1, ink, CARD_PADDING))
+	_panel_variation(t, &"Sheet", _box(Color(surface, glass_fill), R_XL, e3, ink, R_L))
+	_panel_variation(t, &"Chip", _box(Color(surface, glass_fill), roundi(float(BUTTON_H) * 0.5), e2, ink, R_XS))
+	_panel_variation(t, &"ModalCard", _box(surface_hi, R_L, e3, ink, R_L))
 
 	# --- text input (rename, GDD §7.3)
 	var field := _box(surface_hi, R_S, [], ink, R_XS)
@@ -163,11 +171,14 @@ static func px(size: int, text_scale: float) -> int:
 	return _px(size, text_scale)
 
 
-## Extra line spacing: Vietnamese lines get +12 % for stacked marks (synthesis §3).
-static func _spacing(size: int, text_scale: float, vietnamese: bool) -> int:
-	if not vietnamese:
-		return roundi(LINE_SPACING_EN)
-	return roundi(float(_px(size, text_scale)) * (I18n.VI_LINE_SPACING_MUL - 1.0))
+## Extra line spacing (px, may be negative) that gives the Art Bible §9.1 line height:
+## LINE_HEIGHT_EN x size, and +12 % on that for Vietnamese stacked marks (synthesis §3).
+static func _spacing(font: Font, size: int, text_scale: float, vietnamese: bool) -> int:
+	if font == null:
+		return 0
+	var px := _px(size, text_scale)
+	var line_h := LINE_HEIGHT_EN * (I18n.VI_LINE_SPACING_MUL if vietnamese else 1.0)
+	return roundi(line_h * float(px) - font.get_height(px))
 
 
 static func _px(size: int, text_scale: float) -> int:

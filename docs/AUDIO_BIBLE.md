@@ -216,7 +216,7 @@ Pitch rules are defined in `tools/audio/cues.py` and §8.6. "Heard" is LUFS-M at
 | S17 | Float a leaf boat (§4.4) | low water plop, two small bubbles, a hint of paper → `s17_boat_1…2` | variant | SFX | −24 | — / TICK | BOAT | boat launches |
 | S18 | Tap a bed with no ready bud | soft leaf/stem rustle → `s18_rustle_1…3` | variant | SFX | −27 | — | — | stems sway |
 | S19 | Tap a leaf pinwheel | one airy swell sweeping 350→900→450 Hz (no flutter) → `s19_swish_1…2` | variant | SFX | −27 | — | — | spin burst |
-| S20 | Tap a firefly lantern | one chime-bank note, A5 (universal pc) | fixed | SFX | −26 | — | — | glow +40 % for 1.2 s |
+| S20 | Tap a firefly lantern | one chime-bank note, A5 (universal pc) | fixed | SFX | −26 | — | — | brightens +60 % (200 ms in, 2 s hold, 1.2 s out), fireflies released (Art Bible §6.6) |
 | S21 | Tap the shell wind chime / gusts ring it (§4.3) | falling run of owned shells (`shell_065…086`, the GDD's F4 G4 A4 C5 D5 F5 G5 A5 C6 D6), 110 ± 15 ms apart, −1.5 dB per step | **shell_run** (owned ∩ chord set) | SFX (tap) / Ambience (gust) | −23 (tap run) / −31 per gust note | — | CHIME | shells swing, Bellkin sways |
 
 **Variants** never repeat back to back and get a random −1.5…0 dB level offset (timbre/level only; pitch randomisation is not scale-aware, C16). **Polyphony:** at most `max_voices` per cue (oldest stopped first) and at most 4 SFX-bus sounds at once; a Collect-all burst plays one S02 per item on the ladder, 90 ms apart, with **one** DOUBLE haptic.
@@ -235,7 +235,7 @@ Pitch rules are defined in `tools/audio/cues.py` and §8.6. "Heard" is LUFS-M at
 | New species arrival chime | **S09** on the new-friend card; **S12** when the mossling itself fades in |
 | Postcard | **S16** when it arrives; **S07** when the player opens it |
 
-**Hand-off to the Game Designer (GDD §8.3 edits):** "Tap mossling → S12" should read **S13** (S12 is arrive/nap, per 06 §0.5); "Postcard → S07" should read **S16** (it contains the paper rustle and keeps `CAPTION_POSTCARD`); "Leaf boat → S06 + paper" is now **S17**; the chime, pinwheel, lantern, bed-tap and toggle rows can cite S21, S19, S20, S18 and S15.
+**Hand-off to the Game Designer (GDD §8.3 edits; applied to GDD §3.1, §3.4, §7.2 and §8.3 on 2026-10-21):** "Tap mossling → S12" should read **S13** (S12 is arrive/nap, per 06 §0.5); "Postcard → S07" should read **S16** (it contains the paper rustle and keeps `CAPTION_POSTCARD`); "Leaf boat → S06 + paper" is now **S17**; the chime, pinwheel, lantern, bed-tap and toggle rows can cite S21, S19, S20, S18 and S15.
 
 ---
 
@@ -255,27 +255,37 @@ Rules: Off / **Subtle (default)** / Full; Subtle drops every TICK and scales iOS
 
 ## 8. AudioDirector specification (for the Tech Lead)
 
-One autoload, `AudioDirector` (suggested `scripts/audio/audio_director.gd`), `process_mode = PROCESS_MODE_ALWAYS`. It reads **only** `res://audio/manifest.json`; no level, pitch or timing is hard-coded in GDScript. `tools/audio/mixsim.py` is the executable reference of §8.4–§8.7: same data, same rules; if the game and the simulator disagree, one of them has a bug.
+One autoload, `AudioDirector` (`scripts/autoload/audio_director.gd`), `process_mode = PROCESS_MODE_ALWAYS`. It reads **only** `res://audio/manifest.json`; no level, pitch or timing is hard-coded in GDScript. `tools/audio/mixsim.py` is the executable reference of §8.4–§8.7: same data, same rules; if the game and the simulator disagree, one of them has a bug.
 
 ### 8.1 Public API (as implemented in `scripts/autoload/audio_director.gd`, ARCHITECTURE §8.3)
 
 ```gdscript
-signal caption_requested(caption_key: String, position: Vector2)   # captions UI (X1), only when Captions is on
-signal chord_changed(chord: Dictionary)                            # a manifest harmony.chords entry
+signal cue_played(cue_id: StringName, caption_key: StringName, world_position: Vector2)  # captions UI (X1)
+signal chord_changed(chord_name: StringName)                       # the sounding pad chord
 
 func request_preload() -> void          # boot: threaded loads of every asset (Web: web_path)
 func start_world_audio() -> void        # when the hollow becomes visible: beds 4 s, pad at 6 s, voices, birds
-func play_cue(id: StringName, ctx: Dictionary = {}) -> void
+func play_cue(cue_id: StringName, ctx: Dictionary = {}) -> void
 	# ctx: world (S01 bus), position (caption anchor), voice_step (S03/S12/S13), nap (S12),
 	#      on (S15), shells (owned wind-chime shells, S21), gust (S21 on the Ambience bus), haptic (default true)
-func start_loop(id: StringName, ctx: Dictionary = {}) -> int    # S03 purr: attack_s fade-in, returns a handle
-func stop_loop(handle: int) -> void                              # release_s fade-out, then free
-func set_ducked(reason: StringName, on: bool) -> void            # &"sheet" (S07/S08); &"focus" is automatic
+func start_purr(voice_step: int) -> void    # S03 on its dedicated player: attack fade-in, Full TICK repeat
+func stop_purr() -> void                    # release fade-out, haptic repeat stops
+func set_sheet_open(open: bool) -> void     # S07/S08 Music LPF duck; focus-out ducks automatically
+func set_phase(phase_id: StringName, immediate: bool = false) -> void      # from TimeOfDay.phase_changed
+func set_weather(weather_id: StringName, immediate: bool = false) -> void  # from TimeOfDay.weather_changed
+func set_music_mode(mode: StringName) -> void                    # &"on" / &"ambience" / &"off" (§8.9)
+func set_volume(group: StringName, slider: int) -> void          # music / ambience / effects, 0-100
+func set_mono(enabled: bool) -> void
+func set_world_state(shells_owned: int, awake_visitors: PackedInt32Array, sleeping_visitors: int) -> void
+func set_install_seed(install_seed: int) -> void
+func current_chord() -> StringName
+func current_pcs() -> Array
+func debug_set_clock(phase: StringName, weather: StringName) -> void       # QA: pin a profile
 func stop_all() -> void                                          # before quitting
 static func slider_to_db(slider: int) -> float                   # 30*log10(v/80); 0 = muted
 ```
 
-Phase and weather arrive from the `TimeOfDay` autoload (`phase_changed`, `weather_changed`), settings from `Settings.changed`. The behaviour below is the contract; the names above are the Tech Lead's.
+Phase and weather arrive from the `TimeOfDay` autoload (`phase_changed`, `weather_changed`), settings from `Settings.changed`. The behaviour below is the contract; the names above are the implemented API (ARCHITECTURE §3.1, §8.3), which replaced the first draft's `caption_requested`, `start_loop`/`stop_loop` and `set_ducked`.
 
 ### 8.2 Boot
 
@@ -356,6 +366,8 @@ Get the effect with `AudioServer.get_bus_effect(AudioServer.get_bus_index(&"Musi
 - Unit-testable without audio: snap / pent_step / wrap, ladder reset, walk reflection, variant non-repetition, chord hold range, bed target table, slider curve.
 
 ### 8.11 Review of the current implementation (2026-10-20, against the final manifest)
+
+**Status 2026-10-21: all six items below are implemented** in `scripts/autoload/audio_director.gd` and `haptics.gd` (equal-power `Fader` gains written with `linear_to_db`; every motif note wrapped into its bank range; `music_add_db`, `critters`, `chime_gust_s` and `pad_clip_order` read; one `AudioStreamInteractive` natively and A/B players on Web; `full_repeat_ms`, `full_delay_ms`, `once` and `haptic_once_per_burst`; variant level offsets, the 4-voice SFX cap and stopping silenced players). `tests/test_audio_director.gd` and `tools/qa/audio_smoke.gd` cover them, and the 10-minute real-play capture meets A1/A2 (docs/QA.md §3.4). The list is kept as the review record.
 
 `audio_director.gd` already executes most of this contract (buses, beds with `replace`/`bed_add_db`, birds, pads, voices with density/gap/rest/fatigue, hush and swell, every pitch rule, Web twins, ducking, volumes, Mono, captions, haptics). Deltas, in order of audible impact:
 
@@ -440,11 +452,11 @@ Seeds are `crc32(asset_id) XOR 20261020`; numpy `default_rng`; ffmpeg runs with 
 
 ## 11. Hand-offs and open issues
 
-**Tech Lead:** implement `AudioDirector` (§8) and `Haptics` (§7) against the manifest; add the Android export exclude for `audio/sfx_web/*`; add the MovieWriter project settings of §8.10 (they fit 00 §3's `.movie` overrides); keep `audio/general/ios/session_category=0`, the 44.1 kHz mix rate and the bus-sleep defaults. `default_bus_layout.tres` needs no project setting.
+**Tech Lead (done 2026-10-21, ARCHITECTURE §8.2–8.3):** implement `AudioDirector` (§8) and `Haptics` (§7) against the manifest; add the Android export exclude for `audio/sfx_web/*`; add the MovieWriter project settings of §8.10 (they fit 00 §3's `.movie` overrides); keep `audio/general/ios/session_category=0`, the 44.1 kHz mix rate and the bus-sleep defaults. `default_bus_layout.tres` needs no project setting.
 **UI Engineer:** call `play_cue` on touch-down; `set_sheet_open` on sheet rise/exit; wire the four sound settings and the haptics setting; captions from `cue_played`.
 **Gameplay Engineer:** `set_phase`/`set_weather` from the world clock; `set_world_state` (owned shells, awake visitors' `voice_step`, sleepers) on change; S12 on arrival/nap, S13 on mossling tap, S02 per collected item.
-**Game Designer:** the four GDD §8.3 row edits in §6.1. Optional new caption keys if wanted: none are required (S09/S10 have cards).
-**QA:** `synth.py` (exit code) and `verify_loops_in_godot.py` are CI-ready gates; the real-capture A1 check (`measure.py --gate`) becomes possible once the AudioDirector runs.
+**Game Designer:** the four GDD §8.3 row edits in §6.1 (done). Optional new caption keys if wanted: none are required (S09/S10 have cards).
+**QA:** `synth.py` (exit code) and `verify_loops_in_godot.py` are CI-ready gates; the real-capture A1 check runs as `tools/qa/capture.sh loudness` (`measure.py --gate`; −17.85 / −17.91 LUFS-I measured, docs/QA.md §3.4).
 
 **Open (need a device or a browser):**
 1. Tap-to-sound latency on a low-end Android phone against I1 (≤ 100 ms), with SFX on touch-down (06 §6).

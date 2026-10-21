@@ -3,7 +3,8 @@ extends Node
 ##
 ##  * 60 fps while the player interacts or a UI tween/spring runs; 30 fps after
 ##    motion_tokens world.idle_fps_after_s (8 s) with no input and no UI motion; always 30 fps in
-##    Ambient mode. Rates are refresh divisors (90 Hz -> 45/90, 120 Hz -> 30/60, 02 §4.4.1).
+##    Ambient mode. Rates are refresh divisors (active/idle: 60 Hz 60/30, 90 Hz 45/30, 120 Hz 60/30;
+##    02 §4.4.1).
 ##  * If the idle 30 fps cadence itself is unstable (p95 frame delta > 40 ms), idle-30 is turned
 ##    off for the session and the content tier drops instead (C21 fallback, R2).
 ##  * Quality tier 0 (full) / 1 / 2: step down when > 5 % of frames in a 3 s window exceed 1.5x

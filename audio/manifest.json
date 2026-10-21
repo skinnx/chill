@@ -1566,7 +1566,7 @@
 			},
 			"caption": null,
 			"max_voices": 2,
-			"visual_twin": "lantern glow +40 % for 1.2 s, fireflies drift in"
+			"visual_twin": "lantern brightens +60 % (200 ms in, 2 s hold, 1.2 s out), 2-3 fireflies released (Art Bible §6.6)"
 		},
 		"S21": {
 			"name": "wind_chime",

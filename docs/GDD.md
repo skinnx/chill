@@ -57,7 +57,7 @@ The player is the quiet keeper of a hollow: a shallow, mossy bowl ringed by a wi
 
 | Shape | Typical flow (taps) | Design guarantees |
 |---|---|---|
-| **30 s glance** | Open → (recap card 3–5 s, tap to skip) → see who is visiting → tap **Basket** → **Collect all** → close. 2–3 taps. | Something new every time (§5.6). Collecting is one tap. Leaving costs nothing; leaving mid-anything is safe (autosave). E4: even a 30 s session plants the tutorial seed or collects a gift, which is visible next launch. |
+| **30 s glance** | Open → (recap card up to 5 s, tap to skip) → see who is visiting → tap **Basket** → **Collect all** → close. 2–3 taps. | Something new every time (§5.6). Collecting is one tap. Leaving costs nothing; leaving mid-anything is safe (autosave). E4: even a 30 s session plants the tutorial seed or collects a gift, which is visible next launch. |
 | **1–5 min check-in** | Glance + plant 1–2 flowers or place 1 décor piece (Garden sheet) + pet a visitor + read a postcard / rename a new friend / float a leaf boat. | ≥ 1 affordable purchase at every session start (E5, proven in §5.11 and §9). Next catalogue item ≈ 30–90 min of passive income mid-game. |
 | **Ambient watch** | Put the phone down. After 60 s without input (or tap the eye in the HUD) the HUD and dock fade out (600 ms), frame rate drops to 30 fps (C21), the world keeps living by the device clock. First tap only wakes the UI. | No required input ever. Screen stays on only if the player enabled it (default off, 02 R12). |
 
@@ -92,11 +92,11 @@ The player is the quiet keeper of a hollow: a shallow, mossy bowl ringed by a wi
 Reading the screen top to bottom:
 1. **Sky** (L0/L1): the full upper half; sun or moon arcs across with the clock; clouds drift on L2. This is the rest area (30–40 % low detail, 05 §4).
 2. **Far hills and tree line** (L2/L3): a soft fractal ridge at y ≈ 0.30 descending to the hollow's rim at y ≈ 0.42.
-3. **The rim** (look zone, y 0.33–0.44), left to right: a **willow** whose canopy fills the top-left corner with one low branch where the **shell wind chime** hangs (0.28, 0.336); the **mailbox** on a mossy post (0.07, 0.395); the **toadstool ring** on the left slope (centre 0.32, 0.43); the grassy **hill crest** (0.56, 0.405) where **leaf pinwheels** catch the wind; a pale mossy **moon rock** (0.74, 0.385); the **old stump** with a hollow (0.90, 0.445) on the right.
+3. **The rim** (look zone, y 0.33–0.44), left to right: a **willow** whose canopy fills the top-left corner with one low branch where the **shell wind chime** hangs (0.30, 0.336); the **mailbox** on a mossy post (0.09, 0.395); the **toadstool ring** on the left slope (centre 0.32, 0.43); the grassy **hill crest** (0.56, 0.405) where **leaf pinwheels** catch the wind; a pale mossy **moon rock** (0.74, 0.385); the **old stump** with a hollow (0.90, 0.445) on the right.
 4. **The garden floor** (tend zone, y 0.44–0.75): the woven **gift basket** sits at the top centre (0.50, 0.48) just above the flat, warm **sun stone** (0.50, 0.585), the composition's focal point (05 §4: lower-third band). Five **flower beds** surround it like petals: two upper beds (willow side and stump side) and three lower beds. A loose path runs left–right through the middle (y ≈ 0.59) with the **moss cushion**, **clover bank** and **fern shade** spots along it.
 5. **The stream** (y 0.74–0.80): a quiet trickle that rises from a **spring rock** at the right edge (0.95, 0.735) and runs right→left along the foot of the garden, half under the frosted dock glass. Its upper bank carries the **firefly lantern** posts, the water holds the **stream stones**, and the **pebble cairn** grows on the far-left bank. Leaf boats drift along it from right to left.
 
-⟲ Preview of the authored layout (spot circles ≈ a 50 dp creature, boxes = hit areas):
+⟲ Preview of the authored layout (spot circles ≈ a 50 dp creature, boxes = hit areas; regenerate with `python3 -I tools/sim/layout_preview.py` whenever `spots.json` changes):
 
 ![Hollow layout schematic](gdd/hollow_layout.png)
 
@@ -151,7 +151,7 @@ Décor sets **grow at fixed, pre-authored positions**: each copy adds the next p
 - `leaf_pinwheel` (scatter): (0.500, 0.418), (0.620, 0.392), (0.680, 0.428), (0.460, 0.392), (0.800, 0.405), (0.585, 0.437), (0.700, 0.372), (0.420, 0.430), (0.830, 0.378), (0.520, 0.372)
 - `toadstool_seat` (ring): (0.320, 0.408), (0.320, 0.452), (0.401, 0.423), (0.239, 0.437), (0.370, 0.448), (0.270, 0.412), (0.370, 0.412), (0.270, 0.448), (0.401, 0.437), (0.239, 0.423)
 - `pebble_cairn` (stack): (0.045, 0.728), (0.045, 0.720), (0.045, 0.711), (0.045, 0.703), (0.045, 0.694), (0.045, 0.685), (0.045, 0.677), (0.045, 0.668), (0.045, 0.660), (0.045, 0.651)
-- `wind_chime` (string): (0.239, 0.336), (0.248, 0.342), (0.258, 0.336), (0.267, 0.342), (0.276, 0.336), (0.284, 0.342), (0.293, 0.336), (0.302, 0.342), (0.311, 0.336), (0.321, 0.342)
+- `wind_chime` (string): (0.260, 0.336), (0.269, 0.342), (0.278, 0.336), (0.286, 0.342), (0.295, 0.336), (0.304, 0.342), (0.314, 0.336), (0.323, 0.342), (0.332, 0.336), (0.341, 0.342)
 
 Props (⟲ `spots.json:props`):
 
@@ -159,13 +159,13 @@ Props (⟲ `spots.json:props`):
 |---|---|---|---|---|---|
 | `sun_stone_rock` | 0.500 | 0.585 | 87 × 40 | — | — |
 | `basket` | 0.500 | 0.480 | 44 × 36 | open_basket | 64 |
-| `mailbox` | 0.070 | 0.395 | 30 × 48 | open_postcards | 64 |
-| `wind_chime_branch` | 0.280 | 0.336 | 40 × 60 | ring_chime | 64 |
+| `mailbox` | 0.090 | 0.395 | 30 × 48 | open_postcards | 64 |
+| `wind_chime_branch` | 0.300 | 0.336 | 40 × 60 | ring_chime | 64 |
 | `stump` | 0.900 | 0.445 | 70 × 60 | — | — |
 | `spring_rock` | 0.950 | 0.735 | 60 × 40 | — | — |
 | `willow` | 0.120 | 0.300 | 140 × 170 | — | — |
 
-**Hit priority** when targets overlap (world): mossling > bed with a ready bud > prop (basket, mailbox, chime) > bed > stream > background. The validator checks every static target for size floors and 8 dp gaps (§10).
+**Hit priority** when targets overlap (world): mossling > bed with a ready bud > prop (basket, mailbox, chime) > décor piece with a `tap_fx` (pinwheel, lantern; optional delight, hit ≥ 60 dp, 64 dp in the look zone, nearest piece wins) > bed > stream > background. The validator checks every static target for size floors, 8 dp gaps and that its hit area lies fully inside the frame (§10).
 
 ---
 
@@ -177,10 +177,10 @@ Props (⟲ `spots.json:props`):
 | Tap a **ready bud** (a stem whose bloom time arrived while you were watching) | the bed's ready buds unfurl, 30 ms stagger, 3–5 sparkles, S04 | 600 ms unfurl; un-tapped ready buds open by themselves after 20 s (2.4 s slow unfurl) |
 | **Long-press** a mossling | pet: radial fill from 150 ms, at 450 ms squash to 0.88 (`jelly` spring), purr chime S03 loops while held, hearts on release | +1 affection, first pet per visit only (never stated in UI) |
 | **Stroke** (drag ≥ 24 px starting on a mossling) | same as pet | — |
-| Tap a mossling | it turns to you, chirps (S12 at its `voice_step`), name tag fades in for 2 s; a second tap within 2 s opens its card | — |
+| Tap a mossling | it turns to you, chirps (S13 at its `voice_step`), name tag fades in for 2 s; a second tap within 2 s opens its card (an optional shortcut, not a timed requirement: the Album opens the same card, I3). A napping mossling only stirs (S14) | — |
 | Tap the **stream** | ripple ring to 36 dp in 380 ms, bubbles S06; nearby awake mosslings glance | — |
-| Tap the **wind chime** (once placed) | rings the owned shells, falling arpeggio | — |
-| Tap a bed (no ready buds) | stems sway, soft rustle; long-press = bed card ("Blooms in about 40 min") | — |
+| Tap the **wind chime** (once placed) | rings the owned shells, falling arpeggio (S21) | — |
+| Tap a bed (no ready buds) | stems sway, soft rustle (S18); long-press = bed card ("Blooms in about 40 min") | — |
 
 ### 3.2 Minutes loop (1–5 min)
 1. **Collect** — Basket (dock or in-world basket) → **Collect all**: gifts fly to the dew counter, counter rolls up (600 ms), S02 ladder. One tap.
@@ -214,7 +214,7 @@ Rule zero: **no text walls**. The only words on screen in the first five minutes
 | on collect | **Collect all**: "+18" flies to the HUD where the dew counter appears for the first time. Clover #2 costs 17, so the Garden button wakes with a small "new" dot. | — |
 | bloom + 15 s (≤ 150 s) | **Second visitor Dot** (Buttonbud), drawn by the new bloom, bounces over the hill crest straight to the clover (nibble). New-friend card. Stays 100 s, leaves a petal bundle (12 dew). | — |
 | 210 s | **Third visitor Cobble** (Pebblepaw) wanders up the stream bank to the stream bend. New-friend card. While Cobble sits there, a leaf drifts down the stream once and a ripple ghost appears on the water (invites the stream tap). Cobble is the first normal visit (40–80 min stay, normal gift). | — |
-| 240 s | The **mailbox flag** pops up with a paper rustle (S07): the welcome postcard. Opening it is optional. | Flag wiggles every 8 s |
+| 240 s | The **mailbox flag** pops up with a paper rustle (S16): the welcome postcard. Opening it is optional. | Flag wiggles every 8 s |
 | 300 s | Scripted part ends; Poisson visits begin (§5.4). | — |
 
 Outcome (sim-verified): 3 species met, 1 flower bloomed, 1–2 purchases possible, 0 words of instruction. Players who leave early lose nothing: scripted visits run in world time, so their gifts and new-friend cards are waiting (in the recap) next time; the seed keeps sparkling until tapped.
@@ -297,7 +297,7 @@ All mosslings are one SDF creature material with `instance uniform`s (D7, C11): 
 | `fl_dandelion` | `#F4CF62` | 0.60 | 0.96 | dandelion |
 | `fl_moonbloom` | `#EDEAF7` | 0.05 | 0.97 | moonbloom |
 
-- `voice_step`: offset in pentatonic steps for the species' chirp (S12) and purr root (S03), so friends are distinguishable by ear (06 §0.5).
+- `voice_step`: offset in pentatonic steps for the species' arrive/nap notes (S12), chirp (S13) and purr root (S03), so friends are distinguishable by ear (06 §0.5).
 
 #### 4.1.3 Behaviours (state machine shared by all species)
 States: **ENTER** → (**BOUT** ⇄ **MOVE**)* → **LEAVE**.
@@ -309,7 +309,7 @@ States: **ENTER** → (**BOUT** ⇄ **MOVE**)* → **LEAVE**.
   - `wander`: stroll a Catmull-Rom path through 2–3 random points of the tend zone, sniff flowers, look at the camera.
   - `sit_by_stream`: sit at a stream spot or anywhere on the upper bank, paw the water (ripples), watch boats.
 - **Spot choice**: the first bout and every nap go to the **favourite spot** if it is free and allows the behaviour (60 %); otherwise a random free spot allowing it. Spot capacity is respected; `nibble` uses beds, `wander` uses paths.
-- **Awake breathing** 3.5–4.5 s, asleep 5–6 s, ±10 % per individual (05 §3.4). Blinks every 2.5–7 s.
+- **Awake breathing** 3.5–4.5 s, asleep 5–6 s; each individual gets its own period inside those ranges as 600/k with a seeded integer k (`motion_tokens.json loops_k.breathe_*`, 05 §3.4, C4). Blinks every 2–6 s (`creature.blink`).
 - **LEAVE**: at departure time: stretch, wave toward the camera, drop the gift into the basket (gift flies 600 ms to the in-world basket), walk to the entry, fade out over 400 ms.
 - **Boat**: when a leaf boat launches, awake mosslings turn to watch; those within 300 px of the stream walk to the bank and `sit_by_stream` until it passes.
 - **Max 5 mosslings in the hollow**; a 6th arrival "peeks" (waves from the rim for 4 s, leaves its gift, no stay).
@@ -523,14 +523,14 @@ Three tabs: **Friends**, **Photos**, **Postcards**.
 ### 7.2 Postcards (20 templates ⟲ `strings.csv: POSTCARD_*`)
 - **Friendship**: each species has two templates (`postcard_heart2`, `postcard_heart4`) from 12 friend templates, signed "— {name}" with the player's chosen name. 24 deliveries in total.
 - **Events** (`economy.json:event_postcards`, signed "— the hollow"): welcome (240 s), first bloom of a bought flower, first décor, first rainy visit, first night visitor, basket brimming, 10th leaf boat, all friends of spring met. 8 deliveries.
-- Delivery: the mailbox flag pops up (S07, paper rustle); tap the mailbox or open Album → Postcards. Reading is optional and nothing waits on it.
+- Delivery: the mailbox flag pops up (S16, paper rustle); tap the mailbox (S07 as the reader opens) or open Album → Postcards. Reading is optional and nothing waits on it.
 
 ### 7.3 Naming
 - Every friend has a default name per language (`SPECIES_*_DEFAULT_NAME`). Renaming: tap the name on the new-friend card or in the album → `LineEdit` with the platform keyboard, max **12 characters**, trimmed; empty → default. A custom name is shown in every language.
 - **Allowed characters = the subset font's coverage** (Latin + Vietnamese + digits + space + `- ' .`), because fonts have no system fallback (D6); other characters are silently filtered while typing (no error). Input is NFC-normalized before saving.
 
 ### 7.4 Petting and hearts
-- Long-press 450 ms or stroke (§3.1). Purr S03 loops while held; haptic: Subtle = none during the purr, Full = TICK every 120 ms (≥ 60 ms apart). On release 3–5 hearts float up (fade in ≥ 300 ms).
+- Long-press 450 ms or stroke (§3.1). Purr S03 loops while held; haptic: Subtle = none during the purr, Full = TICK every 120 ms (≥ 60 ms apart). On release 3 hearts float up (fade in ≥ 300 ms); crossing a heart threshold adds the 5-heart `celebrate` burst (`motion_tokens.json creature.pet`).
 - Unlocks: ♥1 favourite spot revealed · ♥2 first postcard · ♥3 "Likes" list revealed + greets you with a wave on arrival · ♥4 second postcard · ♥5 **best friend**: golden frame in the album, visit weight ×1.25.
 - Reference player: 11 best friends by day 30 (median).
 
@@ -575,7 +575,7 @@ Back (Android) closes the top-most card/sheet; at Main it opens "Leave the hollo
 ```
 - **Dock**: 4 buttons, centres at x = 135 / 405 / 675 / 945 px, hit 76 dp (228 px) each, gaps ≥ 42 px. The frequent pair (Garden, Basket) sits in the centre with 72 dp visuals; Settings and Album 56 dp visuals. Faux glass (no screen read, C7). The Basket shows a small gift-count badge (≤ 24) and a brim sparkle when full.
 - **HUD (Z1, passive)**: dew chip (top-left, appears after the first collect), time/weather chip and the "just watch" eye (top-right, 72 dp hit). Mirrored when left-handed.
-- **Sheets**: bottom sheets rising from the dock, ≤ 60 % of the height, `standard` 320 ms in / `exit` ≈ 220 ms out; exactly one at a time; the open sheet is the one live-glass surface (C7). Close by tapping the scrim, swiping down (> 25 % of height or > 1000 px/s), Back, or tapping the same dock button. Tapping another dock button swaps sheets (200 ms cross-fade).
+- **Sheets**: bottom sheets rising from the dock, ≤ 60 % of the height, `standard` 320 ms in / `exit` ≈ 210 ms out (0.65 × 320); exactly one at a time; the open sheet is the one live-glass surface (C7). Close by tapping the scrim, swiping down (> 25 % of height or > 1000 px/s), Back, or tapping the same dock button. Tapping another dock button swaps sheets (200 ms cross-fade).
 - **Garden item card**: icon (live mini-render), name, price chip with drop icon, "{owned} of {max}", dew-yield drops (flowers), bloom time ("Blooms in about 40 min"), "Loved by {names}" for met friends or "A friend you haven't met yet loves these", primary button **Plant / Place** at the card's bottom. Unaffordable: button reads "A little more dew", price chip in `ink_2`; pressing it gives the soft S11 tok and a ±2 dp wiggle — never red, never a buzz.
 
 ### 8.2 Gestures (I3)
@@ -588,7 +588,8 @@ Back (Android) closes the top-most card/sheet; at Main it opens "Leave the hollo
 | Event | Visual (≤ 100 ms to first change) | Sound (06 §0.5) | Haptic (Subtle / Full) |
 |---|---|---|---|
 | Any touch-down | tint +6 L*, UI scale 0.96 in 80 ms / world squash 0.94 | S01 | — / TICK |
-| Tap mossling | look-at, chirp bubble, name tag 2 s | S12 at `voice_step` | — / TICK |
+| Tap mossling | look-at, chirp bubble, name tag 2 s | S13 at `voice_step` | — / TICK |
+| Tap a napping mossling | stirs (squash 0.97, ear twitch), stays asleep | S14 | — |
 | Pet | radial fill, squash 0.88, hearts on release | S03 loop | — / TICK every 120 ms |
 | Ready bud | unfurl 600 ms, sparkles | S04 | — / TICK at end |
 | Plant / place | seed arc 320 ms, soil puff / piece settles 500 ms | S05 | — / TICK |
@@ -598,9 +599,13 @@ Back (Android) closes the top-most card/sheet; at Main it opens "Leave the hollo
 | Sheet open / close | rise / exit | S07 / S08 | — |
 | Not affordable | price chip pulse, ±2 dp wiggle | S11 (soft tok, no buzz) | — |
 | Stream tap | ripple ring 380 ms | S06 | — |
-| Leaf boat | boat launches at the spring | S06 + paper | — / TICK |
-| Postcard | mailbox flag pops | S07 | — |
+| Leaf boat | boat launches at the spring | S17 | — / TICK |
+| Postcard arrives / opened | mailbox flag pops / reader card rises | S16 / S07 | — |
 | Arrival / falls asleep | fade-in 400 ms / curls up | S12 | — |
+| Tap a bed (no ready bud) | stems sway | S18 | — |
+| Tap a pinwheel / lantern | spin burst / lantern brightens | S19 / S20 | — |
+| Tap the wind chime; breeze gusts | owned shells swing | S21 | — |
+| Settings toggle / segmented choice | thumb slides / pill moves | S15 | — / TICK |
 Captions (setting) show `CAPTION_*` bubbles next to the source.
 
 ### 8.4 Targets (I2)
@@ -723,25 +728,25 @@ All files: UTF-8 JSON, `"schema": 1`, a `"doc"` string, snake_case ids, seconds 
 | `data/species.json` | `species[]` | `id, name_key, default_name_key, desc_key, hint_key, album_order, rarity, base_weight, gift_dew, gift_item, stay_mult, entry, favourite_spot, requires[{item,min}], phases[], likes_items[{item,min,mult}], likes_weather[{weather,mult}], likes_phases[{phase,mult}], behaviours{nap,nibble,play,wander,sit_by_stream} (sum 1), rig{body_w_h,size,ear,tail,antenna,pattern,eye,fuzz_dp,fur,fur_2,belly,accent}, voice_step, postcard_heart2, postcard_heart4, seasons[]` |
 | `data/flora.json` | `flowers[]` | `id, name_key, desc_key, garden_order, form, petal_token, cost_base, cost_growth, max_copies, sprout_at_s, bud_at_s, bloom_at_s, dew_per_hour, snug, opens_at (any / dusk_night), seasons[]` |
 | `data/decor.json` | `decor[]` | `id, name_key, desc_key, garden_order, anchor, cost_base, cost_growth, max_copies, snug, fx[], tap_fx, seasons[]` |
-| `data/economy.json` | flat constants | `display_max, wallet_cap, offline_clamp_s, welcome_back_min_gap_s, basket_slots, dew_cup_saturation_s, dew_cup_base_per_h, lambda_min_per_h, lambda_max_per_h, snug_half, stay_min_s, stay_max_s, max_present, photo_chance_with_gift, debut_chance, affection_per_visit/pet/boat, heart_thresholds[5], best_friend_heart, best_friend_weight_mult, leaf_boat_cost, leaf_boat_drift_s, greeter_delay_min_s/max_s, rarity_order[], onboarding{…}, event_postcards[{id,template,trigger}], gift_items[{id,name_key}], validation_targets{…}` |
+| `data/economy.json` | flat constants | `display_max, wallet_cap, offline_clamp_s, welcome_back_min_gap_s, basket_slots, dew_cup_saturation_s, dew_cup_base_per_h, lambda_min_per_h, lambda_max_per_h, snug_half, stay_min_s, stay_max_s, max_present, photo_chance_with_gift, debut_chance, affection_per_visit/pet/boat, heart_thresholds[5], best_friend_heart, best_friend_weight_mult, leaf_boat_cost, leaf_boat_drift_s, greeter_delay_min_s/max_s, greeter_stay_s, greeter_pet_cooldown_s, rarity_order[], onboarding{…}, event_postcards[{id,template,trigger}], gift_items[{id,name_key}], validation_targets{…}` |
 | `data/world.json` | clock & weather | `phases[{id,start_s,g_day,audio_profile,name_key}], phase_crossfade_s, audio_profile_crossfade_s, weather[{id,name_key,g_wind,rain_particles,cloud_cover,ambient_mult}], weather_crossfade_s, weather_plan{rain_count_probs, rain_min_s, rain_max_s, breeze_count_probs, breeze_min_s, breeze_max_s}, seasons[{id,name_key,length_days}], season_cycle[]` |
-| `data/spots.json` | layout | `frame{width_px,height_px,anchor,px_per_dp}, zones[{id,y0,y1}], safe_x{x0,x1}, stream{polyline[[x,y]],water_width,tap_band_y0,tap_band_y1}, entries[{id,x,y}], spots[{id,name_key,x,y,capacity,behaviours[],shelter,requires_item,requires_min}], beds[{id,name_key,x,y,fill_order,hit_w_dp,hit_h_dp,capacity,stems[[dx,dy]],nibble_points[[x,y]]}], decor_anchors[{decor_id,layout,positions[[x,y]]}], props[{id,x,y,w_dp,h_dp,tap_action,hit_dp}]` |
+| `data/spots.json` | layout | `frame{width_px,height_px,anchor,px_per_dp}, zones[{id,y0,y1}], safe_x{x0,x1}, stream{polyline[[x,y]],water_width (fraction of frame height, = the tap band's height),tap_band_y0,tap_band_y1}, entries[{id,x,y}], spots[{id,name_key,x,y,capacity,behaviours[],shelter,requires_item,requires_min}], beds[{id,name_key,x,y,fill_order,hit_w_dp,hit_h_dp,capacity,stems[[dx,dy]],nibble_points[[x,y]]}], decor_anchors[{decor_id,layout,positions[[x,y]]}], props[{id,x,y,w_dp,h_dp,tap_action,hit_dp}]` |
 
 `world.json` is a sixth file beyond the five requested: clock and weather numbers are needed by both the sim and the game, and do not belong in the economy file.
 
-Validator rules (exit 1 on failure): ids unique snake_case; every reference resolves (items, spots, entries, anchors, phases, weather, seasons, gift items, string keys); r ∈ [1.10, 1.12]; copies ∈ [10, 12]; top price ≤ 99,999; stage times increase; behaviour weights sum to 1; every MVP species visits in spring; favourite spots exist whenever the species can visit; rig palette slots are `cr_*`; beds hold all flower copies; anchors hold exactly `max_copies` positions; static targets meet size floors, keep 8 dp gaps and stay clear of the dock; required targets are not in the look zone.
+Validator rules (exit 1 on failure): ids unique snake_case; every reference resolves (items, spots, entries, anchors, phases, weather, seasons, gift items, string keys); r ∈ [1.10, 1.12]; copies ∈ [10, 12]; top price ≤ 99,999; stage times increase; behaviour weights sum to 1; every MVP species visits in spring; favourite spots exist whenever the species can visit; rig palette slots are `cr_*`; beds hold all flower copies; anchors hold exactly `max_copies` positions; static targets meet size floors, keep 8 dp gaps, keep their hit areas inside the frame's side edges and stay clear of the dock; required targets are not in the look zone.
 
 ---
 
 ## 11. Translations
 - `i18n/strings.csv` — Godot CSV translation format, header `keys,en,vi`, UTF-8 **without BOM**, Vietnamese **NFC**, comma-delimited, RFC-4180 quoting. 271 keys: UI, dock, sheets, settings, accessibility labels, captions, species (name, default name, description, hint), flowers, décor, spots, beds, behaviours, time/weather/season names, recap lines, 20 postcard templates.
-- Import: Godot generates `strings.en.translation` and `strings.vi.translation` next to the CSV (verified on 4.7.2 headless; `unescape_translations` default true). Register both in `project.godot` → `internationalization/locale/translations`. Use `tr("KEY").format({...})`.
+- Import: Godot generates `strings.en.translation` and `strings.vi.translation` next to the CSV (verified on 4.7.2 headless; `unescape_translations` default true). Both are registered at startup by `I18n.ensure_translations()`, not in `project.godot` (ARCHITECTURE §2: on a fresh clone the editor would otherwise log load errors before the first import has produced them). Use `tr("KEY").format({...})`.
 - Lint: `validate_content.py` checks header, BOM, NFC, empty cells, duplicate keys, placeholder parity between en and vi, banned words, and that every key referenced from data exists.
 
 ---
 
 ## 12. Hand-offs and open items
-**Art Director / Technical Artist:** creature token names `cr_*` (20) and petal tokens `fl_*` (8) are binding names and already resolve in `data/palettes.json`; keep them in sync if tokens are renamed. Layout positions (§2) are a gameplay contract; nudges ≤ 0.02 are fine if `validate_content.py` still passes. Gift item art (5), photo poses (5) and the leaf boat are needed.
+**Art Director / Technical Artist:** creature token names `cr_*` (20) and petal tokens `fl_*` (8) are binding names and already resolve in `data/palettes.json`; keep them in sync if tokens are renamed. Layout positions (§2) are a gameplay contract; nudges ≤ 0.02 are fine if `validate_content.py` still passes. (2026-10-21 integration review: `mailbox` x 0.07 → 0.09 so its 64 dp hit no longer crosses the left edge, and `wind_chime_branch` + its 10 anchors x +0.02 to keep the 8 dp gap; Art Bible U6.) Gift item art (5), photo poses (5) and the leaf boat are needed.
 **Sound Designer:** phase boundaries in `world.json` supersede 06 §0.4 (05:00 / 08:00 / 18:30 / 20:30 for dawn / day / dusk / night profiles). Each species has a `voice_step`; wind-chime notes per §4.3; no thunder.
 **Gameplay Engineer / Tech Lead:** port `Player.advance` from the sim (§5.8) as the one world step for live and offline; world seconds in the save; RNG state persisted; data loaded from JSON only. Greeter, debut, bout and wallet-cap rules are part of the contract (§5.5–5.7, §4.1.3).
 **UI Engineer:** dock order and mirroring (§8.1), sheet behaviour, unaffordable state (§8.1), name input filtering (§7.3), recap (§7.5), all strings via `tr()`.
