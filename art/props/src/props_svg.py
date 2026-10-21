@@ -809,8 +809,8 @@ def main() -> int:
 # "top" = y is measured from the VISIBLE top of the viewport (tall phones), "bottom" = design frame.
 # Every piece overscans its frame edges by >= 150 px (camera drift 86 px x parallax 1.3 + margin).
 FG_PARTS = [
-    ("fg_left", fg_left, "bottom", (-190, 1560), "willow_leaf", [5.0, 133, 0.95]),
-    ("fg_right", fg_right, "bottom", (790, 1580), "moss", [3.5, 120, 0.95]),
+    ("fg_left", fg_left, "bottom", (-130, 1550), "willow_leaf", [5.0, 133, 0.95]),
+    ("fg_right", fg_right, "bottom", (760, 1570), "moss", [3.5, 120, 0.95]),
     ("fg_bough", fg_bough, "top", (740, -110), "willow_leaf", [5.0, 76, 0.0]),
 ]
 

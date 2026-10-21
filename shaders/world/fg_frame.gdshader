@@ -17,7 +17,9 @@ instance uniform vec4 i_detail : source_color = vec4(0.824, 0.902, 0.761, 0.0);
 instance uniform vec4 i_sway = vec4(6.0, 120.0, 1.0, 0.0);
 instance uniform vec4 i_region = vec4(0.0, 0.0, 1.0, 1.0);
 
-uniform float fg_mix = 0.74;
+uniform float fg_mix = 0.84;
+// The frame is the darkest value of the picture (Art Bible §1.2, §2.5 value plan).
+uniform float fg_dark = 0.82;
 uniform float rim_k = 0.55;
 uniform float rim_px = 9.0;
 uniform float glow_k = 0.10;
@@ -46,7 +48,7 @@ void fragment() {
 	vec3 alb = w.r * i_lit.rgb + w.g * i_shade.rgb + w.b * i_detail.rgb + o * i_shade.rgb * 0.72;
 	vec3 c = mix(alb * g_ambient.rgb, g_fg.rgb, fg_mix);
 	// Lit tone reads a little lighter (leaf volume survives the blur).
-	c *= 0.92 + 0.16 * w.r;
+	c *= (0.92 + 0.16 * w.r) * fg_dark;
 	vec2 kd = key_dir(v_canvas);
 	float ahead = texture(TEXTURE, UV + kd * rim_px * TEXTURE_PIXEL_SIZE).a;
 	float rim = clamp(m.a - ahead, 0.0, 1.0);

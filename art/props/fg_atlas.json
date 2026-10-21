@@ -17,8 +17,8 @@
 			],
 			"anchor": "bottom",
 			"origin": [
-				-190,
-				1560
+				-130,
+				1550
 			],
 			"material": "willow_leaf",
 			"sway": [
@@ -37,8 +37,8 @@
 			],
 			"anchor": "bottom",
 			"origin": [
-				790,
-				1580
+				760,
+				1570
 			],
 			"material": "moss",
 			"sway": [

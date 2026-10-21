@@ -24,7 +24,7 @@ const PLANS := {
 	&"golden": [4, 25.0, 90.0, 900.0, Vector2(60, 70), Vector2(220, 260), 0.0],
 	&"dawn": [3, 18.0, 100.0, 950.0, Vector2(80, 120), Vector2(200, 240), 1.0],
 }
-const ALPHA_RANGE := Vector2(0.09, 0.12)
+const ALPHA_RANGE := Vector2(0.07, 0.10)
 const SEGMENTS := 8
 
 ## Shaft geometry for the dust mask: (origin x, y, angle rad, length) in design px.

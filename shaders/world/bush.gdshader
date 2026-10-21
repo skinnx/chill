@@ -108,8 +108,11 @@ void fragment() {
 	vec3 shade = base * g_shadow.rgb * SHADE_K;
 	// Lobe light: the lobe's own normal toward the key plus a top-lit bias for the whole canopy.
 	float lit = dot(normalize(lob_n + vec2(0.0, -0.35)), kd);
-	vec3 c = mix(base, shade, clamp(-lit, 0.0, 1.0) * 0.45);
-	c += (g_key.rgb * 0.65 + base * 0.35) * clamp(lit, 0.0, 1.0) * 0.18 * (0.5 + g_ground_light * 2.5);
+	// Contre-jour: with the light behind the hedge the viewer sees its shaded side; only the rims
+	// glow (below). Front light lights the lobes.
+	float back = g_backlight * g_celestial.x;
+	vec3 c = mix(base, shade, clamp(-lit, 0.0, 1.0) * 0.45 + back * 0.32);
+	c += (g_key.rgb * 0.65 + base * 0.35) * clamp(lit, 0.0, 1.0) * 0.18 * (0.5 + g_ground_light * 2.5) * (1.0 - 0.7 * back);
 	// Crevices between lobes and the base sink into shade (felted masses, not one blob).
 	float crease = smoothstep(0.0, 0.07, lob_d - d);
 	c = mix(c, shade, crease * 0.35);

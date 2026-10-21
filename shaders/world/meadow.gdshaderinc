@@ -39,8 +39,8 @@ uniform float moss_shade_k = 0.20;
 uniform float moss_crevice_k = 0.10;
 uniform float fibre_k = 0.07;
 // Relief: slope light, slope shade, bowl occlusion.
-uniform float relief_lit_k = 0.22;
-uniform float relief_shade_k = 0.38;
+uniform float relief_lit_k = 0.14;
+uniform float relief_shade_k = 0.48;
 uniform float occlusion_k = 0.30;
 uniform float height_tint_k = 0.16;
 uniform float dapple_k = 0.03;
@@ -142,7 +142,7 @@ vec3 meadow_color(vec2 uv, vec2 frag) {
 	float rl = dot(rn, kd);
 	float relief_light = (0.55 + 0.45 * low) * (1.0 - 0.5 * night);
 	c = mix(c, shade_c, clamp(-rl, 0.0, 1.0) * relief_shade_k * relief_light);
-	c += g_key.rgb * clamp(rl, 0.0, 1.0) * relief_lit_k * relief_light * (0.35 + g_ground_light * 2.5);
+	c += g_key.rgb * clamp(rl, 0.0, 1.0) * relief_lit_k * relief_light * (0.3 + g_ground_light * 1.5);
 	// Higher ground leans toward the lit grass tone, hollows toward the cool root tone.
 	float hh = rel.r - 0.5;
 	c = mix(c, hh > 0.0 ? grass_tip.rgb : grass_root.rgb, abs(hh) * 2.0 * height_tint_k);
@@ -173,7 +173,7 @@ vec3 meadow_color(vec2 uv, vec2 frag) {
 
 	// Drifting cloud shadows toward the tinted shadow (off at dusk, night and in rain).
 	if (g_cloud_shadow > 0.001) {
-		c = mix(c, c * g_shadow.rgb * SHADE_K, cloud_shadow(p) * 1.6);
+		c = mix(c, c * g_shadow.rgb * SHADE_K, cloud_shadow(p) * 1.3);
 	}
 	// 4c. Depth frame: the near ground below the brook and the bottom corners sink toward the
 	// shadow tint (richer, darker foreground; the far meadow keeps a touch of aerial haze).

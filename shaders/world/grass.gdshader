@@ -173,8 +173,8 @@ void fragment() {
 			if (fj >= n) {
 				break;
 			}
-			vec2 c = vec2((hs(seed, fj, 12.0) - 0.5) * 24.0, -4.0 - hs(seed, fj, 13.0) * 8.0 * hk);
-			float r = mix(4.6, 6.4, hs(seed, fj, 14.0));
+			vec2 c = vec2((hs(seed, fj, 12.0) - 0.5) * 22.0, -5.0 - hs(seed, fj, 13.0) * 8.0 * hk);
+			float r = mix(5.6, 7.6, hs(seed, fj, 14.0));
 			float rot = hs(seed, fj, 15.0) * TAU;
 			stem = min(stem, sd_capsule(p, vec2(c.x * 0.7, 0.0), c, 0.7));
 			for (int k = 0; k < 3; k++) {
