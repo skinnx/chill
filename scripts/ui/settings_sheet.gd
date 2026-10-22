@@ -14,6 +14,9 @@ extends UiSheet
 
 const ROW_H := 156.0
 const ROW_PAD := 30
+const ROW_PAD_Y := 18
+## Label -> segmented control in a choice row (the hit's 24 px grow plus 12 px of air).
+const CHOICE_GAP := 36
 const ICON_PX := 60.0
 ## Stepper plates 36 dp in a 50 dp hit (the row itself is not the hit here).
 const STEP_PLATE := 108.0
@@ -136,7 +139,7 @@ func _row(icon: StringName, key: String, desc_key: String, hit: bool) -> Array:
 	for side: StringName in [&"margin_left", &"margin_right"]:
 		m.add_theme_constant_override(side, ROW_PAD)
 	for side: StringName in [&"margin_top", &"margin_bottom"]:
-		m.add_theme_constant_override(side, 18)
+		m.add_theme_constant_override(side, ROW_PAD_Y)
 	m.mouse_filter = Control.MOUSE_FILTER_IGNORE if hit else Control.MOUSE_FILTER_PASS
 	row.add_child(m)
 	var h := HBoxContainer.new()
@@ -189,9 +192,34 @@ func _toggle_row(icon: StringName, key: String, desc_key: String, setting: Strin
 	return parts[0]
 
 
+## Art Bible §9.5 "segmented rows": [icon] label on top, the segmented control on a full-width
+## line under it (round 6, device QA: indented under the label, three Vietnamese options were
+## squeezed into 250 px segments).
 func _choice_row(icon: StringName, key: String, option_keys: Array, values: Array, setting: StringName) -> Control:
-	var parts := _row(icon, key, "", false)
-	var tv := parts[1] as VBoxContainer
+	var row := PanelContainer.new()
+	row.mouse_filter = Control.MOUSE_FILTER_PASS
+	row.custom_minimum_size = Vector2(0.0, ROW_H)
+	var m := MarginContainer.new()
+	for side: StringName in [&"margin_left", &"margin_right"]:
+		m.add_theme_constant_override(side, ROW_PAD)
+	m.add_theme_constant_override(&"margin_top", ROW_PAD_Y)
+	# the segmented hit grows 24 px past its track: the row keeps that room below it
+	m.add_theme_constant_override(&"margin_bottom", ROW_PAD_Y + roundi(Segmented.HIT_GROW))
+	m.mouse_filter = Control.MOUSE_FILTER_PASS
+	row.add_child(m)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override(&"separation", CHOICE_GAP)
+	v.mouse_filter = Control.MOUSE_FILTER_PASS
+	m.add_child(v)
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override(&"separation", 24)
+	head.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if icon != &"" and Settings.get_int(Settings.TEXT_SCALE) < ICONLESS_AT_TEXT:
+		var ic := Icons.rect(icon, ICON_PX)
+		ic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		head.add_child(ic)
+	head.add_child(label(tr(key), &"BodyLabel", true))
+	v.add_child(head)
 	var seg := Segmented.new()
 	seg.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var texts := PackedStringArray()
@@ -199,11 +227,10 @@ func _choice_row(icon: StringName, key: String, option_keys: Array, values: Arra
 		texts.append(tr(String(k)))
 	var current := String(Settings.get_value(setting))
 	var idx := maxi(0, values.find(current))
-	tv.add_theme_constant_override(&"separation", 18)
-	tv.add_child(seg)
+	v.add_child(seg)
 	seg.setup(texts, idx)
 	seg.selected.connect(func(i: int) -> void: Settings.set_value(setting, values[i]))
-	return parts[0]
+	return row
 
 
 func _slider_row(key: String, setting: StringName) -> Control:

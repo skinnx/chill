@@ -22,7 +22,8 @@ extends Control
 ##   --qa-leave            show "Leave the hollow for now?"
 ##   --qa-toast            show a sample toast (choose-a-bed copy)
 ##   --qa-newfriend=<id>   show the new-friend card for that species
-##   --qa-friend=<id>      open the Album on that friend's detail card
+##   --qa-friend=<id>      open the Album on that friend's detail card ("present": a met friend
+##                         who is visiting right now, so the card shows Pet)
 ##   --qa-press=<target>   freeze a touch-down for the touch strip: a dock tab (garden, basket,
 ##                         album), settings (= gear, the top bar's Settings button), eye, close
 ##                         (the open sheet's close), primary (the open sheet's or modal's first
@@ -36,6 +37,12 @@ extends Control
 ##   --qa-captions         show a sample caption bubble (Captions on)
 ##   --qa-met=<n>          (with --no-save captures) mark the first n friends met, with hearts,
 ##                         photos and two postcards, so the Album shows a lived-in collection
+##   --qa-scroll=<v>       scroll the open sheet's list: a fraction 0..1 of its range ("0.5",
+##                         "1" = the end) or px ("640px"), after its layout settles
+##   --qa-detent=large     open the sheet at its large detent
+##   --qa-rename           (with --qa-friend) start renaming: the name field focused, all selected
+##   --qa-kb=<px>          simulate an on-screen keyboard this tall (canvas px; drawn as a grey
+##                         block) so the sheet's keyboard lift can be captured on desktop
 
 # Data boundary: values read from JSON / Dictionaries are Variants and each one is converted
 # explicitly (int(), float(), String() ...) where it is read; the analyzer still flags every
@@ -60,6 +67,12 @@ const QA_PRESS_T_MS := 60.0
 const QA_DRAWCALL_EVERY := 30
 const ARG_CAPTIONS := "--qa-captions"
 const ARG_MET := "--qa-met="
+const ARG_SCROLL := "--qa-scroll="
+const ARG_DETENT := "--qa-detent="
+const ARG_RENAME := "--qa-rename"
+const ARG_KB := "--qa-kb="
+## Frames for a sheet's containers, bakes and springs to settle before --qa-scroll applies.
+const QA_SETTLE_FRAMES := 6
 ## --qa-met: friends met this many days apart, hearts cycling 1..5, photos and two postcards.
 const QA_MET_DAY_S := 86400.0
 const QA_PHOTO_BITS := [0b00001, 0b00011, 0b10101, 0b01111, 0b11111]
@@ -438,11 +451,12 @@ func _on_bed_chosen(bed: StringName) -> void:
 
 func _parse_qa() -> void:
 	for a: String in OS.get_cmdline_user_args():
-		for key: String in [ARG_SHEET, ARG_TAB, ARG_NEWFRIEND, ARG_FRIEND, ARG_PRESS_T, ARG_PRESS, ARG_MET]:
+		for key: String in [ARG_SHEET, ARG_TAB, ARG_NEWFRIEND, ARG_FRIEND, ARG_PRESS_T, ARG_PRESS, ARG_MET,
+				ARG_SCROLL, ARG_DETENT, ARG_KB]:
 			if a.begins_with(key):
 				_qa[key] = a.trim_prefix(key)
 		for flag: String in [ARG_RECAP, ARG_PEEK, ARG_AMBIENT, ARG_LEAVE, ARG_TOAST, ARG_CAPTIONS, ARG_DRAWCALLS,
-				ARG_UI_AUDIT]:
+				ARG_UI_AUDIT, ARG_RENAME]:
 			if a == flag:
 				_qa[flag] = true
 
@@ -454,7 +468,13 @@ func _apply_qa() -> void:
 	if _qa.has(ARG_MET):
 		_qa_seed_album(int(String(_qa[ARG_MET])))
 	if _qa.has(ARG_FRIEND):
-		open_friend(StringName(String(_qa[ARG_FRIEND])))
+		var friend := StringName(String(_qa[ARG_FRIEND]))
+		if friend == &"present" and Game.sim != null:
+			# a met friend strolls in (the greeter rule), so the detail card shows Pet
+			friend = Game.sim.add_greeter(Game.sim.state.t)
+			if friend == &"" and not Game.sim.state.present.is_empty():
+				friend = StringName(String((Game.sim.state.present[0] as Dictionary)["species"]))
+		open_friend(friend)
 	elif _qa.has(ARG_SHEET):
 		var id := StringName(String(_qa[ARG_SHEET]))
 		if SHEETS.has(id):
@@ -482,6 +502,39 @@ func _apply_qa() -> void:
 		overlays.show_caption(tr("CAPTION_CHIRP"), get_viewport_rect().size * Vector2(0.5, 0.55), true)
 	if _qa.has(ARG_UI_AUDIT):
 		_qa_ui_audit.call_deferred()
+	if sheets.current != null and (_qa.has(ARG_SCROLL) or _qa.has(ARG_DETENT) or _qa.has(ARG_RENAME) or _qa.has(ARG_KB)):
+		_qa_sheet_state.call_deferred()
+
+
+## --qa-detent / --qa-kb / --qa-rename / --qa-scroll on the open sheet (in that order).
+func _qa_sheet_state() -> void:
+	var s := sheets.current
+	if s == null:
+		return
+	if String(_qa.get(ARG_DETENT, "")) == "large":
+		s.expand(true, false)
+	if _qa.has(ARG_KB):
+		var kb := float(String(_qa[ARG_KB]).trim_suffix("px"))
+		sheets.qa_keyboard_px = kb
+		var block := ColorRect.new()
+		block.name = "QaKeyboard"
+		block.color = Color(0.82, 0.83, 0.86)
+		block.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		block.position = Vector2(0.0, get_viewport_rect().size.y - kb)
+		block.size = Vector2(get_viewport_rect().size.x, kb)
+		block.z_index = 100
+		overlays.add_child(block)
+	if _qa.has(ARG_RENAME) and s is AlbumSheet:
+		(s as AlbumSheet).begin_rename()
+	for i in QA_SETTLE_FRAMES:
+		await get_tree().process_frame
+	if _qa.has(ARG_SCROLL) and is_instance_valid(s) and s.scroll_list() != null:
+		var sc := s.scroll_list()
+		var raw := String(_qa[ARG_SCROLL])
+		var bar := sc.get_v_scroll_bar()
+		var room := maxf(bar.max_value - bar.page, 0.0)
+		sc.scroll_vertical = int(raw.trim_suffix("px").to_float()) if raw.ends_with("px") \
+				else roundi(clampf(raw.to_float(), 0.0, 1.0) * room)
 
 
 ## --qa-ui-audit: hides each absolute z layer of the open sheet / modal in turn and prints its cost

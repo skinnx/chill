@@ -212,7 +212,8 @@ func test_sheet_rect_sits_above_the_dock() -> void:
 	host.layout(SCREEN, 1541.0)
 	assert_eq(host.sheet_rect(), Rect2(24, 442, 1032, 1075), "sheet 24..1056 x 442..1517 at H 1920")
 	host.layout(Vector2(1080, 2400), 2021.0)
-	assert_eq(host.sheet_rect().size.y, roundf(0.56 * 2400.0), "height = round(0.56 H)")
+	assert_eq(host.sheet_rect().size.y, roundf(SheetHost.TALL_FRAC * 2400.0),
+			"20:9: the medium detent is 0.66 H (round 6)")
 	assert_eq(host.sheet_rect().end.y, 1997.0, "bottom = dock top - 24")
 
 

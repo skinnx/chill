@@ -521,6 +521,10 @@ Base: `tools/qa/capture.sh still --size=1080x2400 --seed=7 --frames=120 --no-sav
 | Album grid | `--tod=0.4 --qa-sheet=album` (`--qa-tab=1` Photos, `2` Postcards) | 12 portrait wells (studio light, studio diorama) |
 | Album friend at night | `--fixture=night_lanterns --tod=0.95 --qa-friend=puffmoss` | night chrome dock/chips, neutral sheet, crisp studio-lit portrait |
 | Basket / Settings | `--qa-sheet=basket` / `--qa-sheet=settings` | — |
+| Settings scrolled (round 6) | `--size=720x1600 --set=language:vi --qa-sheet=settings --qa-scroll=0.5` (`0` top, `1` end, or `640px`) | every option label inside its segment, the selected one inside the thumb; fades only where more waits |
+| Large detent | `--qa-sheet=garden --qa-detent=large` | the sheet up to the top bar + 24 |
+| Friend detail with Pet | `--qa-met=3 --qa-friend=present` | a visiting friend: Pet pill and hearts inside the card |
+| Rename above the keyboard | `--qa-met=3 --qa-friend=puffmoss --qa-rename --qa-kb=1000` | grey block = simulated keyboard; the sheet's bottom clears it, the field (primary edge, ink selection) and "Done" are in view |
 | Recap / new friend / leave / toast / captions | `--qa-recap`, `--qa-newfriend=honeyhum`, `--qa-leave`, `--qa-toast`, `--qa-captions` | overlays (no auto-dismiss) |
 | Ambient watch | `--qa-ambient` | HUD hidden |
 | Night chrome | `--fixture=night_lanterns --tod=1.0` (also dusk `--tod=0.82`) | dim warm-navy glass, night_ink labels/icons (switch at g_lights >= 0.6, back <= 0.4) |

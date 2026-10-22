@@ -43,12 +43,9 @@ func _init() -> void:
 func build_body() -> void:
 	_count = _count_chip()
 	header_extra.add_child(_count.get_parent())
-	var v := VBoxContainer.new()
-	v.position = Vector2(SIDE, 0.0)
-	v.size = Vector2(body.size.x - SIDE * 2.0, body.size.y)
-	v.add_theme_constant_override(&"separation", 24)
-	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	body.add_child(v)
+	# round 6: a scroll list like the other sheets, so large text or a short screen never pushes
+	# the Collect button under the sheet's bottom edge
+	var v := make_scroll(0.0, 24)
 	v.add_child(_cup_widget())
 	_grid = GridContainer.new()
 	_grid.columns = COLUMNS

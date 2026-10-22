@@ -42,8 +42,10 @@ const TEXT := 19
 const TEXT_SLOTS := 10
 const SCROLL_BAND := 30
 ## Scroll-edge fade bands, px (QA r4: the 72 px fade read as an overlap bug; 96 px at the bottom).
-const FADE_TOP_PX := 24.0
-const FADE_BOTTOM_PX := 96.0
+## Round 6: the fades are the scroll affordance and only show where more content waits (UiSheet
+## grows each band in with the distance left to scroll), so they can be clearly visible.
+const FADE_TOP_PX := 48.0
+const FADE_BOTTOM_PX := 120.0
 
 const META_ALPHA := &"ui_batch_alpha"
 const META_WELL := &"ui_batch_well"
@@ -51,6 +53,7 @@ const META_WELL := &"ui_batch_well"
 ## Content materials by "fade|alpha|well" (no instance uniforms: that buffer is the world's).
 static var _content: Dictionary = {}
 static var _window := Vector4(-1e6, -1e6, 1e6, 1e6)
+static var _bands := Vector2(FADE_TOP_PX, FADE_BOTTOM_PX)
 
 
 static func content_material(fade: bool = false, a: float = 1.0, well: bool = false) -> ShaderMaterial:
@@ -60,7 +63,7 @@ static func content_material(fade: bool = false, a: float = 1.0, well: bool = fa
 		return hit
 	var m := ShaderMaterial.new()
 	m.shader = load(CONTENT_SHADER) as Shader
-	m.set_shader_parameter(&"u_band", Vector2(FADE_TOP_PX, FADE_BOTTOM_PX))
+	m.set_shader_parameter(&"u_band", _bands)
 	m.set_shader_parameter(&"u_window", _window)
 	m.set_shader_parameter(&"u_fade", 1.0 if fade else 0.0)
 	m.set_shader_parameter(&"u_alpha", a)
@@ -87,14 +90,17 @@ static func mark_well(leaf: CanvasItem) -> void:
 	leaf.set_meta(META_WELL, true)
 
 
-## The scroll window (canvas px rect) the fading content melts into, on both shared materials.
-static func set_window(r: Rect2) -> void:
+## The scroll window (canvas px rect) the fading content melts into and its fade bands (top px,
+## bottom px), on every shared material.
+static func set_window(r: Rect2, bands: Vector2 = Vector2(FADE_TOP_PX, FADE_BOTTOM_PX)) -> void:
 	_window = Vector4(r.position.x, r.position.y, r.end.x, r.end.y)
+	_bands = bands
 	var mats: Array[ShaderMaterial] = UiSurface.shared_materials().duplicate()
 	for m: Variant in _content.values():
 		mats.append(m as ShaderMaterial)
 	for m: ShaderMaterial in mats:
 		m.set_shader_parameter(&"u_window", _window)
+		m.set_shader_parameter(&"u_band", _bands)
 
 
 ## Makes [param root] a batch root at absolute z [param base] and layers its whole subtree; nodes

@@ -50,6 +50,7 @@ func build_body() -> void:
 	_tabs.setup(PackedStringArray([tr("GARDEN_TAB_FLOWERS"), tr("GARDEN_TAB_DECOR")]), _tab)
 	_tabs.selected.connect(func(i: int) -> void: select_tab(i))
 	_list = make_scroll(Segmented.HEIGHT + 24.0)
+	keep_scroll_below(_tabs)
 	_scroll = _list.get_parent().get_parent() as ScrollContainer
 	_compute_yield_cuts()
 	_fill()

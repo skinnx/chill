@@ -17,6 +17,8 @@ const CARD_W := 288.0
 const CARD_PAD := 18
 const WELL_H := 216.0
 const HEART_PX := 36.0
+## The friend detail's hearts read at a glance under the name (round 6).
+const DETAIL_HEART_PX := 54.0
 const HEARTS := 5
 const EMPTY_HEART_ALPHA := 0.35
 const COLUMNS := 3
@@ -39,6 +41,11 @@ const DOT_PX := 21.0
 const NAME_MAX := 12
 const POSE_SLEEP := "nap"
 const CUE_PET := &"S03"
+## A friend not met yet: its well's colour veiled this far toward paper.
+const UNMET_VEIL := 0.55
+## Rename: the field's text inset while editing and the "Done" pill width.
+const FIELD_PAD_X := 24.0
+const DONE_W := 228.0
 
 var _tabs: Segmented
 ## Friend detail: a back pill takes the tabs' place (no "Friends" tab + "Friends" back twice).
@@ -73,6 +80,7 @@ func build_body() -> void:
 	_tabs.selected.connect(func(i: int) -> void: select_tab(i))
 	_back = _make_back()
 	_list = make_scroll(Segmented.HEIGHT + 24.0)
+	keep_scroll_below(_tabs, 24.0, BACK_H)
 	_scroll = _list.get_parent().get_parent() as ScrollContainer
 	_fill()
 
@@ -124,6 +132,50 @@ func show_friend(species: StringName) -> void:
 		Motion.tween(_scroll, "position:x", 0.0, &"standard")
 	_list.modulate.a = 0.0
 	Motion.tween(_list, "modulate:a", 1.0, &"standard")
+
+
+## Starts renaming the open friend (the pencil; QA --qa-rename).
+func begin_rename() -> void:
+	if _name_edit != null and is_instance_valid(_name_edit):
+		_name_edit.grab_focus()
+		_name_edit.select_all()
+		_name_edit.caret_column = _name_edit.text.length()
+
+
+## The name reads as the card's title (no box); while it is being edited it becomes a clear
+## field: a recessed surface with a 2 dp primary edge, ink text on a primary_tint selection
+## (round 6, device QA: Godot's default white-on-blue selection made the name unreadable).
+func _style_name_field(e: LineEdit) -> void:
+	e.add_theme_font_override(&"font", get_theme_font(&"font", &"TitleLabel"))
+	e.add_theme_font_size_override(&"font_size", get_theme_font_size(&"font_size", &"TitleLabel"))
+	var ink := UiTokens.sc(&"ink")
+	var rest := StyleBoxEmpty.new()
+	rest.content_margin_left = 0.0
+	rest.content_margin_right = FIELD_PAD_X
+	var field := StyleBoxFlat.new()
+	field.bg_color = UiTokens.sc(&"surface")
+	field.border_color = UiTokens.sc(&"primary")
+	field.set_border_width_all(roundi(2.0 * UiTokens.PX_PER_DP))
+	field.set_corner_radius_all(ThemeBuilder.R_S)
+	field.corner_detail = 12
+	field.content_margin_left = FIELD_PAD_X
+	field.content_margin_right = FIELD_PAD_X
+	field.content_margin_top = 6.0
+	field.content_margin_bottom = 6.0
+	# the text keeps its x when the field appears: the field grows out to the left instead
+	field.expand_margin_left = FIELD_PAD_X
+	e.add_theme_stylebox_override(&"normal", rest)
+	e.add_theme_stylebox_override(&"read_only", rest)
+	e.add_theme_stylebox_override(&"focus", StyleBoxEmpty.new())
+	e.focus_entered.connect(func() -> void: e.add_theme_stylebox_override(&"normal", field))
+	e.focus_exited.connect(func() -> void: e.add_theme_stylebox_override(&"normal", rest))
+	e.add_theme_color_override(&"font_color", ink)
+	e.add_theme_color_override(&"font_selected_color", ink)
+	e.add_theme_color_override(&"font_uneditable_color", ink)
+	e.add_theme_color_override(&"font_placeholder_color", UiTokens.sc(&"ink_2"))
+	e.add_theme_color_override(&"caret_color", UiTokens.sc(&"primary_deep"))
+	e.add_theme_color_override(&"selection_color", UiTokens.sc(&"primary_tint"))
+	e.add_theme_constant_override(&"caret_width", roundi(UiTokens.PX_PER_DP * 1.5))
 
 
 func _tab_texts() -> PackedStringArray:
@@ -216,9 +268,14 @@ func _friend_card(sp: StringName, s: Dictionary, w: float) -> Control:
 		v.add_child(n2)
 		var h := label(tr(String(s.get("hint_key", ""))), &"SecondaryLabel", true)
 		h.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		h.max_lines_visible = 3
+		# round 6: the whole hint (it is the card's point; a 3-line cap cut it mid-sentence on
+		# phones), the card grows and the grid row with it
 		v.add_child(h)
-	c.resized.connect(func() -> void: b.custom_minimum_size = Vector2(w, c.get_combined_minimum_size().y))
+	# the card's minimum follows its wrapped text (round 6: synced on `resized` only, a card first
+	# laid out at 0 px wide kept the hint's 1000+ px height and the button never shrank back)
+	var sync := func() -> void: b.custom_minimum_size = Vector2(w, c.get_combined_minimum_size().y)
+	c.minimum_size_changed.connect(sync)
+	c.resized.connect(sync)
 	b.custom_minimum_size = Vector2(w, c.get_combined_minimum_size().y)
 	return b
 
@@ -227,7 +284,7 @@ func _friend_card(sp: StringName, s: Dictionary, w: float) -> Control:
 ## baked once into the shared atlas (BakedWell), so the whole grid draws its wells in one batch.
 func _portrait_well(sp: StringName, met: bool, h: float, pose: StringName) -> Control:
 	var scheme := "n" if UiTokens.night_scheme else "d"
-	var key := "portrait|%s|%s" % [sp, pose] if met else "silhouette|%s|%s" % [sp, scheme]
+	var key := "portrait|%s|%s" % [sp, pose] if met else "silhouette2|%s|%s" % [sp, scheme]
 	var radius := float(ThemeBuilder.R_M)
 	return BakedWell.create(key, Vector2(0.0, h), radius, func(_sz: Vector2) -> Control:
 		return portrait_cell(sp, met, pose))
@@ -241,13 +298,16 @@ static func portrait_cell(sp: StringName, met: bool, pose: StringName) -> Contro
 	if met:
 		var w := LiveWell.wrap(p, Vector2.ZERO, 0.0)
 		return w
-	var fill := UiSurface.make(UiTokens.sc(&"surface"), 0.0)
-	fill.add_child(p)
-	p.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	return fill
+	# Round 6 (device QA: "Not met yet" tiles read as blank white squares): the friend still to
+	# come stands on the same studio sweep and felt cushion as a met friend, the backdrop veiled
+	# toward paper with a hint of its colour, its soft felt silhouette clearly readable (no face,
+	# never a lock).
+	var w2 := LiveWell.wrap(p, Vector2.ZERO, 0.0)
+	w2.set_product(sp, UNMET_VEIL)
+	return w2
 
 
-func _hearts(n: int, center: bool) -> Control:
+func _hearts(n: int, center: bool, px: float = HEART_PX) -> Control:
 	var h := HBoxContainer.new()
 	h.alignment = BoxContainer.ALIGNMENT_CENTER if center else BoxContainer.ALIGNMENT_BEGIN
 	h.add_theme_constant_override(&"separation", 3)
@@ -255,7 +315,7 @@ func _hearts(n: int, center: bool) -> Control:
 	h.tooltip_text = I18n.fmt(&"ALBUM_HEARTS_A11Y", {"hearts": n})
 	# both heart states come from the UI atlas, so every heart of the sheet is one draw call
 	for i in HEARTS:
-		var r := Icons.rect(&"heart" if i < n else &"heart_empty", HEART_PX)
+		var r := Icons.rect(&"heart" if i < n else &"heart_empty", px)
 		if i >= n:
 			UiBatch.set_alpha(r, EMPTY_HEART_ALPHA)
 		h.add_child(r)
@@ -280,25 +340,19 @@ func _build_detail(sp: StringName) -> void:
 	name_row.add_theme_constant_override(&"separation", 12)
 	name_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_name_edit = LineEdit.new()
+	_name_edit.name = "NameEdit"
 	_name_edit.text = Game.display_name(sp)
 	_name_edit.placeholder_text = tr("ALBUM_NAME_HINT")
 	_name_edit.max_length = NAME_MAX
-	_name_edit.flat = true
 	_name_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_name_edit.add_theme_font_override(&"font", get_theme_font(&"font", &"TitleLabel"))
-	_name_edit.add_theme_font_size_override(&"font_size", get_theme_font_size(&"font_size", &"TitleLabel"))
-	_name_edit.text_submitted.connect(func(t: String) -> void: _rename(sp, t))
-	_name_edit.focus_exited.connect(func() -> void:
-		if _name_edit != null:
-			_rename(sp, _name_edit.text))
-	_name_edit.text_changed.connect(func(t: String) -> void:
-		var clean := _filter_name(t)
-		if clean != t:
-			var caret := _name_edit.caret_column
-			_name_edit.text = clean
-			_name_edit.caret_column = mini(caret, clean.length()))
+	_name_edit.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_name_edit.custom_minimum_size = Vector2(0.0, MIN_TARGET)
+	_name_edit.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_DEFAULT
+	_name_edit.select_all_on_focus = false
+	_style_name_field(_name_edit)
 	name_row.add_child(_name_edit)
 	var pencil := RoundButton.new()
+	pencil.name = "Rename"
 	pencil.plate_px = 108.0
 	pencil.icon_px = 48.0
 	pencil.icon_name = &"pencil"
@@ -307,14 +361,41 @@ func _build_detail(sp: StringName) -> void:
 	pencil.custom_minimum_size = Vector2(MIN_TARGET, MIN_TARGET)
 	pencil.tooltip_text = tr("ALBUM_RENAME")
 	PressFeedback.attach(pencil)
-	pencil.pressed.connect(func() -> void:
-		_name_edit.grab_focus()
-		_name_edit.select_all())
+	pencil.pressed.connect(begin_rename)
 	name_row.add_child(pencil)
+	# while editing, the pencil gives way to "Done" (the keyboard's Enter does the same)
+	var done := pill_button(tr("COMMON_DONE"), true, MIN_TARGET, true)
+	done.name = "Done"
+	done.custom_minimum_size = Vector2(DONE_W, MIN_TARGET)
+	done.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	done.visible = false
+	name_row.add_child(done)
+	var edit := _name_edit
+	var finish := func() -> void:
+		if is_instance_valid(edit) and edit.has_focus():
+			edit.release_focus()
+	done.pressed.connect(finish)
+	_name_edit.text_submitted.connect(func(t: String) -> void:
+		_rename(sp, t)
+		finish.call())
+	_name_edit.focus_entered.connect(func() -> void:
+		pencil.visible = false
+		done.visible = true)
+	_name_edit.focus_exited.connect(func() -> void:
+		pencil.visible = true
+		done.visible = false
+		if is_instance_valid(edit):
+			_rename(sp, edit.text))
+	_name_edit.text_changed.connect(func(t: String) -> void:
+		var clean := _filter_name(t)
+		if clean != t:
+			var caret := edit.caret_column
+			edit.text = clean
+			edit.caret_column = mini(caret, clean.length()))
 	v.add_child(name_row)
 	if best:
 		v.add_child(_pill_tag(tr("ALBUM_BEST_FRIEND"), &"gold_tint"))
-	v.add_child(_hearts(sim.hearts_of(sp), false))
+	v.add_child(_hearts(sim.hearts_of(sp), false, DETAIL_HEART_PX))
 	if sim.is_present(sp):
 		var pet := pill_button(tr("ALBUM_PET"), true, ThemeBuilder.BUTTON_H)
 		pet.pressed.connect(func() -> void:

@@ -120,7 +120,7 @@ func test_scroll_has_no_canvas_group_mask() -> void:
 	await wait_frames(1)
 	for n: Node in s.find_children("*", "CanvasItem", true, false):
 		assert_eq((n as CanvasItem).clip_children, CanvasItem.CLIP_CHILDREN_DISABLED, "%s has no clip_children" % n.name)
-	assert_eq(UiBatch.FADE_BOTTOM_PX, 96.0, "the bottom fade is 96 px (QA r4)")
+	assert_eq(UiBatch.FADE_BOTTOM_PX, 120.0, "the bottom fade is 120 px, shown only while more waits below (round 6)")
 
 
 func test_surface_instance_data_is_two_slots() -> void:

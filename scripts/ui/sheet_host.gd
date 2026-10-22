@@ -6,6 +6,12 @@ extends Control
 ## sheet at a time: tapping the same dock button closes it, another one swaps with a 200 ms
 ## crossfade. In: rise 96 px + fade on `standard`; out: `exit` (~210 ms). Back closes the sheet
 ## (Game.push_back_handler). Audio: S07 on open/swap, S08 on close, AudioDirector.set_sheet_open.
+##
+## Round 6 (device QA): two detents per sheet (UiSheet.configure): medium = round(0.56 H) on
+## 16:9, growing with the screen's aspect to 0.66 H on tall phones; large = everything up to the
+## top bar (+ 24), at most 0.80 H. While a field in the sheet is being edited, the sheet rises
+## above the on-screen keyboard (DisplayServer.virtual_keyboard_get_height) and the field is
+## scrolled into view.
 
 # Data boundary: values read from JSON / Dictionaries are Variants and each one is converted
 # explicitly (int(), float(), String() ...) where it is read; the analyzer still flags every
@@ -16,8 +22,14 @@ signal sheet_changed(id: StringName)
 
 const CUE_OPEN := &"S07"
 const CUE_CLOSE := &"S08"
-## Art Bible §9.4: height = round(0.56 H), bottom = dock top - 24.
+## Art Bible §9.4: height = round(0.56 H) on 16:9 (H/W 1.78), bottom = dock top - 24; on taller
+## screens the medium detent grows to TALL_FRAC at H/W >= TALL_ASPECT (0.66 x 2400 = 1584 at 20:9).
 const HEIGHT_FRAC := 0.56
+const TALL_FRAC := 0.66
+const BASE_ASPECT := 16.0 / 9.0
+const TALL_ASPECT := 2.2
+## The large detent never covers more than this share of the screen (nor the top bar).
+const LARGE_FRAC := 0.80
 const DOCK_GAP := 24.0
 const SIDE := 24.0
 ## The sheet draws above the dock's z-lifted layers (DockView.Z_LABELS) while it slides over them;
@@ -47,10 +59,14 @@ var tint: Color = Color.WHITE:
 			if c is UiSheet:
 				var s := c as UiSheet
 				s.modulate = Color(v.r, v.g, v.b, s.modulate.a)
+## QA (--qa-kb): a simulated on-screen keyboard height in canvas px (< 0: the real one).
+var qa_keyboard_px: float = -1.0
 var _bbc: BackBufferCopy
 var _scrim: ColorRect
 var _back := Callable()
 var _screen: Vector2 = Vector2(1080, 1920)
+var _lift_to: float = 0.0
+var _kb_restore_expanded: bool = false
 
 
 func _init() -> void:
@@ -90,16 +106,75 @@ func layout(screen: Vector2, p_dock_top: float) -> void:
 	_screen = screen
 	dock_top = p_dock_top
 	if current != null:
-		var r := sheet_rect()
-		current.position = r.position
+		_configure(current, true)
 		_sync_copy()
 
 
-## The open sheet's rect in screen px.
+## The open sheet's rect in screen px at its medium (opening) detent.
 func sheet_rect() -> Rect2:
 	var bottom := dock_top - DOCK_GAP
-	var h := minf(roundf(HEIGHT_FRAC * _screen.y), bottom - (top_limit + DOCK_GAP))
+	var aspect := _screen.y / maxf(_screen.x, 1.0)
+	var k := clampf((aspect - BASE_ASPECT) / (TALL_ASPECT - BASE_ASPECT), 0.0, 1.0)
+	var frac := lerpf(HEIGHT_FRAC, TALL_FRAC, k)
+	var h := minf(roundf(frac * _screen.y), _room(bottom))
 	return Rect2(SIDE, bottom - h, _screen.x - SIDE * 2.0, h)
+
+
+## The large detent's rect: up to the top bar (+ 24), at most LARGE_FRAC of the screen.
+func large_rect() -> Rect2:
+	var bottom := dock_top - DOCK_GAP
+	var h := maxf(minf(roundf(LARGE_FRAC * _screen.y), _room(bottom)), sheet_rect().size.y)
+	return Rect2(SIDE, bottom - h, _screen.x - SIDE * 2.0, h)
+
+
+func _room(bottom: float) -> float:
+	return bottom - (top_limit + DOCK_GAP)
+
+
+func _configure(s: UiSheet, keep: bool) -> void:
+	var r := sheet_rect()
+	s.configure(r.position.x, r.size.x, r.end.y, r.size.y, large_rect().size.y, keep)
+
+
+## The on-screen keyboard's height in canvas px (0 when hidden).
+func keyboard_height() -> float:
+	if qa_keyboard_px >= 0.0:
+		return qa_keyboard_px
+	var px := float(DisplayServer.virtual_keyboard_get_height())
+	if px <= 0.0:
+		return 0.0
+	var win := float(DisplayServer.window_get_size().y)
+	return px * get_viewport_rect().size.y / maxf(win, 1.0)
+
+
+func _process(_delta: float) -> void:
+	if current == null or current.rest_bottom <= 0.0:
+		return
+	var focus := get_viewport().gui_get_focus_owner()
+	var editing := focus is LineEdit and current.is_ancestor_of(focus)
+	var kb := keyboard_height() if editing else 0.0
+	var lift := 0.0
+	if kb > 0.0:
+		lift = maxf(current.rest_bottom - (_screen.y - kb - DOCK_GAP), 0.0)
+	if not is_equal_approx(lift, _lift_to):
+		var was_lifted := _lift_to > 0.0
+		_lift_to = lift
+		if lift > 0.0 and not was_lifted:
+			_kb_restore_expanded = current.expanded
+		# while lifted the sheet takes all the room between the top bar and the keyboard
+		var room := _room(current.rest_bottom - lift)
+		var rest_h := current.h_large if _kb_restore_expanded else current.h_medium
+		var h := minf(current.h_large, room) if lift > 0.0 else rest_h
+		if lift <= 0.0:
+			current.expanded = _kb_restore_expanded
+		Motion.spring_to(current, "lift", lift, UiSheet.DETENT_SPRING)
+		Motion.spring_to(current, "sheet_h", maxf(h, 0.0), UiSheet.DETENT_SPRING)
+		FrameGovernor.hold_for(Motion.duration(&"standard"))
+		_sync_copy()
+	if editing and kb > 0.0:
+		var sc := current.scroll_list()
+		if sc != null:
+			sc.ensure_control_visible(focus as Control)
 
 
 ## Opens [param id]; the same id closes it; another id swaps (crossfade). [param instant] skips the
@@ -129,21 +204,20 @@ func open(id: StringName, instant: bool = false) -> void:
 	else:
 		_scrim.modulate.a = 0.0
 		Motion.tween(_scrim, "modulate:a", 1.0, &"short")
-	var r := sheet_rect()
 	if instant:
-		s.position = r.position
+		s.rise = 0.0
 	else:
 		var rise := float(UiTokens.ui_block("sheet_open").get("rise_px", 96.0))
 		s.modulate.a = 0.0
 		if Motion.reduce_motion:
-			s.position = r.position
+			s.rise = 0.0
 			var t := s.create_tween()
 			t.tween_property(s, "modulate:a", 1.0, Motion.duration(&"reduce_motion_crossfade"))
 		else:
-			s.position = r.position + Vector2(0.0, rise)
+			s.rise = rise
 			# M3-Expressive (round 4): the sheet rises on the `pop` spring, a few px of overshoot
 			# and settle, while it fades in on `standard`.
-			Motion.spring_to(s, "position", r.position, OPEN_SPRING)
+			Motion.spring_to(s, "rise", 0.0, OPEN_SPRING)
 			Motion.tween(s, "modulate:a", 1.0, &"standard")
 	_sync_copy()
 	sheet_changed.emit(id)
@@ -169,7 +243,7 @@ func close() -> void:
 		f.finished.connect(s.queue_free)
 	else:
 		Motion.stop_springs(s)
-		Motion.exit(s, "position", s.position + Vector2(0.0, rise))
+		Motion.exit(s, "rise", s.rise + rise)
 		var f := Motion.exit(s, "modulate:a", 0.0)
 		f.finished.connect(s.queue_free)
 	_bbc.copy_mode = BackBufferCopy.COPY_MODE_DISABLED
@@ -202,7 +276,8 @@ func _swap(id: StringName, instant: bool, quiet: bool = false) -> void:
 		return
 	if not quiet:
 		AudioDirector.play_cue(CUE_OPEN)
-	s.position = sheet_rect().position
+	if old != null and old.expanded:
+		s.expand(true, false)
 	if old != null:
 		var dur := Motion.duration(&"short")
 		if instant:
@@ -226,10 +301,9 @@ func _make(id: StringName) -> UiSheet:
 	var s: UiSheet = factory.call(id)
 	if s == null:
 		return null
-	var r := sheet_rect()
 	s.sheet_id = id
-	s.size = r.size
-	s.position = r.position
+	_configure(s, false)
+	_lift_to = 0.0
 	s.close_requested.connect(close)
 	s.z_index = Z_SHEET
 	s.modulate = Color(tint.r, tint.g, tint.b, s.modulate.a)
@@ -244,10 +318,14 @@ func _sync_copy() -> void:
 	if current == null or not current.is_live():
 		_bbc.copy_mode = BackBufferCopy.COPY_MODE_DISABLED
 		return
-	var r := sheet_rect()
+	# the large detent's top (or, lifted above the keyboard, the top bar) down to the rise's end
+	var r := large_rect()
 	var rise := float(UiTokens.ui_block("sheet_open").get("rise_px", 96.0))
+	var top := minf(r.position.y, top_limit + DOCK_GAP) if _lift_to > 0.0 else r.position.y
+	var bottom := r.end.y + rise
 	_bbc.copy_mode = BackBufferCopy.COPY_MODE_RECT
-	_bbc.rect = Rect2(r.position - Vector2(0.0, OVERSHOOT_PX), r.size + Vector2(0.0, rise + OVERSHOOT_PX)).grow(2.0)
+	_bbc.rect = Rect2(Vector2(r.position.x, top - OVERSHOOT_PX),
+			Vector2(r.size.x, bottom - top + OVERSHOOT_PX)).grow(2.0)
 
 
 func _on_scrim_input(event: InputEvent) -> void:
