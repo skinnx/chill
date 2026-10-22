@@ -116,7 +116,7 @@ What makes it ours (signature): **backlit peach-fuzz rims on felted creatures at
 | Layer | Node / `scroll_scale` | Content | y band at H = 1920 (crest → body bottom) | Notes |
 |---|---|---|---|---|
 | **L0 Sky** | `Parallax2D` 0 → `SkyQuad` | Opaque gradient, haze band, sun/moon disc + halos, stars (all in one shader) | visible top → `max(far crest) + 12` (≈ 700) | `blend_disabled`, the only opaque full-width layer |
-| **L1 Celestial** | `Parallax2D` 0.02 | Empty marker node. The sky shader shifts stars, sun and moon by 0.02 × camera offset (uniform `u_cam_offset`, ≤ 2 px at the 4 dp/s drift) | — | Keeps the 6-layer parallax contract at no fill cost |
+| **L1 Celestial** | `Parallax2D` 0.02 | Empty marker node. The sky shader shifts stars, sun and moon by 0.02 × the map pan (global `g_cam_pan`; the idle drift is ignored, ≤ 2 px); the sun veil and light shafts follow the disc (`celestial_shift()`) | — | Keeps the 6-layer parallax contract at no fill cost |
 | **L2 Far** | `Parallax2D` 0.10 | Far hills polygon + 2–3 cloud quads (autoscroll −4 dp/s, `repeat_size` 1800) | crest 610–670 → 790 | Feather 6 px; crest→bottom `far` → `far_haze` |
 | **L3 Mid** | `Parallax2D` 0.30 | Tree-line polygon (fBm ridge + canopy bumps) | crest 560–705 → 800 | Feather 3 px; `mid` → `mid_haze`; crest rim at backlight |
 | **L4 Play** | `Parallax2D` 1.0 | Meadow polygon, path, brook, grass bands, `YSort` (props, beds, décor, creatures), lamp pools, `Air` (shafts, particles) | crest 742–805 → 1920 | The only layer with focal detail and outlines |

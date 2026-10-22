@@ -558,6 +558,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			if m != null:
 				_touch = m
 				m.touch_down(p)
+				# a stroke that starts on a mossling pets it; it never pans the map
+				WorldPan.claim_pointer()
 				get_viewport().set_input_as_handled()
 		elif _touch != null:
 			_touch.touch_up(p)

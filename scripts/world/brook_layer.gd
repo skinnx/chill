@@ -155,18 +155,34 @@ func _build(ring_px: float) -> void:
 	add_child(mi)
 
 
+## Map pan (ARCHITECTURE §3.4): the water continues straight past its right end (x 1.04 of the
+## frame) to the geometry's x_max, so a pan to the right never shows where it stops. Mesh only: the
+## centre line (taps, boats, ripples) and the arc length of the original points are unchanged.
+func _right_bleed() -> PackedVector2Array:
+	var out := PackedVector2Array()
+	var dir := (centre[0] - centre[1]).normalized()
+	if dir.x <= 0.01:
+		return out
+	var n := ceili((TerrainMath.X_MAX + BANK_PX + half_width - centre[0].x) / (dir.x * SEGMENT_PX))
+	for j in range(n, 0, -1):
+		out.append(centre[0] + dir * SEGMENT_PX * float(j))
+	return out
+
+
 func _strip_mesh() -> ArrayMesh:
 	var verts := PackedVector2Array()
 	var uvs := PackedVector2Array()
 	var idx := PackedInt32Array()
 	var bank_v := BANK_PX / (half_width * 2.0)
-	var arc := 0.0
-	var n := centre.size()
+	var line := _right_bleed()
+	var arc := -SEGMENT_PX * float(line.size())
+	line.append_array(centre)
+	var n := line.size()
 	for i in n:
 		if i > 0:
-			arc += centre[i].distance_to(centre[i - 1])
-		var a := centre[maxi(i - 1, 0)]
-		var b := centre[mini(i + 1, n - 1)]
+			arc += line[i].distance_to(line[i - 1])
+		var a := line[maxi(i - 1, 0)]
+		var b := line[mini(i + 1, n - 1)]
 		var t := (b - a).normalized()
 		var nrm := Vector2(-t.y, t.x)
 		if nrm.y < 0.0:
@@ -175,9 +191,9 @@ func _strip_mesh() -> ArrayMesh:
 		var wk := 1.0 + WIDTH_VAR * TerrainMath.fbm1(arc / WIDTH_PERIOD_PX, 1.0, 3, 0.5, WIDTH_SEED)
 		var far_r := half_width * wk + BANK_PX
 		var near_r := half_width * (2.0 - wk) * 0.35 + half_width * wk * 0.65 + BANK_PX
-		verts.append(centre[i] - nrm * far_r)
+		verts.append(line[i] - nrm * far_r)
 		uvs.append(Vector2(arc, -bank_v))
-		verts.append(centre[i] + nrm * near_r)
+		verts.append(line[i] + nrm * near_r)
 		uvs.append(Vector2(arc, 1.0 + bank_v))
 	for i in n - 1:
 		var k := i * 2
@@ -264,7 +280,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	var hit := Vector2(pos.x, clampf(pos.y, cy - half_width * RIPPLE_CLAMP, cy + half_width * RIPPLE_CLAMP))
 	add_ripple(hit, 1.0)
 	TouchRing.spawn(self, hit, RING_SQUASH)
-	var canvas_pos := get_global_transform_with_canvas() * hit
+	var canvas_pos := get_global_transform() * hit  # canvas px; captions apply the camera
 	AudioDirector.play_cue(CUE_TOUCH, {"world": true, "position": canvas_pos})
 	AudioDirector.play_cue(CUE_STREAM, {"position": canvas_pos})
 	tapped.emit(hit)

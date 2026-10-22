@@ -137,4 +137,5 @@ func test_time_of_day_pushes_declared_globals() -> void:
 	for key: String in ProjectSettings.get_property_list().map(func(p: Dictionary) -> String: return String(p["name"])):
 		if key.begins_with("shader_globals/"):
 			var g := key.trim_prefix("shader_globals/")
-			assert_true(values.has(StringName(g)) or g in ["g_time", "g_motion", "g_world_offset"], "%s has a writer" % g)
+			var other_writer := g in ["g_time", "g_motion", "g_world_offset", "g_cam_pan"]
+			assert_true(values.has(StringName(g)) or other_writer, "%s has a writer" % g)

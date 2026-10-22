@@ -562,6 +562,22 @@
 		"parallax_tilt_max_dp": {
 			"L2": 2,
 			"L5": 8
+		},
+		"pan": {
+			"doc": "One-finger map drag (docs/ARCHITECTURE.md §3.4, GDD §8.2). Horizontal bounds come from the layer geometry (TerrainMath x range and the Parallax2D scroll factors); sky_up_px is how far the camera may rise into the sky; the drag threshold is gui/common/drag_threshold and the edge rule is spots.json safe_x.",
+			"sky_up_px": 600,
+			"rubber_room_dp": 16,
+			"rubber_k": 0.55,
+			"settle_spring": "move",
+			"home_spring": "move",
+			"glide_friction_per_s": 4.5,
+			"glide_min_speed_dp_s": 4,
+			"glide_max_speed_dp_s": 1200,
+			"velocity_window_ms": 100,
+			"drift_resume_s": 4.0,
+			"double_tap_ms": 300,
+			"double_tap_slop_dp": 16,
+			"fg_knee": 0.75
 		}
 	},
 	"ui": {

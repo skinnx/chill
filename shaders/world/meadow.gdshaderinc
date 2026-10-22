@@ -208,7 +208,9 @@ vec3 meadow_color(vec2 uv, vec2 frag) {
 	float bank_y = brook_fit.x + brook_fit.y * p.x + brook_half_px;
 	float near = smoothstep(bank_y, 1960.0, p.y);
 	vec2 cq = vec2(abs(p.x - 540.0) / 620.0, (p.y - 1150.0) / 820.0);
-	float corner = smoothstep(0.55, 1.35, length(cq)) * step(1150.0, p.y);
+	// a soft start below the focal (not a step): the map pan shows the sides, where the corner
+	// weight is already strong at y 1150 (ARCHITECTURE §3.4)
+	float corner = smoothstep(0.55, 1.35, length(cq)) * smoothstep(1150.0, 1390.0, p.y);
 	c = mix(c, shade_of(c), clamp(near * near_frame_k + corner * corner_k, 0.0, 0.6));
 	c = mix(c, g_sky_horizon.rgb, far_haze_k * (1.0 - smoothstep(T_TOP, 980.0, p.y)) * (1.0 - night));
 	// Rain: wet moss is darker and richer (QA r2: creatures must clear the meadow by dL* >= 9), and

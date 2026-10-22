@@ -199,6 +199,7 @@ class Unit:
 
 func _ready() -> void:
 	current = self
+	add_to_group(WorldPan.GROUP_PRESS)
 	_content = ContentRegistry.content
 	kit = DecorKit.new(_content)
 	_dp = float(_content.spots_doc["frame"]["px_per_dp"])
@@ -764,7 +765,8 @@ func _step_puffs(delta: float) -> void:
 
 
 func _canvas_of(design: Vector2) -> Vector2:
-	return get_global_transform_with_canvas() * design
+	# canvas (world) px: the caption host applies the camera (map pan) itself
+	return get_global_transform() * design
 
 
 # ================================================================= touch
@@ -800,6 +802,12 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif released and _press != null:
 		_end_press(pos.distance_to(_press_pos) <= DRAG_CANCEL_PX)
 		get_viewport().set_input_as_handled()
+
+
+## WorldPan: a map drag started; the pending piece tap is dropped (no action).
+func cancel_world_press() -> void:
+	if _press != null:
+		_end_press(false)
 
 
 ## Touch-down on a tappable piece: squash 0.94 + tint + touch ring + S01 (with its haptic) at once.

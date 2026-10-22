@@ -23,7 +23,10 @@ varying vec2 v_design;
 
 void vertex() {
 	v_data = COLOR;
-	vec2 o = g_sun_pos - g_world_offset;
+	// the shafts leave the sun disc, which sits on L1: follow it when the map is panned
+	vec2 shift = celestial_shift();
+	vec2 o = g_sun_pos + shift - g_world_offset;
+	VERTEX += shift;
 	float k = COLOR.a * 100.0;
 	float a = radians(sway_deg) * sin(TAU * k / LOOP_S * g_time + COLOR.b * TAU) * g_motion;
 	vec2 d = VERTEX - o;

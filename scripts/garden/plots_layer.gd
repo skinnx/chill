@@ -221,6 +221,7 @@ class SeedHint:
 
 func _ready() -> void:
 	current = self
+	add_to_group(WorldPan.GROUP_PRESS)
 	_content = ContentRegistry.content
 	GardenFixture.apply_from_args(_content)
 	var frame: Dictionary = _content.spots_doc["frame"]
@@ -693,7 +694,8 @@ static func depth_scale(y: float) -> float:
 
 
 func _canvas_of(design: Vector2) -> Vector2:
-	return get_global_transform_with_canvas() * design
+	# canvas (world) px: the caption host applies the camera (map pan) itself
+	return get_global_transform() * design
 
 
 # ================================================================= halos
@@ -815,6 +817,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		var inside := bv.hit.has_point(pos) and pos.distance_to(_press_pos) <= DRAG_CANCEL_PX
 		_release_press(inside and not _press_long_sent)
 		get_viewport().set_input_as_handled()
+
+
+## WorldPan: a map drag started; the pending bed tap / long-press is dropped (no action).
+func cancel_world_press() -> void:
+	if _press_bed != &"":
+		_release_press(false)
 
 
 func _bed_at(pos: Vector2) -> StringName:

@@ -584,8 +584,9 @@ Back (Android) closes the top-most card/sheet; at Main it opens "Leave the hollo
 ### 8.2 Gestures (I3)
 - **Tap**: pressed state on touch-down in the same frame; action on touch-up inside the target; sliding off cancels.
 - **Long-press**: 450 ms, radial fill from 150 ms, cancelled by > 24 px movement. Every long-press action has a tap alternative (Pet button, bed card via tap on the bed's info chip).
-- **Drag**: starts after 24 px (`gui/common/drag_threshold = 24`); used only for stroking mosslings, scrolling sheets and swipe-to-dismiss. No drag starts within 24 dp of a side edge.
-- No double-tap, no multi-touch, no timed or rapid input. Pinch is not used.
+- **Drag**: starts after 24 px (`gui/common/drag_threshold = 24`); used for stroking mosslings, scrolling sheets, swipe-to-dismiss and **panning the hollow**. No drag starts within 24 dp of a side edge.
+- **Map pan**: one finger on empty world (or a bed, décor, prop or the brook) and past 24 px moves the camera, 1:1 with the finger; on release it glides and eases to a stop, with a soft rubber band at the edges. It reaches ±400 px sideways (exactly as far as the art goes) and up to 600 px into the sky, never below the ground. Starting a pan cancels the pending tap or long-press under the finger; a stroke that starts on a mossling always pets it. No pan through an open sheet. Reduce Motion: no glide or bounce. The slow idle drift pauses while panning and fades back in afterwards. Calm: no sound or haptic.
+- No multi-touch, no timed or rapid input. Pinch is not used. One optional shortcut: a double tap on empty ground glides back to the home view (never required; dragging back does the same).
 
 ### 8.3 Feedback map (I1, A3, A4)
 | Event | Visual (≤ 100 ms to first change) | Sound (06 §0.5) | Haptic (Subtle / Full) |

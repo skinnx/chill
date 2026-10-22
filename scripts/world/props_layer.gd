@@ -414,7 +414,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	_press(best)
 	_ring(pos)
-	AudioDirector.play_cue(CUE_TOUCH, {"world": true, "position": get_global_transform_with_canvas() * pos})
+	AudioDirector.play_cue(CUE_TOUCH, {"world": true, "position": get_global_transform() * pos})
 	prop_tapped.emit(best, StringName(_touchables[best]["action"]), pos)
 	get_viewport().set_input_as_handled()
 

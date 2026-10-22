@@ -16,6 +16,11 @@ const ANCHOR_TOP := "top"
 
 var _top_pieces: Array[Sprite2D] = []
 var _top_y := PackedFloat64Array()
+var _pieces: Array[Sprite2D] = []
+## How far the frame may slide on screen before a piece's cut atlas edge would show:
+## (left, up, right, down) px at the home view (see on_world_pan).
+var _room := Vector4.ZERO
+var _knee: float = 0.75
 
 
 func _ready() -> void:
@@ -37,6 +42,7 @@ func _ready() -> void:
 		sp.position = Vector2(o[0], o[1])
 		sp.material = mat
 		add_child(sp)
+		_pieces.append(sp)
 		var m: Dictionary = mats[String(part["material"])]
 		sp.set_instance_shader_parameter(&"i_lit", Color.html(String(m["lit"])))
 		sp.set_instance_shader_parameter(&"i_shade", Color.html(String(m["shade"])))
@@ -47,6 +53,9 @@ func _ready() -> void:
 		if String(part["anchor"]) == ANCHOR_TOP:
 			_top_pieces.append(sp)
 			_top_y.append(o[1])
+	var pan_cfg: Dictionary = (ContentRegistry.motion_tokens()["world"] as Dictionary).get("pan", {})
+	_knee = float(pan_cfg.get("fg_knee", 0.75))
+	add_to_group(&"world_pan_view")
 	get_viewport().size_changed.connect(_layout)
 	_layout.call_deferred()
 	# Governor tier 1+ drops L5 (Art Bible §4.19 mitigation).
@@ -58,3 +67,35 @@ func _ready() -> void:
 func _layout() -> void:
 	for i in _top_pieces.size():
 		_top_pieces[i].position.y = _top_y[i] - TimeOfDay.world_offset.y
+	_room = frame_room(_pieces, TimeOfDay.world_offset, get_viewport_rect().size)
+
+
+## Room per direction (left, up, right, down) before a piece cut by a screen edge at the home view
+## would show that edge: e.g. moving right is limited by the pieces that bleed past the left edge.
+static func frame_room(pieces: Array[Sprite2D], off: Vector2, vis: Vector2) -> Vector4:
+	var room := Vector4(INF, INF, INF, INF)
+	for sp: Sprite2D in pieces:
+		var r := Rect2(sp.position + off, sp.region_rect.size)
+		if r.position.x < 0.0:
+			room.z = minf(room.z, -r.position.x)
+		if r.end.x > vis.x:
+			room.x = minf(room.x, r.end.x - vis.x)
+		if r.position.y < 0.0:
+			room.w = minf(room.w, -r.position.y)
+		if r.end.y > vis.y:
+			room.y = minf(room.y, r.end.y - vis.y)
+	for i in 4:
+		room[i] = clampf(room[i], 0.0, 1e6)
+	return room
+
+
+## Map pan (Main, ARCHITECTURE §3.4): L5 scrolls 1.3x, which would slide the corner pieces far
+## enough to show their cut edges. Their on-screen shift follows -1.3 x cam exactly up to
+## fg_knee x the room (the idle drift stays inside it), then eases into the room.
+func on_world_pan(_pan: Vector2, cam: Vector2, _reveal_px: float) -> void:
+	var par := get_parent() as Parallax2D
+	var s := par.scroll_scale if par != null else Vector2.ONE
+	var want := -cam * s
+	var shown := Vector2(PanMath.soft_limit(want.x, _room.x, _room.z, _knee),
+			PanMath.soft_limit(want.y, _room.y, _room.w, _knee))
+	position = shown - want

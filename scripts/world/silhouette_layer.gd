@@ -16,11 +16,16 @@ const FOG_K: Array[float] = [0.30, 0.15]
 const VEIL_K: Array[float] = [1.0, 0.6]
 const CREST_RIM_PX := 3.0
 const MID_MOTTLE := 0.035
+## Skirt heights grow in steps of this many px (the mesh is rebuilt only when a taller one is needed).
+const SKIRT_STEP_PX := 64.0
 
 @export var kind: Kind = Kind.FAR
 
 ## Sampled crest (design px), available after _ready (the sky reads the far crest's lowest point).
 var crest := PackedVector2Array()
+
+var _skirt: MeshInstance2D
+var _skirt_h: float = 0.0
 
 
 func _ready() -> void:
@@ -38,6 +43,25 @@ func _ready() -> void:
 	edge.mesh = SilhouetteMesh.feather(crest, FEATHER_PX[k])
 	edge.material = feather_mat
 	add_child(edge)
+	_skirt = MeshInstance2D.new()
+	_skirt.name = "Skirt"
+	_skirt.material = core_mat
+	_skirt.visible = false
+	add_child(_skirt)
+	add_to_group(&"world_pan_view")
+
+
+## Map pan (Main, ARCHITECTURE §3.4): when the camera rises, the layer in front slides down faster
+## than this one and would show below the body bottom; a skirt in the bottom colour covers
+## [param reveal_px] (hidden at rest, so the home view costs nothing).
+func on_world_pan(_pan: Vector2, _cam: Vector2, reveal_px: float) -> void:
+	var need := reveal_px > 0.5
+	_skirt.visible = need
+	if not need or reveal_px <= _skirt_h:
+		return
+	_skirt_h = ceilf(reveal_px / SKIRT_STEP_PX) * SKIRT_STEP_PX
+	var bottom := BOTTOM_Y[int(kind)]
+	_skirt.mesh = SilhouetteMesh.skirt(crest[0].x, crest[crest.size() - 1].x, bottom - 1.0, bottom + _skirt_h)
 
 
 func _material(path: String, k: int) -> ShaderMaterial:

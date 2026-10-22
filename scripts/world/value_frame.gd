@@ -19,9 +19,8 @@ const FOCAL_CLEAR := 0.72
 const TOP_Y := 760.0
 const BOTTOM_Y := 2040.0
 const CELL := 80.0
-## Bleed past the 1080 px design width for the camera drift.
-const BLEED_X := 160.0
-const DESIGN_W := 1080.0
+## The grid spans the layer geometry's x range (TerrainMath.X_MIN .. X_MAX, Art Bible §2.1), so the
+## map pan never reaches its edge. Cells keep their CELL alignment to x = 0.
 
 var _mi: MeshInstance2D
 
@@ -48,11 +47,11 @@ func _ready() -> void:
 ## the clear core of the focal ellipse.
 static func rects() -> Array[Rect2]:
 	var out: Array[Rect2] = []
-	var x0 := -BLEED_X
+	var x0 := floorf(TerrainMath.X_MIN / CELL) * CELL
 	var y := TOP_Y
 	while y < BOTTOM_Y:
 		var x := x0
-		while x < DESIGN_W + BLEED_X:
+		while x < TerrainMath.X_MAX:
 			var r := Rect2(x, y, CELL, CELL)
 			if not _inside_focal(r):
 				out.append(r)

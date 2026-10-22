@@ -127,8 +127,8 @@ OS splash (#F0EEE9, Android export option) → engine boot splash (#F0EEE9, show
 ### 3.3 Main scene tree (`scenes/main.tscn`; layer names per Art Bible §2.3)
 
 ```
-Main (Node2D, main.gd)                    layout, camera drift (≤ 4 dp/s, off under Reduce Motion), intro
-├─ Camera2D                                centre of the visible rect; zoom 1.03 → 1.0 intro
+Main (Node2D, main.gd)                    layout, camera = home + map pan + drift (≤ 4 dp/s, off under Reduce Motion), intro
+├─ Camera2D                                home = centre of the visible rect; zoom 1.03 → 1.0 intro
 ├─ World (Node2D)                          position = g_world_offset = ((W−1080)/2, H−1920) — bottom-anchored (A1)
 │  ├─ Sky        Parallax2D 0              L0  └─ Placeholder (PlaceholderBand SKY)
 │  ├─ Celestial  Parallax2D 0.02           L1  (empty marker; the sky shader draws sun/moon/stars)
@@ -148,12 +148,30 @@ Main (Node2D, main.gd)                    layout, camera drift (≤ 4 dp/s, off 
       ├─ Sheets · Overlays (full-rect, mouse-transparent hosts)
       ├─ DebugReadout (--debug-hud)
       └─ BootCover (ColorRect #F0EEE9, fades out once)
+└─ WorldPan (Node, world_pan.gd)           map-drag input arbiter (§3.4); LAST child on purpose
 ```
 
 Coordinates are design px in the 1080×1920 frame: `px = (x·1080, y·1920)` from `spots.json` (`GardenRules.frame_to_px`).
 - On taller phones the extra height is sky above y = 0.
 - On wider screens the 1080 column is centred.
 - Layer geometry should extend to x ∈ [−400, 1480] (Art Bible §2.1).
+
+### 3.4 Input: world taps and the map pan
+
+World input is a chain, in Godot's order:
+1. **GUI** (HUD, sheets, scrims, cards: `CanvasLayer` 10) consumes its own presses, so nothing below sees a touch on a sheet. `HudController._input` swallows the first press in ambient watch mode.
+2. **`WorldPan._unhandled_input`** (`scripts/main/world_pan.gd`): the last child of Main, so it is called *first* among the unhandled handlers. It arms a pan on every press but never consumes it. It does not arm while a sheet or modal card is open (`blocked`), within 24 dp of a side edge (`spots.json safe_x`, I2), or for a pointer a world object claimed.
+3. **World layers** (`_unhandled_input`, hit-tested in design px through `make_input_local` / the canvas transform): creatures (mouse path) › plots › décor › props › brook. They give touch-down feedback in the same frame (I1) and consume the presses they take. `CreatureLayer` calls `WorldPan.claim_pointer()` on a mossling hit: a stroke started on a mossling pets it and never pans.
+4. **`Main._unhandled_input`** (the root, so last): a press that reaches it hit nothing → `WorldPan.mark_empty_press()` (double tap on empty ground glides home; optional, never required, GDD §8.2).
+
+Drag arbitration: motion and release are read in `WorldPan._input` (a drag across the dock keeps panning). Past `gui/common/drag_threshold` (24 px) the pan starts from the slop edge (no jump). Then every node in group `WorldPan.GROUP_PRESS` gets `cancel_world_press()` (plots and décor drop the pending tap or long-press), `drag_started` fires, and the drag's motion and release events are consumed. Props and the brook act on touch-down, so a drag that starts on them has already rung or rippled. One input path: touch index 0 on devices, the real mouse on desktop and web; emulated mouse events are ignored, as in the layers.
+
+Motion (`PanBody`, pure; maths in `PanMath`; tokens `motion_tokens.world.pan`):
+- **Bounds** per viewport: for each full-width layer with scroll s ≤ 1, the visible rect stays inside the authored x range (`TerrainMath.X_MIN/X_MAX`), so d ∈ [(x_min + ox)/s, (x_max + ox − W)/s] (±400 px on phones, ±220 at 1440 px wide, none past 1880). Vertically from `sky_up_px` (600) into the sky down to the home view (the frame bottom = the ground's bottom). The rest bounds sit `rubber_room_dp` (16 dp) inside, so the rubber band never shows past the geometry; no rubber band below the ground.
+- **Feel:** 1:1 while dragging; on release an exact exponential glide (`glide_friction_per_s`); past an edge the rubber band (`rubber_k`) and the `move` spring back. Reduce Motion: no inertia, no rubber band (clamped), home is a cut.
+- **Idle drift** pauses while the map is dragged or gliding (the current drift is folded into the pan, no jump) and resumes from zero over `drift_resume_s`, its amplitude capped by the distance to the rest bounds.
+- **Followers:** `TimeOfDay.set_camera_pan` → `g_cam_pan`. The sun and moon *positions* stay pinned to the world (lighting, shadows and lamp pools are camera-invariant: everything world-space works in design px); the sky draws the discs and stars on L1 (0.02 × pan), and the sun veil and light shafts add `celestial_shift()` to follow the disc. Nodes in group `world_pan_view` get `on_world_pan(pan, cam, reveal_px)`: `SkyQuad` and `SilhouetteLayer` extend their bottoms (a skirt in the body-bottom colour, hidden at rest) by the gap the faster layer in front opens; `ForegroundFrame` keeps the 1.3× pieces from sliding far enough to show their cut edges (exact up to `fg_knee` × room, which covers the drift). The value frame and the brook (mesh only) run to x_max. Glass sheets read the screen texture and need nothing. Caption anchors are canvas px; the overlay applies the camera.
+- **QA:** captures start centred (the pan is 0, so frames are unchanged); `--qa-pan=x,y` starts panned, clamped to the rest bounds (`--qa-pan=-9999,-9999` = left-top corner).
 
 ---
 
@@ -353,6 +371,7 @@ A crash at any step leaves at least one complete file. Saving is synchronous and
 | `g_wind`, `g_cloud`, `g_rain` | TimeOfDay (weather) | same |
 | `g_sun_pos`, `g_moon_pos`, `g_celestial`, `g_sun_dir` | TimeOfDay (celestial) | same |
 | `g_world_offset` | TimeOfDay, set by Main on resize | on change |
+| `g_cam_pan` (map pan, canvas px, idle drift excluded; §3.4) | TimeOfDay, set by Main | on change (every frame while panning) |
 
 The pipeline:
 1. **`TodMath.g_day_at(local_s)`** maps the clock to `g_day` per `world.json`: dawn 05:00 → 0.2, day 08:00 → 0.4, golden 16:30 → 0.6, dusk 18:30 → 0.8, night 20:30 → 1.0. Each phase crossfades over `phase_crossfade_s` (2400 s). Night reads 0.0 after midnight, and the jump is invisible because the gradient has night at both ends (tested at every minute of the day).
@@ -522,6 +541,7 @@ The contract is AUDIO_BIBLE §8; `tools/audio/mixsim.py` is its executable refer
 | `test_retention_parity.gd` | Bit-level parity with `economy_sim.py` on the exported scripted schedule (§5.3) |
 | `test_palette.gd` | **Palette interpolation:** keys exact, midpoints equal to the engine's OKLab Gradient; OKLab round trip; scalars; clock → `g_day` (crossfades, midnight, continuity over 24 h); rain transform; 30 s weather crossfade; celestial; every declared global has a writer |
 | `test_clock.gd` | **Frame clock** (QA captures): replays identically, ignores real time, `--now`/override mid-run and clear; the system-clock mode is unchanged |
+| `test_world_pan.gd` | Map pan (§3.4): bounds per aspect keep every layer inside its geometry (phones, tablets, wider than the geometry); rubber band is 1:1 inside and never passes the hard bounds; release past the bounds springs back inside; fling glides with friction, overshoots an edge and settles on it; home glide; Reduce Motion (no inertia, clamp, cut); soft limit and reveal; foreground room; threshold from the project setting; small moves stay taps; a drag cancels pending world presses once and tracks 1:1 from the slop edge; a stroke on a mossling never pans; touch path vs emulated mouse and a second finger; edge band and open sheets; double tap on empty ground only |
 | `test_spring.gd` | **Spring helper converges** for all 5 tokens, with analytic overshoot and envelope settle times; frame-rate independence (30 vs 120 fps); stability through hitches; retarget keeps velocity; critically and over-damped never overshoot; Reduce Motion ζ ≥ 1; Spring2D; bézier tokens; duration tokens; the loop table meets V5 (integer k, breathing 3.5–4.5 / 5–6 s, ≤ 3 firefly glows/s); `Motion` springs take the token rest epsilon |
 | `test_core_helpers.gd` | NFC and name filtering; weather plan determinism and share; locale policy and loaded translations; settings validation; recap priority; harmony helpers versus theory.py (including JSON float sets); bus graph (limiter −1.5 dB, LPF resonance 0.5); frame-rate divisors; haptics modes, persistence and repeat |
 | `test_audio_director.gd` | AUDIO_BIBLE §8.10 without a device: manifest loaded; ladder climbs, caps at 7 and resets after 1.5 s; walk stays in range and set and always moves; variants never repeat and all are used; chord hold 6–10 bars; bed targets (rain replaces the stream, crickets only at night and never in rain); slider curve; `cue_played` captions; one DOUBLE per Collect burst; S10 MEDIUM once |

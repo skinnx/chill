@@ -228,3 +228,7 @@ g_world_offset={
 "type": "vec2",
 "value": Vector2(0, 0)
 }
+g_cam_pan={
+"type": "vec2",
+"value": Vector2(0, 0)
+}
