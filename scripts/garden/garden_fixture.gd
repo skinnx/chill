@@ -86,6 +86,9 @@ static func requested() -> String:
 
 ## QA hook (idempotent): applies --fixture=<name> to Game.sim once per run.
 static func apply_from_args(content: GameContent) -> void:
+	if ActiveFixture.wanted():  # --fixture=active_mid (Gameplay, GDD §14.11)
+		ActiveFixture.apply_from_args(content)
+		return
 	if RetentionFixture.wanted():  # --fixture=retention_mid / --qa-scene=<id> (Gameplay, GDD §13.9)
 		RetentionFixture.apply_from_args(content)
 		return
@@ -136,6 +139,10 @@ static func apply(content: GameContent, state: WorldState, name: String) -> bool
 			continue
 		state.basket.append({"species": String(sp), "gift_item": String(s["gift_item"]), "dew": int(s["gift_dew"])})
 	state.dew = maxi(state.dew, FIXTURE_DEW)
+	# Active F3: the rebuilt sim lays the décor out from the anchors (the GDD §14.9 migration:
+	# anchors verbatim, the lantern jitter baked in), so captures look as before free placement.
+	state.decor_layout.clear()
+	state.active_v = 0
 	return true
 
 

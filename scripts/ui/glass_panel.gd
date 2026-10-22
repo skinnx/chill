@@ -17,6 +17,10 @@ const FAUX_SHADER := "res://shaders/ui/glass_faux.gdshader"
 const LIVE_SHADER := "res://shaders/ui/glass_live.gdshader"
 ## A radius below 0 means a pill / circle (half the short side).
 const PILL := -1.0
+## HUD chrome shadow strength over e<n> (round 6: the dock visibly floats).
+const HUD_SHADOW_K := 1.4
+## HUD chrome glass fill (round 6: a warmer, creamier frost that no longer reads grey over grass).
+const HUD_FILL := 0.9
 ## FrameGovernor tier from which live glass is replaced by faux.
 const LIVE_MAX_TIER := 0
 
@@ -130,6 +134,13 @@ static func _faux_material(level: int, radius_px: float, fill: float, night: boo
 	m.set_shader_parameter(&"u_fill", fill)
 	m.set_meta(&"night_aware", night)
 	if night:
+		# Round 6: the HUD chrome (chips, gear, eye, dock pebble) is a warmer cream frosted glass that
+		# floats on a soft meadow-tinted shadow (HUD_SHADOW_K x e<n>) instead of the neutral ink one.
+		m.set_shader_parameter(&"u_surface", UiTokens.color(&"hud_glass"))
+		m.set_shader_parameter(&"u_fill", maxf(fill, HUD_FILL))
+		m.set_shader_parameter(&"u_shadow_tint", UiTokens.color(&"hud_shadow"))
+		if level > UiTokens.E0:
+			m.set_shader_parameter(&"u_shadow_alpha", UiTokens.alpha(StringName("shadow_e%d" % level)) * HUD_SHADOW_K)
 		var nt := night_tokens()
 		m.set_shader_parameter(&"u_fill_night", maxf(fill, float(nt.get("fill", 0.88))))
 		m.set_shader_parameter(&"u_night", night_k)
@@ -150,6 +161,7 @@ static func _apply_common(m: ShaderMaterial) -> void:
 	m.set_shader_parameter(&"u_surface", UiTokens.color(&"surface"))
 	m.set_shader_parameter(&"u_rim", UiTokens.color(&"surface_hi"))
 	m.set_shader_parameter(&"u_ink", UiTokens.color(&"ink"))
+	m.set_shader_parameter(&"u_shadow_tint", UiTokens.color(&"ink"))
 	m.set_shader_parameter(&"u_rim_tl", UiTokens.alpha(&"rim_top_left"))
 	m.set_shader_parameter(&"u_rim_br", UiTokens.alpha(&"rim_bottom_right"))
 	m.set_shader_parameter(&"u_inner_shadow", UiTokens.alpha(&"inner_bottom_shadow"))

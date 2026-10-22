@@ -43,12 +43,9 @@ func _init() -> void:
 func build_body() -> void:
 	_count = _count_chip()
 	header_extra.add_child(_count.get_parent())
-	var v := VBoxContainer.new()
-	v.position = Vector2(SIDE, 0.0)
-	v.size = Vector2(body.size.x - SIDE * 2.0, body.size.y)
-	v.add_theme_constant_override(&"separation", 24)
-	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	body.add_child(v)
+	# round 6: a scroll list like the other sheets, so large text or a short screen never pushes
+	# the Collect button under the sheet's bottom edge
+	var v := make_scroll(0.0, 24)
 	v.add_child(_cup_widget())
 	_grid = GridContainer.new()
 	_grid.columns = COLUMNS
@@ -65,6 +62,9 @@ func build_body() -> void:
 	_collect = pill_button(tr("BASKET_COLLECT_ALL"), true, COLLECT_H)
 	_collect.pressed.connect(_on_collect)
 	v.add_child(_collect)
+	# Active F2: a findable path to the Tea nook besides the world prop (ACTIVE_TEA §10)
+	if Game.sim != null and Game.tea_unlocked():
+		v.add_child(_tea_row())
 	refresh()
 
 
@@ -114,6 +114,39 @@ func _count_chip() -> Label:
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	p.add_child(l)
 	return l
+
+
+## Active F2: the "Tea nook" row (the felt teapot, the name, a chevron); a tap swaps to the Tea sheet.
+func _tea_row() -> Control:
+	var b := Button.new()
+	b.name = "TeaNookRow"
+	b.flat = true
+	b.focus_mode = Control.FOCUS_NONE
+	b.custom_minimum_size = Vector2(0.0, MIN_TARGET)
+	var c := card(24, ThemeBuilder.R_L, UiTokens.E1)
+	c.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	c.set_anchors_preset(Control.PRESET_FULL_RECT)
+	b.add_child(c)
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override(&"separation", 30)
+	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	c.add_child(h)
+	h.add_child(TeaIcon.of_teaware(TeaArt.in_use("teapot"), Vector2(132.0, 132.0)))
+	var l := label(tr("TEA_NOOK_NAME"), &"StrongLabel")
+	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	h.add_child(l)
+	var ch := Icons.rect(&"chevron", 42.0)
+	ch.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	h.add_child(ch)
+	c.minimum_size_changed.connect(func() -> void: b.custom_minimum_size.y = maxf(c.get_combined_minimum_size().y,
+			MIN_TARGET))
+	b.custom_minimum_size.y = maxf(c.get_combined_minimum_size().y, MIN_TARGET)
+	PressFeedback.attach(b)
+	b.pressed.connect(func() -> void:
+		if hud != null:
+			hud.open_sheet(&"tea"))
+	return b
 
 
 func _cup_widget() -> Control:

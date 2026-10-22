@@ -52,10 +52,12 @@ func test_value_frame_leaves_the_focal_open() -> void:
 	var focal := Vector2(540, 1123)
 	for r: Rect2 in ValueFrame.rects():
 		assert_false(r.has_point(focal), "the sun stone is never under the multiply mesh")
+	# fill = the part of the cells on a 1080x2400 screen (the grid runs past it for the map pan)
+	var view := Rect2(0.0, -480.0, 1080.0, 2400.0)
 	var area := 0.0
 	for r: Rect2 in ValueFrame.rects():
-		area += r.get_area()
-	var screen := (ValueFrame.DESIGN_W + 2.0 * ValueFrame.BLEED_X) * 2400.0
+		area += r.intersection(view).get_area()
+	var screen := view.get_area()
 	# Round 4 (directive 1): the frame covers the whole play area around the focal; still well under
 	# the full screen (one cheap multiply pass, dropped at governor tier 1+).
 	assert_lt(area / screen, 0.6, "fill stays well under the full screen")

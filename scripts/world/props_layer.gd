@@ -6,7 +6,7 @@ extends Node2D
 ## sits under a sort node at its y-sort origin (where creatures and beds sort against it), with a
 ## tinted contact shadow at its foot. Also builds the willow's frond curtain (one mesh) and owns
 ## touch feedback for the touchable props (spots.json tap_action): squash 0.94 + S01 on touch-down,
-## then [signal prop_tapped] for the owner of the action (UI: open_basket, open_postcards;
+## then, on release (WorldPan), [signal prop_tapped] for the owner of the action (UI: open_basket, open_postcards;
 ## décor: ring_chime).
 ##
 ## Touch-down also spawns a TouchRing (bloom + eased ring + sparkles) at the touch.
@@ -22,7 +22,7 @@ extends Node2D
 # such conversion, so only that warning is silenced in this file (docs/ARCHITECTURE.md §10).
 @warning_ignore_start("unsafe_call_argument")
 
-## Touch-down on a touchable prop (design px of the touch). Connect from the UI / décor layer.
+## A tap on a touchable prop, on release (design px of the touch). Connect from the UI / décor layer.
 signal prop_tapped(prop_id: StringName, action: StringName, design_pos: Vector2)
 
 const ATLAS_JSON := "res://art/props/props_atlas.json"
@@ -114,6 +114,7 @@ var _shadow_group: Node2D = null
 
 
 func _ready() -> void:
+	add_to_group(WorldPan.GROUP_HIT)
 	var doc: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(ATLAS_JSON))
 	_atlas = load(String(doc["atlas"])) as Texture2D
 	_mat = ShaderMaterial.new()
@@ -391,32 +392,49 @@ func _update_light(values: Dictionary) -> void:
 		s.set_light(values)
 
 
-func _unhandled_input(event: InputEvent) -> void:
-	var pressed := false
-	if event is InputEventScreenTouch:
-		pressed = (event as InputEventScreenTouch).pressed
-	elif event is InputEventMouseButton:
-		var mb := event as InputEventMouseButton
-		pressed = mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT and mb.device != InputEvent.DEVICE_ID_EMULATION
-	if not pressed or _touchables.is_empty():
-		return
-	var local := make_input_local(event)
-	var pos: Vector2 = local.get("position")
-	var best: StringName = &""
-	var best_d := INF
+## WorldPan (the world input arbiter, ARCHITECTURE §3.5): the nearest touchable prop within its
+## spots.json hit (+ slop). Touch-down answers at once (squash 0.94, tint, ring, S01); the action
+## ([signal prop_tapped]: open the basket, the postcards, ring the chime) fires on release, so a
+## drag or a pan that starts on a prop never opens anything.
+func world_hit(canvas_pos: Vector2, slop: float) -> Dictionary:
+	if _touchables.is_empty():
+		return {}
+	var pos := get_global_transform_with_canvas().affine_inverse() * canvas_pos
+	var best := {}
 	for id: StringName in _touchables:
 		var t: Dictionary = _touchables[id]
-		var d := pos.distance_to(t["centre"] as Vector2)
-		if d <= float(t["hit"]) and d < best_d:
-			best = id
-			best_d = d
-	if best == &"":
+		var cand := WorldPan.circle_hit(pos, t["centre"] as Vector2, float(t["hit"]), slop, WorldPan.PRIO_PROP, id)
+		if not cand.is_empty() and (best.is_empty() or WorldPan.better(cand, best)):
+			best = cand
+	return best
+
+
+func world_press(key: Variant, canvas_pos: Vector2) -> void:
+	var id := StringName(str(key))
+	if not _touchables.has(id):
 		return
-	_press(best)
+	var pos := get_global_transform_with_canvas().affine_inverse() * canvas_pos
+	_press(id)
 	_ring(pos)
-	AudioDirector.play_cue(CUE_TOUCH, {"world": true, "position": get_global_transform_with_canvas() * pos})
-	prop_tapped.emit(best, StringName(_touchables[best]["action"]), pos)
-	get_viewport().set_input_as_handled()
+	AudioDirector.play_cue(CUE_TOUCH, {"world": true, "position": get_global_transform() * pos})
+
+
+func world_release(key: Variant, canvas_pos: Vector2, act: bool) -> void:
+	var id := StringName(str(key))
+	if act and _touchables.has(id):
+		var pos := get_global_transform_with_canvas().affine_inverse() * canvas_pos
+		prop_tapped.emit(id, StringName(_touchables[id]["action"]), pos)
+
+
+## Debug overlay (--debug-hits): the touchable props' hit circles in canvas px.
+func world_hit_shapes() -> Array:
+	var out: Array = []
+	var xf := get_global_transform_with_canvas()
+	for id: StringName in _touchables:
+		var t: Dictionary = _touchables[id]
+		out.append({"kind": "circle", "c": xf * (t["centre"] as Vector2), "r": float(t["hit"]) * xf.get_scale().x,
+			"prio": WorldPan.PRIO_PROP, "name": String(id)})
+	return out
 
 
 func _ring(pos: Vector2) -> TouchRing:

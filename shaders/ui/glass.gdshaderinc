@@ -17,6 +17,8 @@ uniform float u_inner_shadow = 0.06;                // ui_alpha.inner_bottom_sha
 // u_margin on every side; ink at u_shadow_alpha, falling off over u_shadow_blur px, offset down.
 uniform float u_margin = 0.0;
 uniform float u_shadow_alpha = 0.0;                 // ui_alpha.shadow_e<n>
+// Shadow colour: ink, or for the HUD chrome (round 6) a soft meadow-tinted hud_shadow.
+uniform vec4 u_shadow_tint : source_color = vec4(0.165, 0.157, 0.22, 1.0);
 uniform float u_shadow_blur = 48.0;
 uniform float u_shadow_dy = 18.0;
 // Corner radius px; below 0 = a pill / circle (half the short side, resolved per surface).
@@ -67,10 +69,10 @@ float glass_shadow(vec2 sz) {
 	return u_shadow_alpha * t * t * (3.0 - 2.0 * t);
 }
 
-// Straight-alpha "over": glass (c, a) over the shadow (ink, sa).
+// Straight-alpha "over": glass (c, a) over the shadow (u_shadow_tint, sa).
 vec4 over_shadow(vec3 c, float a, float sa) {
 	float out_a = a + sa * (1.0 - a);
-	vec3 rgb = (c * a + u_ink.rgb * sa * (1.0 - a)) / max(out_a, 1e-4);
+	vec3 rgb = (c * a + u_shadow_tint.rgb * sa * (1.0 - a)) / max(out_a, 1e-4);
 	return vec4(rgb, out_a);
 }
 

@@ -31,6 +31,12 @@ const FILES := {
 		"variant_sign_windows_s", "debut_after_last_sign_s", "variant_hearts_required",
 		"variant_requires_all_met", "cousin_every_n_visits"],
 	"scenes": ["schema", "scenes", "min_absence_s", "max_per_return", "scene_chance", "linger_s", "away_sample_s"],
+	# Active Play v1 (GDD §14): Active F1 wishes, Active F2 tea & treats, Active F3 free décor placement
+	"wishes": ["schema", "tuning", "reward", "hash_keys", "traits", "wishes"],
+	"tea": ["schema", "unlock", "nook", "harvest", "petals", "dew_drop", "pot", "brewing", "tray", "offering",
+		"recipes", "species_prefs", "likes_revealed_at_heart", "teaware", "event_postcards"],
+	"decor_placement": ["schema", "feature_flag", "edit_mode", "hit", "area", "clearances", "sets", "snap",
+		"beautify", "derived_spots", "attraction", "auto_place", "migration", "undo"],
 }
 const SUPPORTED_SCHEMA := 1
 const KIND_FLOWER := &"flower"
@@ -98,6 +104,34 @@ var sign_types_by_id: Dictionary = {}
 ## Away scenes in data order (the weighted pick walks this order) and by id.
 var scenes: Array[Dictionary] = []
 var scenes_by_id: Dictionary = {}
+
+# --- Active Play v1 (GDD §14; wishes.json, tea.json, decor_placement.json)
+var wishes_doc: Dictionary = {}
+var tea: Dictionary = {}
+var decor_placement: Dictionary = {}
+## Wishes in data order (append-only: wish_stamps are a bitmask over this order), by id, and the
+## index of each id in that order.
+var wishes: Array[Dictionary] = []
+var wishes_by_id: Dictionary = {}
+var wish_index: Dictionary = {}
+## Parsed wish targets by wish id: {kind: StringName, arg: String, n: int} (ACTIVE_WISHES §5 grammar).
+var wish_targets: Dictionary = {}
+## species -> Array[String] personality tags (wishes.json traits).
+var wish_traits: Dictionary = {}
+## flower id -> tea.json petals row {flower, petal_regrow_s, pantry_cap, jar_order}.
+var petals_by_flower: Dictionary = {}
+## Tea recipes in book order, by id; named recipes by their mix key ([method tea_mix_key]);
+## fallback recipe id by drop count.
+var recipes: Array[Dictionary] = []
+var recipes_by_id: Dictionary = {}
+var recipe_by_mix: Dictionary = {}
+var recipe_fallback_by_drops: Dictionary = {}
+var named_recipe_count: int = 0
+## species -> {loves: Array, likes: Array, gift_petal: String}.
+var tea_prefs: Dictionary = {}
+var teaware_by_id: Dictionary = {}
+## slot -> the free default teaware id.
+var teaware_default: Dictionary = {}
 
 
 ## Loads and indexes every file in [param dir]. Never returns null; check [member errors].
@@ -237,6 +271,178 @@ func season_for_world_day(world_day: int) -> StringName:
 	return StringName(cycle[idx])
 
 
+# ------------------------------------------------------------------ Active Play v1 (GDD §14)
+
+## The recipe-match key of a pot: petals as a sorted multiset plus the drop count
+## ("button_daisy,sweet_clover,sweet_clover|0"). Order in the pot never matters (tea.json match_rule).
+static func tea_mix_key(petals: Array, drops: int) -> String:
+	var list := PackedStringArray()
+	for p: Variant in petals:
+		list.append(str(p))
+	list.sort()
+	return "%s|%d" % [",".join(list), drops]
+
+
+## The recipe a pot makes: the exact named mix, else the fallback for its drop count (&"" when the
+## pot is not brewable: no petals, too many, or a drop count without a fallback).
+func match_recipe(petals: Array, drops: int) -> StringName:
+	var pot: Dictionary = tea.get("pot", {})
+	if petals.size() < int(pot.get("min_petals", 1)) or petals.size() > int(pot.get("max_petals", 3)):
+		return &""
+	var key := tea_mix_key(petals, drops)
+	if recipe_by_mix.has(key):
+		return recipe_by_mix[key]
+	return recipe_fallback_by_drops.get(drops, &"")
+
+
+## Petals a named recipe needs as flower -> count ({} for a fallback).
+func recipe_petals(recipe_id: StringName) -> Dictionary:
+	var r: Dictionary = recipes_by_id.get(recipe_id, {})
+	var p: Variant = r.get("petals", {})
+	return p if p is Dictionary else {}
+
+
+func is_named_recipe(recipe_id: StringName) -> bool:
+	var r: Dictionary = recipes_by_id.get(recipe_id, {})
+	return not r.is_empty() and String(r.get("match", "")) != "fallback"
+
+
+## decor_placement.json sets record of a décor id ({} if unknown).
+func placement_set(decor_id: StringName) -> Dictionary:
+	var sets: Dictionary = decor_placement.get("sets", {})
+	return sets.get(String(decor_id), {})
+
+
+func is_movable_decor(decor_id: StringName) -> bool:
+	return bool(placement_set(decor_id).get("movable", false))
+
+
+func _index_active() -> void:
+	wishes = _records(wishes_doc["wishes"])
+	for i in wishes.size():
+		var w := wishes[i]
+		var id := StringName(w["id"])
+		wishes_by_id[id] = w
+		wish_index[id] = i
+		var target := String(w["target"])
+		var kind := target.get_slice(":", 0)
+		var arg := target.substr(kind.length() + 1) if target.contains(":") else ""
+		wish_targets[id] = {"kind": StringName(kind), "arg": arg, "n": arg.to_int() if arg.is_valid_int() else 0}
+	var traits: Dictionary = wishes_doc["traits"]
+	for sp: Variant in traits:
+		wish_traits[StringName(sp)] = Array(traits[sp])
+	for p: Dictionary in _records(tea["petals"]):
+		petals_by_flower[StringName(p["flower"])] = p
+	recipes = _sorted_records(tea["recipes"], "book_order")
+	for r: Dictionary in recipes:
+		var id := StringName(r["id"])
+		recipes_by_id[id] = r
+		if String(r.get("match", "")) == "fallback":
+			for d: Variant in r.get("drops_any", []):
+				recipe_fallback_by_drops[int(d)] = id
+			continue
+		named_recipe_count += 1
+		var list: Array = []
+		var petals: Dictionary = r["petals"]
+		for f: Variant in petals:
+			for i in int(petals[f]):
+				list.append(String(f))
+		recipe_by_mix[tea_mix_key(list, int(r["drops"]))] = id
+	var prefs: Dictionary = tea["species_prefs"]
+	for sp: Variant in prefs:
+		tea_prefs[StringName(sp)] = prefs[sp]
+	for x: Dictionary in _records(tea["teaware"]):
+		teaware_by_id[StringName(x["id"])] = x
+		if bool(x.get("default", false)):
+			teaware_default[String(x["slot"])] = String(x["id"])
+	# Tea event postcards live in tea.json (GDD §14.4 D20); the world sends them like any other.
+	for p: Dictionary in _records(tea["event_postcards"]):
+		event_postcards_by_trigger[StringName(p["trigger"])] = p
+
+
+## Cross-references of the Active Play data (the full lint is tools/sim/validate_content.py).
+func _check_active() -> void:
+	for sp: Dictionary in species:
+		var sid := StringName(sp["id"])
+		if not wish_traits.has(sid):
+			errors.append("wishes.json: no traits for species %s" % sid)
+		if not tea_prefs.has(sid):
+			errors.append("tea.json: no species_prefs for %s" % sid)
+	for w: Dictionary in wishes:
+		var id := StringName(w["id"])
+		var tg: Dictionary = wish_targets[id]
+		var arg := StringName(tg["arg"])
+		match StringName(tg["kind"]):
+			&"bed_invite", &"tea_petal":
+				if not flowers_by_id.has(arg):
+					errors.append("wish %s: unknown flower %s" % [id, arg])
+			&"decor_near", &"decor_tap":
+				if not decor_by_id.has(arg):
+					errors.append("wish %s: unknown décor %s" % [id, arg])
+			&"tea":
+				if not recipes_by_id.has(arg):
+					errors.append("wish %s: unknown recipe %s" % [id, arg])
+			&"tea_kind":
+				if arg != &"tea" and arg != &"treat":
+					errors.append("wish %s: tea_kind must be tea or treat" % id)
+			&"pet", &"play_taps", &"chime_tap", &"boat", &"stream_tap", &"tea_loved":
+				pass
+			_:
+				errors.append("wish %s: unknown target kind %s" % [id, tg["kind"]])
+		var req: Dictionary = w["requires"]
+		for f: Variant in req.get("bloomed", {}):
+			if not flowers_by_id.has(StringName(f)):
+				errors.append("wish %s requires unknown flower %s" % [id, f])
+		for d: Variant in req.get("owned", {}):
+			if not decor_by_id.has(StringName(d)):
+				errors.append("wish %s requires unknown décor %s" % [id, d])
+		for s: Variant in Array(w["prefer"]) + Array(w["species_only"]):
+			if not species_by_id.has(StringName(s)):
+				errors.append("wish %s names unknown species %s" % [id, s])
+	if wishes.size() > 62:
+		errors.append("wishes.json: more than 62 wishes do not fit the wish_stamps bitmask")
+	if not wishes_by_id.has(StringName(wishes_doc["tuning"]["first_wish"]["wish"])):
+		errors.append("wishes.json: unknown first_wish")
+	for f: Dictionary in flowers:
+		if not petals_by_flower.has(StringName(f["id"])):
+			errors.append("tea.json: no petals row for flower %s" % f["id"])
+	for r: Dictionary in recipes:
+		var petals: Variant = r.get("petals", {})
+		if petals is Dictionary:
+			for f: Variant in petals:
+				if not flowers_by_id.has(StringName(f)):
+					errors.append("recipe %s: unknown flower %s" % [r["id"], f])
+	for d in int(tea["pot"]["max_drops"]) + 1:
+		if not recipe_fallback_by_drops.has(d):
+			errors.append("tea.json: no fallback recipe for %d drops" % d)
+	for sp: StringName in tea_prefs:
+		var pr: Dictionary = tea_prefs[sp]
+		for rid: Variant in Array(pr["loves"]) + Array(pr["likes"]):
+			if not recipes_by_id.has(StringName(rid)):
+				errors.append("tea.species_prefs.%s: unknown recipe %s" % [sp, rid])
+		if not flowers_by_id.has(StringName(pr["gift_petal"])):
+			errors.append("tea.species_prefs.%s: unknown gift_petal %s" % [sp, pr["gift_petal"]])
+	for slot: Variant in ["teapot", "cup", "cloth"]:
+		if not teaware_default.has(slot):
+			errors.append("tea.json: no default teaware for slot %s" % slot)
+	if not props_by_id.has(StringName(tea["nook"]["on_prop"])):
+		errors.append("tea.json: nook.on_prop is not a spots.json prop")
+	var sets: Dictionary = decor_placement["sets"]
+	for d: Dictionary in decor:
+		if not sets.has(String(d["id"])):
+			errors.append("decor_placement.json: no sets entry for %s" % d["id"])
+	for id: Variant in sets:
+		var st: Dictionary = sets[id]
+		if not decor_by_id.has(StringName(id)):
+			errors.append("decor_placement.json: unknown set %s" % id)
+		elif bool(st.get("movable", false)) and Array(st.get("rot_render", [])).size() != int(st["rot_steps"]):
+			errors.append("decor_placement.sets.%s: rot_render must hold rot_steps entries" % id)
+	for sid: Variant in decor_placement["derived_spots"]:
+		var ds: Variant = decor_placement["derived_spots"][sid]
+		if ds is Dictionary and not spots_by_id.has(StringName(sid)):
+			errors.append("decor_placement.derived_spots: unknown spot %s" % sid)
+
+
 # ------------------------------------------------------------------ indexing
 
 func _index() -> void:
@@ -260,6 +466,9 @@ func _index() -> void:
 	friendship = raw.get("friendship", {})
 	mysteries = raw.get("mysteries", {})
 	scenes_doc = raw.get("scenes", {})
+	wishes_doc = raw.get("wishes", {})
+	tea = raw.get("tea", {})
+	decor_placement = raw.get("decor_placement", {})
 	if not errors.is_empty():
 		return
 
@@ -297,8 +506,10 @@ func _index() -> void:
 	for p: Dictionary in _records(economy.get("event_postcards", [])):
 		event_postcards_by_trigger[StringName(p["trigger"])] = p
 	_index_retention()
+	_index_active()
 	_check_references()
 	_check_retention()
+	_check_active()
 
 
 func _index_retention() -> void:

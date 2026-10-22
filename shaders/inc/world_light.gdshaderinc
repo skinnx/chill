@@ -174,7 +174,7 @@ float gust_at(vec2 p_design) {
 
 vec3 sun_veil(vec2 p_canvas, float layer_k) {
 	float r0 = SUN_RADIUS_PX * 3.2 * g_halo.x;
-	float d = distance(p_canvas, g_sun_pos) / (1.4 * r0);
+	float d = distance(p_canvas, g_sun_pos + celestial_shift()) / (1.4 * r0);  // around the L1 disc
 	return g_glow.rgb * (g_halo.y * 0.6 * layer_k * g_celestial.x / (1.0 + d * d));
 }
 

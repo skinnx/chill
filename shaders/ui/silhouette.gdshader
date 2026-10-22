@@ -35,7 +35,10 @@ void fragment() {
 	float fringe = (vnoise(vec2(ang * 9.0 + u_seed * 31.0, 0.0)) - 0.5) * FUZZ_PX;
 	float cov = clamp(0.5 - (d + fringe) / 1.5, 0.0, 1.0);
 	float halo = (1.0 - smoothstep(0.0, FUZZ_PX * 1.6, d)) * 0.35;
-	float a = max(cov, halo * step(0.0, d)) * u_ink.a;
+	// round 6: a felt volume, lighter toward the studio key (upper left), so the friend still to
+	// come reads as a soft plush shape rather than a flat stain
+	float lit = clamp(0.5 - 0.55 * p.y - 0.35 * p.x, 0.0, 1.0);
+	float a = max(cov * (1.0 - 0.38 * lit), halo * step(0.0, d)) * u_ink.a;
 	vec3 c = finish(u_ink.rgb, v_local / PX_PER_DP, FRAGCOORD.xy, GRAIN_GLASS);
 	COLOR = vec4(c, a * COLOR.a);
 }

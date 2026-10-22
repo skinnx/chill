@@ -42,8 +42,6 @@ uniform float cirrus_alpha = 0.15;
 uniform vec2 cirrus_cell_px = vec2(450.0, 34.0);
 uniform float cirrus_speed = 3.0;
 uniform vec2 cirrus_band = vec2(-420.0, 420.0);
-// L1 parallax: the celestial bodies and stars shift by 0.02 x the camera offset.
-uniform vec2 u_cam_offset = vec2(0.0);
 // Round 4 (V2 budget, ADR 0001 #1): the zenith keeps its hue but its HSV saturation is capped, so
 // the calm-colour budget is spent on the darker foreground frame (directive 1) instead of the sky.
 uniform float sat_cap = 0.44;
@@ -128,7 +126,7 @@ void fragment() {
 	float hw = (p.y - haze_center) / haze_wide_sigma;
 	c = mix(c, haze, haze_amp * exp(-hy * hy) + haze_wide_amp * exp(-hw * hw) * (1.0 - g_rain * 0.5));
 
-	vec2 pc = p + g_world_offset + u_cam_offset * 0.02;  // canvas px of this fragment (L1)
+	vec2 pc = p + g_world_offset + g_cam_pan * CELESTIAL_SCROLL;  // L1: bodies and stars shift by 0.02 x the map pan
 	vec3 cl_lit = mix(cloud_lit.rgb, g_glow.rgb, 0.25 * g_celestial.x * g_backlight);
 	float clear_k = 1.0 - g_rain;
 

@@ -36,6 +36,8 @@ var weather: StringName = &"clear"
 var g_day: float = 0.4
 ## Canvas offset of the bottom-anchored design frame: (centering x, viewport_h - 1920).
 var world_offset: Vector2 = Vector2.ZERO
+## Map pan of the camera from its home view (canvas px; g_cam_pan).
+var camera_pan: Vector2 = Vector2.ZERO
 ## Current palette colours by slot (all 27, for consumers such as the sky gradient texture).
 var colors: Dictionary = {}
 var scalars: Dictionary = {}
@@ -97,6 +99,14 @@ func set_world_offset(offset: Vector2) -> void:
 	if _content != null:
 		_force = true
 		_update(0.0)
+
+
+## Map pan (canvas px from the home view, drift excluded; Main, ARCHITECTURE §3.4) -> g_cam_pan.
+## The sun / moon positions stay pinned to the world: shaders add celestial_shift() where they draw
+## around the L1 disc, so lighting and shadows never change with the view.
+func set_camera_pan(pan: Vector2) -> void:
+	camera_pan = pan
+	_set_global(&"g_cam_pan", pan)
 
 
 ## QA / debug: pin g_day (NAN releases) and/or the weather (&"" releases).

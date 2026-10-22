@@ -1,0 +1,475 @@
+{
+	"schema": 1,
+	"doc": "Active play F2 Tea & Treats. Petals, pantry, pot, brewing gesture tuning, recipes, species tea preferences, offering, teaware. Deterministic: no randomness anywhere in tea. Durations in seconds (_s) or milliseconds (_ms), sizes in dp. See docs/gdd/ACTIVE_TEA.md. Strings in i18n/staging_tea.csv until merged.",
+	"unlock": {"requires_onboarding_done": true, "requires_bloomed_stems": 1, "nook_prop": "tea_nook"},
+	"nook": {
+		"prop_id": "tea_nook",
+		"on_prop": "stump",
+		"x": 0.9,
+		"y": 0.4,
+		"w_dp": 56,
+		"h_dp": 44,
+		"hit_dp": 64,
+		"tap_action": "open_tea",
+		"hit_prio": 4,
+		"steam": "ambient_wisp",
+		"cups_drawn_max": 3,
+		"f3_exclusion_radius_dp": 40,
+		"note": "On top of the stump prop. Gaps checked by validate_content.py (bed_5 hit 10 dp below; the stump_hollow spot is not a hit target). It covers leaf_pinwheel anchors[4] (0.800, 0.405) and anchors[8] (0.830, 0.378) (0-based; #5 and #9 counted from 1): Active F3 migration nudges those two pieces out of the 40 dp exclusion (decor_placement.json migration), and new drops treat it as a hard exclusion."
+	},
+	"harvest": {
+		"stage": "bloom",
+		"petal_hold_per_stem": 2,
+		"bed_hit_prio_with_petals": 5,
+		"gather_fly_ms": 600,
+		"glints_max_per_bed": 3,
+		"petals_per_glint": 2,
+		"stagger_ms": 40,
+		"harms_flower": false,
+		"affects_dew_or_attraction": false
+	},
+	"petals": [
+		{"flower": "sweet_clover", "petal_regrow_s": 1800, "pantry_cap": 24, "jar_order": 1},
+		{"flower": "button_daisy", "petal_regrow_s": 2400, "pantry_cap": 24, "jar_order": 2},
+		{"flower": "buttercup", "petal_regrow_s": 2700, "pantry_cap": 24, "jar_order": 3},
+		{"flower": "forget_me_not", "petal_regrow_s": 3600, "pantry_cap": 24, "jar_order": 4},
+		{"flower": "bluebell", "petal_regrow_s": 3600, "pantry_cap": 24, "jar_order": 5},
+		{"flower": "primrose", "petal_regrow_s": 4500, "pantry_cap": 24, "jar_order": 6},
+		{"flower": "dandelion", "petal_regrow_s": 4500, "pantry_cap": 24, "jar_order": 7},
+		{"flower": "moonbloom", "petal_regrow_s": 7200, "pantry_cap": 24, "jar_order": 8}
+	],
+	"dew_drop": {
+		"id": "dew_drop",
+		"cost_dew": 3,
+		"charged_on": "add_to_pot",
+		"refund_on_remove": true,
+		"name_key": "TEA_DROP_NAME"
+	},
+	"pot": {"min_petals": 1, "max_petals": 3, "max_drops": 2, "treat_at_drops": 2, "keeps_contents_when_closed": true},
+	"brewing": {
+		"petal_drag_threshold_px": 24,
+		"drop_zone_scale": 1.4,
+		"petal_fly_back_ms": 320,
+		"stir_target_deg": 540,
+		"stir_ring_inner_dp": 28,
+		"stir_ring_outer_dp": 150,
+		"stir_counts_both_directions": true,
+		"stir_max_deg_per_event": 45,
+		"stir_tap_alt_deg_per_tap": 180,
+		"stir_tap_anim_ms": 600,
+		"stir_haptic_every_deg": 180,
+		"pour_drag_dp": 40,
+		"pour_start_tilt_deg": 30,
+		"pour_tilt_max_deg": 55,
+		"pour_ms": 1200,
+		"reveal_ms": 500,
+		"new_recipe_stamp_ms": 900,
+		"simple_brew_ms": 900,
+		"simple_brew_default_when_reduce_motion": true,
+		"no_step_ever_times_out": true
+	},
+	"tray": {"slots": 6, "cups_never_cool": true},
+	"offering": {
+		"affection_content": 1,
+		"affection_liked": 1,
+		"affection_loved": 2,
+		"credit": "once_per_rest",
+		"greeter_affection": 0,
+		"petals_back_liked": 1,
+		"petals_back_loved": 2,
+		"petals_back_cap_respected": true,
+		"cup_arc_ms": 320,
+		"sip_ms": 2400,
+		"delight_token": "celebrate",
+		"sleeping_friend": "cup_waits_beside_them",
+		"affection_rest_s": 72000,
+		"affection_rest_note": "Lead balance pass (GDD 14.6): a cup warms a friendship at most once per friend per 20 h of world time (own clock tea_aff_t, like the visit rest), so opening often is no advantage (G5). Later cups are still sipped and still react, without affection. Stacks with an Active F1 wish point (own 20 h rest): at most +3 per friend per 20 h from the active layer."
+	},
+	"match_rule": "exact multiset of petals and exact drop count; else the fallback for the drop count",
+	"recipes": [
+		{
+			"id": "clover_tea",
+			"kind": "tea",
+			"petals": {"sweet_clover": 2},
+			"drops": 0,
+			"name_key": "TEA_R_CLOVER_TEA_NAME",
+			"desc_key": "TEA_R_CLOVER_TEA_DESC",
+			"hint_key": "TEA_R_CLOVER_TEA_HINT",
+			"book_order": 1,
+			"liquid_token": "fl_clover"
+		},
+		{
+			"id": "daisy_tea",
+			"kind": "tea",
+			"petals": {"button_daisy": 2},
+			"drops": 0,
+			"name_key": "TEA_R_DAISY_TEA_NAME",
+			"desc_key": "TEA_R_DAISY_TEA_DESC",
+			"hint_key": "TEA_R_DAISY_TEA_HINT",
+			"book_order": 2,
+			"liquid_token": "fl_daisy"
+		},
+		{
+			"id": "buttercup_tea",
+			"kind": "tea",
+			"petals": {"buttercup": 2},
+			"drops": 0,
+			"name_key": "TEA_R_BUTTERCUP_TEA_NAME",
+			"desc_key": "TEA_R_BUTTERCUP_TEA_DESC",
+			"hint_key": "TEA_R_BUTTERCUP_TEA_HINT",
+			"book_order": 3,
+			"liquid_token": "fl_buttercup"
+		},
+		{
+			"id": "blue_sky_tea",
+			"kind": "tea",
+			"petals": {"forget_me_not": 2},
+			"drops": 0,
+			"name_key": "TEA_R_BLUE_SKY_TEA_NAME",
+			"desc_key": "TEA_R_BLUE_SKY_TEA_DESC",
+			"hint_key": "TEA_R_BLUE_SKY_TEA_HINT",
+			"book_order": 4,
+			"liquid_token": "fl_forget_me_not"
+		},
+		{
+			"id": "bluebell_tea",
+			"kind": "tea",
+			"petals": {"bluebell": 2},
+			"drops": 0,
+			"name_key": "TEA_R_BLUEBELL_TEA_NAME",
+			"desc_key": "TEA_R_BLUEBELL_TEA_DESC",
+			"hint_key": "TEA_R_BLUEBELL_TEA_HINT",
+			"book_order": 5,
+			"liquid_token": "fl_bluebell"
+		},
+		{
+			"id": "primrose_tea",
+			"kind": "tea",
+			"petals": {"primrose": 2},
+			"drops": 0,
+			"name_key": "TEA_R_PRIMROSE_TEA_NAME",
+			"desc_key": "TEA_R_PRIMROSE_TEA_DESC",
+			"hint_key": "TEA_R_PRIMROSE_TEA_HINT",
+			"book_order": 6,
+			"liquid_token": "fl_primrose"
+		},
+		{
+			"id": "breezy_tea",
+			"kind": "tea",
+			"petals": {"dandelion": 2},
+			"drops": 0,
+			"name_key": "TEA_R_BREEZY_TEA_NAME",
+			"desc_key": "TEA_R_BREEZY_TEA_DESC",
+			"hint_key": "TEA_R_BREEZY_TEA_HINT",
+			"book_order": 7,
+			"liquid_token": "fl_dandelion"
+		},
+		{
+			"id": "moonlight_tea",
+			"kind": "tea",
+			"petals": {"moonbloom": 2},
+			"drops": 1,
+			"name_key": "TEA_R_MOONLIGHT_TEA_NAME",
+			"desc_key": "TEA_R_MOONLIGHT_TEA_DESC",
+			"hint_key": "TEA_R_MOONLIGHT_TEA_HINT",
+			"book_order": 8,
+			"liquid_token": "fl_moonbloom"
+		},
+		{
+			"id": "meadow_blend",
+			"kind": "tea",
+			"petals": {"sweet_clover": 1, "button_daisy": 1, "buttercup": 1},
+			"drops": 0,
+			"name_key": "TEA_R_MEADOW_BLEND_NAME",
+			"desc_key": "TEA_R_MEADOW_BLEND_DESC",
+			"hint_key": "TEA_R_MEADOW_BLEND_HINT",
+			"book_order": 9,
+			"liquid_token": "fl_buttercup"
+		},
+		{
+			"id": "dewy_clover_tea",
+			"kind": "tea",
+			"petals": {"sweet_clover": 2},
+			"drops": 1,
+			"name_key": "TEA_R_DEWY_CLOVER_TEA_NAME",
+			"desc_key": "TEA_R_DEWY_CLOVER_TEA_DESC",
+			"hint_key": "TEA_R_DEWY_CLOVER_TEA_HINT",
+			"book_order": 10,
+			"liquid_token": "fl_clover"
+		},
+		{
+			"id": "twilight_tea",
+			"kind": "tea",
+			"petals": {"forget_me_not": 1, "bluebell": 1, "moonbloom": 1},
+			"drops": 0,
+			"name_key": "TEA_R_TWILIGHT_TEA_NAME",
+			"desc_key": "TEA_R_TWILIGHT_TEA_DESC",
+			"hint_key": "TEA_R_TWILIGHT_TEA_HINT",
+			"book_order": 11,
+			"liquid_token": "fl_bluebell"
+		},
+		{
+			"id": "sleepy_tea",
+			"kind": "tea",
+			"petals": {"primrose": 1, "moonbloom": 1},
+			"drops": 1,
+			"name_key": "TEA_R_SLEEPY_TEA_NAME",
+			"desc_key": "TEA_R_SLEEPY_TEA_DESC",
+			"hint_key": "TEA_R_SLEEPY_TEA_HINT",
+			"book_order": 12,
+			"liquid_token": "fl_primrose"
+		},
+		{
+			"id": "starlight_tea",
+			"kind": "tea",
+			"petals": {"dandelion": 1, "moonbloom": 1},
+			"drops": 1,
+			"name_key": "TEA_R_STARLIGHT_TEA_NAME",
+			"desc_key": "TEA_R_STARLIGHT_TEA_DESC",
+			"hint_key": "TEA_R_STARLIGHT_TEA_HINT",
+			"book_order": 13,
+			"liquid_token": "fl_moonbloom"
+		},
+		{
+			"id": "clover_puff_cake",
+			"kind": "treat",
+			"petals": {"sweet_clover": 3},
+			"drops": 2,
+			"name_key": "TEA_R_CLOVER_PUFF_CAKE_NAME",
+			"desc_key": "TEA_R_CLOVER_PUFF_CAKE_DESC",
+			"hint_key": "TEA_R_CLOVER_PUFF_CAKE_HINT",
+			"book_order": 14,
+			"liquid_token": "fl_clover"
+		},
+		{
+			"id": "daisy_biscuit",
+			"kind": "treat",
+			"petals": {"button_daisy": 2},
+			"drops": 2,
+			"name_key": "TEA_R_DAISY_BISCUIT_NAME",
+			"desc_key": "TEA_R_DAISY_BISCUIT_DESC",
+			"hint_key": "TEA_R_DAISY_BISCUIT_HINT",
+			"book_order": 15,
+			"liquid_token": "fl_daisy"
+		},
+		{
+			"id": "buttercup_jelly",
+			"kind": "treat",
+			"petals": {"buttercup": 2},
+			"drops": 2,
+			"name_key": "TEA_R_BUTTERCUP_JELLY_NAME",
+			"desc_key": "TEA_R_BUTTERCUP_JELLY_DESC",
+			"hint_key": "TEA_R_BUTTERCUP_JELLY_HINT",
+			"book_order": 16,
+			"liquid_token": "fl_buttercup"
+		},
+		{
+			"id": "sky_sugar_drops",
+			"kind": "treat",
+			"petals": {"forget_me_not": 2},
+			"drops": 2,
+			"name_key": "TEA_R_SKY_SUGAR_DROPS_NAME",
+			"desc_key": "TEA_R_SKY_SUGAR_DROPS_DESC",
+			"hint_key": "TEA_R_SKY_SUGAR_DROPS_HINT",
+			"book_order": 17,
+			"liquid_token": "fl_forget_me_not"
+		},
+		{
+			"id": "bluebell_candy",
+			"kind": "treat",
+			"petals": {"bluebell": 2},
+			"drops": 2,
+			"name_key": "TEA_R_BLUEBELL_CANDY_NAME",
+			"desc_key": "TEA_R_BLUEBELL_CANDY_DESC",
+			"hint_key": "TEA_R_BLUEBELL_CANDY_HINT",
+			"book_order": 18,
+			"liquid_token": "fl_bluebell"
+		},
+		{
+			"id": "primrose_tart",
+			"kind": "treat",
+			"petals": {"primrose": 2},
+			"drops": 2,
+			"name_key": "TEA_R_PRIMROSE_TART_NAME",
+			"desc_key": "TEA_R_PRIMROSE_TART_DESC",
+			"hint_key": "TEA_R_PRIMROSE_TART_HINT",
+			"book_order": 19,
+			"liquid_token": "fl_primrose"
+		},
+		{
+			"id": "fluff_cake",
+			"kind": "treat",
+			"petals": {"dandelion": 3},
+			"drops": 2,
+			"name_key": "TEA_R_FLUFF_CAKE_NAME",
+			"desc_key": "TEA_R_FLUFF_CAKE_DESC",
+			"hint_key": "TEA_R_FLUFF_CAKE_HINT",
+			"book_order": 20,
+			"liquid_token": "fl_dandelion"
+		},
+		{
+			"id": "little_moon_cake",
+			"kind": "treat",
+			"petals": {"moonbloom": 2},
+			"drops": 2,
+			"name_key": "TEA_R_LITTLE_MOON_CAKE_NAME",
+			"desc_key": "TEA_R_LITTLE_MOON_CAKE_DESC",
+			"hint_key": "TEA_R_LITTLE_MOON_CAKE_HINT",
+			"book_order": 21,
+			"liquid_token": "fl_moonbloom"
+		},
+		{
+			"id": "rainbow_jelly",
+			"kind": "treat",
+			"petals": {"buttercup": 1, "forget_me_not": 1, "primrose": 1},
+			"drops": 2,
+			"name_key": "TEA_R_RAINBOW_JELLY_NAME",
+			"desc_key": "TEA_R_RAINBOW_JELLY_DESC",
+			"hint_key": "TEA_R_RAINBOW_JELLY_HINT",
+			"book_order": 22,
+			"liquid_token": "fl_primrose"
+		},
+		{
+			"id": "meadow_tea",
+			"kind": "tea",
+			"match": "fallback",
+			"drops_any": [0, 1],
+			"name_key": "TEA_R_MEADOW_TEA_NAME",
+			"desc_key": "TEA_R_MEADOW_TEA_DESC",
+			"hint_key": "TEA_R_MEADOW_TEA_HINT",
+			"book_order": 23,
+			"liquid_token": "mix"
+		},
+		{
+			"id": "petal_sweet",
+			"kind": "treat",
+			"match": "fallback",
+			"drops_any": [2],
+			"name_key": "TEA_R_PETAL_SWEET_NAME",
+			"desc_key": "TEA_R_PETAL_SWEET_DESC",
+			"hint_key": "TEA_R_PETAL_SWEET_HINT",
+			"book_order": 24,
+			"liquid_token": "mix"
+		}
+	],
+	"species_prefs": {
+		"puffmoss": {
+			"loves": ["sleepy_tea", "clover_tea"],
+			"likes": ["buttercup_tea", "clover_puff_cake", "meadow_blend"],
+			"gift_petal": "sweet_clover"
+		},
+		"buttonbud": {
+			"loves": ["daisy_biscuit", "daisy_tea"],
+			"likes": ["meadow_blend", "rainbow_jelly", "clover_tea"],
+			"gift_petal": "button_daisy"
+		},
+		"pebblepaw": {
+			"loves": ["blue_sky_tea", "twilight_tea"],
+			"likes": ["dewy_clover_tea", "daisy_tea", "sky_sugar_drops"],
+			"gift_petal": "forget_me_not"
+		},
+		"honeyhum": {
+			"loves": ["buttercup_tea", "buttercup_jelly"],
+			"likes": ["daisy_tea", "meadow_blend", "clover_puff_cake"],
+			"gift_petal": "buttercup"
+		},
+		"fernwhisk": {
+			"loves": ["sky_sugar_drops", "dewy_clover_tea"],
+			"likes": ["blue_sky_tea", "sleepy_tea", "twilight_tea"],
+			"gift_petal": "forget_me_not"
+		},
+		"dandelfluff": {
+			"loves": ["fluff_cake", "breezy_tea"],
+			"likes": ["starlight_tea", "meadow_blend", "rainbow_jelly"],
+			"gift_petal": "dandelion"
+		},
+		"bellkin": {
+			"loves": ["bluebell_tea", "bluebell_candy"],
+			"likes": ["twilight_tea", "breezy_tea", "blue_sky_tea"],
+			"gift_petal": "bluebell"
+		},
+		"primpip": {
+			"loves": ["primrose_tea", "primrose_tart"],
+			"likes": ["rainbow_jelly", "daisy_biscuit", "sleepy_tea"],
+			"gift_petal": "primrose"
+		},
+		"capling": {
+			"loves": ["clover_puff_cake", "rainbow_jelly"],
+			"likes": ["clover_tea", "buttercup_jelly", "fluff_cake"],
+			"gift_petal": "sweet_clover"
+		},
+		"puddlewump": {
+			"loves": ["dewy_clover_tea", "bluebell_candy"],
+			"likes": ["blue_sky_tea", "buttercup_jelly", "primrose_tea"],
+			"gift_petal": "bluebell"
+		},
+		"glowmote": {
+			"loves": ["starlight_tea", "moonlight_tea"],
+			"likes": ["twilight_tea", "little_moon_cake", "sky_sugar_drops"],
+			"gift_petal": "moonbloom"
+		},
+		"moonpuff": {
+			"loves": ["little_moon_cake", "sleepy_tea"],
+			"likes": ["moonlight_tea", "starlight_tea", "clover_tea"],
+			"gift_petal": "moonbloom"
+		}
+	},
+	"likes_revealed_at_heart": 3,
+	"teaware": [
+		{"id": "acorn_teapot", "slot": "teapot", "cost": 0, "default": true, "name_key": "TEAWARE_ACORN_TEAPOT"},
+		{"id": "toadstool_teapot", "slot": "teapot", "cost": 300, "name_key": "TEAWARE_TOADSTOOL_TEAPOT"},
+		{"id": "shell_teapot", "slot": "teapot", "cost": 800, "name_key": "TEAWARE_SHELL_TEAPOT"},
+		{"id": "willow_teapot", "slot": "teapot", "cost": 2000, "name_key": "TEAWARE_WILLOW_TEAPOT"},
+		{
+			"id": "moon_kettle",
+			"slot": "teapot",
+			"cost": 4500,
+			"name_key": "TEAWARE_MOON_KETTLE",
+			"fx": ["night_glow"]
+		},
+		{"id": "walnut_cup", "slot": "cup", "cost": 0, "default": true, "name_key": "TEAWARE_WALNUT_CUP"},
+		{"id": "daisy_cup", "slot": "cup", "cost": 150, "name_key": "TEAWARE_DAISY_CUP"},
+		{"id": "bluebell_cup", "slot": "cup", "cost": 300, "name_key": "TEAWARE_BLUEBELL_CUP"},
+		{"id": "leaf_cup", "slot": "cup", "cost": 500, "name_key": "TEAWARE_LEAF_CUP"},
+		{"id": "pebble_cup", "slot": "cup", "cost": 800, "name_key": "TEAWARE_PEBBLE_CUP"},
+		{"id": "moon_cup", "slot": "cup", "cost": 1800, "name_key": "TEAWARE_MOON_CUP", "fx": ["night_glow"]},
+		{"id": "moss_mat", "slot": "cloth", "cost": 0, "default": true, "name_key": "TEAWARE_MOSS_MAT"},
+		{"id": "gingham_cloth", "slot": "cloth", "cost": 300, "name_key": "TEAWARE_GINGHAM_CLOTH"},
+		{"id": "fern_lace_cloth", "slot": "cloth", "cost": 900, "name_key": "TEAWARE_FERN_LACE_CLOTH"},
+		{"id": "star_quilt", "slot": "cloth", "cost": 2500, "name_key": "TEAWARE_STAR_QUILT"}
+	],
+	"teaware_snug": 0,
+	"wish_hooks": {
+		"doc": "Wish condition types F2 can satisfy (Active F1 Wishes picks and owns affection for wishes). Evaluated on TeaRules.offer().",
+		"types": ["tea:<recipe_id>", "tea_kind:tea", "tea_kind:treat", "tea_petal:<flower_id>", "tea_loved"],
+		"feasible_only": "pick a tea wish only when every petal it needs comes from a flower with at least one bloomed stem"
+	},
+	"event_postcards": [
+		{"id": "first_tea", "template": "POSTCARD_EVENT_FIRST_TEA", "trigger": "first_cup_offered"},
+		{"id": "tea_book", "template": "POSTCARD_EVENT_TEA_BOOK", "trigger": "all_named_recipes_found"}
+	],
+	"audio_cues": {
+		"S28": "petal_gather",
+		"S29": "petal_plip",
+		"S30": "stir_swish",
+		"S31": "pour",
+		"S32": "cup_clink",
+		"S33": "recipe_found",
+		"S34": "nook_steam",
+		"teaware_place": "S05"
+	},
+	"sim_model": {
+		"doc": "Suggested engagement model for tools/sim/economy_sim.py (owned by the sim role).",
+		"brews_per_session": [0, 1, 2],
+		"drops_per_brew_mean": 0.8,
+		"offer_share_of_visits": 0.5,
+		"loved_share": 0.35
+	},
+	"book": {
+		"total_counts_fallbacks": true,
+		"columns": 3,
+		"card_min_dp": [96, 128],
+		"hints_always_shown": true,
+		"love_revealed_by": ["reaction_seen", "heart_3"]
+	}
+}

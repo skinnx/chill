@@ -20,6 +20,8 @@ const BELOW_CREST_PX := 12.0
 
 ## Design y where the sky stops (set by the layer builder from the far crest).
 var bottom_y: float = 700.0
+## Extra depth while the map is panned up and the far hills slide down (Main, ARCHITECTURE §3.4).
+var reveal_px: float = 0.0
 
 var _gradient := Gradient.new()
 var _feed := PaletteFeed.new()
@@ -52,7 +54,14 @@ func _ready() -> void:
 	_apply_colors(TimeOfDay.colors)
 	TimeOfDay.globals_updated.connect(func(_v: Dictionary) -> void: _apply_colors(TimeOfDay.colors))
 	get_viewport().size_changed.connect(queue_redraw)
+	add_to_group(&"world_pan_view")
 	queue_redraw()
+
+
+func on_world_pan(_pan: Vector2, _cam: Vector2, p_reveal_px: float) -> void:
+	if p_reveal_px != reveal_px:
+		reveal_px = p_reveal_px
+		queue_redraw()
 
 
 func _draw() -> void:
@@ -60,7 +69,7 @@ func _draw() -> void:
 	var off := TimeOfDay.world_offset
 	var top := -off.y - BLEED_PX
 	var left := -off.x - BLEED_PX
-	draw_rect(Rect2(left, top, vis.x + 2.0 * BLEED_PX, bottom_y - top), Color.WHITE)
+	draw_rect(Rect2(left, top, vis.x + 2.0 * BLEED_PX, bottom_y + reveal_px - top), Color.WHITE)
 
 
 ## [param far_crest_low_y] = the largest y of the far crest (its lowest dip): the sky must reach it.

@@ -1,0 +1,369 @@
+{
+	"schema": 1,
+	"doc": "Active play F3 Free décor placement (docs/gdd/ACTIVE_DECOR.md). Rules and tuning for edit mode, validity, soft snapping, derived spots, storage, undo, migration from spots.json decor_anchors, and budgets. Positions are normalized to the 1080x1920 bottom-anchored play frame (x right, y down; 1.0 x = 360 dp, 1.0 y = 640 dp; x may leave [0, 1] into the pan wings). Distances in dp, durations in ms unless _s. Strings in i18n/staging_decor.csv until merged. Placement never changes attraction, snug or dew (counts stay owned copies), so tools/sim/economy_sim.py is untouched.",
+	"feature_flag": "free_decor",
+	"edit_mode": {
+		"enter_long_press_ms": 450,
+		"enter_long_press_fill_start_ms": 150,
+		"enter_from_garden_sheet": true,
+		"long_press_cancel_px": 24,
+		"pick_up": {
+			"scale": 1.08,
+			"rise_dp": 6,
+			"shadow_scale": 1.25,
+			"shadow_alpha_mult": 0.7,
+			"spring": "press",
+			"lean_max_deg": 6,
+			"lean_spring": "follow"
+		},
+		"drag_threshold": "gui/common/drag_threshold",
+		"chrome_in": "standard",
+		"chrome_out": "exit",
+		"hud_and_dock": "fade_out_short",
+		"world_dim": 0.0,
+		"keep_clear_halo_alpha": 0.1,
+		"keep_clear_halo_only_while_holding": true,
+		"origin_ghost_alpha": 0.22,
+		"wish_bubble_alpha": 0.45,
+		"pause_wish_spawns": true,
+		"mosslings_targetable": false,
+		"mosslings_glance_at_held_piece": true,
+		"ambient_watch_disabled": true,
+		"edge_autopan": {
+			"zone_dp": 40,
+			"max_speed_dp_s": 220,
+			"curve": "ease_in_quad",
+			"start_delay_ms": 250,
+			"reduce_motion_factor": 0.5,
+			"note": "Only while a piece is held by a drag. Speed grows with depth into the zone; it never pans past the WorldPan rest bounds."
+		},
+		"exit_on": ["done_button", "back_button", "app_paused"],
+		"resume_in_edit_mode": false
+	},
+	"hit": {
+		"prio_edit_piece": 8,
+		"prio_edit_selected_bonus": 1,
+		"edit_piece_hit_dp": 60,
+		"edit_piece_hit_dp_look_zone": 64,
+		"edit_hit_clip_above_y": 0.797,
+		"edit_hit_min_dp_after_clip": 48,
+		"prio_still_piece_play": 1,
+		"still_piece_hit_dp": 60,
+		"still_piece_core_dp": 20,
+		"still_piece_tap_fx": "wobble",
+		"note": "Play mode: pinwheel and lantern keep PRIO_DECOR 3 (64 dp hit, 20 dp core). Cairn stacks, toadstools and stream stones become long-press-only targets at PRIO_STILL 1 (tap = a small wobble + S01; never outranks a bed, prop or mossling; a stone beats the brook only through its core). Edit mode: only pieces (prio 8, +1 for the selected one) and the ground are world targets."
+	},
+	"area": {
+		"x_min": -0.3,
+		"x_max": 1.3,
+		"ground_top": [
+			[-0.3, 0.41],
+			[0.067, 0.4],
+			[0.3, 0.39],
+			[0.45, 0.365],
+			[0.6, 0.355],
+			[0.75, 0.362],
+			[0.85, 0.37],
+			[0.933, 0.395],
+			[1.3, 0.41]
+		],
+		"ground_top_note": "The hollow's walkable rim (GDD 2.2: ridge 0.30, rim 0.42; the hill crest carries pinwheels at 0.372). Env Artist to confirm against the meadow mask, especially in the wings (x < 0 and x > 1).",
+		"ground_bottom_y": 0.785,
+		"ground_bottom_note": "tend zone bottom (spots.json zones). Nothing is placed under the dock; the brook below 0.785 stays decorative.",
+		"screen_edge_drag_start_dp": 24
+	},
+	"water": {
+		"source": "spots.json stream.polyline + water_width",
+		"stone_only": true,
+		"note": "Distance is to the polyline in dp. Water half width = water_width x 640 / 2 = 11.5 dp."
+	},
+	"clearances": {
+		"gap_dp": 4,
+		"bank_gap_dp": 2,
+		"stone_inset_dp": 0,
+		"spot_clear_dp": 10,
+		"spot_clear_note": "Centre of an always-on spot to the piece footprint edge. Gated spots (requires_item) are derived from clusters (derived_spots) and are not exclusions.",
+		"nibble_clear_dp": 8,
+		"bed_soil": {
+			"rx_dp": 42,
+			"ry_dp": 22,
+			"note": "The planted soil ellipse, not the 90 x 63 dp hit rect: lanterns may stand at a bed's lower edge as today; the bed's core still wins its taps (GDD 2.5)."
+		},
+		"nest": {
+			"centre_clear_dp": 12,
+			"only_when_built": true,
+			"note": "Nests are friends' homes and look lovely among décor (the puddlewump nest sits on the stepping stones), so they are not area exclusions: a dropped piece's foot stays 12 dp from a built nest's centre so the nest stays visible and tappable. A nest built later never moves a piece; RetentionRules may shift the nest up to 24 dp if a footprint covers its centre (contract)."
+		},
+		"sign_anchors": {
+			"rule": "signs_yield",
+			"note": "Sign anchors (mysteries.json) never block décor; a sign whose anchor is covered by a footprint + gap_dp picks its next free anchor of the same type (contract for RetentionRules)."
+		},
+		"tea_nook": {"source": "tea.json nook.f3_exclusion_radius_dp", "hard": true, "only_when": "feature tea"},
+		"props": [
+			{"id": "sun_stone_rock", "x": 0.5, "y": 0.585, "rx_dp": 43.5, "ry_dp": 10, "cy_dp": 10, "hard": true},
+			{
+				"id": "basket",
+				"x": 0.5,
+				"y": 0.48,
+				"rx_dp": 32,
+				"ry_dp": 32,
+				"cy_dp": 0,
+				"gap_dp": 0,
+				"hard": true,
+				"note": "64 dp tap hit"
+			},
+			{
+				"id": "mailbox",
+				"x": 0.09,
+				"y": 0.395,
+				"rx_dp": 32,
+				"ry_dp": 32,
+				"cy_dp": 0,
+				"gap_dp": 0,
+				"hard": true,
+				"note": "64 dp tap hit"
+			},
+			{"id": "stump", "x": 0.9, "y": 0.445, "rx_dp": 35, "ry_dp": 15, "cy_dp": 15, "hard": true},
+			{"id": "spring_rock", "x": 0.95, "y": 0.735, "rx_dp": 30, "ry_dp": 10, "cy_dp": 10, "hard": false},
+			{
+				"id": "willow_trunk",
+				"x": 0.12,
+				"y": 0.41,
+				"rx_dp": 22,
+				"ry_dp": 8,
+				"cy_dp": 0,
+				"hard": false,
+				"note": "trunk foot only; Env Artist to confirm"
+			}
+		],
+		"hard_note": "Hard exclusions (hard: true props, the tea nook) also apply to migrated (legacy) pieces: a legacy piece inside one is nudged on load (today: pinwheels #4 and #8 under the F2 tea nook). Every other rule applies to new drops only; legacy positions are kept even where they sit closer than these numbers (e.g. stone #9 against the spring rock, pinwheel #7 beside the toadstool ring).",
+		"props_note": "Footprint ellipses on the ground: centre = prop centre + cy_dp down (props.json x/y are visual centres; the foot is lower). Tappable props (basket, mailbox) use their 64 dp hit circle with gap 0: a piece's foot may touch the hit ring, its tap core never enters it."
+	},
+	"sets": {
+		"leaf_pinwheel": {
+			"movable": true,
+			"unit": "piece",
+			"footprint_r_dp": 4,
+			"visual_centre_dy_dp": -24,
+			"same_set_min_dp": 12,
+			"preferred_spacing_dp": 22,
+			"cluster_link_dp": 40,
+			"rot_steps": 4,
+			"rot_render": [
+				{"flip": false, "squash_x": 1.0, "variant": 0},
+				{"flip": false, "squash_x": 0.72, "variant": 0},
+				{"flip": false, "squash_x": 1.0, "variant": 1},
+				{"flip": true, "squash_x": 0.72, "variant": 0}
+			],
+			"rot_note": "variant 1 swaps pinwheel_a / pinwheel_b blades (the back face)",
+			"affinity": ["same_set_ring", "legacy_anchor", "spot_side"],
+			"spin_uses_position": true
+		},
+		"pebble_cairn": {
+			"movable": true,
+			"unit": "stack",
+			"footprint_r_dp": 9,
+			"visual_centre_dy_dp": -14,
+			"same_set_min_dp": 20,
+			"stack_merge_dp": 14,
+			"stack_max": 10,
+			"preferred_spacing_dp": 26,
+			"cluster_link_dp": 44,
+			"rot_steps": 4,
+			"rot_render": [
+				{"flip": false, "jitter_seed": 0},
+				{"flip": true, "jitter_seed": 1},
+				{"flip": false, "jitter_seed": 2},
+				{"flip": true, "jitter_seed": 3}
+			],
+			"rot_note": "a turn re-seeds the pebble offsets (+-4 px) and tilts (+-5 deg); the stack stays balanced",
+			"affinity": ["legacy_anchor", "bank_line", "spot_side"]
+		},
+		"toadstool_seat": {
+			"movable": true,
+			"unit": "piece",
+			"footprint_r_dp": 7,
+			"visual_centre_dy_dp": -10,
+			"same_set_min_dp": 8,
+			"preferred_spacing_dp": 16,
+			"cluster_link_dp": 30,
+			"ring": {"forms_at": 3, "socket_radius_dp": 16, "socket_count": 10, "glow_motes": 6},
+			"rot_steps": 4,
+			"rot_render": [
+				{"flip": false, "variant": 0},
+				{"flip": true, "variant": 0},
+				{"flip": false, "variant": 1},
+				{"flip": true, "variant": 1}
+			],
+			"rot_note": "variant = cap spot pattern",
+			"affinity": ["ring_around_cluster", "same_set_ring", "legacy_anchor"]
+		},
+		"stream_stones": {
+			"movable": true,
+			"unit": "piece",
+			"water": "only",
+			"footprint_r_dp": 9,
+			"visual_centre_dy_dp": -3,
+			"same_set_min_dp": 12,
+			"preferred_spacing_dp": 14,
+			"cluster_link_dp": 24,
+			"rot_steps": 2,
+			"rot_render": [{"flip": false}, {"flip": true}],
+			"affinity": ["water_line", "same_set_ring", "legacy_anchor"],
+			"riffle": "BrookLayer.set_stone(key, foot, r) at the new foot"
+		},
+		"firefly_lantern": {
+			"movable": true,
+			"unit": "piece",
+			"footprint_r_dp": 4,
+			"visual_centre_dy_dp": -34,
+			"same_set_min_dp": 16,
+			"preferred_spacing_dp": 36,
+			"cluster_link_dp": 60,
+			"rot_steps": 2,
+			"rot_render": [{"flip": false}, {"flip": true}],
+			"rot_note": "the crook faces left or right",
+			"reflection_max_water_dp": 40,
+			"lamp_pools_max": 8,
+			"affinity": ["bank_line", "same_set_ring", "legacy_anchor", "spot_side"],
+			"legacy_jitter_baked": true
+		},
+		"wind_chime": {
+			"movable": false,
+			"unit": "rail",
+			"rail_note": "Tubes hang from the willow branch (a prop); they keep their anchors. Edit mode shows them without a lift target. Later hang points (stump branch, lantern crook) are an open question (ACTIVE_DECOR.md Q2).",
+			"footprint_r_dp": 0,
+			"rot_steps": 1
+		}
+	},
+	"snap": {
+		"magnet_radius_dp": 14,
+		"magnet_pull_max": 0.7,
+		"magnet_curve": "smoothstep",
+		"settle_spring": "move",
+		"socket_marker": "sparkle_dot",
+		"same_set_ring_dirs": 8,
+		"spot_side_offset_dp": 26,
+		"spot_side_dirs": [[-1, 0], [1, 0], [-0.7, 0.7], [0.7, 0.7]],
+		"bank_line_offset_dp": -22,
+		"bank_line_note": "the brook polyline moved 22 dp up (the far bank, where the lanterns stand today)",
+		"water_line_offset_dp": 0,
+		"line_socket_step": "preferred_spacing_dp",
+		"legacy_anchor_sockets": true,
+		"invalid_drop": {"nudge_search_dp": 48, "nudge_step_dp": 4, "else": "return_to_origin", "return_spring": "move"},
+		"priority": ["same_set_ring", "ring_around_cluster", "water_line", "bank_line", "legacy_anchor", "spot_side", "free"],
+		"tie_break": "nearest to the finger"
+	},
+	"beautify": {
+		"enabled": true,
+		"settle_jitter_dp": 1.5,
+		"jitter_seed": "hash(piece_id, x_dp_int, y_dp_int)",
+		"y_depth_scale": "DecorLayer.depth_scale(foot.y)",
+		"face_cluster": true,
+		"face_cluster_note": "a dropped pinwheel or lantern takes the rotation step most common in its cluster unless the player turned it in this session",
+		"odd_cluster_hint": false,
+		"odd_cluster_note": "05 section 4 odd-cluster rule lives in the sockets (rings of 8 and lines), never as a message"
+	},
+	"derived_spots": {
+		"toadstool_ring": {"set": "toadstool_seat", "min": 3, "place": "cluster_centroid"},
+		"stream_stones": {"set": "stream_stones", "min": 3, "place": "middle_piece"},
+		"lantern_nook": {"set": "firefly_lantern", "min": 3, "place": "beside_cluster", "offset_dp": [-14, 8]},
+		"cairn_side": {"set": "pebble_cairn", "min": 3, "place": "beside_tallest_stack", "offset_dp": [24, 6]},
+		"rule": "The spot exists while owned copies >= requires_min (as today). Its position is taken from the largest placed cluster (cluster_link_dp linkage) holding >= min pieces; else from all placed pieces of the set; else its authored spots.json position. A derived position that breaks a hard exclusion or sits within 20 dp of another spot moves along the offset direction in 4 dp steps (max 24 dp), else uses the authored position.",
+		"recompute_on": ["edit_mode_exit", "load"],
+		"occupant_on_move": "walk_to_new_spot"
+	},
+	"attraction": {
+		"count": "owned",
+		"count_note": "requires / likes_items / snug / spot gating all count owned copies, placed or tucked away (unchanged from MVP; sim parity). Only fx (glow, riffles, ring motes, pool lights) and the F1 decor_near check use placed pieces.",
+		"placed_count_api": "Game.decor_placed_count(set)",
+		"near_dp_for_wishes": 120,
+		"brain_flavour": {
+			"enabled": true,
+			"wander_target_near_liked_decor_weight": 1.5,
+			"radius_dp": 60,
+			"note": "creature brain only (not the sim): a friend that likes a set wanders and rests beside its pieces a little more often"
+		}
+	},
+	"storage": {
+		"tray_glass": "hud_glass",
+		"tray_rect_px": [132, 1553, 816, 204],
+		"tile_dp": 72,
+		"tile_gap_dp": 8,
+		"tile_per": "set",
+		"tile_count_label": true,
+		"scroll": "horizontal",
+		"drop_target_grow_dp": 12,
+		"drop_hover_glow": "basket_glow",
+		"drag_out_threshold_dp": 10,
+		"drag_out_direction": "any",
+		"stored_counts_for_attraction": true,
+		"stored_max": "unlimited"
+	},
+	"undo": {
+		"depth": 1,
+		"scope": "edit_session",
+		"ops": ["move", "turn", "put_away", "take_out", "lift_pebble", "merge_stack"],
+		"clears_on_exit": true
+	},
+	"autosave": {
+		"on": "commit",
+		"call": "SaveService.request_save()",
+		"commit_events": ["drop_settled", "turn", "put_away", "take_out", "undo"],
+		"exit_calls_save_now": false
+	},
+	"auto_place": {
+		"when": "a new copy is bought, or Find a spot is tapped",
+		"order": [
+			"legacy_anchor_n_if_valid_and_free",
+			"best_socket_near_largest_cluster",
+			"spiral_from_legacy_anchor_0",
+			"tray"
+		],
+		"spiral_step_dp": 8,
+		"spiral_max_dp": 200,
+		"first_tip": "DECOR_TIP_LONG_PRESS"
+	},
+	"migration": {
+		"from": "spots.json decor_anchors (MVP fixed anchors)",
+		"save_field": "decor_layout",
+		"version_field": "active_v",
+		"version": 1,
+		"rules": [
+			"copy n of each set takes anchors[n] verbatim (rot 0, placed)",
+			"lantern jitter (DecorLayer LANTERN_JITTER_PX, seeded by hash(lantern, n)) is baked into x so nothing moves on screen",
+			"pebble_cairn: all copies form one stack at anchors[0], in copy order",
+			"wind_chime: copies stay on their rail anchors (movable false)",
+			"hard exclusions (props, tea nook) nudge a piece by snap.invalid_drop.nudge_search_dp; every other rule is grandfathered",
+			"pieces owned but missing from decor_layout (a later purchase on an older build) are auto_placed on load"
+		],
+		"note": "One content-aware Active Play migration step (ActiveRules.migrate_v1, GDD 14.9) runs once when active_v < 1, after RetentionRules.migrate_v1: decor_layout from the anchors, tea_unlocked, nothing else changes."
+	},
+	"draw": {
+		"decor_draw_calls_max": 20,
+		"merge_band_dp": 16,
+		"merge_note": "Static pieces (cairn stacks, toadstools, stones, lanterns) merge into one stamp per (set, y band of 16 dp) for y-sort; if the décor total would pass the cap, the nearest bands of a set merge. The held piece draws on its own stamp (+1) and re-merges on settle.",
+		"edit_chrome_draw_calls_max": 6
+	},
+	"audio": {
+		"lift": "S35",
+		"snap": "S36",
+		"settle": "S05",
+		"turn": "S37",
+		"put_away": "S38",
+		"take_out": "S35",
+		"invalid_hint": "none",
+		"chrome_in": "S07",
+		"chrome_out": "S08",
+		"note": "Cue ids assigned centrally by the lead pass (GDD 14.8): S26-S27 Active F1, S28-S34 Active F2, S35-S38 Active F3. An invalid spot never sounds; S11 plays only on a disabled button (Undo with nothing to undo)."
+	},
+	"haptics": {
+		"lift": "TICK",
+		"snap": "TICK",
+		"settle": "TICK",
+		"turn": "TICK",
+		"put_away": "TICK",
+		"invalid_hint": "none",
+		"note": "Full mode; Subtle mode keeps only settle"
+	}
+}

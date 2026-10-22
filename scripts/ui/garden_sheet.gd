@@ -50,6 +50,7 @@ func build_body() -> void:
 	_tabs.setup(PackedStringArray([tr("GARDEN_TAB_FLOWERS"), tr("GARDEN_TAB_DECOR")]), _tab)
 	_tabs.selected.connect(func(i: int) -> void: select_tab(i))
 	_list = make_scroll(Segmented.HEIGHT + 24.0)
+	keep_scroll_below(_tabs)
 	_scroll = _list.get_parent().get_parent() as ScrollContainer
 	_compute_yield_cuts()
 	_fill()
@@ -94,6 +95,8 @@ func _fill() -> void:
 	var rows: Array[Dictionary] = []
 	rows.assign(content.flowers.duplicate() if _tab == 0 else content.decor.duplicate())
 	rows.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a["garden_order"]) < int(b["garden_order"]))
+	if _tab == 1 and _can_arrange():
+		_list.add_child(_arrange_card())
 	for d: Dictionary in rows:
 		_list.add_child(_item_card(StringName(String(d["id"])), d, _tab == 0))
 	if _tab == 1:
@@ -134,6 +137,9 @@ func _item_card(id: StringName, d: Dictionary, flower: bool) -> Control:
 	var loved := _loved_line(id)
 	if loved != "":
 		info.add_child(label(loved, &"SecondaryLabel", true))
+	var tucked := _tucked_count(id) if not flower else 0
+	if tucked > 0:
+		info.add_child(label(I18n.fmt(&"GARDEN_TUCKED_AWAY", {"count": tucked}), &"SecondaryLabel", true))
 	var spacer := Control.new()
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -154,6 +160,45 @@ func _item_card(id: StringName, d: Dictionary, flower: bool) -> Control:
 	b.pressed.connect(_on_buy.bind(id, flower, b, chip))
 	info.add_child(b)
 	return shell[0]
+
+
+## Active F3 (ACTIVE_DECOR §2): "Arrange your décor", the no-long-press way into edit mode. Shown
+## once a movable piece is owned; the sheet exits and edit mode opens with its hint.
+func _can_arrange() -> bool:
+	if not Game.feature_on(&"free_decor") or DecorEdit.current == null:
+		return false
+	for d: Dictionary in ContentRegistry.content.decor:
+		var id := StringName(String(d["id"]))
+		if ContentRegistry.content.is_movable_decor(id) and Game.sim.owned_count(id) > 0:
+			return true
+	return false
+
+
+func _arrange_card() -> Control:
+	var c := card(24, ThemeBuilder.R_L, UiTokens.E1)
+	var info := VBoxContainer.new()
+	info.add_theme_constant_override(&"separation", 9)
+	info.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	c.add_child(info)
+	info.add_child(label(tr("GARDEN_ARRANGE_ROW"), &"StrongLabel"))
+	info.add_child(label(tr("GARDEN_ARRANGE_DESC"), &"SecondaryLabel", true))
+	var b := pill_button(tr("GARDEN_ARRANGE"), true)
+	b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	b.pressed.connect(func() -> void:
+		close_requested.emit()
+		if DecorEdit.current != null:
+			DecorEdit.current.enter(true))
+	info.add_child(b)
+	return c
+
+
+## Copies of a décor set tucked away in the Active F3 tray.
+func _tucked_count(id: StringName) -> int:
+	var n := 0
+	for rec: Dictionary in Game.decor_layout():
+		if StringName(String(rec["set"])) == id and bool(rec.get("stored", false)):
+			n += 1
+	return n
 
 
 func _boat_card() -> Control:

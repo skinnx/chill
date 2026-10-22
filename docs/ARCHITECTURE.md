@@ -47,15 +47,17 @@ shaders/                 Art Bible §12.1 shaders (Technical Artist); shaders/de
 scripts/
   autoload/              the 11 autoloads (§3.1)
   sim/                   PURE world model: world_state, world_sim, retention_rules, retention_hash, tod_math,
-                         weather_plan, garden_rules, recap
-  qa/                    QA fixtures that touch Game (retention_fixture: --fixture=retention_mid, --qa-scene)
+                         weather_plan, garden_rules, recap; Active Play v1 (§5.2b): active_rules, wish_rules,
+                         tea_rules, decor_placement_rules
+  qa/                    QA fixtures that touch Game (retention_fixture: --fixture=retention_mid, --qa-scene;
+                         active_fixture: --fixture=active_mid)
   core/                  PURE infrastructure: game_content, save_store, atomic_file, i18n, name_rules, nfc_table, platform
   world/                 PURE look math: palette_math (OKLab), palette_driver, weather_driver, celestial
   motion/                spring, spring_2d (analytic), cubic_bezier
   audio/                 harmony (pitch-set helpers mirroring tools/audio/theory.py)
   ui/                    theme_builder, safe_area_container
   boot/  main/           scene scripts (boot, shader_warmup / main, placeholder_band, layout_debug)
-tests/                   GUT suites (test_*.gd) + helpers/ (sim_player, compare_util)
+tests/                   GUT suites (test_*.gd) + helpers/ (sim_player, compare_util, retention_util, active_util)
 tools/  (.gdignore)      vendor_addons.sh · fonts/ · i18n/ · ui/ · ci/ · qa/ · sim/ (GDD) · art/ (Art) · audio/ (Sound)
 docs/ qa/ build/         each has an empty .gdignore so the editor never imports them
 ```
@@ -96,7 +98,7 @@ On a fresh clone the editor loads both before the first import has produced the 
 | 8 | **UiTheme** | `autoload/ui_theme.gd` | Builds the Theme from tokens, sets it on the root window, rebuilds on text size, language or transparency changes | `theme`, `rebuild()`, `attach(control)` | `theme_rebuilt(theme)` |
 | 9 | **TimeOfDay** | `autoload/time_of_day.gd` | Art Bible PaletteDriver + WeatherDriver + celestial: clock → `g_day` → OKLab palettes → rain transform → shader globals | `phase`, `weather`, `g_day`, `colors`, `scalars`, `evaluate(local_s)`, `set_install_seed(seed)`, `set_world_offset(v)`, `set_overrides(g_day, weather)` | `phase_changed(phase)`, `weather_changed(w)`, `globals_updated(values)` |
 | 10 | **AudioDirector** | `autoload/audio_director.gd` | Executes `audio/manifest.json` (AUDIO_BIBLE §8): bus graph, beds, pads, Eno voices, birds, critters, gusts, cues with pitch rules, haptics, ducking, music modes, volumes | `request_preload()`, `start_world_audio()`, `play_cue(id, ctx)`, `start_purr(voice_step)`, `stop_purr()`, `set_phase(p)`, `set_weather(w)`, `set_sheet_open(open)`, `set_music_mode(m)`, `set_volume(group, v)`, `set_mono(on)`, `set_world_state(shells, awake, sleeping)`, `set_install_seed(s)`, `current_chord()`, `current_pcs()`, `debug_set_clock(p, w)`, `stop_all()`, `slider_to_db(v)` | `cue_played(id, caption_key, world_position)`, `chord_changed(chord_name)` |
-| 11 | **Game** | `autoload/game.gd` | Glue: owns `sim: WorldSim`; boot/load/catch-up; away-scene check on every return; per-frame advance (+ pending-scene foreground time); player-action API; lifecycle; Back button; greeter scheduling | `boot()`, `world_now()`, `tap_seed()`, `plant(flower, bed)`, `place(decor)`, `collect_all()`, `float_boat()`, `pet(species)`, `rename(species, name)`, `read_postcard(id)`, `display_name(species)`, `notify_world_visible()`, `push_back_handler(c)`, `remove_back_handler(c)`, `handle_back()`, `leave_now()`, `quit_cleanly(code)`; **Retention v1 (§5.2a):** `tap_sign(sign_key)`, `tap_scene()`, `scene_foreground_tick(dt)`, `on_background(world_t)`, `pending_scene()`, `visible_signs()`, `clue_cards()`, `clues_for(mystery)`, `heart_level(species)`, `unlocks(species)`, `unseen_hearts()`, `mark_hearts_seen(species)`, `nest_state(species)`, `nests()`, `memories()`, `keepsakes()`, `cousin_of(species)`, `variants_met()`, `best_buddy(species)`, `wave_plan()`, `can_rename(species)` | `world_ready(recap)`, `sim_event(ev)`, `wallet_changed(dew)`, `basket_changed(n, dew)`, `leave_requested`, `suspended`, `resumed`; **Retention v1:** `heart_up(species, hearts, offline)`, `mystery_opened(mystery, kind, target)`, `sign_appeared(sign)`, `clue_found(clue)`, `nest_grew(species, stage, offline)`, `scene_ready(scene)`, `scene_archived(memory)`, `cousin_met(variant, species)`, `cousin_arrived(variant, species, first)`, `keepsake_added(species)` |
+| 11 | **Game** | `autoload/game.gd` | Glue: owns `sim: WorldSim`; boot/load/catch-up; away-scene check on every return; per-frame advance (+ pending-scene foreground time); player-action API; lifecycle; Back button; greeter scheduling | `boot()`, `world_now()`, `tap_seed()`, `plant(flower, bed)`, `place(decor)`, `collect_all()`, `float_boat()`, `pet(species)`, `rename(species, name)`, `read_postcard(id)`, `display_name(species)`, `notify_world_visible()`, `push_back_handler(c)`, `remove_back_handler(c)`, `handle_back()`, `leave_now()`, `quit_cleanly(code)`; **Retention v1 (§5.2a):** `tap_sign(sign_key)`, `tap_scene()`, `scene_foreground_tick(dt)`, `on_background(world_t)`, `pending_scene()`, `visible_signs()`, `clue_cards()`, `clues_for(mystery)`, `heart_level(species)`, `unlocks(species)`, `unseen_hearts()`, `mark_hearts_seen(species)`, `nest_state(species)`, `nests()`, `memories()`, `keepsakes()`, `cousin_of(species)`, `variants_met()`, `best_buddy(species)`, `wave_plan()`, `can_rename(species)`; **Active Play v1 (§5.2b):** `feature_on(flag)`, `world_action(kind, args)`, `wish_foreground_tick(dt)`, `pause_wishes(reason, on)`, `report_wish_busy(species)`, `wishes()`, `wish_of(species)`, `wish_stamps(species)`, `wish_list_unread()`, `mark_wish_list_seen()`, `tea_unlocked()`, `harvest_bed(bed)`, `petals_ready(bed)`, `next_petal_in_s(bed)`, `pantry()`, `pot()`, `pot_add_petal(flower)`, `pot_remove(i)`, `pot_add_drop()`, `pot_remove_drop()`, `pot_stir(deg)`, `pot_pour()`, `simple_brew()`, `tray()`, `offer_cup(i, species)`, `recipes_found()`, `tea_prefs_seen(species)`, `buy_teaware(id)`, `use_teaware(id)`, `teaware()`, `decor_layout()`, `decor_placed_count(set)`, `decor_rules()`, `decor_context()`, `move_decor(piece, pos_norm, rot)`, `turn_decor(piece)`, `store_decor(piece)`, `take_out_decor(set, pos_norm)`, `lift_pebble(stack)`, `undo_decor()`, `can_undo_decor()`, `set_edit_mode(on)`, `edit_mode()`, `spot_position(spot)` | `world_ready(recap)`, `sim_event(ev)`, `wallet_changed(dew)`, `basket_changed(n, dew)`, `leave_requested`, `suspended`, `resumed`; **Retention v1:** `heart_up(species, hearts, offline)`, `mystery_opened(mystery, kind, target)`, `sign_appeared(sign)`, `clue_found(clue)`, `nest_grew(species, stage, offline)`, `scene_ready(scene)`, `scene_archived(memory)`, `cousin_met(variant, species)`, `cousin_arrived(variant, species, first)`, `keepsake_added(species)`; **Active Play v1:** `wish_opened(species, wish, visible)`, `wish_shown(species, wish)`, `wish_held(species, wish)`, `wish_granted(species, wish, affection, gift_flower, first_stamp, on_arrival)`, `tea_nook_awake`, `petals_harvested(bed, counts)`, `recipe_found(recipe)`, `tea_offered(species, recipe, reaction, petals)`, `teaware_changed(slot, id)`, `decor_placed(set, piece, pos_norm, rot_deg)`, `decor_stored(set, piece)`, `decor_edit_entered`, `decor_edit_exited` |
 
 Rules:
 - Autoloads talk *down* the list by direct calls and *up* by signals.
@@ -127,8 +129,8 @@ OS splash (#F0EEE9, Android export option) → engine boot splash (#F0EEE9, show
 ### 3.3 Main scene tree (`scenes/main.tscn`; layer names per Art Bible §2.3)
 
 ```
-Main (Node2D, main.gd)                    layout, camera drift (≤ 4 dp/s, off under Reduce Motion), intro
-├─ Camera2D                                centre of the visible rect; zoom 1.03 → 1.0 intro
+Main (Node2D, main.gd)                    layout, camera = home + map pan + drift (≤ 4 dp/s, off under Reduce Motion), intro
+├─ Camera2D                                home = centre of the visible rect; zoom 1.03 → 1.0 intro
 ├─ World (Node2D)                          position = g_world_offset = ((W−1080)/2, H−1920) — bottom-anchored (A1)
 │  ├─ Sky        Parallax2D 0              L0  └─ Placeholder (PlaceholderBand SKY)
 │  ├─ Celestial  Parallax2D 0.02           L1  (empty marker; the sky shader draws sun/moon/stars)
@@ -144,16 +146,80 @@ Main (Node2D, main.gd)                    layout, camera drift (≤ 4 dp/s, off 
 └─ HUD (CanvasLayer 10)
    └─ HudRoot (Control, UiTheme.attach)
       ├─ SafeArea (SafeAreaContainer: max(OS safe area, 72 / 127 / 48 px floors))
-      │  └─ Layout (VBox) ─ TopBar (216 px) · Spacer · Dock (240 px)
+      │  └─ Layout (VBox) ─ TopBar (216 px, Settings gear · dew · time · eye) · Spacer · Dock (pebble 204 px: Album · Garden · Basket)
       ├─ Sheets · Overlays (full-rect, mouse-transparent hosts)
       ├─ DebugReadout (--debug-hud)
       └─ BootCover (ColorRect #F0EEE9, fades out once)
+└─ WorldPan (Node, world_pan.gd)           the one world input arbiter: target + map drag (§3.4-3.5); LAST child
 ```
 
 Coordinates are design px in the 1080×1920 frame: `px = (x·1080, y·1920)` from `spots.json` (`GardenRules.frame_to_px`).
 - On taller phones the extra height is sky above y = 0.
 - On wider screens the 1080 column is centred.
 - Layer geometry should extend to x ∈ [−400, 1480] (Art Bible §2.1).
+
+### 3.4 Input: world taps and the map pan
+
+World input is a chain, in Godot's order (the full contract is §3.5):
+1. **GUI** (HUD, sheets, scrims, cards, toast, the top bar's band and the dock's gesture guard: `CanvasLayer` 10) consumes its own presses, so nothing below sees a touch on the HUD. `HudController._input` swallows the whole first gesture in ambient watch mode (`PointerGate`).
+2. **`WorldPan._unhandled_input`** (`scripts/main/world_pan.gd`): the last child of Main, so it is called *first* among the unhandled handlers, and it is the **only** world input handler. It asks every node in group `WorldPan.GROUP_HIT` (creatures, plots, décor, props, brook) for its best candidate, picks **one** target, calls its `world_press` (touch-down feedback in the same frame, I1) and arms a pan. Nothing happens while a sheet or modal card is open (`blocked`); no pan starts within 24 dp of a side edge (`spots.json safe_x`, I2), though taps there work; a mossling claims the drag (a stroke pets it and never pans), and a pressed décor piece may claim it mid-press (`claim_drag()`, the Active F3 long-press). In Active F3 edit mode only group `GROUP_HIT_EDIT` is asked (§3.5).
+3. On **release** within the slop the target's `world_release(act = true)` fires its action; a move past the slop cancels it (`act = false`) and starts the pan. A press that found no target is an empty press: two within `double_tap_ms` glide home (optional, never required, GDD §8.2).
+
+Drag arbitration: motion and release are read in `WorldPan._input` (a drag across the dock keeps panning). Past `gui/common/drag_threshold` (24 px) the pending tap is cancelled and the pan starts from the slop edge (no jump); `drag_started` fires and the drag's motion and release events are consumed. One input path: touch index 0 on devices, the real mouse on desktop and web; emulated mouse events are ignored.
+
+Motion (`PanBody`, pure; maths in `PanMath`; tokens `motion_tokens.world.pan`):
+- **Bounds** per viewport: for each full-width layer with scroll s ≤ 1, the visible rect stays inside the authored x range (`TerrainMath.X_MIN/X_MAX`), so d ∈ [(x_min + ox)/s, (x_max + ox − W)/s] (±400 px on phones, ±220 at 1440 px wide, none past 1880). Vertically from `sky_up_px` (600) into the sky down to the home view (the frame bottom = the ground's bottom). The rest bounds sit `rubber_room_dp` (16 dp) inside, so the rubber band never shows past the geometry; no rubber band below the ground.
+- **Feel:** 1:1 while dragging; on release an exact exponential glide (`glide_friction_per_s`); past an edge the rubber band (`rubber_k`) and the `move` spring back. Reduce Motion: no inertia, no rubber band (clamped), home is a cut.
+- **Idle drift** pauses while the map is dragged or gliding (the current drift is folded into the pan, no jump) and resumes from zero over `drift_resume_s`, its amplitude capped by the distance to the rest bounds.
+- **Followers:** `TimeOfDay.set_camera_pan` → `g_cam_pan`. The sun and moon *positions* stay pinned to the world (lighting, shadows and lamp pools are camera-invariant: everything world-space works in design px); the sky draws the discs and stars on L1 (0.02 × pan), and the sun veil and light shafts add `celestial_shift()` to follow the disc. Nodes in group `world_pan_view` get `on_world_pan(pan, cam, reveal_px)`: `SkyQuad` and `SilhouetteLayer` extend their bottoms (a skirt in the body-bottom colour, hidden at rest) by the gap the faster layer in front opens; `ForegroundFrame` keeps the 1.3× pieces from sliding far enough to show their cut edges (exact up to `fg_knee` × room, which covers the drift). The value frame and the brook (mesh only) run to x_max. Glass sheets read the screen texture and need nothing. Caption anchors are canvas px; the overlay applies the camera.
+- **QA:** captures start centred (the pan is 0, so frames are unchanged); `--qa-pan=x,y` starts panned, clamped to the rest bounds (`--qa-pan=-9999,-9999` = left-top corner).
+
+### 3.5 Input & hit-testing contract (round 7: "I often mis-tap" on a 720×1600 phone)
+
+**One path per layer of the UI.** `input_devices/pointing/emulate_mouse_from_touch` stays on (GUI needs it). Input dispatches a touch's emulated mouse twin (device −1) *before* the `InputEventScreenTouch` itself.
+- **World:** only `WorldPan` reads input, on the touch path (index 0) or the real mouse; emulated events are ignored. No world layer has an `_unhandled_input` any more, so nothing in the world can act twice or on both paths.
+- **GUI:** `BaseButton` sees both twins and fires once (on the first release; the second finds no press attempt). Custom controls (`UiSlider`, the sheet swipe zone, the scrims, cards) read the mouse path only. `HudController._input` and `PointerGate` read both, and swallow both.
+
+**World targets** (`world_hit(canvas_pos, slop) -> {prio, inside, core?, d, key, drag?}`, `world_press`, `world_release(key, pos, act)`, `world_drag`; debug shapes via `world_hit_shapes()`):
+- **One target per press.** Candidates compare by tier, then priority, then distance. Tiers: core hit, then the rest of the hit area, then reachable only through the fat-finger slop (`SLOP_DP` 9 dp). Priority follows GDD §2.5 (as amended by §14.4 D5): choose-a-bed bed with room 7, mossling 6, bed with a ready bud, the seed or ready petals 5 (`PRIO_PETAL_BED`), prop and the tea nook 4 (`PRIO_TEA_NOOK`), pinwheel and lantern 3, bed 2, stream and the still décor pieces (cairn stack, toadstool, stone: `PRIO_STILL`) 1; in edit mode pieces 8, the selected one 9 (`PRIO_EDIT`, `PRIO_EDIT_SELECTED`). Distance is to the target's centre. Only the winner gets the press.
+- **Aim and slop.** A touch aims `AIM_UP_DP` (3 dp) above the contact (contacts land low, 02 §1.1). Décor keeps its 64 dp hit for empty ground, but only its 20 dp-radius core outranks a bed it overlaps.
+- **Release-to-fire.** Feedback comes on touch-down; the action comes on release within the 24 px drag threshold. Moving further cancels it and pans: the tap slop and the pan threshold are one number, so there is no gap where neither or both happen. This covers props (basket, mailbox, chime), the brook, beds, décor and mossling taps.
+- **No action after a drag, a fling or a cancel.** A press on a gliding map only stops it. A sheet or card that opens mid-press takes the tap. A long-press that fired the bed card never also taps.
+
+**Active Play v1 additions (GDD §14.11 a6; `tests/test_active_input.gd`).**
+- **`claim_drag()`.** The pressed target may take the drag while the finger is still within the slop and no pan has started (DecorLayer calls it when its 450 ms long-press fires, so one gesture enters edit mode and carries the piece). The pan is disarmed; later motion arrives as `world_drag(key, pos)` and the release as `world_release(key, pos, true)`. A drag past the slop *before* the long-press still pans, exactly as on a bed.
+- **`empty_tapped(canvas_pos)`.** Every empty tap within the slop emits it (the double-tap glide is unchanged). DecorEdit uses it as "tap a destination".
+- **Edit filter.** `WorldPan.edit_mode` follows `Game.decor_edit_entered / decor_edit_exited`. While on, `resolve()` asks only `GROUP_HIT_EDIT` (the DecorEdit controller: pieces at prio 8, +1 selected, 60 dp hit or 64 dp in the look zone around the visual centre, clipped above the dock); mosslings, beds, props and the brook are ground. `--debug-hits` draws that group in edit mode.
+- **`nudge(delta_px)`** pans inside the rest bounds (no rubber band, no glide) for the edge pan while a piece is carried, and pokes the FrameGovernor.
+- **`is_blocked()`** is public: Game pauses the wish clock while a sheet or card is open.
+- **Wish fulfilment rides on release-to-fire.** Views report the actions the player already has through `Game.world_action(kind, args)` from `world_release(act = true)` only (`tap_creature`, `ring_chime`, `bed_tap` on every bed release whichever branch ran, `decor_tap`, `stream_tap`; pets and boats report themselves), so a pan or a cancelled press never grants a wish. The wish bubble is not a hit target.
+
+**GUI consumption (no through-taps).** Every surface that looks like UI stops presses (`MOUSE_FILTER_STOP`):
+- **The sheet and its scrim.** The sheet's whole rect (padding, grabber, header) stops presses, and so does the full-screen scrim. While a sheet *closes*, it is input-dead (`mouse_behavior_recursive = DISABLED`, so a fast second tap on Plant or Collect never acts). Its rect and the scrim keep consuming until the sheet is freed. A scrim tap (press and release within 10 dp) closes the sheet and never reaches the world; a drag over it does nothing.
+- **Modal cards and their scrim.** They behave the same way, and dismissing one needs a tap, not a drag.
+- **The toast**, while shown and while it fades.
+- **The top bar's band.** It runs from the top of the screen to the bottom of the gear and eye hits, over the chips and the gaps between them. Under an open sheet it yields to the scrim, so a tap there still closes the sheet.
+- **The dock.** The pebble stops presses, the tabs tile it edge to edge, and the tabs reach down to the gesture guard. The guard is a full-width strip over the bottom inset (max(safe bottom, 127 px)); presses that start in the gesture-bar zone do nothing.
+
+**Buttons** (`TapGuard`, wired by `PressFeedback.attach`):
+- **Press slop.** A press that travels more than 10 dp (30 px) is cancelled (no action, the visual springs back). Sliding off cancels too.
+- **Scroll-through.** Buttons inside a `ScrollContainer` pass their presses on (`MOUSE_FILTER_PASS`), so a drag that starts on a button scrolls. The list's `scroll_deadzone` is 30 px (`gui/common/default_scroll_deadzone`), and its `NOTIFICATION_SCROLL_BEGIN` cancels the press.
+- **Fling catch.** A press while the list is still moving only stops it.
+- **Debounce.** A second press within 350 ms of an action on the same button is swallowed: one purchase, plant or collect per press, and no double-open of a dock tab.
+- **Selection on release.** Dock tabs and buttons fire on release. Tapping the active dock tab closes its sheet (GDD §8.1, kept).
+
+**Sliders.** `UiSlider` is `PASS`. A press stays pending until it moves. Horizontally past 24 px it becomes a slider drag, the only case that consumes the motion. Vertically past 10 dp it is the list's scroll and the value never changes. A tap jumps to the nearest detent.
+
+**Ambient watch.** The first gesture only wakes the HUD. `PointerGate` swallows the touch, its twin, their moves and both releases.
+
+**Sizes and gaps** (GDD §8.4):
+- Dock tabs ≥ 76 dp (88 × 88, the hero 96 × 93).
+- The gear and the eye 72 dp.
+- In-sheet buttons, sliders, segments and rows ≥ 48 dp; the sheet × is 60 dp and nothing sits next to it.
+- At least 8 dp between discrete targets: the tabs-to-list gap (`UiSheet.TABS_GAP`) and the padding of rows that hold their own steppers or sliders keep it. Full-width Settings list rows stack under a hairline (the Material list pattern), and contiguous dock tabs share edges by design.
+- Nothing in the app is irreversible ("Leave for now" saves first), so no primary action sits next to a destructive one.
+
+**QA.** `--debug-hits` (`HitDebug`, CanvasLayer 100) draws every live world hit area with its slop ring and core, and every UI target and consumer with its size in dp. It flags targets under 48 dp (red), overlaps (magenta) and gaps under 8 dp (orange), and prints a `debug-hits:` summary. World areas are hidden while the world is blocked. Renders: `qa/out/hits/`.
 
 ---
 
@@ -193,6 +259,7 @@ Plain typed fields (GDD §5.8 persistence list), serialised by `to_dict()` and r
 | Relationships | `met{species: first_met_unix}`, `names`, `affection`, `photos{species: 5-bit mask}`, `photo_meta{"species/pose": {phase, weather, world_t}}`, `postcards[{id, template, species, received_unix, read}]`, `boats`, `last_pet_unix` |
 | Flags | `seed_planted`, `seed_tap_t`, `basket_full_seen`, `first_bloom_postcard_sent` |
 | Retention v1 (schema 2, GDD §13.6) | `retention_v` (content-aware migration done), `visit_aff_t`, `hearts_seen`, `nests{style, built_t, stage}`, `postcards_waiting`, `mysteries{kind, target, open_t, ok_t, solved_unix}`, `signs[{mystery, index, type, appear_t, anchor}]`, `clues{mystery: bitmask}`, `variants_met`, `cousin_visits`, `scene_returns`, `scenes_seen`, `scene_cast`, `pending_scene{scene, cast, phase, weather, world_t, shown_s}`, `memories[{scene, cast, phase, weather, world_t, unix}]`, `keepsakes`, `signature_gifts`, `last_bg_t`, `open_count`; `basket[].signature`, `present[].cousin` |
+| Active Play v1 (schema 3, GDD §14.9) | `active_v` (content-aware migration done); **F1** `wishes[{species, wish, opened_t, state open/held, taps, placed}]`, `wish_checks` (hash index), `wish_fg_s`, `wish_last_t`, `wish_friend_t`, `wish_visit_count{species: {arrive_t, n}}`, `wish_last_id`, `wish_aff_t`, `wish_stamps{species: bitmask over wishes.json order}`, `wishes_granted`, `wish_tutorial_done`, `wish_list_seen_t`; **F2** `tea_unlocked`, `petal_from_t{"bed:slot": t}`, `pantry`, `pot{petals, drops, stir_deg}`, `tray[{recipe, made_unix, drops, petals}]`, `recipes_found`, `tea_prefs_seen`, `tea_aff_t`, `teaware_owned`, `teaware_set`, `cups_offered`, `tea_flags`; **F3** `decor_layout[{id "set#n", set, x, y, rot, stored, stack, level}]` |
 
 ### 5.2 `WorldSim` — the world step
 
@@ -241,7 +308,7 @@ Between events, `advance` is O(1): it caches the next event time and only settle
 | `met` | species | album entry, new-friend card |
 | `gift` | species, gift_item, dew, slot | basket badge, basket tile |
 | `photo` | species, pose, new | album photo strip |
-| `basket_full` | — | brim sparkle on the dock button |
+| `basket_full` | — | brim sparkle on the dock button (the dock shows the basket's fill by what peeks out, never a count) |
 | `stage` | stem, flower, stage (3 = bloom) | grow step / ready bud glow (GDD §3.1) |
 | `hearts` | species, hearts | `celebrate` heart burst |
 | `postcard` | id, template, species | mailbox flag, S16 |
@@ -262,12 +329,13 @@ Between events, `advance` is O(1): it caches the next event time and only settle
 
 **Onboarding (GDD §3.4)** is scheduled at install with provisional times: Pip at 30 s, Dot at 150 s, Cobble at 210 s, the welcome postcard at 240 s, and Poisson visits from 300 s. A seed tapped at t ≤ 25 s reschedules Pip to clamp(t + 15, 20, 40) and Dot to min(t + 90 + 15, 150). The tutorial hints are view-side.
 
-**Recap (`Recap.build`)** produces up to 3 lines in GDD §13.5.3 priority order: new friend → away-scene teaser → cousin → postcard → hearts → clue → visitors → nest → gifts waiting → blooms → photos → rain; a staged scene's teaser always gets a line. It appears only when the gap is at least `welcome_back_min_gap_s` and something happened. Lines are `{key, species}`, so the UI formats names and language at display time.
+**Recap (`Recap.build`)** produces up to 3 lines in GDD §13.5.3 priority order: new friend → away-scene teaser → cousin → postcard → hearts → a wish granted on arrival (`RECAP_WISH`, Active F1) → clue → visitors → nest → gifts waiting → blooms → photos → rain; a staged scene's teaser always gets a line. It appears only when the gap is at least `welcome_back_min_gap_s` and something happened. Lines are `{key, species}`, so the UI formats names and language at display time.
 
 **Greeter (GDD §5.6).**
 - On launch or resume, if nothing happened or nobody is present, Game marks the greeter as wanted.
 - Once the UI calls `Game.notify_world_visible()`, it waits `greeter_delay_min..max_s`, then `sim.add_greeter()`.
 - The greeter leaves when the app is backgrounded. A real arrival of the same species converts the greeter into the visit.
+- **Active Play (GDD §14.2.3).** The greeter is preferably a met, absent friend holding a wish (oldest first, `WishRules.greeter_pick`); the pool draw still runs first, so the world RNG stream is identical with or without a wish. It brings that wish back for its stay and never spawns one; a cup gives it 0 affection and no petals back.
 
 ### 5.2a Retention v1 (`RetentionRules`, `RetentionHash`; GDD §13)
 
@@ -280,6 +348,14 @@ Between events, `advance` is O(1): it caches the next event time and only settle
 - **E1/G1.** `monotone_snapshot()` also covers hearts, nest stages, clues + waiting signs, mysteries, cousins, memories + pending, scenes seen, keepsakes, signature gifts and postcards + waiting.
 - **Not in the sim (creature brain, P2):** nest nap preference 0.7, pair bouts, wave-on-open poses, cousin bouts, staged-scene slots and staged friends as greeters (GDD §13.9).
 
+### 5.2b Active Play v1 (`ActiveRules`, `WishRules`, `TeaRules`, `DecorPlacementRules`; GDD §14)
+
+`WorldSim.active` is an `ActiveRules` that holds the three pure rule objects and the feature flags (`FEATURES_V1`: `wishes`, `tea`, `free_decor`, all on; `Game.feature_on`) and, like `RetentionRules`, **no reference back**: every call takes the sim. Content comes from `GameContent` (`wishes.json`, `tea.json`, `decor_placement.json`: required keys and cross-references checked at load, the full lint in `validate_content.py`; tea's event postcards are merged into `event_postcards_by_trigger`).
+- **Active F1 `WishRules`** (port of the reference `wish_*`). `foreground_tick(sim, dt, blocked)` accumulates `wish_fg_s` and runs one `check(sim, t)` per `spawn_check_s`; Game calls it from `_process` and passes `blocked` while a sheet, card, edit mode or `pause_wishes` is on. **It never runs inside `advance()` or catch-up**, so offline time spawns nothing (AP6). `check`: the scripted teaching `cuddle` (first present onboarding friend, `poisson_start_s + after_onboarding_s`), caps (2 visible, 4 pending, 1 per friend, 2 per visit), gaps (90 s global, 600 s per friend), then hash draws `["wish_roll", n]`, `["wish_friend", n]` (candidates in album order: real visitors present ≥ 45 s, not reported busy), `["wish_pick", n]` over the weights `weight × (1 + trait_bonus × matches) × prefer × boost(phase × weather) × unseen × repeat` of the eligible wishes (requires hold now: blooms, **placed** pieces, feature and tea unlock, best buddy present, `not_already_near` = no placed piece of the set within `near_dp` of the friend's favourite spot; `spawn_when` gates appearance only). Fulfilment: `on_action` (pet, play_taps, chime, bed with that flower blooming, décor tap, stream, boat: every open wish of a present friend that the action matches, collected first, then granted), `on_offer` (tea targets via `TeaRules.satisfies`), `on_decor_placed` (`decor_near`: granted now if the friend is here, else `placed` and granted on its next arrival). `grant` is atomic: removed, stamp bit, +1 affection on its own 20 h `wish_aff_t` rest, one gift petal by the shared rule (tea unlocked, jar cap), slot refilled. `on_arrive` / `on_depart` move wishes between open and held (never removed); `greeter_pick` (§5.2).
+- **Active F2 `TeaRules`** (port of `petals_ready`, `harvest`, `offer`, `tea_satisfies`; no randomness). Petal anchor per stem `petal_from_t["bed:slot"]` (absent = bloom time, `WorldSim.stem_bloom_t`), `ready = min(hold, ⌊(t − pa)/regrow⌋)`; `harvest_bed` takes petals in stem order within each jar's room and moves the anchor (`pa += k·regrow`, or `t − (ready − k)·regrow` on a full stem); the flower's stage, dew and attraction never change. Pot ops (`pot_add_petal/remove`, `pot_add_drop/remove_drop`: 3 dew charged in, refunded out; `pot_stir`; `pour(simple)`), `GameContent.match_recipe` (exact multiset + drops, else the fallback per drop count: every pot makes something), the tray (≤ 6, cups keep their petals for `tea_petal` wishes), `offer` (reaction loved/liked/content, never a dislike; affection once per friend per 20 h on `tea_aff_t`, the greeter 0; petals back by the gift rule; then `WishRules.on_offer`), known preferences (seen or ♥3), teaware (a pure sink, snug 0), the nook unlock (after the welcome postcard time and a bloom; checked at the end of `advance`), postcards `first_tea` / `tea_book`.
+- **Active F3 `DecorPlacementRules`** (pure; the front-end calls it through `Game.decor_rules()` with `Game.decor_layout()` and `Game.decor_context()` for the live drag): `validate` → one soft reason (`sky`, `low`, `edge`, `water`, `dry`, `flowers`, `spot`, `nest`, `prop`, `crowded`, `stack`; `hint_key` → `DECOR_HINT_*`), `validate_hard`, `sockets` (same-set rings, the fairy ring around a cluster ≥ 3, water and bank lines, legacy anchors, spot sides; valid ones only), `snap` (14 dp magnet, family priority then nearest), `magnet` (the ≤ 70 % visual pull), `nudge` (48 dp ring search, 4 dp rings), `jitter` (±1.5 dp hash of piece and position), `resolve_drop`, `merge_target` (cairn ≤ 14 dp, ≤ 10 high), `clusters`, `derived_spots`, `auto_place` (anchor n if valid → best socket by the largest cluster → spiral from anchor 0 → tray), `nearest_piece_dp`, `is_clear`, `migrate_v1`, `sync_owned`. `ActiveRules` owns the layout operations (`move`, `turn`, `store`, `take_out`, `lift_pebble`, one-step `undo` per edit session) and emits `decor_placed` **only after a settle** (a failed move changes and emits nothing), `refresh_spots` on load and edit-mode exit, `on_decor_bought` (a purchase is auto placed; a new pebble joins the tallest stack with room). **Attraction, snug and spot gating keep counting owned copies** (placed or tucked away); only wish gates and fx read placed pieces (`decor_placed_count`).
+- **E1/AP2.** `monotone_snapshot()["active"]`: pending + granted wishes, stamps, grants, petals ready + in jars + in the pot, recipes, teaware, cups offered, tray + offered, layout records. `displayed_values()` adds teaware prices, jar counts and the drop price (E6).
+
 ### 5.3 Parity with `tools/sim/economy_sim.py`
 Rules, data and the order of operations are ported 1:1. The known differences are listed below; none of them changes any GDD rule:
 - **RNG engine.** Godot's PCG32 (`RandomNumberGenerator`, whose state is persisted) replaces numpy's PCG64. The results are statistically equivalent but not bit-identical, which is why the GDScript E5/E6 test re-checks the invariants instead of comparing numbers.
@@ -287,6 +363,7 @@ Rules, data and the order of operations are ported 1:1. The known differences ar
 - **`first_bloom` postcard.** It is sent for the first bloom of a *bought* stem, which is the GDD intent; the reference used "any bloom after the first purchase".
 - **Greeter and live tap times.** The greeter and the live seed-tap rescheduling exist only in the game; the reference knows the tap time up front.
 - **Retention (bit-exact).** All retention randomness is the stateless hash, so `tests/test_retention_parity.gd` replays the reference's scripted schedule (`python3 tools/sim/economy_sim.py --parity-export tests/fixtures/retention_parity.json`: visits, pets, garden counts, sign taps, 21 returns with fixed absence profiles, two cousin debuts) and matches affection, the rest, hearts, story postcards and waits, nests, every mystery `open_t`/`ok_t`, every sign `appear_t`, clues, cousins and every scene roll, pick and cast. Regenerate the fixture after any rule or data change. Game-only bookkeeping the reference does not model: sign anchors and visibility, nest stage events, pending scenes and linger, cousin repeat visits, signature gifts, keepsakes, `hearts_seen`, the migration.
+- **Active Play (bit-exact).** `tests/test_active_parity.gd` replays `python3 tools/sim/economy_sim.py --active-parity-export tests/fixtures/active_parity.json` (467 ops generated online from the reference model: 260 foreground checks with the sky pinned, visits and departures, help through each wish's own action, gathering, brewing, offering, two gaps past the 20 h rests; no world-RNG draws) and matches after every op the wish list (species, wish, open/held, `opened_t`), `wish_checks`, both gaps, both rests, stamps, grants, the teaching wish, affection, the nook, every petal anchor and jar, the book, the tray, cups offered and the wallet. Friends with an always-on favourite spot only, so `not_already_near` agrees (the reference stands copy n at its legacy anchor). `retention_parity.json` is unchanged. Game-only: the pot steps, teaware, the layout operations and validity, derived spots, the migration, events.
 
 Two greeter numbers stated only in GDD prose were added to `data/economy.json` as `greeter_stay_s: 300` and `greeter_pet_cooldown_s: 3600`. `validate_content.py` still passes.
 
@@ -304,7 +381,7 @@ Behaviour bouts, spots, walking paths, hops, look-at and every other position ar
 
 **File** `user://save.json`. It is one JSON object, written by `JSON.stringify(doc, "\t", sort_keys, full_precision)`:
 ```json
-{ "format": "mossling-meadow-save", "schema": 2, "app_version": "0.1.0",
+{ "format": "mossling-meadow-save", "schema": 3, "app_version": "0.1.0",
   "saved_at_unix": 1792700000.25, "sha256": "<hex>", "world": { …WorldState.to_dict()… } }
 ```
 
@@ -328,6 +405,7 @@ A crash at any step leaves at least one complete file. Saving is synchronous and
 - Older files are migrated forward, without checksum, before normalisation; the next save writes the current schema with its checksum. The main → `.tmp` → `.bak` order is unchanged, so an old `.bak` behind a corrupt main file is migrated too.
 - Newer files are refused (`unsupported schema`) and never misread.
 - **Schema 1 → 2 (Retention v1, GDD §13.6).** `SaveStore.migrate(1, w)` adds every new field empty (`RETENTION_V1_DEFAULTS`, with `retention_v = 0`); `WorldState.from_dict` adds `basket[].signature = false` and `present[].cousin = ""`. The content-aware steps need the data, so `WorldSim._init` runs `RetentionRules.migrate_v1` once when `retention_v < RETENTION_VERSION`, at the saved world time: `hearts_seen` = hearts; nests (twigs) for ♥3+; ♥4/♥5 stories not yet delivered by template (♥4 waits for an unmet buddy; if an MVP `<species>_h4` card with the old shared template holds the id, the new story gets `<species>_h4_story`); keepsakes for ♥5; then `check_mysteries`. Affection is untouched and the 20 h rest starts empty. Tested from a real schema-1 save written by the MVP code (`tests/fixtures/save_schema1.json`).
+- **Schema 2 → 3 (Active Play v1, GDD §14.9).** `SaveStore.migrate(2, w)` adds every new field with its default (`ACTIVE_V1_DEFAULTS`, `active_v = 0`; literal, so the step keeps meaning "2 → 3") and never overwrites a key; a schema-1 file runs 1 → 2 → 3. `WorldSim._init` then runs `ActiveRules.migrate_v1` once when `active_v < ACTIVE_VERSION`, after the retention step, at the saved world time: copy n of each movable set takes `spots.json decor_anchors[set].positions[n]` verbatim (rot 0, placed), the lantern jitter (`DecorPlacementRules.legacy_lantern_jitter_px`, the old `DecorLayer` hash-seeded RNG) baked into x, every cairn pebble one stack at `anchors[0]` in copy order, the chime not in the layout; only the hard exclusions (hard props, the tea nook) nudge a piece by the ring search (on today's data pinwheels `anchors[4]` by 8 dp and `anchors[8]` by 16 dp; nothing else moves, ≤ 0.5 px); `tea_unlocked` if onboarding is done and a stem blooms; no wish open, the teaching wish still to come; petal anchors absent (full stems). Affection, hearts, `owned`, `rng_state` and every Retention field are untouched. Every load also runs `ActiveRules.on_load`: owned movable copies missing from the layout are auto placed (a fixture or a later purchase) and the derived spots are computed. Tested from a real schema-2 save written by the pre-Active code (`tests/fixtures/save_schema2.json`), through boot as well.
 
 **Policy (who saves when).**
 
@@ -353,6 +431,7 @@ A crash at any step leaves at least one complete file. Saving is synchronous and
 | `g_wind`, `g_cloud`, `g_rain` | TimeOfDay (weather) | same |
 | `g_sun_pos`, `g_moon_pos`, `g_celestial`, `g_sun_dir` | TimeOfDay (celestial) | same |
 | `g_world_offset` | TimeOfDay, set by Main on resize | on change |
+| `g_cam_pan` (map pan, canvas px, idle drift excluded; §3.4) | TimeOfDay, set by Main | on change (every frame while panning) |
 
 The pipeline:
 1. **`TodMath.g_day_at(local_s)`** maps the clock to `g_day` per `world.json`: dawn 05:00 → 0.2, day 08:00 → 0.4, golden 16:30 → 0.6, dusk 18:30 → 0.8, night 20:30 → 1.0. Each phase crossfades over `phase_crossfade_s` (2400 s). Night reads 0.0 after midnight, and the jump is invisible because the gradient has night at both ends (tested at every minute of the day).
@@ -520,13 +599,22 @@ The contract is AUDIO_BIBLE §8; `tools/audio/mixsim.py` is its executable refer
 | `test_retention_core.gd` | GDD §13: the §13.1 golden hash vectors; retention never draws from the world RNG; the 20 h visit rest; heart unlock order (♥2 story + signature gift, ♥3 nest, ♥4 waits for the buddy, ♥5 story + keepsake, multi-level jumps); nests grow offline and never wilt; signs precede the debut, never expire and are still collectable after 30 days; ≤ 3 visible at distinct, type-valid anchors; cousin conditions and every-3rd visit; scenes: ≥ 2 h, one per return, pending re-shown, deterministic per seed, unseen first, profile conditions, cast rules, pending across close + 600 s linger; 30 days away nothing decreases; live = one catch-up; recap teaser; view models; `retention_mid` and every `--qa-scene` |
 | `test_retention_save.gd` | Schema 1 → 2 from a real MVP save: every v1 value kept, new fields added, content-aware steps (hearts_seen, nests, keepsakes, stories, mysteries), runs once, plays on and round-trips; old `.bak` migrated behind a corrupt main; `migrate` only adds; coercion of the new fields |
 | `test_retention_parity.gd` | Bit-level parity with `economy_sim.py` on the exported scripted schedule (§5.3) |
+| `test_active_wishes.gd` | Active F1: spawns deterministic per seed and never touching the world RNG; nothing spawns in `advance` or catch-up; the 60 s cadence survives a reload and stops when blocked or flagged off; caps and the teaching wish; held wishes kept across visits and 30 days; every world target grants (pet, chime, bed, décor tap, stream, boat, play_taps ×3); a mismatched action is no mistake; one action grants every matching wish; rewards with the 20 h rest, one stamp, the gift petal and its jar cap; "fulfillable now" eligibility (nook, blooms, phase, weather, species_only, buddy, placed pieces, not_already_near); the greeter brings a held wish and never spawns one; a wish leaves only by a grant |
+| `test_active_tea.gd` | Active F2: the nook unlock; harvest never harms a flower; offline-exact regrow, partial progress kept, full stems pause, live = one jump; jar caps (the rest waits); every pot of 1–3 petals × 0–2 drops makes something, two drops a treat; the pot returns petals and refunds drops, never creates dew; stir both ways to the target, simple brewing, a full tray keeps the pot; reactions (never a dislike), the 20 h tea rest, petals back, the greeter's 0, `first_tea`; known preferences; a cup grants a tea wish and stacks; teaware is a sink with snug 0; `tea_book` |
+| `test_active_decor.gd` | Active F3: the validity table (one soft reason each, hint keys in strings.csv), spacing and the cairn merge / full stack, snapping (in reach vs free), valid family-ordered sockets incl. the fairy ring and the water line, the 48 dp nudge and the float home, repeatable jitter, a move that settles commits and emits one `decor_placed` and a float home changes and emits nothing, turn / put away / take out / undo (one step, cleared on exit), tidying keeps owned counts and λ, cairn lift and merge, purchases auto placed on valid ground, derived spots follow the pieces and fall back to the authored spot, `decor_near` granted now and on arrival |
+| `test_active_save.gd` | Schema 2 → 3 from a real pre-Active save: every v2 value kept, defaults added; every piece where it stood (≤ 0.5 px) but the two nudged pinwheels (≤ 48 dp, now clear), one cairn stack, owned / affection / RNG / retention untouched, the nook awake, full stems; idempotent and round-trips; schema 1 → 3; `.bak` behind a corrupt main; `migrate` only adds; every active field round-trips; coercion of hand-edited fields |
+| `test_active_invariants.gd` | E1 / E5 / E6 with the whole active layer in play (`SimPlayer.active_play`: wish clock, help, gather, brew, offer, teaware); jars within caps; tea and wishes create no dew; 30 days away keeps every wish and petal; the `active_mid` fixture |
+| `test_active_input.gd` | §3.5 additions through real dispatch: `claim_drag` carries the piece and never pans, a drag before it still pans and cancels the tap, `empty_tapped`, the edit-group filter driven by Game's edit signals, `nudge` inside the rest bounds, the Active priorities match the data |
+| `test_active_parity.gd` | Bit-level parity with `economy_sim.py` on the exported Active Play schedule (§5.3) |
 | `test_palette.gd` | **Palette interpolation:** keys exact, midpoints equal to the engine's OKLab Gradient; OKLab round trip; scalars; clock → `g_day` (crossfades, midnight, continuity over 24 h); rain transform; 30 s weather crossfade; celestial; every declared global has a writer |
 | `test_clock.gd` | **Frame clock** (QA captures): replays identically, ignores real time, `--now`/override mid-run and clear; the system-clock mode is unchanged |
+| `test_world_pan.gd` | Map pan (§3.4): bounds per aspect keep every layer inside its geometry (phones, tablets, wider than the geometry); rubber band is 1:1 inside and never passes the hard bounds; release past the bounds springs back inside; fling glides with friction, overshoots an edge and settles on it; home glide; Reduce Motion (no inertia, clamp, cut); soft limit and reveal; foreground room. Arbiter (§3.5): threshold and slop from the settings; release-to-fire; a drag cancels the tap and tracks 1:1 from the slop edge; a drag-claiming target never pans; one target per press by priority then nearest; direct hit beats slop, slop catches near misses; touch aim offset; the emulated twin is ignored; second finger; edge band (taps still work); nothing through a sheet or a card that rose mid-press; a press on a gliding map only catches it; cancel; double tap on empty ground only |
+| `test_input_contract.gd` | §3.5 through real GUI dispatch (a SubViewport fed the phone's emulated-mouse + touch pairs): one world press per touch; release-to-fire with slop; props act on release; bed priority and choose mode; candidate order (tier, priority, distance); HUD band, chips, dock seams, pebble ends, under the pebble and the gesture inset consume; toast (shown and fading); sheet rect, grabber and padding consume, scrim drag vs tap, no world tap through the scrim; a closing sheet consumes and never acts; modal scrim; the ambient wake gesture swallowed whole; one fire per touch on a button; press slop; scroll-through and deadzone; fling catch; debounce; dock select on release, slide-off cancel, active tab closes; slider moves only on a horizontal drag; size floors |
 | `test_spring.gd` | **Spring helper converges** for all 5 tokens, with analytic overshoot and envelope settle times; frame-rate independence (30 vs 120 fps); stability through hitches; retarget keeps velocity; critically and over-damped never overshoot; Reduce Motion ζ ≥ 1; Spring2D; bézier tokens; duration tokens; the loop table meets V5 (integer k, breathing 3.5–4.5 / 5–6 s, ≤ 3 firefly glows/s); `Motion` springs take the token rest epsilon |
 | `test_core_helpers.gd` | NFC and name filtering; weather plan determinism and share; locale policy and loaded translations; settings validation; recap priority; harmony helpers versus theory.py (including JSON float sets); bus graph (limiter −1.5 dB, LPF resonance 0.5); frame-rate divisors; haptics modes, persistence and repeat |
 | `test_audio_director.gd` | AUDIO_BIBLE §8.10 without a device: manifest loaded; ladder climbs, caps at 7 and resets after 1.5 s; walk stays in range and set and always moves; variants never repeat and all are used; chord hold 6–10 bars; bed targets (rain replaces the stream, crickets only at night and never in rain); slider curve; `cue_played` captions; one DOUBLE per Collect burst; S10 MEDIUM once |
 
-`tests/helpers/sim_player.gd` ports the Python sim's *player* model (schedules, spending policies, E5 "new/affordable" audit). All game rules are the real `WorldSim`.
+`tests/helpers/sim_player.gd` ports the Python sim's *player* model (schedules, spending policies, E5 "new/affordable" audit; `active_play` adds the wish clock, help, gathering, brewing, offering and teaware). All game rules are the real `WorldSim`. `tests/helpers/active_util.gd` builds quiet Active Play worlds (a bloomed bed, décor at the legacy anchors, long visits, world actions, simple brewing).
 
 **Pipeline** (CI order; extends synthesis D14). Every gate is a stage of `tools/ci/run_ci.sh`, which `.github/workflows/ci.yml` calls, so a local run reproduces CI; commands, thresholds and the visual QA protocol are in `docs/QA.md`:
 ```
@@ -554,7 +642,7 @@ It runs the real boot → main hand-off with a throw-away user://, the frame clo
 | `shaders/dev/placeholder_band.gdshader`, `PlaceholderBand` nodes under Sky / FarHills / MidHills / Meadow / Stream | Technical Artist: Art Bible §4.3–4.8 shaders and builders | Delete the dev shader with the last band. Warm-up picks up new shaders automatically |
 | Empty `Celestial`, `Foreground`, `Play/*`, `Particles` | Technical Artist (layers, particles), Gameplay Engineer (beds, décor, creatures) | `Plots` children = beds from `spots.json` + `sim.state.stems`; `Decor` from `owned` × anchors; `Creatures` from `present` |
 | `HUD/…/TopBar`, `Dock`, `Sheets`, `Overlays` | UI Engineer | Back handlers, the leave dialog on `leave_requested`, the recap on `world_ready(recap)`, choose-a-bed mode (`sim.needs_bed_choice`, `GardenRules.beds_with_room`), `UiTheme.attach` on new CanvasLayers |
-| `LayoutDebug`, `DebugReadout` | stay (debug-only flags) | `--debug-layout`, `--debug-hud`, `--log-events` |
+| `LayoutDebug`, `HitDebug`, `DebugReadout` | stay (debug-only flags) | `--debug-layout`, `--debug-hits`, `--debug-hud`, `--log-events` |
 
 **For other roles.**
 - **Gameplay:**
@@ -565,7 +653,7 @@ It runs the real boot → main hand-off with a throw-away user://, the frame clo
 - **UI:**
   - `ThemeBuilder` tables are the place to restyle; regenerate `base_theme.tres` with `tools/ui/build_theme.gd`.
   - Text size rebuilds the theme.
-  - Dock labels cap at 130 % (Art Bible §9.1).
+  - Dock labels take the full text size; the pebble widens and grows (Art Bible §9.4). Settings is the top bar's gear (`TopBarView.gear`, `settings_pressed`), not a dock tab.
   - Call `FrameGovernor.ambient_mode = true` in watch mode.
   - Audio hooks: `set_sheet_open()` on sheet rise/exit; `start_purr()` / `stop_purr()` on the long-press; captions from `cue_played`; the four sound settings and `Haptics.mode` through Settings.
 - **Technical Artist:**
@@ -599,6 +687,8 @@ It runs the real boot → main hand-off with a throw-away user://, the frame clo
 tools/vendor_addons.sh                                     # GUT v9.7.1, SHA-verified
 python3 -I tools/fonts/build_fonts.py                      # re-fetch + subset fonts (npm, fonttools, brotli)
 python3 -I tools/i18n/gen_nfc_table.py                     # regenerate scripts/core/nfc_table.gd
+python3 tools/sim/economy_sim.py --parity-export tests/fixtures/retention_parity.json        # retention parity
+python3 tools/sim/economy_sim.py --active-parity-export tests/fixtures/active_parity.json    # Active Play parity
 godot --headless --path . -s res://tools/ui/build_theme.gd # regenerate ui/theme/base_theme.tres
 godot --headless --path . -s res://tools/ci/check_scripts.gd   # compile every script with autoloads live
 godot --path . -- --clock=19:00 --weather=breeze --world-speed=60 --debug-hud --log-events   # look around
@@ -612,6 +702,7 @@ User args (after `--`):
 - `--freeze-time`, `--g-time=<s>`
 - `--frame-clock` (wall time and ticks follow the frame delta; implied in Movie Maker mode)
 - `--no-governor`
-- `--debug-layout`, `--debug-hud`, `--log-events`
+- `--debug-layout`, `--debug-hits` (every world and UI hit area, §3.5), `--debug-hud`, `--log-events`
 - `--audio-seed=N`
+- `--fixture=active_mid` (garden_mid + five friends met, three visiting; two open wishes and one held; the tea nook with five jars, full glints on bed_1, a half-stirred pot, two cups, six recipes, a teaware cup; free-placed décor: pinwheels on the hill crest, a toadstool ring by the moss cushion, a turned lantern, a second cairn stack, a stone tucked away): `ActiveFixture`, called from `GardenFixture.apply_from_args`. Every `GardenFixture` world now lays its décor out through the §6 migration (anchors verbatim, the lantern jitter baked in), so existing captures are unchanged
 - `--fixture=retention_mid` (garden_mid + hearts 1–5, nests at all 3 stages, 2 open mysteries with 1 visible sign each, a cousin met, memories, a pending `pair_nap`) and `--qa-scene=<scene id>` (that scene pending; implies the retention_mid world): `RetentionFixture`, called from `GardenFixture.apply_from_args`

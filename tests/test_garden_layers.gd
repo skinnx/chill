@@ -2,7 +2,8 @@ extends GutTest
 ## The garden view layers against a live sim (GDD §3.1, §8.2-8.3, Art Bible §6.2, §6.6): every
 ## planted bed gets one mesh, the tutorial seed shows until tapped and a tap plants it, a bloom the
 ## player watches becomes a ready bud that a tap unfurls (and that opens by itself after 20 s),
-## a plain bed tap sways the stems, every owned décor copy stands at its anchor, a placement
+## a plain bed tap sways the stems, every owned décor copy stands at its anchor (the Active F3 layout
+## starts there), a placement
 ## animates, the lantern and pinwheel taps fire their effects, and the basket shows what waits.
 
 # Tests read JSON dictionaries and GUT asserts take Variants, so every value is converted or
@@ -17,6 +18,7 @@ var c: GameContent
 var _saved_sim: WorldSim
 var _saved_ready: bool
 var _saved_content: GameContent
+var _held: Dictionary = {}
 
 
 func before_all() -> void:
@@ -58,11 +60,20 @@ func _tick(node: Node, seconds: float) -> void:
 		t += FRAME_S
 
 
+## A tap through the world input arbiter (WorldPan.resolve on this one layer, ARCHITECTURE §3.5):
+## press = world_press on the winner, release = world_release(act = true).
 func _touch(node: Node2D, design: Vector2, pressed: bool) -> void:
-	var ev := InputEventScreenTouch.new()
-	ev.pressed = pressed
-	ev.position = node.get_global_transform_with_canvas() * design
-	node._unhandled_input(ev)
+	var canvas := node.get_global_transform_with_canvas() * design
+	if pressed:
+		var arb := WorldPan.new()
+		var hit := arb.resolve(canvas, [node])
+		arb.free()
+		_held = hit
+		if not hit.is_empty():
+			node.call(&"world_press", hit["key"], canvas)
+	elif not _held.is_empty():
+		node.call(&"world_release", _held["key"], canvas, true)
+		_held = {}
 
 
 func _vertex_count(p: PlotsLayer, bed: StringName) -> int:
@@ -256,9 +267,13 @@ func test_full_garden_decor_is_a_handful_of_stamps() -> void:
 	assert_eq(pinwheels, c.max_copies(&"leaf_pinwheel"))
 	# pinwheels + 6 unit stamps + halos + contact shadows + the basket's gifts, rim and dew stamp.
 	assert_lt(items, 80, "décor instance-uniform items stay a small share of the 256 the buffer holds")
-	var lanterns: DecorLayer.Unit = d._units["lanterns"]
-	var verts := (lanterns.stamp.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX] as PackedVector2Array).size()
-	assert_eq(verts, d.piece_count(&"firefly_lantern") * 3 * 4, "every lantern is 3 quads of one stamp")
+	# Active F3: static pieces merge per (set, y band); the lanterns share their bands' stamps
+	var verts := 0
+	for key: String in d._units:
+		if key.begins_with("firefly_lantern|"):
+			var u: DecorLayer.Unit = d._units[key]
+			verts += (u.stamp.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX] as PackedVector2Array).size()
+	assert_eq(verts, d.piece_count(&"firefly_lantern") * 3 * 4, "every lantern is 3 quads of a band stamp")
 
 
 func test_a_touched_lantern_leaves_its_unit_and_returns() -> void:

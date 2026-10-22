@@ -50,7 +50,8 @@ func _hearts(world: Dictionary, sp: String) -> int:
 func test_fixture_is_a_real_schema_one_save() -> void:
 	var doc: Dictionary = JSON.parse_string(v1_text)
 	assert_eq(int(doc["schema"]), 1)
-	assert_eq(SaveStore.SCHEMA, 2, "Retention v1 bumped the schema by one")
+	assert_true(SaveStore.SCHEMA >= 2, "Retention v1 bumped the schema by one (Active Play v1 to 3)")
+	assert_true(SaveStore.MIGRATABLE.has(1), "schema 1 still migrates forward")
 	assert_false(v1_world.has("nests") or v1_world.has("signs"), "no retention fields yet")
 	var spread := {}
 	for sp: String in v1_world["affection"]:
@@ -150,7 +151,7 @@ func test_migrated_world_plays_on_and_round_trips_losslessly() -> void:
 	assert_eq(store.write(world, saved_at + 5.0 * DAY, "0.2.0"), OK)
 	var res := store.read()
 	assert_true(bool(res["ok"]), str(res.get("error")))
-	assert_eq(int(res["schema"]), 2)
+	assert_eq(int(res["schema"]), SaveStore.SCHEMA)
 	assert_eq(TestUtil.canonical(res["world"]), TestUtil.canonical(world), "every retention field round-trips")
 
 
@@ -160,7 +161,7 @@ func test_old_backup_is_migrated_when_the_main_file_is_corrupt() -> void:
 	var res := store.read()
 	assert_true(bool(res["ok"]), str(res.get("error")))
 	assert_eq(res["source"], SaveStore.SOURCE_BACKUP)
-	assert_eq(int(res["schema"]), 2)
+	assert_eq(int(res["schema"]), SaveStore.SCHEMA)
 	assert_eq(TestUtil.canonical((res["world"] as Dictionary)["met"]), TestUtil.canonical(v1_world["met"]))
 
 

@@ -6,7 +6,7 @@ extends RefCounted
 ## language (Vietnamese +12 % line spacing). The UI Engineer owns the look from here on: extend the
 ## token tables below rather than hand-editing the .tres.
 ##
-## Type variations: TitleLabel, BodyLabel, StrongLabel, CaptionLabel, SecondaryLabel,
+## Type variations: TitleLabel, BodyLabel, StrongLabel, CaptionLabel, DockLabel, SecondaryLabel,
 ## HudNumeral, PriceLabel; buttons: (default = primary), SecondaryButton; panels: Card, Sheet,
 ## Chip, ModalCard.
 
@@ -106,6 +106,9 @@ static func build(palettes: Dictionary, text_scale: float = 1.0, vietnamese: boo
 	_label_variation(t, &"CaptionLabel", strong, _px(SIZE_CAPTION, text_scale), ink,
 			_spacing(strong, SIZE_CAPTION, text_scale, vietnamese))
 	# Secondary text only on opaque surface / surface_hi, never on glass (Art Bible A7).
+	# Round 6: dock tab labels in the rounder Baloo 2 (plush, game-like), Caption size.
+	_label_variation(t, &"DockLabel", title, _px(SIZE_CAPTION, text_scale), ink,
+			_spacing(title, SIZE_CAPTION, text_scale, vietnamese))
 	_label_variation(t, &"SecondaryLabel", strong, _px(SIZE_CAPTION, text_scale), ink_soft,
 			_spacing(strong, SIZE_CAPTION, text_scale, vietnamese))
 	_label_variation(t, &"HudNumeral", numerals, _px(SIZE_HUD, text_scale), ink, 0)

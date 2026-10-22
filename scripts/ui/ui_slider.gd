@@ -2,8 +2,9 @@ class_name UiSlider
 extends Control
 ## Volume slider (Art Bible §9.5): track 12 px r-pill in toggle_off_track with a primary fill to
 ## the thumb; thumb Ø 72 surface_hi on e1; 11 detents (step 10) with a TICK per detent in Full
-## haptics. The whole row is the hit; a drag starts after the project's 24 px threshold, a tap
-## jumps to the nearest detent. Values are 0..100 (Settings volume_*).
+## haptics. The whole row is the hit; a HORIZONTAL drag starts after the project's 24 px threshold,
+## a tap jumps to the nearest detent; a vertical gesture over it scrolls the sheet and never moves
+## the value (ARCHITECTURE §3.5). Values are 0..100 (Settings volume_*).
 
 # Data boundary: values read from JSON / Dictionaries are Variants and each one is converted
 # explicitly (int(), float(), String() ...) where it is read; the analyzer still flags every
@@ -11,6 +12,10 @@ extends Control
 @warning_ignore_start("unsafe_call_argument")
 
 signal value_changed(value: int)
+
+## A press is PENDING until it moves: horizontally past the drag threshold it becomes the slider's
+## DRAG; vertically past the 10 dp slop it is the sheet's SCROLL and the value never changes.
+enum Gesture { NONE, PENDING, DRAG, SCROLL }
 
 const TRACK_H := 12.0
 const THUMB_D := 72.0
@@ -20,8 +25,8 @@ const MAX := 100
 const MIN_H := 144.0
 
 var value: int = 80
-var _dragging: bool = false
-var _press_x: float = 0.0
+var _state: Gesture = Gesture.NONE
+var _press_at := Vector2.ZERO
 ## Round 5: track, fill and thumb are batched UiSurfaces.
 var _track: UiSurface
 var _fill: UiSurface
@@ -30,7 +35,8 @@ var _thumb: UiSurface
 
 func _init() -> void:
 	custom_minimum_size = Vector2(0.0, MIN_H)
-	mouse_filter = Control.MOUSE_FILTER_STOP
+	# PASS: inside a sheet's scroll list a vertical drag over the slider scrolls the list
+	mouse_filter = Control.MOUSE_FILTER_PASS
 	focus_mode = Control.FOCUS_NONE
 	_track = UiSurface.make(Color.WHITE, UiSurface.PILL)
 	add_child(_track, false, Node.INTERNAL_MODE_FRONT)
@@ -60,21 +66,34 @@ func _gui_input(event: InputEvent) -> void:
 		if mb.button_index != MOUSE_BUTTON_LEFT:
 			return
 		if mb.pressed:
-			_press_x = mb.position.x
-			_dragging = false
+			_press_at = mb.global_position
+			_state = Gesture.PENDING
 			AudioDirector.play_cue(PressFeedback.CUE_TOUCH)
 		else:
-			_set_from_x(mb.position.x)
-			_dragging = false
-		accept_event()
+			# a tap (the finger stayed put) jumps to the nearest detent; a drag ends where it is;
+			# a vertical gesture was the sheet's scroll and changes nothing
+			if _state == Gesture.PENDING or _state == Gesture.DRAG:
+				_set_from_x(mb.position.x)
+			_state = Gesture.NONE
+		# the press and the release travel on to the scroll list (it must see both to scroll)
 	elif event is InputEventMouseMotion and (event as InputEventMouseMotion).button_mask & MOUSE_BUTTON_MASK_LEFT:
 		var mm := event as InputEventMouseMotion
-		if not _dragging and absf(mm.position.x - _press_x) >= float(ProjectSettings.get_setting(
-				"gui/common/drag_threshold", 24)):
-			_dragging = true
-		if _dragging:
+		if _state == Gesture.PENDING:
+			var d := (mm.global_position - _press_at).abs()
+			if d.y > TapGuard.slop_px() and d.y >= d.x:
+				_state = Gesture.SCROLL
+			elif d.x >= float(ProjectSettings.get_setting("gui/common/drag_threshold", 24)) and d.x > d.y:
+				_state = Gesture.DRAG
+			elif maxf(d.x, d.y) > TapGuard.slop_px():
+				_state = Gesture.SCROLL
+		if _state == Gesture.DRAG:
 			_set_from_x(mm.position.x)
-		accept_event()
+			accept_event()  # a horizontal drag is the slider's alone
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_SCROLL_BEGIN and _state == Gesture.PENDING:
+		_state = Gesture.SCROLL  # the list started scrolling: this gesture is not for the slider
 
 
 func _track_rect() -> Rect2:

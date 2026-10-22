@@ -6,9 +6,10 @@ extends RefCounted
 ## language and custom names are always current.
 ##
 ## Line = {"key": StringName, "species": StringName (or &"")}.
-## Priority (GDD §13.5.3): new friend -> away-scene teaser -> cousin -> postcard -> hearts ->
-## clue -> visitors (the GDD's "{name} napped at the {spot}" line needs the creature brain's bout
-## history and replaces this slot once that exists) -> nest -> gifts waiting -> new flowers opened
+## Priority (GDD §13.5.3, §14.11 a5): new friend -> away-scene teaser -> cousin -> postcard ->
+## hearts -> a wish granted on arrival (Active F1 RECAP_WISH) -> clue -> visitors (the GDD's
+## "{name} napped at the {spot}" line needs the creature brain's bout history and replaces this
+## slot once that exists) -> nest -> gifts waiting -> new flowers opened
 ## -> photos -> it rained. The teaser names nobody and always gets a line when a scene is staged.
 
 # Data boundary: values read from JSON / Dictionaries are Variants and each one is converted
@@ -38,6 +39,7 @@ static func build(sim: WorldSim, events: Array[Dictionary], from_t: float, to_t:
 	var heart_n := 0
 	var clue := false
 	var nest := &""
+	var wish := &""
 	for ev: Dictionary in events:
 		match ev["type"]:
 			WorldSim.EV_MET:
@@ -68,7 +70,10 @@ static func build(sim: WorldSim, events: Array[Dictionary], from_t: float, to_t:
 			WorldSim.EV_NEST_STAGE:
 				if nest == &"":
 					nest = StringName(ev["species"])
-	# GDD §13.5.3 priority: new friend, scene teaser, cousin, postcard, hearts, clue, visitors,
+			WorldSim.EV_WISH_GRANTED:
+				if wish == &"" and bool(ev.get("on_arrival", false)):
+					wish = StringName(ev["species"])  # a decor_near piece set while it was away
+	# GDD §13.5.3 priority: new friend, scene teaser, cousin, postcard, hearts, wish, clue, visitors,
 	# nest, gifts, flowers, photos, rain.
 	var cands: Array[Dictionary] = []
 	for sp: StringName in met:
@@ -84,6 +89,8 @@ static func build(sim: WorldSim, events: Array[Dictionary], from_t: float, to_t:
 		cands.append({"key": &"RECAP_POSTCARD", "species": &""})
 	if heart_sp != &"":
 		cands.append({"key": &"RECAP_HEARTS", "species": heart_sp})
+	if wish != &"":
+		cands.append({"key": &"RECAP_WISH", "species": wish})
 	if clue:
 		cands.append({"key": &"RECAP_CLUE", "species": &""})
 	if visitors.size() == 1:

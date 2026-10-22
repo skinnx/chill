@@ -51,7 +51,8 @@ static func wrap(content: Control, min_size: Vector2, radius: float) -> LiveWell
 ## Product sweep (round 5, studio owner: the friends are premium plush toys): the well becomes a
 ## toy-shop product backdrop, a warm paper cyclorama tinted toward the friend's accent colour
 ## (palettes.json creatures.species_resolved.<id>.accent) with a stitched felt moss cushion.
-func set_product(sp: StringName) -> void:
+## [param veil] 0..1 fades the tint toward the paper (a friend not met yet).
+func set_product(sp: StringName, veil: float = 0.0) -> void:
 	var mat := material as ShaderMaterial
 	var cr: Dictionary = ContentRegistry.palettes().get("creatures", {})
 	var tokens: Dictionary = cr.get("tokens", {})
@@ -59,7 +60,7 @@ func set_product(sp: StringName) -> void:
 	mat.set_shader_parameter(&"u_product", 1.0)
 	mat.set_shader_parameter(&"u_pr_paper", UiTokens.color(&"surface_hi"))
 	var accent := String(res.get("accent", tokens.get(PRODUCT_TINT_FALLBACK, "#EE9FA6")))
-	mat.set_shader_parameter(&"u_pr_tint", Color.html(accent))
+	mat.set_shader_parameter(&"u_pr_tint", Color.html(accent).lerp(UiTokens.color(&"surface_hi"), clampf(veil, 0.0, 1.0)))
 	mat.set_shader_parameter(&"u_pr_felt", Color.html(String(tokens.get(PRODUCT_FELT, "#A7CB93"))))
 	var st: Dictionary = (ContentRegistry.content.creature_rig.get("view", {}) as Dictionary).get("studio", {})
 	var kd: Array = st.get("key_dir", [])

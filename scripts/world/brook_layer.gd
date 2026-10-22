@@ -2,9 +2,10 @@ class_name BrookLayer
 extends Node2D
 ## The brook (Art Bible §2.4, §4.7, §6.8): a triangle strip along the Catmull-Rom of the
 ## spots.json stream polyline (one segment per 12 px of arc, 69 px of water + 10 px damp banks),
-## shaded by shaders/world/water.gdshader. Owns the stream tap (GDD §3.1): touch-down inside the
-## tap band -> eased ripple ring to 36 dp in 380 ms + bubbles, cues S01 (world) and S06, and the
-## [signal tapped] signal so nearby awake mosslings can glance. Stones (décor) register riffles.
+## shaded by shaders/world/water.gdshader. Owns the stream tap (GDD §3.1, through WorldPan):
+## touch-down inside the tap band -> touch ring + S01 (world); the tap (release) -> eased ripple
+## ring to 36 dp in 380 ms + bubbles, S06, and the [signal tapped] signal so nearby awake
+## mosslings can glance. Stones (décor) register riffles.
 ##
 ## Other roles: find the brook with BrookLayer.current (null when no main scene is loaded).
 ##   BrookLayer.current.add_ripple(design_pos, 1.0)       # leaf boat wake, a creature pawing water
@@ -93,6 +94,7 @@ static func centre_fit(content: GameContent) -> Vector2:
 
 func _ready() -> void:
 	current = self
+	add_to_group(WorldPan.GROUP_HIT)
 	var content := ContentRegistry.content
 	var pts := polyline_px(content)
 	var last := pts[pts.size() - 1]
@@ -155,18 +157,34 @@ func _build(ring_px: float) -> void:
 	add_child(mi)
 
 
+## Map pan (ARCHITECTURE §3.4): the water continues straight past its right end (x 1.04 of the
+## frame) to the geometry's x_max, so a pan to the right never shows where it stops. Mesh only: the
+## centre line (taps, boats, ripples) and the arc length of the original points are unchanged.
+func _right_bleed() -> PackedVector2Array:
+	var out := PackedVector2Array()
+	var dir := (centre[0] - centre[1]).normalized()
+	if dir.x <= 0.01:
+		return out
+	var n := ceili((TerrainMath.X_MAX + BANK_PX + half_width - centre[0].x) / (dir.x * SEGMENT_PX))
+	for j in range(n, 0, -1):
+		out.append(centre[0] + dir * SEGMENT_PX * float(j))
+	return out
+
+
 func _strip_mesh() -> ArrayMesh:
 	var verts := PackedVector2Array()
 	var uvs := PackedVector2Array()
 	var idx := PackedInt32Array()
 	var bank_v := BANK_PX / (half_width * 2.0)
-	var arc := 0.0
-	var n := centre.size()
+	var line := _right_bleed()
+	var arc := -SEGMENT_PX * float(line.size())
+	line.append_array(centre)
+	var n := line.size()
 	for i in n:
 		if i > 0:
-			arc += centre[i].distance_to(centre[i - 1])
-		var a := centre[maxi(i - 1, 0)]
-		var b := centre[mini(i + 1, n - 1)]
+			arc += line[i].distance_to(line[i - 1])
+		var a := line[maxi(i - 1, 0)]
+		var b := line[mini(i + 1, n - 1)]
 		var t := (b - a).normalized()
 		var nrm := Vector2(-t.y, t.x)
 		if nrm.y < 0.0:
@@ -175,9 +193,9 @@ func _strip_mesh() -> ArrayMesh:
 		var wk := 1.0 + WIDTH_VAR * TerrainMath.fbm1(arc / WIDTH_PERIOD_PX, 1.0, 3, 0.5, WIDTH_SEED)
 		var far_r := half_width * wk + BANK_PX
 		var near_r := half_width * (2.0 - wk) * 0.35 + half_width * wk * 0.65 + BANK_PX
-		verts.append(centre[i] - nrm * far_r)
+		verts.append(line[i] - nrm * far_r)
 		uvs.append(Vector2(arc, -bank_v))
-		verts.append(centre[i] + nrm * near_r)
+		verts.append(line[i] + nrm * near_r)
 		uvs.append(Vector2(arc, 1.0 + bank_v))
 	for i in n - 1:
 		var k := i * 2
@@ -243,32 +261,53 @@ func _push_stones() -> void:
 	_mat.set_shader_parameter(&"u_stone_count", n)
 
 
-func _unhandled_input(event: InputEvent) -> void:
-	var pressed := false
-	if event is InputEventScreenTouch:
-		pressed = (event as InputEventScreenTouch).pressed
-	elif event is InputEventMouseButton:
-		var mb := event as InputEventMouseButton
-		# Touches also arrive as emulated mouse events (device -1): handle each press once.
-		pressed = mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT and mb.device != InputEvent.DEVICE_ID_EMULATION
-	if not pressed:
-		return
-	var local := make_input_local(event) as InputEventFromWindow
-	if local == null:
-		return
-	var pos: Vector2 = local.get("position")
+## WorldPan (the world input arbiter, ARCHITECTURE §3.5): the water (the tap band, or the water
+## +- HIT_SLACK_PX, + slop) is the lowest-priority world target. Touch-down: the touch ring and S01
+## in the same frame; the ripple, S06 and [signal tapped] on release (a pan never ripples).
+func world_hit(canvas_pos: Vector2, slop: float) -> Dictionary:
+	var pos := get_global_transform_with_canvas().affine_inverse() * canvas_pos
 	var cy := centre_y_at(pos.x)
+	var dy := absf(pos.y - cy)
 	var in_band := pos.y >= _band.x and pos.y <= _band.y
-	if not (in_band or absf(pos.y - cy) <= half_width + HIT_SLACK_PX):
-		return
-	var hit := Vector2(pos.x, clampf(pos.y, cy - half_width * RIPPLE_CLAMP, cy + half_width * RIPPLE_CLAMP))
-	add_ripple(hit, 1.0)
+	var inside := in_band or dy <= half_width + HIT_SLACK_PX
+	if not inside and dy > half_width + HIT_SLACK_PX + slop:
+		return {}
+	# the water itself is the core; the rest of the tap band is a generous ring (WorldPan.tier)
+	return {"prio": WorldPan.PRIO_STREAM, "inside": inside, "core": dy <= half_width, "d": dy, "key": &"stream"}
+
+
+func world_press(_key: Variant, canvas_pos: Vector2) -> void:
+	var hit := _on_water(get_global_transform_with_canvas().affine_inverse() * canvas_pos)
 	TouchRing.spawn(self, hit, RING_SQUASH)
-	var canvas_pos := get_global_transform_with_canvas() * hit
-	AudioDirector.play_cue(CUE_TOUCH, {"world": true, "position": canvas_pos})
-	AudioDirector.play_cue(CUE_STREAM, {"position": canvas_pos})
+	AudioDirector.play_cue(CUE_TOUCH, {"world": true, "position": get_global_transform() * hit})
+
+
+func world_release(_key: Variant, canvas_pos: Vector2, act: bool) -> void:
+	if not act:
+		return
+	var hit := _on_water(get_global_transform_with_canvas().affine_inverse() * canvas_pos)
+	add_ripple(hit, 1.0)
+	var canvas_pos2 := get_global_transform() * hit  # canvas px; captions apply the camera
+	AudioDirector.play_cue(CUE_STREAM, {"position": canvas_pos2})
 	tapped.emit(hit)
-	get_viewport().set_input_as_handled()
+
+
+## Debug overlay (--debug-hits): the tap band and the water strip, in canvas px.
+func world_hit_shapes() -> Array:
+	var xf := get_global_transform_with_canvas()
+	var pts := PackedVector2Array()
+	for p: Vector2 in centre:
+		pts.append(xf * p)
+	var r := Rect2(xf * Vector2(TerrainMath.X_MIN, _band.x),
+			Vector2(TerrainMath.X_MAX - TerrainMath.X_MIN, _band.y - _band.x))
+	return [{"kind": "band", "rect": r, "line": pts, "half": (half_width + HIT_SLACK_PX) * xf.get_scale().y,
+		"prio": WorldPan.PRIO_STREAM, "name": "stream"}]
+
+
+## The touch point clamped onto the water (ripples land on the water).
+func _on_water(pos: Vector2) -> Vector2:
+	var cy := centre_y_at(pos.x)
+	return Vector2(pos.x, clampf(pos.y, cy - half_width * RIPPLE_CLAMP, cy + half_width * RIPPLE_CLAMP))
 
 
 func _on_exit() -> void:

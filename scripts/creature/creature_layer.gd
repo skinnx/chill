@@ -1,3 +1,4 @@
+class_name CreatureLayer
 extends Node2D
 ## CreatureLayer (scenes/creatures/creature_layer.tscn at World/Ground/Play/Creatures): the view
 ## of the visitors in Game.sim (docs/ARCHITECTURE.md §5.4, GDD §4.1.3, Art Bible §5.7).
@@ -6,12 +7,17 @@ extends Node2D
 ##    place when the world loads with it already here), and walks it out on departure.
 ##  * Plans behaviour bouts with the pure CreatureBrain (seeded per visit) and commands each
 ##    mossling: walk (hop / waddle) to the bout's spot, then nap / nibble / play / wander / sit.
-##  * Touch: hit-tests mosslings first (hit priority, GDD §2.5), squash on touch-down, chirp (S13)
+##  * Touch (through WorldPan, the one world input arbiter: mosslings top the GDD §2.5 priority and
+##    claim the drag): squash on touch-down, chirp (S13)
 ##    or snore (S14), name tag on tap, a second tap within 2 s emits [signal card_requested];
 ##    long-press 450 ms or a 24 px stroke pets (purr S03 while held, Game.pet on release).
 ##  * Creatures with their feet above the meadow crest draw from BehindCrest (added under
 ##    World/Ground before Meadow at runtime), so they rise into view over the hill.
 ##  * Reports nappers to Game for the audio snores (Game.report_sleepers).
+##  * Active F1 Wishes: its WishView child shows the wish bubbles, the wish caption on a tap and the
+##    delight on a grant (scripts/creature/wish_view.gd, which also documents --qa-wish). While a
+##    friend holds a play_taps wish every tap counts toward it, so the second-tap card shortcut
+##    waits until the game of tag is over (the card stays one Album tap away).
 ##
 ## QA user args: --qa-creatures=<n> (a fixture of n mosslings in varied behaviours at their
 ## favourite spots), --qa-pet=<species> (that mossling is petted during the capture, hearts at
@@ -75,8 +81,15 @@ const BOAT_WATCH_PX := 300.0
 const BANK_OFFSET_PX := 46.0
 const CREST_MARGIN_PX := 4.0
 const MS := 0.001
+## play_taps hop aside: the friend stays this long off its bout spot before the brain walks it back.
+const HOP_ASIDE_HOLD_S := 4.0
+
+## The live layer (null when no main scene is loaded): the Album's "Say hello" reaches the hollow.
+static var current: CreatureLayer = null
 
 var rig: MosslingRig
+## Active F1: the wish bubbles and delights (child node).
+var wishes: WishView
 var brain: CreatureBrain
 
 var _content: GameContent
@@ -111,7 +124,13 @@ var _feed := PaletteFeed.new()
 
 
 func _ready() -> void:
+	add_to_group(WorldPan.GROUP_HIT)
+	current = self
 	_content = ContentRegistry.content
+	wishes = WishView.new()
+	wishes.name = "WishView"
+	wishes.layer = self
+	add_child(wishes)
 	rig = MosslingRig.new(_content)
 	_fur = rig.make_fur_material()
 	MosslingRig.bind_palette(_fur, _feed)
@@ -163,6 +182,8 @@ func _on_globals(_values: Dictionary) -> void:
 
 
 func _exit_tree() -> void:
+	if current == self:
+		current = null
 	if _touch != null:
 		AudioDirector.stop_purr()
 
@@ -193,6 +214,7 @@ func _on_world_ready(_recap: Array) -> void:
 			_send_away(sp)
 	if _qa_count > 0 and _qa_t == 0.0:
 		_spawn_fixture()
+	wishes.sync()
 
 
 func _on_suspended() -> void:
@@ -452,6 +474,10 @@ func _watch_boat() -> void:
 
 
 ## The upper bank above the brook at x (stream polyline from spots.json).
+func bank_point(x: float) -> Vector2:
+	return _bank_point(x)
+
+
 func _bank_point(x: float) -> Vector2:
 	var poly: Array = (_content.spots_doc.get("stream", {}) as Dictionary).get("polyline", [])
 	var best := Vector2(x, _frame.y * 0.75)
@@ -464,6 +490,49 @@ func _bank_point(x: float) -> Vector2:
 			var u := (x - ax) / (bx - ax) if absf(bx - ax) > 1e-3 else 0.0
 			best = Vector2(x, lerpf(float(a[1]), float(b[1]), u) * _frame.y - BANK_OFFSET_PX)
 	return best
+
+
+# ================================================================= Active F1 wish helpers
+
+## The visitor mossling of [param sp] (null when it is not in the hollow).
+func mossling(sp: StringName) -> Mossling:
+	var m: Mossling = _mosslings.get(sp)
+	return m if m != null and is_instance_valid(m) else null
+
+
+func visitors() -> Array[Mossling]:
+	var out: Array[Mossling] = []
+	for sp: StringName in _mosslings:
+		out.append(_mosslings[sp])
+	return out
+
+
+## The design frame (spots.json frame, px).
+func frame_size() -> Vector2:
+	return _frame
+
+
+## A walk for a wish (to the bed, the piece, the bank): the brain waits [param hold_s] before it
+## plans this friend again, then [param then] runs at the destination.
+func walk_for_wish(m: Mossling, to: Vector2, hold_s: float, then: Callable) -> void:
+	var sp := m.species_id
+	_override_until[sp] = _now() + hold_s
+	_commanded.erase(sp)
+	m.set_sort_bias(0.0)
+	m.walk(_path(m.feet(), to, m.seed01), then)
+
+
+## play_taps (ACTIVE_WISHES §5): a small hop [param px] aside to a free point of the tend zone,
+## then a look back at the player.
+func hop_aside(m: Mossling, px: float) -> void:
+	var zone: Dictionary = rig.behaviour().get("tend_zone_px", {})
+	var zx: Array = zone.get("x", [110, 970])
+	var dir := -1.0 if m.feet().x > _frame.x * 0.5 else 1.0
+	if fposmod(m.seed01 * 13.0 + float(_now()), 1.0) < 0.3:
+		dir = -dir
+	var to := m.feet() + Vector2(dir * px, -px * 0.15)
+	to.x = clampf(to.x, float(zx[0]), float(zx[1]))
+	walk_for_wish(m, to, HOP_ASIDE_HOLD_S, m.look_at_camera)
 
 
 # ================================================================= depth: behind the crest
@@ -549,38 +618,64 @@ func _report_sleepers() -> void:
 
 # ================================================================= touch
 
-func _unhandled_input(event: InputEvent) -> void:
-	var mb := event as InputEventMouseButton
-	if mb != null and mb.button_index == MOUSE_BUTTON_LEFT:
-		var p := _local(mb.position)
-		if mb.pressed:
-			var m := _hit(p)
-			if m != null:
-				_touch = m
-				m.touch_down(p)
-				get_viewport().set_input_as_handled()
-		elif _touch != null:
-			_touch.touch_up(p)
-			_touch = null
-			get_viewport().set_input_as_handled()
+## WorldPan (the world input arbiter, ARCHITECTURE §3.5): the mossling nearest the point whose hit circle
+## (+ the fat-finger slop) holds the point. A mossling claims the drag: a stroke on it pets it and
+## never pans the map.
+func world_hit(canvas_pos: Vector2, slop: float) -> Dictionary:
+	var p := _local(canvas_pos)
+	var best := {}
+	for m: Mossling in _all():
+		var c := m.hit_circle()
+		if c.z <= 0.0:
+			continue
+		# inside beats slop; then the nearer body centre (two friends side by side split the overlap)
+		var cand := WorldPan.circle_hit(p, Vector2(c.x, c.y), c.z, slop, WorldPan.PRIO_MOSSLING, m)
+		if not cand.is_empty() and (best.is_empty() or WorldPan.better(cand, best)):
+			best = cand
+	if not best.is_empty():
+		best["drag"] = true
+	return best
+
+
+func world_press(key: Variant, canvas_pos: Vector2) -> void:
+	var m := key as Mossling
+	if m == null or not is_instance_valid(m):
 		return
-	var mm := event as InputEventMouseMotion
-	if mm != null and _touch != null:
-		_touch.touch_move(_local(mm.position))
-		get_viewport().set_input_as_handled()
+	_touch = m
+	m.touch_down(_local(canvas_pos))
+
+
+func world_drag(key: Variant, canvas_pos: Vector2) -> void:
+	var m := key as Mossling
+	if m != null and is_instance_valid(m) and m == _touch:
+		m.touch_move(_local(canvas_pos))
+
+
+func world_release(key: Variant, canvas_pos: Vector2, act: bool) -> void:
+	var m := key as Mossling
+	_touch = null
+	if m == null or not is_instance_valid(m):
+		return
+	if act:
+		m.touch_up(_local(canvas_pos))
+	else:
+		m.cancel_touch()
+
+
+## Debug overlay (--debug-hits): every touchable mossling's hit circle, in canvas px.
+func world_hit_shapes() -> Array:
+	var out: Array = []
+	var xf := get_global_transform_with_canvas()
+	for m: Mossling in _all():
+		var c := m.hit_circle()
+		if c.z > 0.0:
+			out.append({"kind": "circle", "c": xf * Vector2(c.x, c.y), "r": c.z * xf.get_scale().x,
+				"prio": WorldPan.PRIO_MOSSLING, "name": String(m.species_id)})
+	return out
 
 
 func _local(screen: Vector2) -> Vector2:
 	return get_global_transform_with_canvas().affine_inverse() * screen
-
-
-## Front-most mossling under the point (largest feet y draws on top).
-func _hit(p: Vector2) -> Mossling:
-	var best: Mossling = null
-	for m: Mossling in _all():
-		if m.hit_test(p) and (best == null or m.feet().y > best.feet().y):
-			best = m
-	return best
 
 
 func _on_touched(m: Mossling) -> void:
@@ -597,11 +692,13 @@ func _on_tapped(m: Mossling) -> void:
 	var now := Clock.ticks_s()
 	var last := float(_last_tap.get(m.species_id, -INF))
 	_last_tap[m.species_id] = now
-	if now - last <= window_s:
+	var tag_game := Game.is_ready and StringName(Game.wish_of(m.species_id).get("kind", "")) == &"play_taps"
+	if now - last <= window_s and not tag_game:
 		card_requested.emit(m.species_id)
 		_last_tap.erase(m.species_id)
 		return
-	m.show_name(Game.display_name(m.species_id) if Game.is_ready else String(m.species_id))
+	if not wishes.on_tapped(m):
+		m.show_name(Game.display_name(m.species_id) if Game.is_ready else String(m.species_id))
 
 
 func _on_petted(m: Mossling) -> void:

@@ -442,3 +442,292 @@ VARIANT_AMBER_GLOWMOTE_RIDDLE,"Someone amber glows by the lanterns, late, late a
 VARIANT_STARLIT_MOONPUFF_NAME,Starlit Moonpuff,Bông Trăng Ánh Sao
 VARIANT_STARLIT_MOONPUFF_DESC,"{name}'s cousin, sprinkled with starlight. Rides down on the clearest nights and naps until dawn.","Họ hàng của {name}, lấm tấm ánh sao. Cưỡi ánh sao xuống vào những đêm trời trong nhất rồi ngủ tới sáng."
 VARIANT_STARLIT_MOONPUFF_RIDDLE,Someone sparkly is waiting for a night without a single cloud.,Có một bạn lấp lánh đang chờ một đêm không gợn mây.
+WISH_CUDDLE_TITLE,A cuddle,Một cái ôm
+WISH_CUDDLE_HINT,Press and hold {name} for a gentle pet.,Chạm và giữ lên {name} để vuốt ve nhé.
+WISH_TAG_GAME_TITLE,A game of tag,Một trò đuổi bắt
+WISH_TAG_GAME_HINT,Tap {name} three times as it hops about.,Chạm vào {name} ba lần khi bạn ấy nhảy tung tăng.
+WISH_SING_ALONG_TITLE,Humming with the wind chime,Ngân nga theo chuông gió
+WISH_SING_ALONG_HINT,Tap the wind chime on the willow branch.,Chạm vào chuông gió trên cành liễu nhé.
+WISH_NAP_DAISIES_TITLE,A nap beside the daisies,Giấc ngủ bên khóm cúc dại
+WISH_NAP_DAISIES_HINT,Tap a bed with Button Daisies in bloom.,Chạm vào một luống có cúc dại đang nở.
+WISH_CLOVER_NIBBLE_TITLE,A nibble of sweet clover,Nhấm nháp cỏ ba lá
+WISH_CLOVER_NIBBLE_HINT,Tap a bed with Sweet Clover in bloom.,Chạm vào một luống có cỏ ba lá đang nở.
+WISH_LISTEN_BLUEBELLS_TITLE,Listening to the bluebells,Lắng nghe hoa chuông xanh
+WISH_LISTEN_BLUEBELLS_HINT,Tap a bed with Bluebells in bloom.,Chạm vào một luống có chuông xanh đang nở.
+WISH_FORGET_ME_NOT_NOOK_TITLE,A quiet nook among forget-me-nots,Một góc yên tĩnh giữa khóm lưu ly
+WISH_FORGET_ME_NOT_NOOK_HINT,Tap a bed with Forget-me-nots in bloom.,Chạm vào một luống có lưu ly đang nở.
+WISH_TIDY_PRIMROSES_TITLE,Tidying the primroses,Sửa sang khóm anh thảo
+WISH_TIDY_PRIMROSES_HINT,Tap a bed with Primroses in bloom.,Chạm vào một luống có anh thảo đang nở.
+WISH_BLOW_DANDELIONS_TITLE,Blowing dandelion seeds,Thổi hạt bồ công anh
+WISH_BLOW_DANDELIONS_HINT,Tap a bed with Dandelions in bloom.,Chạm vào một luống có bồ công anh đang nở.
+WISH_MOONBLOOM_GLOW_TITLE,Watching the moonbloom glow,Ngắm hoa quỳnh tỏa sáng
+WISH_MOONBLOOM_GLOW_HINT,Tap a bed with Moonbloom in flower.,Chạm vào một luống có hoa quỳnh.
+WISH_BUTTERCUP_SIP_TITLE,A sip of buttercup dew,Một ngụm sương mao lương
+WISH_BUTTERCUP_SIP_HINT,Tap a bed with Buttercups in bloom.,Chạm vào một luống có mao lương vàng đang nở.
+WISH_PINWHEEL_NEARBY_TITLE,A pinwheel nearby,Một chiếc chong chóng ở gần
+WISH_PINWHEEL_NEARBY_HINT,Move a Leaf Pinwheel close to the {spot}.,Đặt một chiếc chong chóng lá gần {spot} nhé.
+WISH_CAIRN_NEARBY_TITLE,A pebble cairn close by,Một tháp sỏi ở gần
+WISH_CAIRN_NEARBY_HINT,Move a Pebble Cairn close to the {spot}.,Đặt một tháp sỏi gần {spot} nhé.
+WISH_TOADSTOOL_NEARBY_TITLE,A toadstool to bounce on,Một chiếc ghế nấm để nhún nhảy
+WISH_TOADSTOOL_NEARBY_HINT,Move a Toadstool Seat close to the {spot}.,Đặt một chiếc ghế nấm gần {spot} nhé.
+WISH_LANTERN_NEARBY_TITLE,A lantern glowing nearby,Một chiếc đèn sáng gần bên
+WISH_LANTERN_NEARBY_HINT,Move a Firefly Lantern close to the {spot}.,Đặt một chiếc đèn đom đóm gần {spot} nhé.
+WISH_STONES_NEARBY_TITLE,Stepping stones close by,Mấy hòn đá suối ở gần
+WISH_STONES_NEARBY_HINT,Move some Stream Stones near the {spot}.,Đặt vài hòn đá suối gần {spot} nhé.
+WISH_WATCH_FIREFLIES_TITLE,Watching the fireflies,Ngắm đom đóm
+WISH_WATCH_FIREFLIES_HINT,Tap a firefly lantern.,Chạm vào một chiếc đèn đom đóm.
+WISH_PINWHEEL_SPIN_TITLE,A pinwheel twirl,Ngắm chong chóng quay
+WISH_PINWHEEL_SPIN_HINT,Tap a leaf pinwheel.,Chạm vào một chiếc chong chóng lá.
+WISH_BOAT_RIDE_TITLE,A boat ride,Một chuyến đi thuyền lá
+WISH_BOAT_RIDE_HINT,Float a leaf boat from the Garden sheet.,Thả một chiếc thuyền lá từ mục Khu vườn nhé.
+WISH_CANDLE_BOAT_TITLE,A candle boat drifting by,Ngắm thuyền nến trôi
+WISH_CANDLE_BOAT_HINT,Float a leaf boat. It carries a candle in the evening.,Thả một chiếc thuyền lá. Chiều tối thuyền sẽ mang theo một ngọn nến.
+WISH_RAIN_SPLASH_TITLE,Splashing in the rain,Lội nước dưới mưa
+WISH_RAIN_SPLASH_HINT,Tap the stream.,Chạm vào dòng suối.
+WISH_BROOK_SONG_TITLE,The brook's bubbly song,Tiếng suối reo
+WISH_BROOK_SONG_HINT,Tap the stream.,Chạm vào dòng suối.
+WISH_CLOVER_TEA_TITLE,A cup of clover tea,Một tách trà cỏ ba lá
+WISH_CLOVER_TEA_HINT,Brew a cup with clover petals and offer it to {name}.,Pha một tách trà có cánh cỏ ba lá rồi mời {name} nhé.
+WISH_DAISY_TEA_TITLE,A cup of daisy tea,Một tách trà cúc dại
+WISH_DAISY_TEA_HINT,Brew a cup with daisy petals and offer it to {name}.,Pha một tách trà có cánh cúc dại rồi mời {name} nhé.
+WISH_BUTTERCUP_TEA_TITLE,A honey-gold buttercup tea,Một tách trà mao lương vàng óng
+WISH_BUTTERCUP_TEA_HINT,Brew a cup with buttercup petals and offer it to {name}.,Pha một tách trà có cánh mao lương rồi mời {name} nhé.
+WISH_BLUEBELL_TEA_TITLE,A cup of bluebell tea,Một tách trà chuông xanh
+WISH_BLUEBELL_TEA_HINT,Brew a cup with bluebell petals and offer it to {name}.,Pha một tách trà có cánh chuông xanh rồi mời {name} nhé.
+WISH_FORGET_ME_NOT_TEA_TITLE,A cup of forget-me-not tea,Một tách trà lưu ly
+WISH_FORGET_ME_NOT_TEA_HINT,Brew a cup with forget-me-not petals and offer it to {name}.,Pha một tách trà có cánh lưu ly rồi mời {name} nhé.
+WISH_MOONLIGHT_TEA_TITLE,A cup of moonlight tea,Một tách trà ánh trăng
+WISH_MOONLIGHT_TEA_HINT,Brew Moonlight Tea from the recipe book and offer it to {name}.,Pha trà ánh trăng theo sổ công thức rồi mời {name} nhé.
+WISH_FAVOURITE_CUP_TITLE,A cup of its favourite tea,Một tách trà yêu thích
+WISH_FAVOURITE_CUP_HINT,Offer {name} a cup it likes. Its Album page shows a hint.,Mời {name} một tách trà bạn ấy thích. Trang Album của bạn ấy có gợi ý.
+WISH_SHARE_TEA_TITLE,Sharing tea with {friend},Uống trà cùng {friend}
+WISH_SHARE_TEA_HINT,Offer {name} any cup while {friend} is in the hollow.,Mời {name} một tách trà bất kỳ khi {friend} cũng đang ở thung lũng.
+WISH_SWEET_TREAT_TITLE,A little treat,Một chút đồ ngọt
+WISH_SWEET_TREAT_HINT,Offer {name} any treat from the teapot.,Mời {name} một món ngọt bất kỳ từ ấm trà nhé.
+WISH_LIST_BUTTON,Wishes,Điều ước
+WISH_LIST_TITLE,Little wishes,Những điều ước nhỏ
+WISH_LIST_EMPTY,No wishes right now. Everyone is content.,Lúc này chưa ai ước gì. Ai cũng đang vui vẻ.
+WISH_LIST_HERE,In the hollow,Đang ở thung lũng
+WISH_LIST_AWAY,Wandering elsewhere for now,Đang dạo chơi nơi khác
+WISH_LIST_VISIT,Say hello,Ghé chào
+ALBUM_WISHING,Wishing for,Đang ước
+ALBUM_WISH_STAMPS,Wishes granted together,Những điều ước đã thành
+ALBUM_WISH_STAMPS_EMPTY,"Now and then, friends have a little wish.",Thỉnh thoảng các bạn sẽ có một điều ước nhỏ.
+WISH_GRANTED_TITLE,Wish granted,Điều ước thành rồi
+WISH_GRANTED_BODY,{name} is delighted.,{name} vui ơi là vui.
+WISH_GRANTED_ARRIVAL,{name} found your surprise near the {spot}.,{name} thấy bất ngờ bạn để gần {spot}.
+WISH_GIFT_PETAL,{name} brought you a {flower} petal for the teapot.,{name} mang tặng bạn một cánh {flower} để pha trà.
+WISH_TIP_FIRST,"A thought bubble is a little wish. Help if you like, or let it float.","Bong bóng suy nghĩ là một điều ước nhỏ. Bạn giúp cũng được, để đó cũng chẳng sao."
+WISH_TIP_HELD,{name} keeps the wish for another visit.,{name} sẽ giữ điều ước này cho lần ghé sau.
+WISH_INVITE,{name} toddles over.,{name} lon ton chạy tới.
+RECAP_WISH,{name} found a lovely surprise.,{name} tìm thấy một bất ngờ dễ thương.
+CAPTION_WISH,soft bubble pop,tiếng bong bóng khẽ nổ
+CAPTION_WISH_GRANTED,happy trill,tiếng reo vui
+A11Y_WISH_BUBBLE,{name} has a little wish: {wish},{name} có một điều ước nhỏ: {wish}
+A11Y_WISH_LIST_ROW,{name}: {wish}. {hint},{name}: {wish}. {hint}
+WISH_NAME_TAG,{name} · {wish},{name} · {wish}
+ALBUM_TEA,Tea,Trà
+ALBUM_TEA_LOVES,Loves {recipes},Mê {recipes}
+ALBUM_TEA_LIKES,Likes {recipes},Thích {recipes}
+ALBUM_TEA_UNKNOWN,Offer {name} a cup to learn what it likes.,Mời {name} một tách để biết bạn ấy thích gì nhé.
+TEA_NOOK_NAME,Tea nook,Góc trà
+TEA_NOOK_A11Y,Tea nook. Open to brew tea.,Góc trà. Mở ra để pha trà.
+TEA_SHEET_TITLE,Tea nook,Góc trà
+TEA_TAB_BREW,Brew,Pha trà
+TEA_TAB_RECIPES,Recipes,Công thức
+TEA_TAB_TEAWARE,Teaware,Ấm chén
+TEA_PANTRY_TITLE,Petal pantry,Hũ cánh hoa
+TEA_JAR_A11Y,{flower} petals: {count},Cánh {flower}: {count}
+TEA_JAR_EMPTY,Tap a bed in bloom to gather spare petals.,Chạm vào luống đang nở hoa để nhặt cánh hoa thừa nhé.
+TEA_JAR_FULL,The {flower} jar is full. More petals rest on the flowers until there is room.,"Hũ {flower} đã đầy. Cánh hoa còn lại cứ nằm trên hoa, chờ có chỗ nhé."
+TEA_DROP_NAME,Dew drop,Giọt sương
+TEA_DROP_A11Y,"Dew drop, {count} dew. It makes tea dewy, and two make a treat.","Giọt sương, {count} sương. Một giọt cho trà thêm mát, hai giọt thành món bánh."
+TEA_POT_EMPTY,The pot is warm and waiting for petals.,"Ấm đã ấm, đang chờ cánh hoa."
+TEA_STEP_ADD,Drag petals into the pot,Kéo cánh hoa vào ấm
+TEA_STEP_STIR,Stir gently in a circle,Khuấy nhẹ theo vòng tròn
+TEA_STEP_POUR,Tilt the pot to pour,Nghiêng ấm để rót
+TEA_STEP_POUR_TREAT,Tilt the pot into the leaf mould,Nghiêng ấm rót vào khuôn lá
+TEA_BTN_STIR,Stir,Khuấy
+TEA_BTN_POUR,Pour,Rót
+TEA_BTN_BREW,Brew,Pha
+TEA_TAKE_OUT_A11Y,{flower} petal in the pot. Tap to take it out.,Cánh {flower} trong ấm. Chạm để lấy ra.
+TEA_POT_ROOM,The pot holds three petals and two dew drops.,Ấm đựng được ba cánh hoa và hai giọt sương.
+TEA_MADE,{recipe},{recipe}
+TEA_NEW_RECIPE,A new recipe!,Công thức mới!
+TEA_TRAY_TITLE,Tea tray,Khay trà
+TEA_TRAY_EMPTY,"Cups you brew rest here, warm and ready.","Những tách trà bạn pha sẽ nằm đây, lúc nào cũng ấm."
+TEA_TRAY_FULL,"The tray is full of cups. Offer one to a friend, then brew more.",Khay đã đầy tách. Mời một bạn nhỏ một tách rồi pha tiếp nhé.
+TEA_OFFER_TITLE,Offer to a friend,Mời một bạn nhỏ
+TEA_OFFER_NOBODY,No one is visiting just now. The cup stays warm on the tray.,Lúc này chưa có ai ghé chơi. Tách trà vẫn ấm trên khay.
+TEA_OFFER_ASLEEP,{name} is napping. The cup will wait beside them.,{name} đang ngủ trưa. Tách trà sẽ đợi bên cạnh.
+TEA_OFFER_A11Y,Offer {recipe} to {name},Mời {name} món {recipe}
+TEA_REACT_CONTENT,{name} sips happily.,{name} nhấp từng ngụm vui vẻ.
+TEA_REACT_LIKED,{name} likes {recipe}.,{name} thích {recipe}.
+TEA_REACT_LOVED,{name} loves {recipe}!,{name} mê {recipe} lắm!
+TEA_REACT_PETALS,{name} tucks some {flower} petals into your pantry.,{name} nhét vài cánh {flower} vào hũ của bạn.
+TEA_REACT_AGAIN,{name} already had tea this visit and sips this one slowly.,"{name} đã uống trà lượt này rồi, giờ nhâm nhi thêm tách nữa."
+TEA_BOOK_COUNT,{count} of {total} recipes,{count} trên {total} công thức
+TEA_BOOK_SECRET,Still a secret,Vẫn còn bí mật
+TEA_BOOK_LOVED_BY,Loved by {names},{names} rất mê
+TEA_BOOK_LIKED_BY,Liked by {names},{names} thích
+TEA_BOOK_FILL,Fill the pot,Cho vào ấm
+TEA_BOOK_FILL_MORE,A few more petals,Cần thêm vài cánh hoa
+TEA_BOOK_TEA,Tea,Trà
+TEA_BOOK_TREAT,Treat,Bánh kẹo
+TEA_BOOK_TIP,Any mix makes something nice. A new mix may make a new recipe.,"Trộn kiểu nào cũng ra món ngon. Thử kiểu mới, biết đâu ra công thức mới."
+TEA_BED_PETALS,Spare petals: {count},Cánh hoa thừa: {count}
+TEA_BED_NEXT,Another petal in about {minutes} min,Thêm một cánh sau khoảng {minutes} phút
+TEA_BED_RESTING,Petals rest on the flowers until a jar has room.,"Cánh hoa nằm trên hoa, chờ hũ có chỗ."
+TEA_HARVEST_A11Y,Gathered {count} petals,Đã nhặt {count} cánh hoa
+TEA_GENTLE_NOTE,Gathering petals never harms a flower. Each bloom grows new spare petals.,Nhặt cánh hoa không làm hoa đau đâu. Mỗi bông lại mọc cánh mới.
+TEA_FIRST_HINT,The flowers share their spare petals. Tap a bed in bloom to gather some.,Hoa sẵn lòng chia cánh hoa thừa. Chạm vào luống đang nở để nhặt nhé.
+TEA_NOOK_AWAKE,Something is steaming on the stump.,Có gì đó đang bốc hơi trên gốc cây.
+TEA_SETTING_SIMPLE,Simple brewing,Pha trà đơn giản
+TEA_SETTING_SIMPLE_DESC,Brew with one tap instead of stirring and pouring.,"Chỉ chạm một lần để pha, không cần khuấy và rót."
+TEA_SLOT_TEAPOT,Teapot,Ấm trà
+TEA_SLOT_CUP,Cups,Chén
+TEA_SLOT_CLOTH,Cloth,Khăn trải
+TEA_TEAWARE_PLACE,Place,Đặt
+TEA_TEAWARE_USE,Use,Dùng
+TEA_TEAWARE_IN_USE,In use,Đang dùng
+TEAWARE_ACORN_TEAPOT,Acorn teapot,Ấm quả sồi
+TEAWARE_TOADSTOOL_TEAPOT,Toadstool teapot,Ấm nấm nhỏ
+TEAWARE_SHELL_TEAPOT,Snail-shell teapot,Ấm vỏ ốc
+TEAWARE_WILLOW_TEAPOT,Willow-weave teapot,Ấm đan liễu
+TEAWARE_MOON_KETTLE,Moon kettle,Ấm trăng
+TEAWARE_WALNUT_CUP,Walnut cups,Chén vỏ óc chó
+TEAWARE_DAISY_CUP,Daisy cups,Chén hoa cúc
+TEAWARE_BLUEBELL_CUP,Bluebell cups,Chén chuông xanh
+TEAWARE_LEAF_CUP,Curled-leaf cups,Chén lá cuộn
+TEAWARE_PEBBLE_CUP,Pebble cups,Chén đá cuội
+TEAWARE_MOON_CUP,Moon cups,Chén trăng
+TEAWARE_MOSS_MAT,Moss mat,Thảm rêu
+TEAWARE_GINGHAM_CLOTH,Gingham leaf cloth,Khăn lá kẻ ô
+TEAWARE_FERN_LACE_CLOTH,Fern lace cloth,Khăn ren dương xỉ
+TEAWARE_STAR_QUILT,Star quilt,Chăn sao
+CAPTION_PETALS,petals flutter,cánh hoa bay lả tả
+CAPTION_PLIP,a soft plip,tiếng tõm khẽ
+CAPTION_STIR,spoon swirls,thìa khuấy khe khẽ
+CAPTION_POUR,tea pours,tiếng rót trà
+CAPTION_CLINK,cups clink,chén cụng leng keng
+CAPTION_STEAM,gentle steam,hơi trà bay nhẹ
+CAPTION_RECIPE,a bright little chime,tiếng chuông nhỏ trong trẻo
+POSTCARD_EVENT_FIRST_TEA,Your very first cup of tea in the hollow. The whole meadow smells of petals now.,Tách trà đầu tiên ở thung lũng. Cả đồng cỏ giờ thơm mùi cánh hoa.
+POSTCARD_EVENT_TEA_BOOK,Every page of the recipe book has a little stain of tea on it now. That is how you know it is loved.,Trang nào trong sổ công thức giờ cũng có một vệt trà nhỏ. Thế là biết cuốn sổ được yêu lắm.
+TEA_R_CLOVER_TEA_NAME,Clover tea,Trà cỏ ba lá
+TEA_R_CLOVER_TEA_DESC,"Sweet and green, like the first morning in the hollow.","Ngọt và xanh, như buổi sáng đầu tiên ở thung lũng."
+TEA_R_CLOVER_TEA_HINT,Two petals of the very first flower.,Hai cánh của loài hoa đầu tiên.
+TEA_R_DAISY_TEA_NAME,Daisy tea,Trà cúc dại
+TEA_R_DAISY_TEA_DESC,"Soft and bright, with a little button of foam.","Dịu và sáng, có một nút bọt nhỏ xíu."
+TEA_R_DAISY_TEA_HINT,Two button-round petals.,Hai cánh hoa tròn như cúc áo.
+TEA_R_BUTTERCUP_TEA_NAME,Sunshine tea,Trà nắng mao lương
+TEA_R_BUTTERCUP_TEA_DESC,Golden as a warm afternoon.,Vàng óng như buổi chiều ấm.
+TEA_R_BUTTERCUP_TEA_HINT,Two petals that hold the sun.,Hai cánh hoa ôm nắng.
+TEA_R_BLUE_SKY_TEA_NAME,Blue-sky tea,Trà trời xanh
+TEA_R_BLUE_SKY_TEA_DESC,Pale blue and very calm.,Xanh nhạt và thật êm.
+TEA_R_BLUE_SKY_TEA_HINT,Two tiny sky-blue petals.,Hai cánh nhỏ màu da trời.
+TEA_R_BLUEBELL_TEA_NAME,Bluebell hum tea,Trà chuông xanh ngân nga
+TEA_R_BLUEBELL_TEA_DESC,It hums a little when you blow on it.,Thổi nhẹ là nghe nó ngân khe khẽ.
+TEA_R_BLUEBELL_TEA_HINT,Two petals that ring like bells.,Hai cánh hoa ngân như chuông.
+TEA_R_PRIMROSE_TEA_NAME,Primrose blush tea,Trà anh thảo má hồng
+TEA_R_PRIMROSE_TEA_DESC,"Pink, polite and gently sweet.","Hồng hồng, lễ phép và ngọt nhẹ."
+TEA_R_PRIMROSE_TEA_HINT,Two shy pink petals.,Hai cánh hồng e thẹn.
+TEA_R_BREEZY_TEA_NAME,Breezy tea,Trà gió nhẹ
+TEA_R_BREEZY_TEA_DESC,Light as a seed on the wind.,Nhẹ như hạt bay trong gió.
+TEA_R_BREEZY_TEA_HINT,Two petals that love the wind.,Hai cánh hoa mê gió.
+TEA_R_MOONLIGHT_TEA_NAME,Moonlight tea,Trà ánh trăng
+TEA_R_MOONLIGHT_TEA_DESC,"Silvery, and it glows a little in the cup.","Ánh bạc, và hơi sáng lên trong tách."
+TEA_R_MOONLIGHT_TEA_HINT,Two night petals and a dew drop.,Hai cánh hoa đêm và một giọt sương.
+TEA_R_MEADOW_BLEND_NAME,Meadow blend,Trà đồng cỏ
+TEA_R_MEADOW_BLEND_DESC,Three spring flowers in one cosy cup.,Ba loài hoa xuân trong một tách ấm.
+TEA_R_MEADOW_BLEND_HINT,"The first three flowers of the garden, one of each.","Ba loài hoa đầu tiên của vườn, mỗi loài một cánh."
+TEA_R_DEWY_CLOVER_TEA_NAME,Dewy clover tea,Trà cỏ ba lá đẫm sương
+TEA_R_DEWY_CLOVER_TEA_DESC,"Clover tea with a cool, fresh sparkle.","Trà cỏ ba lá mát lành, lấp lánh."
+TEA_R_DEWY_CLOVER_TEA_HINT,"Clover tea, with something from the morning.","Trà cỏ ba lá, thêm chút gì của buổi sớm."
+TEA_R_TWILIGHT_TEA_NAME,Twilight tea,Trà chạng vạng
+TEA_R_TWILIGHT_TEA_DESC,Blue at the top and violet at the bottom.,"Trên xanh, dưới tím."
+TEA_R_TWILIGHT_TEA_HINT,"Sky, bell and moon, one of each.","Trời, chuông và trăng, mỗi thứ một cánh."
+TEA_R_SLEEPY_TEA_NAME,Sleepy-time tea,Trà giấc êm
+TEA_R_SLEEPY_TEA_DESC,One sip and every ear goes soft.,Một ngụm là tai nào cũng mềm ra.
+TEA_R_SLEEPY_TEA_HINT,"A pink petal, a night petal and a dew drop.","Một cánh hồng, một cánh hoa đêm và một giọt sương."
+TEA_R_STARLIGHT_TEA_NAME,Starlight tea,Trà ánh sao
+TEA_R_STARLIGHT_TEA_DESC,Tiny seeds float in it like stars.,Hạt nhỏ trôi lơ lửng như sao.
+TEA_R_STARLIGHT_TEA_HINT,"A windy petal, a night petal and a dew drop.","Một cánh hoa gió, một cánh hoa đêm và một giọt sương."
+TEA_R_CLOVER_PUFF_CAKE_NAME,Clover puff cake,Bánh bông cỏ ba lá
+TEA_R_CLOVER_PUFF_CAKE_DESC,"Round, springy and green inside.","Tròn, xốp và xanh bên trong."
+TEA_R_CLOVER_PUFF_CAKE_HINT,Three clover petals and two dew drops.,Ba cánh cỏ ba lá và hai giọt sương.
+TEA_R_DAISY_BISCUIT_NAME,Daisy button biscuit,Bánh quy cúc áo
+TEA_R_DAISY_BISCUIT_DESC,"Crisp, with a daisy pressed on top.","Giòn tan, trên mặt in hình hoa cúc."
+TEA_R_DAISY_BISCUIT_HINT,Two daisy petals set with dew.,Hai cánh cúc dại kết bằng sương.
+TEA_R_BUTTERCUP_JELLY_NAME,Buttercup jelly,Thạch mao lương
+TEA_R_BUTTERCUP_JELLY_DESC,Wobbly and golden.,Vàng óng và rung rinh.
+TEA_R_BUTTERCUP_JELLY_HINT,Sunny petals that dew makes wobbly.,"Cánh hoa nắng, sương làm cho rung rinh."
+TEA_R_SKY_SUGAR_DROPS_NAME,Sky sugar drops,Kẹo trời xanh
+TEA_R_SKY_SUGAR_DROPS_DESC,Little blue sweets that clink in a pocket.,Viên kẹo xanh nhỏ kêu lách cách trong túi.
+TEA_R_SKY_SUGAR_DROPS_HINT,Two sky-blue petals and two dew drops.,Hai cánh màu da trời và hai giọt sương.
+TEA_R_BLUEBELL_CANDY_NAME,Bluebell candy bells,Kẹo chuông xanh
+TEA_R_BLUEBELL_CANDY_DESC,Each one is shaped like a tiny bell.,Viên nào cũng hình chiếc chuông nhỏ.
+TEA_R_BLUEBELL_CANDY_HINT,"Bell petals, set with dew.","Cánh hoa chuông, kết bằng sương."
+TEA_R_PRIMROSE_TART_NAME,Primrose tart,Bánh nướng anh thảo
+TEA_R_PRIMROSE_TART_DESC,Neat as a row of pebbles.,Gọn gàng như một hàng sỏi.
+TEA_R_PRIMROSE_TART_HINT,"Two pink petals, set with dew.","Hai cánh hồng, kết bằng sương."
+TEA_R_FLUFF_CAKE_NAME,Fluff cake,Bánh bông gió
+TEA_R_FLUFF_CAKE_DESC,So light it nearly floats off the plate.,Nhẹ đến mức suýt bay khỏi đĩa.
+TEA_R_FLUFF_CAKE_HINT,Three windy petals and two dew drops.,Ba cánh hoa gió và hai giọt sương.
+TEA_R_LITTLE_MOON_CAKE_NAME,Little moon cake,Bánh trăng nhỏ
+TEA_R_LITTLE_MOON_CAKE_DESC,"Round and pale, with a glow in the middle.","Tròn và trắng ngà, giữa có ánh sáng nhẹ."
+TEA_R_LITTLE_MOON_CAKE_HINT,"Two night petals, set with dew.","Hai cánh hoa đêm, kết bằng sương."
+TEA_R_RAINBOW_JELLY_NAME,Rainbow jelly,Thạch cầu vồng
+TEA_R_RAINBOW_JELLY_DESC,"Yellow, blue and pink in soft layers.","Vàng, xanh và hồng xếp từng lớp mềm."
+TEA_R_RAINBOW_JELLY_HINT,"A sunny, a sky-blue and a pink petal, set with dew.","Một cánh nắng, một cánh da trời, một cánh hồng, kết bằng sương."
+TEA_R_MEADOW_TEA_NAME,A cup of meadow tea,Một tách trà đồng nội
+TEA_R_MEADOW_TEA_DESC,Every mix makes this. Everyone enjoys it.,Trộn kiểu nào cũng ra. Ai cũng thích.
+TEA_R_MEADOW_TEA_HINT,Any petals at all.,Cánh hoa nào cũng được.
+TEA_R_PETAL_SWEET_NAME,Petal sweet,Kẹo cánh hoa
+TEA_R_PETAL_SWEET_DESC,A happy little sweet from any petals.,Viên kẹo nhỏ vui vẻ từ bất kỳ cánh hoa nào.
+TEA_R_PETAL_SWEET_HINT,Any petals with two dew drops.,"Cánh hoa nào cũng được, thêm hai giọt sương."
+DECOR_EDIT_TITLE,Arranging the garden,Sắp xếp khu vườn
+DECOR_EDIT_HINT,"Drag a piece to move it, or tap it and then tap a new spot.","Kéo một món để dời đi, hoặc chạm vào món đó rồi chạm vào chỗ mới nhé."
+DECOR_EDIT_SELECTED_HINT,Tap a spot on the ground to move the {decor} there.,Chạm vào một chỗ trên mặt đất để dời {decor} tới đó nhé.
+DECOR_EDIT_TRAY_HINT,Tap a spot on the ground to set the {decor} there.,Chạm vào một chỗ trên mặt đất để đặt {decor} ở đó nhé.
+DECOR_EDIT_DONE,Done,Xong
+DECOR_EDIT_UNDO,Undo,Hoàn tác
+DECOR_EDIT_TURN,Turn,Xoay
+DECOR_EDIT_PUT_AWAY,Put away,Cất đi
+DECOR_EDIT_LIFT_PEBBLE,Lift a pebble,Nhấc một viên
+DECOR_EDIT_FIND_SPOT,Find a spot,Tìm chỗ đặt
+DECOR_EDIT_DONE_TOAST,The garden looks lovely,Khu vườn trông thật xinh
+DECOR_TRAY_TITLE,Tucked away,Đồ đã cất
+DECOR_TRAY_EMPTY,Pieces you put away rest here.,Những món bạn cất đi sẽ nằm nghỉ ở đây.
+DECOR_TRAY_COUNT,×{count},×{count}
+DECOR_TRAY_DROP,Put it away here,Cất vào đây nhé
+DECOR_HINT_FLOWERS,Let's leave the flowers a little room,Chừa cho hoa một chút chỗ nhé
+DECOR_HINT_SPOT,A friend likes to rest here,Một bạn nhỏ thích nằm nghỉ ở đây
+DECOR_HINT_NEST,This is {name}'s nest,Đây là tổ của {name}
+DECOR_HINT_PROP,Something already sits here,Chỗ này đã có đồ rồi
+DECOR_HINT_WATER,Only stream stones like the water,Chỉ đá suối mới thích nằm dưới nước
+DECOR_HINT_DRY,Stream stones like to sit in the water,Đá suối thích nằm giữa dòng nước
+DECOR_HINT_EDGE,A little further in,Đặt vào trong thêm chút nữa nhé
+DECOR_HINT_SKY,Pieces like to sit on the ground,Đồ trang trí thích đứng trên mặt đất
+DECOR_HINT_LOW,A little higher up,Đặt lên cao thêm chút nữa nhé
+DECOR_HINT_CROWDED,A touch more room between pieces,Để các món cách nhau thêm chút nhé
+DECOR_HINT_STACK,The cairn is as tall as it gets,Tháp sỏi đã cao hết cỡ rồi
+DECOR_HINT_RETURNED,It went back to where it was,Món đồ đã về lại chỗ cũ
+DECOR_TIP_LONG_PRESS,Press and hold any décor piece to move it,Chạm và giữ một món trang trí để dời chỗ nhé
+GARDEN_ARRANGE,Arrange,Sắp xếp
+GARDEN_ARRANGE_ROW,Arrange your décor,Sắp xếp đồ trang trí
+GARDEN_ARRANGE_DESC,"Move, turn or tuck away any piece. Friends still love everything you own.","Dời, xoay hay cất bất kỳ món nào. Các bạn nhỏ vẫn thích mọi món bạn có."
+GARDEN_TUCKED_AWAY,{count} tucked away,Đã cất {count} món
+A11Y_DECOR_PIECE,{decor}. Touch and hold to move,{decor}. Chạm và giữ để dời chỗ
+A11Y_DECOR_PIECE_EDIT,"{decor}. Tap to choose, then tap a new spot","{decor}. Chạm để chọn, rồi chạm vào chỗ mới"
+A11Y_DECOR_MOVED,{decor} now sits near the {spot},{decor} giờ nằm gần {spot}
+A11Y_DECOR_STORED,{decor} is tucked away,Đã cất {decor}
+A11Y_DECOR_TURNED,{decor} turned,Đã xoay {decor}
+A11Y_DECOR_UNDO,Undo the last change,Hoàn tác thay đổi vừa rồi
+A11Y_DECOR_UNDONE,Back as it was,Đã trở lại như trước
+A11Y_TRAY_TILE,"{decor}, {count} tucked away. Tap to choose, or drag into the garden","{decor}, đã cất {count} món. Chạm để chọn, hoặc kéo vào vườn"
+CAPTION_DECOR_LIFT,soft lift,tiếng nhấc khẽ
+CAPTION_DECOR_SNAP,tiny click,tiếng tách khẽ
+CAPTION_DECOR_SETTLE,gentle thud,tiếng đặt nhẹ
+CAPTION_DECOR_TURN,wooden creak,tiếng gỗ kẽo kẹt
+CAPTION_DECOR_TUCK,leafy rustle,lá sột soạt

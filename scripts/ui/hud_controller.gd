@@ -3,16 +3,19 @@ extends Control
 ## The HUD root (scenes/main.tscn HUD/HudRoot; Art Bible §9, GDD §3.4, §7.5, §8; ARCHITECTURE
 ## §3.3, §12): builds the top bar, the dock, the sheet host and the overlays inside the scene's
 ## named hosts, and owns the flows that join them:
-##  * dock buttons open / close / swap the sheets; the dock shows the open sheet as active;
+##  * dock buttons (Album, Garden, Basket) and the top bar's Settings gear open / close / swap the
+##    sheets; the dock (or the gear) shows the open sheet as active;
 ##  * ambient watch (the eye, or 60 s without input when "Hide buttons while I watch" is on):
 ##    HUD and dock fade out over 600 ms, the first tap only wakes them;
-##  * onboarding (GDD §3.4): Garden, Basket and Album sleep at 50 % until their moment;
+##  * onboarding (GDD §3.4): Garden, Basket and Album sleep (full colour, a sleepy icon) until
+##    their moment; Garden and Album get a tiny sparkle when something new waits there;
 ##  * welcome-back recap (world_ready), new-friend card (met), leave dialog (Back at Main),
 ##    sound captions (AudioDirector.cue_played), choose-a-bed mode, postcards from the mailbox;
 ##  * left-handed mirroring and safe areas.
 ##
 ## QA user args (tools/qa/capture.sh still ... --qa-sheet=garden):
-##   --qa-sheet=garden|album|basket|settings   open that sheet instantly once the world is ready
+##   --qa-sheet=garden|album|basket|settings|tea   open that sheet instantly once the world is ready
+##                         (Tea: see TeaSheet --qa-tea for its mid-interaction states)
 ##   --qa-tab=<n>          select tab n of the open sheet (Garden: 1 = Décor; Album: 1 Photos, 2 Postcards)
 ##   --qa-recap            show the welcome-back card with sample lines (no auto-dismiss)
 ##   --qa-peek             hold the time chip's label peek open
@@ -20,12 +23,14 @@ extends Control
 ##   --qa-leave            show "Leave the hollow for now?"
 ##   --qa-toast            show a sample toast (choose-a-bed copy)
 ##   --qa-newfriend=<id>   show the new-friend card for that species
-##   --qa-friend=<id>      open the Album on that friend's detail card
-##   --qa-press=<target>   freeze a touch-down for the touch strip: a dock tab (settings, garden,
-##                         basket, album), eye, close (the open sheet's close), primary (the open
-##                         sheet's or modal's first enabled primary pill: Plant, Collect all, Say
-##                         hello), tab (the open sheet's second segment), card (the Album's first
-##                         friend card), toggle (Settings' first switch row)
+##   --qa-friend=<id>      open the Album on that friend's detail card ("present": a met friend
+##                         who is visiting right now, so the card shows Pet)
+##   --qa-press=<target>   freeze a touch-down for the touch strip: a dock tab (garden, basket,
+##                         album), settings (= gear, the top bar's Settings button), eye, close
+##                         (the open sheet's close), primary (the open sheet's or modal's first
+##                         enabled primary pill: Plant, Collect all, Say hello), tab (the open
+##                         sheet's second segment), card (the Album's first friend card), toggle
+##                         (Settings' first switch row)
 ##   --qa-press-t=<ms>     time after touch-down to freeze at (default 60 = the press dip near its
 ##                         peak with the ripple a sixth grown; 0..380 shows the whole ripple)
 ##   --qa-drawcalls        print "qa-drawcalls: <n>" (RENDER_TOTAL_DRAW_CALLS_IN_FRAME) every 30 frames
@@ -33,6 +38,12 @@ extends Control
 ##   --qa-captions         show a sample caption bubble (Captions on)
 ##   --qa-met=<n>          (with --no-save captures) mark the first n friends met, with hearts,
 ##                         photos and two postcards, so the Album shows a lived-in collection
+##   --qa-scroll=<v>       scroll the open sheet's list: a fraction 0..1 of its range ("0.5",
+##                         "1" = the end) or px ("640px"), after its layout settles
+##   --qa-detent=large     open the sheet at its large detent
+##   --qa-rename           (with --qa-friend) start renaming: the name field focused, all selected
+##   --qa-kb=<px>          simulate an on-screen keyboard this tall (canvas px; drawn as a grey
+##                         block) so the sheet's keyboard lift can be captured on desktop
 
 # Data boundary: values read from JSON / Dictionaries are Variants and each one is converted
 # explicitly (int(), float(), String() ...) where it is read; the analyzer still flags every
@@ -57,10 +68,16 @@ const QA_PRESS_T_MS := 60.0
 const QA_DRAWCALL_EVERY := 30
 const ARG_CAPTIONS := "--qa-captions"
 const ARG_MET := "--qa-met="
+const ARG_SCROLL := "--qa-scroll="
+const ARG_DETENT := "--qa-detent="
+const ARG_RENAME := "--qa-rename"
+const ARG_KB := "--qa-kb="
+## Frames for a sheet's containers, bakes and springs to settle before --qa-scroll applies.
+const QA_SETTLE_FRAMES := 6
 ## --qa-met: friends met this many days apart, hearts cycling 1..5, photos and two postcards.
 const QA_MET_DAY_S := 86400.0
 const QA_PHOTO_BITS := [0b00001, 0b00011, 0b10101, 0b01111, 0b11111]
-const SHEETS: Array[StringName] = [&"settings", &"garden", &"basket", &"album"]
+const SHEETS: Array[StringName] = [&"settings", &"garden", &"basket", &"album", &"tea"]
 ## New-friend card waits for the friend to settle (GDD §3.4 "When Pip settles").
 const NEW_FRIEND_DELAY_S := 3.0
 const MAILBOX_ACTION := &"open_postcards"
@@ -87,6 +104,10 @@ var _night_known: bool = false
 var _night_k: float = 0.0
 var _night_tween: Tween
 var _qa_frames: int = 0
+## Swallows the rest of the gesture whose first touch woke the HUD from ambient watch.
+var _wake_gate := PointerGate.new()
+## Active F3 edit mode is on (DecorEdit): the top bar and dock make way for the edit chrome.
+var _decor_edit: bool = false
 
 @onready var _safe_area: SafeAreaContainer = $SafeArea
 @onready var _sheets_host: Control = $Sheets
@@ -117,6 +138,7 @@ func _ready() -> void:
 	overlays.hud = self
 	_overlays_host.add_child(overlays)
 	top_bar.watch_pressed.connect(func() -> void: set_ambient(true))
+	top_bar.settings_pressed.connect(func() -> void: open_sheet(&"settings"))
 	dock.button_pressed.connect(_on_dock)
 	sheets.sheet_changed.connect(_on_sheet_changed)
 	_safe_area.margins_changed.connect(func(m: Rect2) -> void:
@@ -133,6 +155,8 @@ func _ready() -> void:
 		_refresh_onboarding()
 		sheets.refresh())
 	Game.leave_requested.connect(func() -> void: overlays.show_leave())
+	Game.decor_edit_entered.connect(_on_decor_edit.bind(true))
+	Game.decor_edit_exited.connect(_on_decor_edit.bind(false))
 	TimeOfDay.globals_updated.connect(_on_globals)
 	_on_globals({&"g_lights": float(TimeOfDay.scalars.get("lights", 0.0))})
 	AudioDirector.cue_played.connect(overlays.on_cue_played)
@@ -161,7 +185,7 @@ func _process(delta: float) -> void:
 		_qa_frames += 1
 		if _qa_frames % QA_DRAWCALL_EVERY == 0:
 			print("qa-drawcalls: %d" % int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)))
-	if ambient or sheets.is_open() or overlays.is_modal_open():
+	if ambient or sheets.is_open() or overlays.is_modal_open() or _decor_edit:
 		_idle_s = 0.0
 		return
 	if not Settings.get_bool(Settings.AUTO_HIDE_UI):
@@ -172,14 +196,18 @@ func _process(delta: float) -> void:
 
 
 func _input(event: InputEvent) -> void:
-	var press := (event is InputEventMouseButton and (event as InputEventMouseButton).pressed) \
-			or (event is InputEventScreenTouch and (event as InputEventScreenTouch).pressed)
-	if not press:
+	if _wake_gate.swallow(event):
+		# GDD §1.5 / Art Bible §9.6: the touch that wakes the HUD only wakes it. Every event of that
+		# gesture (the touch and its emulated mouse twin, their moves and releases) stops here, so
+		# neither a dock tab nor the world behind it acts on it.
+		get_viewport().set_input_as_handled()
+		return
+	if not PointerGate.is_press(event):
 		return
 	_idle_s = 0.0
 	if ambient:
-		# GDD §1.5 / Art Bible §9.6: the first tap only wakes the HUD.
 		set_ambient(false)
+		_wake_gate.begin(event)
 		get_viewport().set_input_as_handled()
 
 
@@ -261,8 +289,47 @@ func _apply_night(k: float) -> void:
 
 
 func _set_chrome_input(enabled: bool) -> void:
-	for c: Node in [top_bar.eye] + dock.buttons.values():
-		(c as Control).mouse_filter = Control.MOUSE_FILTER_STOP if enabled else Control.MOUSE_FILTER_IGNORE
+	var controls: Array[Control] = [top_bar.eye, top_bar.gear]
+	controls.append_array(dock.input_controls())
+	for c: Control in controls:
+		c.mouse_filter = Control.MOUSE_FILTER_STOP if enabled else Control.MOUSE_FILTER_IGNORE
+	_sync_band()
+
+
+## The top bar's band takes presses while the world is in view; under an open sheet the scrim does
+## (a tap there closes the sheet as before), and in ambient watch the wake gate does.
+func _sync_band() -> void:
+	var on := not ambient and not sheets.is_open() and not _decor_edit
+	top_bar.band.mouse_filter = Control.MOUSE_FILTER_STOP if on else Control.MOUSE_FILTER_IGNORE
+
+
+## Active F3 edit mode (ACTIVE_DECOR §2, §11): the sheet exits, the top bar and the dock fade out on
+## `short` and take no presses (the DecorEditChrome takes their places); back in play they return.
+## Ambient watch and its auto-hide timer are off meanwhile.
+func _on_decor_edit(on: bool) -> void:
+	_decor_edit = on
+	if on:
+		if ambient:
+			set_ambient(false, true)
+		sheets.close()
+	var chrome := sheets.chrome
+	chrome.visible = true
+	var t := Motion.tween(chrome, "modulate:a", 0.0 if on else 1.0, &"short")
+	if on:
+		# hidden once faded: an invisible top bar and dock would still cost their draw calls
+		t.finished.connect(func() -> void: chrome.visible = not _decor_edit)
+	_set_chrome_input(not on)
+
+
+## Where the Active F3 edit chrome lives: above the sheets and the dock, under the modal cards and
+## the toast.
+func edit_chrome_host() -> Control:
+	return _sheets_host
+
+
+## The OS safe-area margins (position = left, top; size = right, bottom) in screen px.
+func safe_margins() -> Rect2:
+	return _safe
 
 
 func open_sheet(id: StringName, instant: bool = false) -> void:
@@ -276,7 +343,7 @@ func _layout() -> void:
 	top_bar.layout(screen, _safe.position.y)
 	dock.layout(screen, _safe.size.y)
 	sheets.top_limit = top_bar.bottom()
-	sheets.layout(screen, dock.pill_rect().position.y)
+	sheets.layout(screen, dock.top())
 	overlays.layout(screen, _safe)
 
 
@@ -294,18 +361,22 @@ func _make_sheet(id: StringName) -> UiSheet:
 			return b
 		&"settings":
 			return SettingsSheet.new()
+		&"tea":
+			return TeaSheet.make(self)
 	return null
 
 
 func _on_dock(id: StringName) -> void:
 	if id == &"garden":
 		_garden_seen = true
-		dock.set_new_dot(false)
+	dock.set_new(id, false)
 	open_sheet(id)
 
 
 func _on_sheet_changed(id: StringName) -> void:
+	_sync_band()
 	dock.set_active(id)
+	top_bar.set_settings_open(id == &"settings")
 
 
 func _on_setting(key: StringName, value: Variant) -> void:
@@ -328,6 +399,8 @@ func _on_sim_event(ev: Dictionary) -> void:
 	if type == WorldSim.EV_MET and not bool(ev.get("catch_up", false)):
 		var sp := StringName(String(ev.get("species", "")))
 		_pending_friends.append(sp)
+		if sheets.current_id != &"album":
+			dock.set_new(&"album", true)
 		get_tree().create_timer(NEW_FRIEND_DELAY_S).timeout.connect(_show_next_friend)
 	if type in [WorldSim.EV_PLANTED, WorldSim.EV_PLACED, WorldSim.EV_COLLECTED, WorldSim.EV_STAGE,
 			WorldSim.EV_HEARTS, WorldSim.EV_POSTCARD, WorldSim.EV_MET, WorldSim.EV_PHOTO]:
@@ -342,8 +415,9 @@ func _show_next_friend() -> void:
 	overlays.show_new_friend(sp)
 
 
-## GDD §3.4: Garden, Basket and Album are asleep (50 %) until their onboarding moment; Settings is
-## always awake. Garden gets a small "new" dot when it wakes.
+## GDD §3.4: Garden, Basket and Album are asleep (sleepy full-colour icons, round 6) until their
+## onboarding moment; Settings (the top bar gear) is always awake. Garden gets a tiny "new"
+## sparkle when it wakes.
 func _refresh_onboarding() -> void:
 	if Game.sim == null or dock == null:
 		return
@@ -356,7 +430,7 @@ func _refresh_onboarding() -> void:
 	dock.set_asleep(&"album", Game.sim.met_count() == 0)
 	dock.set_glint(not st.basket.is_empty() and st.last_collect_t <= 0.0 and sheets.current_id != &"basket")
 	if was_asleep and garden_awake and not _garden_seen and Game.is_ready:
-		dock.set_new_dot(true)
+		dock.set_new(&"garden", true)
 
 
 # ------------------------------------------------------------------ world hooks
@@ -372,6 +446,8 @@ func _connect_world() -> void:
 	if PlotsLayer.current != null:
 		PlotsLayer.current.bed_chosen.connect(_on_bed_chosen)
 		PlotsLayer.current.bed_card_requested.connect(func(bed: StringName) -> void: overlays.show_bed_card(bed))
+	# Active F2: the tea nook prop, the petal toasts and --qa-tea (TeaSheet owns the wiring)
+	TeaSheet.wire(self)
 
 
 func _on_prop_tapped(_prop: StringName, action: StringName, _pos: Vector2) -> void:
@@ -428,11 +504,12 @@ func _on_bed_chosen(bed: StringName) -> void:
 
 func _parse_qa() -> void:
 	for a: String in OS.get_cmdline_user_args():
-		for key: String in [ARG_SHEET, ARG_TAB, ARG_NEWFRIEND, ARG_FRIEND, ARG_PRESS_T, ARG_PRESS, ARG_MET]:
+		for key: String in [ARG_SHEET, ARG_TAB, ARG_NEWFRIEND, ARG_FRIEND, ARG_PRESS_T, ARG_PRESS, ARG_MET,
+				ARG_SCROLL, ARG_DETENT, ARG_KB]:
 			if a.begins_with(key):
 				_qa[key] = a.trim_prefix(key)
 		for flag: String in [ARG_RECAP, ARG_PEEK, ARG_AMBIENT, ARG_LEAVE, ARG_TOAST, ARG_CAPTIONS, ARG_DRAWCALLS,
-				ARG_UI_AUDIT]:
+				ARG_UI_AUDIT, ARG_RENAME]:
 			if a == flag:
 				_qa[flag] = true
 
@@ -444,7 +521,13 @@ func _apply_qa() -> void:
 	if _qa.has(ARG_MET):
 		_qa_seed_album(int(String(_qa[ARG_MET])))
 	if _qa.has(ARG_FRIEND):
-		open_friend(StringName(String(_qa[ARG_FRIEND])))
+		var friend := StringName(String(_qa[ARG_FRIEND]))
+		if friend == &"present" and Game.sim != null:
+			# a met friend strolls in (the greeter rule), so the detail card shows Pet
+			friend = Game.sim.add_greeter(Game.sim.state.t)
+			if friend == &"" and not Game.sim.state.present.is_empty():
+				friend = StringName(String((Game.sim.state.present[0] as Dictionary)["species"]))
+		open_friend(friend)
 	elif _qa.has(ARG_SHEET):
 		var id := StringName(String(_qa[ARG_SHEET]))
 		if SHEETS.has(id):
@@ -472,6 +555,39 @@ func _apply_qa() -> void:
 		overlays.show_caption(tr("CAPTION_CHIRP"), get_viewport_rect().size * Vector2(0.5, 0.55), true)
 	if _qa.has(ARG_UI_AUDIT):
 		_qa_ui_audit.call_deferred()
+	if sheets.current != null and (_qa.has(ARG_SCROLL) or _qa.has(ARG_DETENT) or _qa.has(ARG_RENAME) or _qa.has(ARG_KB)):
+		_qa_sheet_state.call_deferred()
+
+
+## --qa-detent / --qa-kb / --qa-rename / --qa-scroll on the open sheet (in that order).
+func _qa_sheet_state() -> void:
+	var s := sheets.current
+	if s == null:
+		return
+	if String(_qa.get(ARG_DETENT, "")) == "large":
+		s.expand(true, false)
+	if _qa.has(ARG_KB):
+		var kb := float(String(_qa[ARG_KB]).trim_suffix("px"))
+		sheets.qa_keyboard_px = kb
+		var block := ColorRect.new()
+		block.name = "QaKeyboard"
+		block.color = Color(0.82, 0.83, 0.86)
+		block.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		block.position = Vector2(0.0, get_viewport_rect().size.y - kb)
+		block.size = Vector2(get_viewport_rect().size.x, kb)
+		block.z_index = 100
+		overlays.add_child(block)
+	if _qa.has(ARG_RENAME) and s is AlbumSheet:
+		(s as AlbumSheet).begin_rename()
+	for i in QA_SETTLE_FRAMES:
+		await get_tree().process_frame
+	if _qa.has(ARG_SCROLL) and is_instance_valid(s) and s.scroll_list() != null:
+		var sc := s.scroll_list()
+		var raw := String(_qa[ARG_SCROLL])
+		var bar := sc.get_v_scroll_bar()
+		var room := maxf(bar.max_value - bar.page, 0.0)
+		sc.scroll_vertical = int(raw.trim_suffix("px").to_float()) if raw.ends_with("px") \
+				else roundi(clampf(raw.to_float(), 0.0, 1.0) * room)
 
 
 ## --qa-ui-audit: hides each absolute z layer of the open sheet / modal in turn and prints its cost
@@ -529,6 +645,8 @@ func _qa_press() -> void:
 	match target:
 		&"eye":
 			c = top_bar.eye
+		&"settings", &"gear":
+			c = top_bar.gear
 		&"close":
 			c = sheets.current.close_button if sheets.current != null else null
 		&"primary":

@@ -7,6 +7,15 @@ extends GlassPanel
 ## than 1000 px/s dismisses it, otherwise it settles back on `move`. Subclasses fill [member body]
 ## (local px, below the header) in [method build_body] and may use [method make_scroll].
 ##
+## Round 6 (device QA 720x1600: "the content window is small, cards are cut at the bottom"):
+## two detents. The sheet opens at [member h_medium] (0.56 H on 16:9, up to 0.66 H on tall
+## phones) and the grabber / header drags it up to [member h_large] (everything up to the top bar,
+## at most 0.80 H) or back down; below the medium detent the same drag dismisses. The body and the
+## scroll list are anchored to the sheet, so they follow its height. The scroll list keeps its
+## last item clear of the rounded bottom edge (bottom padding) and shows soft fades only at the
+## edges where more content waits. [member lift] raises the whole sheet above the on-screen
+## keyboard (SheetHost).
+##
 ## Geometry (local px, sheet x0 = 24 at the 1080 frame): header 48..228, content from 252.
 
 # Data boundary: values read from JSON / Dictionaries are Variants and each one is converted
@@ -29,9 +38,19 @@ const CONTENT_TOP := 252.0
 ## Content inset: cards run x 72..1008 on the frame = 48 px inside the sheet.
 const SIDE := 48.0
 const BOTTOM_PAD := 24.0
-## Scrolled content fades out over UiBatch.FADE_BOTTOM_PX (96) at the bottom edge and 24 px at
-## the top (round 5, QA r4: the 72 px fade read as an overlap bug); the list ends this far above
-## the sheet's bottom so the last card clears the fade.
+## Room under the last scrolled item, so it never sits on the rounded bottom edge.
+const LIST_END_PAD := 48.0
+const LIST_TOP_PAD := 12.0
+## Tabs -> scroll list: the segment hit's 24 px reach + 8 dp, less the list's own top pad.
+const TABS_GAP := 24.0 + 24.0 - LIST_TOP_PAD
+## A drag past the large detent stretches a little (rubber band), at most this far.
+const OVERDRAG_PX := 48.0
+const OVERDRAG_K := 0.3
+## Release speed (px/s) that picks the detent in the fling direction.
+const DETENT_FLING := 600.0
+const DETENT_SPRING := &"move"
+## Scrolled content fades out over UiBatch.FADE_BOTTOM_PX at the bottom edge and FADE_TOP_PX at
+## the top, each only while there is more to scroll that way (round 6).
 const FADE_PX := UiBatch.FADE_BOTTOM_PX
 ## Scroll culling margin (the e1 card shadow reaches 30 px).
 const CULL_MARGIN := 36.0
@@ -55,8 +74,33 @@ var header_extra: HBoxContainer
 ## Built in the night scheme (UiTokens.night_scheme at construction; HudController rebuilds an
 ## open sheet when the chrome switches).
 var night: bool = false
+## Geometry, set by SheetHost ([method configure]): the bottom edge at rest (screen px) and the
+## two detent heights. 0 = unmanaged (tests size the sheet themselves).
+var rest_bottom: float = 0.0
+## At the large detent.
+var expanded: bool = false
+var h_medium: float = 0.0
+var h_large: float = 0.0
+## The current height (springs between the detents).
+var sheet_h: float = 0.0:
+	set(v):
+		sheet_h = v
+		_apply_geometry()
+## Slide below the rest position (the open rise, a dismiss drag, the exit).
+var rise: float = 0.0:
+	set(v):
+		rise = v
+		_apply_geometry()
+## Leaving (SheetHost close / swap): input is off, the rect still consumes presses via the scrim.
+var closing: bool = false
+## Raise above the on-screen keyboard (SheetHost).
+var lift: float = 0.0:
+	set(v):
+		lift = v
+		_apply_geometry()
 var _swipe: Control
 var _drag_from: float = -1.0
+var _drag_h0: float = 0.0
 var _drag_base: float = 0.0
 var _drag_y: float = 0.0
 var _drag_v: float = 0.0
@@ -65,6 +109,7 @@ var _built: bool = false
 ## The scroll list made by [method make_scroll] (its window drives the content fade).
 var _fade_scroll: ScrollContainer
 var _window := Rect2()
+var _bands := Vector2(-1.0, -1.0)
 
 
 func _init() -> void:
@@ -95,12 +140,60 @@ func _ready() -> void:
 
 
 func _process(_delta: float) -> void:
-	if _fade_scroll == null or not is_instance_valid(_fade_scroll):
+	if _fade_scroll == null or not is_instance_valid(_fade_scroll) or not _fade_scroll.is_visible_in_tree():
 		return
 	var r := _fade_scroll.get_global_rect()
-	if r != _window:
+	# fades only where more content waits (a hard edge reads as "cut off", a fade on the first
+	# or the last item reads as an overlap bug): they grow in with the scroll distance
+	var bar := _fade_scroll.get_v_scroll_bar()
+	var above := float(_fade_scroll.scroll_vertical)
+	var below := maxf(bar.max_value - bar.page - above, 0.0)
+	# (>= 1 px: a zero-width smoothstep is undefined in GLSL)
+	var bands := Vector2(maxf(UiBatch.FADE_TOP_PX * clampf(above / UiBatch.FADE_TOP_PX, 0.0, 1.0), 1.0),
+			maxf(UiBatch.FADE_BOTTOM_PX * clampf(below / UiBatch.FADE_BOTTOM_PX, 0.0, 1.0), 1.0))
+	if r != _window or not bands.is_equal_approx(_bands):
 		_window = r
-		UiBatch.set_window(r)
+		_bands = bands
+		UiBatch.set_window(r, bands)
+
+
+## SheetHost: places the sheet (x, width, bottom edge) with its two detents and opens it at the
+## medium one (or keeps the current detent when [param keep] and it is expanded).
+func configure(x: float, width: float, bottom: float, medium: float, large: float, keep: bool = false) -> void:
+	rest_bottom = bottom
+	h_medium = medium
+	h_large = maxf(large, medium)
+	position.x = x
+	size.x = width
+	Motion.stop_springs(self)
+	sheet_h = h_large if keep and expanded else h_medium
+	if not (keep and expanded):
+		expanded = false
+
+
+## Springs to the large ([param on]) or the medium detent.
+func expand(on: bool, animate: bool = true) -> void:
+	if rest_bottom <= 0.0:
+		return
+	expanded = on and h_large > h_medium + 1.0
+	var to := h_large if expanded else h_medium
+	if animate:
+		Motion.spring_to(self, "sheet_h", to, DETENT_SPRING)
+		FrameGovernor.hold_for(Motion.duration(&"standard"))
+	else:
+		sheet_h = to
+
+
+func _apply_geometry() -> void:
+	if rest_bottom <= 0.0 or sheet_h <= 0.0:
+		return
+	size.y = sheet_h
+	position.y = rest_bottom - lift - sheet_h + rise
+
+
+## The scroll list (or null): QA, keyboard lift.
+func scroll_list() -> ScrollContainer:
+	return _fade_scroll if _fade_scroll != null and is_instance_valid(_fade_scroll) else null
 
 
 func _notification(what: int) -> void:
@@ -133,23 +226,30 @@ func refresh() -> void:
 ## content fades out at the window's edges in the shared UI materials (UiBatch, round 5: no
 ## clip_children mask, which split the list into its own canvas group). Returns the VBox to fill.
 func make_scroll(top: float, separation: int = 24) -> VBoxContainer:
-	var h := body.size.y - top
 	var sc := ScrollContainer.new()
 	sc.name = "Scroll"
 	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	sc.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
-	sc.position = Vector2(0.0, top)
-	sc.size = Vector2(body.size.x, h)
 	sc.mouse_filter = Control.MOUSE_FILTER_PASS
+	# scroll deadzone = the 10 dp button slop; presses during a fling only catch it (TapGuard)
+	TapGuard.watch_scroll(sc)
+	# the list's clip is the scroll window: everything inside it moves and clips with it
+	sc.clip_contents = true
 	UiBatch.mark_scroll(sc)
 	body.add_child(sc)
+	# anchored to the body, so the window follows the sheet's detent height
+	sc.set_anchors_preset(Control.PRESET_FULL_RECT)
+	sc.offset_left = 0.0
+	sc.offset_right = 0.0
+	sc.offset_top = top
+	sc.offset_bottom = 0.0
 	_fade_scroll = sc
 	var pad := MarginContainer.new()
 	pad.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pad.add_theme_constant_override(&"margin_left", roundi(SIDE))
 	pad.add_theme_constant_override(&"margin_right", roundi(SIDE))
-	pad.add_theme_constant_override(&"margin_top", roundi(UiBatch.FADE_TOP_PX * 0.5))
-	pad.add_theme_constant_override(&"margin_bottom", roundi(FADE_PX))
+	pad.add_theme_constant_override(&"margin_top", roundi(LIST_TOP_PAD))
+	pad.add_theme_constant_override(&"margin_bottom", roundi(LIST_END_PAD))
 	pad.mouse_filter = Control.MOUSE_FILTER_PASS
 	sc.add_child(pad)
 	var list := VBoxContainer.new()
@@ -166,13 +266,33 @@ func make_scroll(top: float, separation: int = 24) -> VBoxContainer:
 	return list
 
 
+## Keeps the scroll list's top [param gap] px below [param c] (tabs above the list grow with
+## large text or a wrapped option, so the list must follow them). The default keeps the first
+## card >= 8 dp below the tabs' hit, which reaches Segmented.HIT_GROW under the track (round 7).
+func keep_scroll_below(c: Control, gap: float = TABS_GAP, at_least: float = 0.0) -> void:
+	var sc := _fade_scroll
+	var place := func() -> void:
+		if is_instance_valid(sc) and is_instance_valid(c):
+			sc.offset_top = maxf(c.position.y + c.size.y + gap, at_least)
+	c.resized.connect(place)
+	place.call()
+
+
 ## Hides (alpha 0) every row of [param list] (and every cell of a grid row) outside the scroll
-## window, plus a shadow margin; partly visible rows draw as usual.
+## window, plus a shadow margin; partly visible rows draw as usual. Round 6: measured in the
+## scroll's content space (scroll_vertical), not with global rects: `value_changed` fires before
+## the ScrollContainer moves its content, so global rects were one scroll step stale and a long
+## jump (a fling, QA --qa-scroll) culled exactly the rows coming into view.
 static func _cull_rows(sc: ScrollContainer, list: Control) -> void:
 	if not is_instance_valid(sc) or not is_instance_valid(list) or not sc.is_inside_tree():
 		return
-	var window := sc.get_global_rect().grow(CULL_MARGIN)
+	var top := float(sc.scroll_vertical) - CULL_MARGIN
+	var bottom := float(sc.scroll_vertical) + sc.size.y + CULL_MARGIN
+	var base := _offset_in(list, sc)
 	for row: Node in list.get_children():
+		var rc := row as Control
+		if rc == null:
+			continue
 		var items: Array[Node] = []
 		if row is GridContainer:
 			items.assign(row.get_children())
@@ -182,9 +302,19 @@ static func _cull_rows(sc: ScrollContainer, list: Control) -> void:
 			var c := n as Control
 			if c == null:
 				continue
-			var on := window.intersects(c.get_global_rect())
+			var y := base + rc.position.y + (c.position.y if c != rc else 0.0)
+			var on := y + c.size.y >= top and y <= bottom
 			c.modulate.a = 1.0 if on else 0.0
 
+
+## [param c]'s y inside the scroll's content (the sum of positions below the scrolled child).
+static func _offset_in(c: Control, sc: ScrollContainer) -> float:
+	var y := 0.0
+	var n: Node = c
+	while n != null and n.get_parent() != sc:
+		y += (n as Control).position.y if n is Control else 0.0
+		n = n.get_parent()
+	return y
 
 
 func _build_chrome() -> void:
@@ -225,11 +355,15 @@ func _build_chrome() -> void:
 	body = Control.new()
 	body.name = "Body"
 	body.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	body.position = Vector2(0.0, CONTENT_TOP)
-	body.size = Vector2(size.x, size.y - CONTENT_TOP - BOTTOM_PAD)
 	# the scroll clips itself; the tabs above it share the chrome's (absent) clip, so they batch
 	body.clip_contents = false
 	add_child(body)
+	# anchored: the body follows the sheet between its detents
+	body.set_anchors_preset(Control.PRESET_FULL_RECT)
+	body.offset_left = 0.0
+	body.offset_right = 0.0
+	body.offset_top = CONTENT_TOP
+	body.offset_bottom = -BOTTOM_PAD
 	_place_header_extra()
 
 
@@ -249,30 +383,69 @@ func _on_swipe_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and (event as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
 		var mb := event as InputEventMouseButton
 		if mb.pressed:
-			_drag_from = mb.global_position.y
-			_drag_base = position.y
-			_drag_y = 0.0
-			_drag_v = 0.0
-			_drag_last_t = now
-			Motion.stop_springs(self)
+			drag_begin(mb.global_position.y, now)
 		elif _drag_from >= 0.0:
-			_drag_from = -1.0
-			var sw := UiTokens.ui_block("swipe_dismiss")
-			if _drag_y > size.y * float(sw.get("distance_frac", 0.25)) or _drag_v > float(sw.get("velocity_px_s", 1000.0)):
-				close_requested.emit()
-			else:
-				Motion.spring_to(self, "position", Vector2(position.x, _drag_base), &"move")
+			drag_end()
 		_swipe.accept_event()
 	elif event is InputEventMouseMotion and _drag_from >= 0.0:
-		var mm := event as InputEventMouseMotion
-		var dy := maxf(0.0, mm.global_position.y - _drag_from)
-		var dt := maxf(now - _drag_last_t, 1e-3)
-		_drag_v = lerpf(_drag_v, (dy - _drag_y) / dt, 0.5)
-		_drag_last_t = now
-		_drag_y = dy
-		position.y = _drag_base + dy
-		FrameGovernor.hold_for(Motion.duration(&"short"))
+		drag_to((event as InputEventMouseMotion).global_position.y, now)
 		_swipe.accept_event()
+
+
+## The header drag (public for tests): up toward the large detent, down to the medium one and,
+## below it, out (dismiss).
+func drag_begin(y: float, now: float) -> void:
+	_drag_from = y
+	_drag_h0 = sheet_h if rest_bottom > 0.0 else size.y
+	_drag_base = position.y - rise
+	_drag_y = 0.0
+	_drag_v = 0.0
+	_drag_last_t = now
+	Motion.stop_springs(self)
+
+
+func drag_to(y: float, now: float) -> void:
+	var dy := y - _drag_from
+	var dt := maxf(now - _drag_last_t, 1e-3)
+	_drag_v = lerpf(_drag_v, (dy - _drag_y) / dt, 0.5)
+	_drag_last_t = now
+	_drag_y = dy
+	if rest_bottom <= 0.0:
+		rise = maxf(dy, 0.0)
+		position.y = _drag_base + rise
+	else:
+		var want := _drag_h0 - dy
+		var top_h := h_large
+		if want > top_h:
+			sheet_h = top_h + minf((want - top_h) * OVERDRAG_K, OVERDRAG_PX)
+			rise = 0.0
+		elif want < h_medium:
+			sheet_h = h_medium
+			rise = h_medium - want
+		else:
+			sheet_h = want
+			rise = 0.0
+	FrameGovernor.hold_for(Motion.duration(&"short"))
+
+
+func drag_end() -> void:
+	_drag_from = -1.0
+	var sw := UiTokens.ui_block("swipe_dismiss")
+	var dist := float(sw.get("distance_frac", 0.25)) * (h_medium if h_medium > 0.0 else size.y)
+	var fast := float(sw.get("velocity_px_s", 1000.0))
+	var at_medium := rest_bottom <= 0.0 or sheet_h <= h_medium + 1.0
+	if rise > dist or (at_medium and _drag_v > fast and rise > 0.0):
+		close_requested.emit()
+		return
+	if rest_bottom <= 0.0:
+		Motion.spring_to(self, "position", Vector2(position.x, _drag_base), DETENT_SPRING)
+		rise = 0.0
+		return
+	Motion.spring_to(self, "rise", 0.0, DETENT_SPRING)
+	var up := _drag_v < -DETENT_FLING
+	var down := _drag_v > DETENT_FLING
+	var nearer_large := absf(sheet_h - h_large) < absf(sheet_h - h_medium)
+	expand(up or (nearer_large and not down))
 
 
 # ------------------------------------------------------------------ small builders for subclasses

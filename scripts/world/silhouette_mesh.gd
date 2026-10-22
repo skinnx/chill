@@ -60,6 +60,16 @@ static func feather(crest: PackedVector2Array, width: float) -> ArrayMesh:
 	return _mesh(verts, uvs, cols, idx)
 
 
+## Skirt below a flat body bottom (map pan, ARCHITECTURE §3.4): a rect from [param top_y] to
+## [param bottom_y] over [x0, x1] shaded as the body bottom (UV.x 1, far below the crest).
+static func skirt(x0: float, x1: float, top_y: float, bottom_y: float) -> ArrayMesh:
+	var verts := PackedVector2Array([Vector2(x0, top_y), Vector2(x1, top_y), Vector2(x0, bottom_y), Vector2(x1, bottom_y)])
+	var deep := Vector2(1.0, bottom_y - top_y + 1000.0)
+	var uvs := PackedVector2Array([deep, deep, deep, deep])
+	var cols := PackedColorArray([Color.WHITE, Color.WHITE, Color.WHITE, Color.WHITE])
+	return _mesh(verts, uvs, cols, PackedInt32Array([0, 1, 2, 2, 1, 3]))
+
+
 static func _mesh(verts: PackedVector2Array, uvs: PackedVector2Array, cols: PackedColorArray,
 		idx: PackedInt32Array) -> ArrayMesh:
 	var arrays := []

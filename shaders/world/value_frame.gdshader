@@ -26,6 +26,7 @@ uniform vec2 bottom_band = vec2(1460.0, 1980.0);
 uniform float corner_k = 0.30;
 uniform vec2 corner_radii = vec2(640.0, 820.0);
 uniform vec2 corner_ramp = vec2(0.75, 1.3);
+uniform float corner_fade_px = 240.0;
 uniform float max_k = 0.60;
 // The frame starts below the crest (the mesh's top edge, ValueFrame.TOP_Y): no visible seam.
 uniform vec2 top_fade = vec2(760.0, 980.0);
@@ -56,7 +57,10 @@ float frame_amount(vec2 p) {
 	float d = length((p - focal_centre) / focal_radii);
 	float r = smoothstep(focal_ramp.x, focal_ramp.y, d);
 	vec2 cq = vec2(abs(p.x - focal_centre.x), p.y - focal_centre.y) / corner_radii;
-	float corner = smoothstep(corner_ramp.x, corner_ramp.y, length(cq)) * step(focal_centre.y, p.y);
+	// below the focal only; a soft start (not a step) because the map pan shows the sides, where the
+	// corner weight is already strong at the focal's height (ARCHITECTURE §3.4)
+	float corner = smoothstep(corner_ramp.x, corner_ramp.y, length(cq))
+			* smoothstep(focal_centre.y, focal_centre.y + corner_fade_px, p.y);
 	float bl = g_backlight * (1.0 - g_lights);
 	float a = (frame_k * r * (2.0 - r) + bottom_k * smoothstep(bottom_band.x, bottom_band.y, p.y))
 			* (1.0 - backlit_mid_relief_k * bl) + corner_k * corner;

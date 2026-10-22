@@ -4,7 +4,7 @@ extends Control
 ## stamp; Art Bible §9.4, GDD §7.1): the real rig drawn by mossling_fur (no screenshots, no
 ## SubViewport), idle-breathing and blinking at the current palette, fitted into the control's
 ## rect with its feet on a soft contact shadow. Unknown friends get a soft fuzzy silhouette in ink
-## @ 0.10 with no face (never a lock, never a question mark).
+## @ 0.22 with no face (never a lock, never a question mark).
 ##
 ## The rig and its materials are shared by every portrait (one fur material, so the portraits
 ## batch with each other like the hollow's mosslings do).
@@ -19,7 +19,8 @@ const SILHOUETTE_SHADER := "res://shaders/ui/silhouette.gdshader"
 const FILL := 0.78
 ## Feet sit this far up from the bottom of the well (fraction of its height).
 const FEET_FRAC := 0.14
-const SILHOUETTE_ALPHA := 0.10
+## Round 6: 0.10 vanished on phone screens (device QA: blank tiles); 0.22 on the studio sweep.
+const SILHOUETTE_ALPHA := 0.22
 ## Magnified portraits keep the fur's felt grain at 1 screen dp (mossling_fur u_grain_density =
 ## the magnification): one fur material per density step, so same-size portraits still batch.
 const GRAIN_PARAM := &"u_grain_density"

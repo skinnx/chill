@@ -161,17 +161,19 @@ func test_stream_tap_makes_a_ripple() -> void:
 	add_child_autofree(b)
 	watch_signals(b)
 	var x := 540.0
-	var ev := InputEventMouseButton.new()
-	ev.button_index = MOUSE_BUTTON_LEFT
-	ev.pressed = true
-	ev.device = 0
-	ev.position = b.get_global_transform_with_canvas() * Vector2(x, b.centre_y_at(x))
-	b._unhandled_input(ev)
+	var on := b.get_global_transform_with_canvas() * Vector2(x, b.centre_y_at(x))
+	var hit := b.world_hit(on, 27.0)
+	assert_false(hit.is_empty(), "the water is a world target")
+	assert_eq(int(hit["prio"]), WorldPan.PRIO_STREAM, "the lowest world priority (GDD §2.5)")
+	b.world_press(hit["key"], on)
+	assert_signal_not_emitted(b, "tapped", "touch-down only rings; the ripple waits for the tap")
+	b.world_release(hit["key"], on, true)
 	assert_signal_emitted(b, "tapped")
-	var away := ev.duplicate() as InputEventMouseButton
-	away.position = b.get_global_transform_with_canvas() * Vector2(x, 1000.0)
-	b._unhandled_input(away)
-	assert_signal_emit_count(b, "tapped", 1, "taps away from the water are ignored")
+	b.world_press(hit["key"], on)
+	b.world_release(hit["key"], on, false)
+	assert_signal_emit_count(b, "tapped", 1, "a cancelled press (a pan) never ripples")
+	var away := b.get_global_transform_with_canvas() * Vector2(x, 1000.0)
+	assert_true(b.world_hit(away, 27.0).is_empty(), "taps away from the water are not the brook's")
 
 
 func test_grass_bands_sort_behind_creatures_in_them() -> void:

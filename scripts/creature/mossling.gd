@@ -11,6 +11,11 @@ extends Node2D
 ## CreatureBrain) / [method leave_to]; touches arrive through [method touch_down],
 ## [method touch_move] and [method touch_up]. Every intent that changes the world goes through
 ## Game (pet) via the layer's signals; nothing here touches the sim.
+##
+## Active F1 Wishes (ACTIVE_WISHES §7; GDD §14.11 b): the WishView hangs the bubble at
+## [method head_anchor], the name tag can carry the wish ("{name} · {wish}" + the hint line,
+## [method show_name]) and [method play_pose] plays the delight poses (D15, DelightPose: the
+## existing squash, hop, happy eyes, hearts and sparkles).
 
 # Data boundary: values read from JSON / Dictionaries are Variants and each one is converted
 # explicitly (int(), float(), String() ...) where it is read; the analyzer still flags every
@@ -56,6 +61,8 @@ const TAP_MAX_MOVE_PX := 18.0
 const UNIFORM_EPS := 1e-4
 const NAP_SETTLE_EASE := 2.0
 const HEAD_BU := 1.05
+## The body's centre in body units (the hit circle's centre_bu default; a mossling is all head).
+const HEAD_CENTRE_BU := 0.5
 ## Sheltered spots (under the willow, in the stump) halve the shadow (§4.12).
 const SHELTER_SHADOW_K := 0.5
 ## mossling_fur.gdshader packing (UMB_CODE, LEAF_STEPS): keep in sync.
@@ -64,6 +71,10 @@ const LEAF_STEPS := 8.0
 ## Shadow quad in body units (x body widths, y body heights from the feet): room for the 2.5x
 ## golden-hour cast toward the viewer and its sideways offset (creature_shadow.gdshader).
 const SHADOW_RECT_BU := Rect2(-2.4, -0.5, 4.8, 3.0)
+## The wish hint wraps at this width (design px, ~200 dp) and the tag keeps this margin inside the
+## frame's edges (GDD §8.4 24 dp side gutter).
+const TAG_HINT_MAX_PX := 600.0
+const TAG_EDGE_PX := 72.0
 
 var species_id: StringName = &""
 var seed01: float = 0.0
@@ -87,6 +98,16 @@ var _body: SdfQuad
 var _fx: MosslingFx
 var _tag: PanelContainer
 var _tag_label: Label
+var _tag_hint: Label
+var _tag_total_s: float = 2.0
+var _entering: bool = false
+var _pose: StringName = &""
+var _pose_kind: StringName = &""
+var _pose_t: float = 0.0
+var _pose_dur: float = 0.9
+var _pose_lift: float = 0.0
+var _pose_wiggle: float = 0.0
+var _pose_turns: int = 0
 var _b: Dictionary = {}
 var _cr: Dictionary = {}
 var _s_px: float = 150.0
@@ -360,6 +381,7 @@ func is_walking() -> bool:
 
 ## Fade in at [param entry] (never pops in, V5), then walk the path to the first spot.
 func enter_from(entry: Vector2, path: PackedVector2Array, on_arrive: Callable) -> void:
+	_entering = true
 	place_at(entry)
 	_alpha = 0.0
 	_alpha_to = 1.0
@@ -470,11 +492,126 @@ func turn_to(target: float) -> void:
 		_facing_to = signf(target)
 
 
-func show_name(text: String) -> void:
+## The name tag for name_tag_ms; with a [param hint] (Active F1: "{name} · {wish}" and the wish's
+## hint line in ink_2 under it) it stays [param seconds] (caption_chip_s, 2.5 s).
+func show_name(text: String, hint: String = "", seconds: float = 0.0) -> void:
 	_tag_label.text = text
+	_tag_hint.visible = hint != ""
+	var font := _tag_hint.get_theme_font(&"font")
+	var fs := _tag_hint.get_theme_font_size(&"font_size")
+	# wrapped by hand at TAG_HINT_MAX_PX (an autowrapping Label inside the tag's containers caches a
+	# minimum height measured at zero width, which blew the chip up to the whole screen)
+	_tag_hint.text = wrap_text(hint, font, fs, TAG_HINT_MAX_PX) if font != null else hint
 	_tag.reset_size()
-	_tag.position = Vector2(-_tag.size.x * 0.5, -(_s_px * (1.0 + rig.top_extent_bu(species_id)) + _tag.size.y + 12.0))
-	_tag_t = float(_b.get("name_tag_ms", 2000.0)) * MS
+	_tag.position = Vector2(_tag_x(), -(_s_px * (1.0 + rig.top_extent_bu(species_id)) + _tag.size.y + 12.0))
+	_tag_total_s = seconds if seconds > 0.0 else float(_b.get("name_tag_ms", 2000.0)) * MS
+	_tag_t = _tag_total_s
+
+
+## [param text] broken into lines no wider than [param max_px] at [param font] / [param size].
+static func wrap_text(text: String, font: Font, size: int, max_px: float) -> String:
+	var lines := PackedStringArray()
+	var line := ""
+	for word: String in text.split(" ", false):
+		var trial := word if line == "" else line + " " + word
+		if line != "" and font.get_string_size(trial, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x > max_px:
+			lines.append(line)
+			line = word
+		else:
+			line = trial
+	if line != "":
+		lines.append(line)
+	return "\n".join(lines)
+
+
+## The tag's x in the visual's space: centred over the friend, kept inside the frame's edges.
+func _tag_x() -> float:
+	var w := _tag.size.x
+	if not is_inside_tree():
+		return -w * 0.5
+	# the visible screen, not the design frame: a tall phone crops the frame's sides
+	var xf := _visual.get_global_transform_with_canvas()
+	var k := maxf(xf.get_scale().x, 1e-3)
+	var vw := get_viewport_rect().size.x
+	var margin := TAG_EDGE_PX * get_viewport().get_canvas_transform().get_scale().x
+	var lo := (margin - xf.origin.x) / k
+	var hi := (vw - margin - xf.origin.x) / k - w
+	return clampf(-w * 0.5, lo, maxf(lo, hi))
+
+
+## The name tag's text and hint while it shows ("" when hidden; tests, QA).
+func name_tag_text() -> PackedStringArray:
+	if _tag_t <= 0.0:
+		return PackedStringArray()
+	return PackedStringArray([_tag_label.text, _tag_hint.text])
+
+
+# ================================================================= Active F1 wishes
+
+## Busy for a new wish (ACTIVE_WISHES §4.1 no_spawn_while): napping, being petted, entering or
+## leaving. An existing wish simply waits.
+func is_wish_busy() -> bool:
+	return asleep or _petting or leaving or _entering
+
+
+## The head anchor in this node's space: the centre of the (round, all-head) body, depth scaled,
+## following hops and the perch bias. The WishView hangs the wish bubble at bubble_offset_dp from
+## here (ACTIVE_WISHES §7.1), so its trailing dots end just above the crown.
+func head_anchor() -> Vector2:
+	return Vector2(0.0, -_sort_bias) + Vector2(0.0, -(_s_px * HEAD_CENTRE_BU + _hop_h + _pose_lift)) * depth
+
+
+## A delight pose (wishes.json granted_pose; Mossling.play_pose is also FE-T's `sip_tea`): happy
+## eyes, a heart bouquet and sparkles plus the mapped motion, over presentation.granted_ms (900 ms,
+## within the celebrate token: it never blocks input). A napping friend only glows (never woken).
+func play_pose(id: StringName) -> void:
+	var pres: Dictionary = rig.content.wishes_doc.get("presentation", {})
+	_pose = id
+	_pose_kind = DelightPose.motion_of(id)
+	_pose_t = 0.0
+	_pose_dur = float(pres.get("granted_ms", 900.0)) * MS
+	_pose_turns = 0
+	_fx.sparkles(_head_local() + Vector2(0.0, _s_px * 0.3), DelightPose.SPARKLES, _w_px * 0.6)
+	if asleep:
+		_fx.hearts(_head_local(), 1, 0.0)
+		_ear.kick(1.2)
+		_pose_kind = &""
+		return
+	look_at_camera()
+	_happy_to = 1.0
+	_closed = MosslingRig.CLOSED_HAPPY
+	_reopen_t = _pose_dur
+	_act_next = maxf(_act_next, _pose_dur)
+	_look_next = maxf(_look_next, _pose_dur + 0.5)
+	_ear.kick(-1.4)
+	_ant.kick(1.6)
+	_fx.hearts(_head_local(), DelightPose.HEARTS, float(_b.get("heart_stagger_ms", 120.0)) * MS)
+	if _pose_kind == DelightPose.SNUGGLE:
+		_squash.value = _sq(DelightPose.SNUG_SQUASH) * _rest_squash
+
+
+## The pose playing now (&"" when none; tests, QA).
+func current_pose() -> StringName:
+	return _pose if _pose_t < _pose_dur else &""
+
+
+func _update_pose(delta: float) -> void:
+	if _pose == &"":
+		return
+	_pose_t += delta
+	var u := clampf(_pose_t / maxf(_pose_dur, 0.01), 0.0, 1.0)
+	var k := _motion_k()
+	_pose_lift = 0.0 if _walking else DelightPose.lift_bu(_pose_kind, u) * _s_px * k
+	_pose_wiggle = DelightPose.wiggle(_pose_kind, _pose_t, u) * k
+	var step := DelightPose.spin_step(_pose_kind, u)
+	if step >= _pose_turns:
+		_pose_turns = step + 1
+		turn_to(DelightPose.SPIN_LOOKS[step])
+	if _pose_t >= _pose_dur:
+		_pose = &""
+		_pose_kind = &""
+		_pose_lift = 0.0
+		_pose_wiggle = 0.0
 
 
 func sparkle(count: int) -> void:
@@ -486,12 +623,19 @@ func sparkle(count: int) -> void:
 ## Hit test in the creature layer's space (design px). Radius >= view.hit.radius_px x depth,
 ## never under 90 px (60 dp target, I2).
 func hit_test(point: Vector2) -> bool:
+	var c := hit_circle()
+	return c.z > 0.0 and point.distance_to(Vector2(c.x, c.y)) <= c.z
+
+
+## The hit circle (centre x, y and radius, the layer's px); radius 0 while it cannot be touched
+## (leaving, or still fading in).
+func hit_circle() -> Vector3:
 	if leaving or _alpha < 0.5:
-		return false
+		return Vector3.ZERO
 	var hit: Dictionary = rig.view().get("hit", {})
 	var c := _feet - Vector2(0.0, (float(hit.get("centre_bu", 0.5)) * _s_px + _hop_h) * depth)
 	var r := maxf(float(hit.get("radius_px", 96.0)) * maxf(depth, 1.0), 90.0)
-	return point.distance_to(c) <= r
+	return Vector3(c.x, c.y, r)
 
 
 func touch_down(point: Vector2) -> void:
@@ -654,6 +798,9 @@ func _process(delta: float) -> void:
 	_update_springs(delta)
 	_update_fx(delta)
 	_update_light(delta)
+	_update_pose(delta)
+	if _entering and not _walking and _alpha >= 1.0:
+		_entering = false
 	if _alpha != _alpha_to:
 		_alpha = move_toward(_alpha, _alpha_to, delta * _alpha_rate)
 		modulate.a = _alpha
@@ -812,6 +959,7 @@ func _next_hop_target() -> bool:
 
 
 func _finish_walk() -> void:
+	_entering = false
 	_walking = false
 	_hop_state = Hop.NONE
 	_hop_h = 0.0
@@ -1092,10 +1240,10 @@ func _update_face(delta: float) -> void:
 	if _tag_t > 0.0:
 		_tag_t -= delta
 		var fade := float((rig.content.motion.get("durations_ms", {}) as Dictionary).get("standard", 320.0)) * MS
-		var total := float(_b.get("name_tag_ms", 2000.0)) * MS
-		var shown := total - _tag_t
+		var shown := _tag_total_s - _tag_t
 		_tag.modulate.a = clampf(minf(shown / fade, _tag_t / fade), 0.0, 1.0)
 		_tag.visible = _tag_t > 0.0
+		_tag.position.x = _tag_x()
 		_tag.position.y = -(_s_px * (1.0 + rig.top_extent_bu(species_id)) + _tag.size.y + 12.0) \
 			- float(_b.get("name_tag_rise_px", 18.0)) * (1.0 - pow(1.0 - clampf(shown / fade, 0.0, 1.0), 3.0)) - _hop_h
 
@@ -1233,7 +1381,7 @@ func _apply_position() -> void:
 	if _visual != null:
 		_visual.position = Vector2(0.0, -_sort_bias)
 		_visual.scale = Vector2.ONE * depth
-		_body.position = Vector2(0.0, -_hop_h)
+		_body.position = Vector2(0.0, -_hop_h - _pose_lift)
 		if _shadow_host != null:
 			_shadow.position = _feet - _shadow_host.position
 			_shadow.scale = Vector2(_w_px, _s_px) * depth
@@ -1253,7 +1401,7 @@ func _depth_at(y: float) -> float:
 ## Writes the animated instance uniforms (slots 11-13) and the shadow, only when they change.
 func _push_uniforms(force: bool) -> void:
 	var squash := _squash.value * _hop_f * _chew_f * _turn_f
-	var lean := _lean.value + _wiggle
+	var lean := _lean.value + _wiggle + _pose_wiggle
 	var anim := Vector4(squash, lean, _lid, _look)
 	if force or not _vec_eq(anim, _u_anim):
 		_u_anim = anim
@@ -1296,11 +1444,23 @@ func _build_tag() -> void:
 	_tag.theme_type_variation = &"Chip"
 	_tag.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_tag.visible = false
+	var col := VBoxContainer.new()
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_theme_constant_override(&"separation", 0)
+	_tag.add_child(col)
 	_tag_label = Label.new()
 	_tag_label.theme_type_variation = &"StrongLabel"
 	_tag_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_tag_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_tag.add_child(_tag_label)
+	col.add_child(_tag_label)
+	# Active F1: the wish's hint line under "{name} · {wish}" (ink_2, the caption size)
+	_tag_hint = Label.new()
+	_tag_hint.theme_type_variation = &"CaptionLabel"
+	_tag_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_tag_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_tag_hint.add_theme_color_override(&"font_color", UiTokens.color(&"ink_2"))
+	_tag_hint.visible = false
+	col.add_child(_tag_hint)
 	_visual.add_child(_tag)
 	# theme propagation stops at the world's Node2Ds: attach the UI theme (rebuilt with text size)
 	UiTheme.attach(_tag)

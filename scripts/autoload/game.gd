@@ -48,6 +48,34 @@ signal cousin_met(variant: StringName, species: StringName)
 signal cousin_arrived(variant: StringName, species: StringName, first: bool)
 signal keepsake_added(species: StringName)
 
+# --- Active Play v1 (GDD §14.11; docs/ARCHITECTURE.md §3.1). Fired from the sim events in order,
+# after sim_event (same dictionaries). Active F1 Wishes:
+## A friend floats a new wish (visible = its bubble shows now; else it is held for later).
+signal wish_opened(species: StringName, wish: StringName, visible: bool)
+## A held wish took a visible slot (its friend came back, or a slot freed).
+signal wish_shown(species: StringName, wish: StringName)
+## Its friend left: the wish is kept for a later visit (no toast).
+signal wish_held(species: StringName, wish: StringName)
+## Granted: delight pose, stamp (first_stamp), gift petal (gift_flower or &""), affection 0/1.
+## on_arrival: a decor_near piece was set while the friend was away.
+signal wish_granted(species: StringName, wish: StringName, affection: int, gift_flower: StringName,
+		first_stamp: bool, on_arrival: bool)
+# Active F2 Tea & Treats:
+## The tea nook woke (GDD §14.11 calls this signal tea_unlocked; renamed because the query
+## [method tea_unlocked] holds that name): fade it in, toast TEA_NOOK_AWAKE once.
+signal tea_nook_awake
+signal petals_harvested(bed_id: StringName, counts: Dictionary)
+signal recipe_found(recipe: StringName)
+## A cup was sipped: reaction content/liked/loved, petals tucked back into the pantry.
+signal tea_offered(species: StringName, recipe: StringName, reaction: StringName, petals: int)
+signal teaware_changed(slot: StringName, id: StringName)
+# Active F3 Free décor placement:
+## After the settle only (never mid-drag): move, glide, take out, turn, a purchase.
+signal decor_placed(set_id: StringName, piece_id: String, pos_norm: Vector2, rot_deg: int)
+signal decor_stored(set_id: StringName, piece_id: String)
+signal decor_edit_entered
+signal decor_edit_exited
+
 const ARG_SEED := "--seed="
 const QUIT_SETTLE_FRAMES := 2
 ## Wall-clock time the audio mix thread gets to free stopped playbacks before quitting. Frames are
@@ -80,6 +108,10 @@ var _seed_override: int = 0
 var _has_seed_override: bool = false
 ## Species napping right now, reported by the creature layer (AUDIO_BIBLE §8.7 snores).
 var _sleepers: PackedStringArray = PackedStringArray()
+## Reasons the wish clock is paused besides sheets, cards and edit mode (QA, FE requests).
+var _wish_pause: Dictionary = {}
+## Pieces turned by the player during this edit session (they keep their turn; beautify).
+var _edit_turned: Dictionary = {}
 
 
 func _ready() -> void:
@@ -138,6 +170,7 @@ func _process(delta: float) -> void:
 	sim.advance(world_now())
 	if not sim.state.pending_scene.is_empty():
 		sim.retention.foreground_tick(sim, delta)  # archived after linger_s of foreground time
+	wish_foreground_tick(delta)  # Active F1: one spawn check per 60 s of unblocked foreground time
 	if sim.has_events():
 		_dispatch(sim.drain_events(), false)
 	if _greeter_left_s >= 0.0:
@@ -368,6 +401,365 @@ func notify_world_visible() -> void:
 		_greeter_left_s = _session_rng.randf_range(float(eco["greeter_delay_min_s"]), float(eco["greeter_delay_max_s"]))
 
 
+# ================================================================= Active Play v1 API (GDD §14.11)
+# Every call returns false / -1 / {} / &"" and changes nothing on failure. World views call
+# world_action() from world_release(act = true) only, so a pan or a cancelled press grants nothing.
+
+## Active Play feature flags: &"wishes", &"tea", &"free_decor" (a build constant, all on in v1).
+func feature_on(flag: StringName) -> bool:
+	return sim != null and sim.active.feature_on(flag)
+
+
+## An action the player already has, for wish fulfilment (ACTIVE_WISHES §5): &"tap_creature"
+## {species}, &"ring_chime", &"bed_tap" {bed}, &"decor_tap" {set, piece}, &"stream_tap" {pos}.
+## (Petting and the leaf boat report themselves through pet() / float_boat().) Returns the
+## species whose wish it granted.
+func world_action(kind: StringName, args: Dictionary = {}) -> Array[StringName]:
+	_sync()
+	var granted := sim.active.wishes.on_action(sim, kind, args, sim.state.t)
+	_after_action()
+	return granted
+
+
+## Foreground seconds for the wish clock. Game calls it every frame; it does nothing while a sheet
+## or card is open (WorldPan.blocked), in edit mode, or while paused by [method pause_wishes].
+func wish_foreground_tick(dt: float) -> void:
+	if sim == null or not is_ready or is_suspended:
+		return
+	sim.active.wishes.foreground_tick(sim, dt, _wishes_blocked())
+	if sim.has_events():
+		_dispatch(sim.drain_events(), false)
+
+
+## Pauses (or resumes) wish spawn checks for [param reason] (e.g. &"scene" while a scene is up).
+func pause_wishes(reason: StringName, on: bool) -> void:
+	if on:
+		_wish_pause[reason] = true
+	else:
+		_wish_pause.erase(reason)
+
+
+## The creature layer reports friends that are napping, being petted, entering or leaving: they
+## do not start a new wish (their existing wish waits).
+func report_wish_busy(species: PackedStringArray) -> void:
+	if sim != null:
+		sim.active.wishes.busy = species
+
+
+func _wishes_blocked() -> bool:
+	if sim.active.edit_mode or not _wish_pause.is_empty() or not _back_handlers.is_empty():
+		return true
+	var pan := WorldPan.current
+	return pan != null and is_instance_valid(pan) and pan.is_blocked()
+
+
+## Pending wishes, oldest first: [{species, wish, state, icon, title_key, hint_key, granted_pose,
+## kind, arg, present, placed, taps, taps_needed, opened_t}].
+func wishes() -> Array[Dictionary]:
+	return sim.active.wishes.view(sim)
+
+
+## The wish [param species] holds ({} if none).
+func wish_of(species: StringName) -> Dictionary:
+	var w := sim.active.wishes.wish_of(sim, species)
+	return {} if w.is_empty() else sim.active.wishes.view_of(sim, w)
+
+
+## Stamps of a friend (wish ids granted at least once, in wishes.json order).
+func wish_stamps(species: StringName) -> Array[StringName]:
+	return sim.active.wishes.stamps(sim, species)
+
+
+## The wish list chip's unread dot: a wish opened since the card was last seen (never a number).
+func wish_list_unread() -> bool:
+	for w: Dictionary in sim.state.wishes:
+		if float(w["opened_t"]) > sim.state.wish_list_seen_t:
+			return true
+	return false
+
+
+func mark_wish_list_seen() -> void:
+	sim.state.wish_list_seen_t = sim.state.t
+	SaveService.request_save()
+
+
+# --- Active F2 Tea & Treats
+
+func tea_unlocked() -> bool:
+	return sim.state.tea_unlocked
+
+
+## A bed's petal branch (the bed release when no bud is ready): gathers every ready petal that
+## fits. The view also calls world_action(&"bed_tap", {bed}) on every bed release. Returns flower
+## -> count ({} when nothing was ready or the jars are full).
+func harvest_bed(bed_id: StringName) -> Dictionary:
+	_sync()
+	if not sim.state.tea_unlocked:
+		return {}
+	var got := sim.active.tea.harvest_bed(sim, bed_id, sim.state.t)
+	_after_action()
+	return got
+
+
+## Petals a tap on [param bed_id] would gather now (glints, hit priority 5, the bed card).
+func petals_ready(bed_id: StringName) -> int:
+	if sim == null or not sim.state.tea_unlocked:
+		return 0
+	return sim.active.tea.petals_ready(sim, bed_id, world_now() if is_ready else sim.state.t)
+
+
+## Seconds until the next petal on a bed (INF if none can grow: no bloom, or all full).
+func next_petal_in_s(bed_id: StringName) -> float:
+	return sim.active.tea.next_petal_in_s(sim, bed_id, sim.state.t)
+
+
+## flower -> petals in its jar.
+func pantry() -> Dictionary:
+	return sim.state.pantry.duplicate()
+
+
+## {petals: Array[String], drops, stir_deg, recipe (what it makes now or &""), stir_target}.
+func pot() -> Dictionary:
+	var p := sim.state.pot.duplicate(true)
+	p["recipe"] = sim.active.tea.pot_recipe(sim)
+	p["stir_target"] = sim.active.tea.stir_target()
+	return p
+
+
+func pot_add_petal(flower: StringName) -> bool:
+	return _tea_op(func() -> bool: return sim.active.tea.pot_add_petal(sim, flower))
+
+
+func pot_remove(index: int) -> bool:
+	return _tea_op(func() -> bool: return sim.active.tea.pot_remove(sim, index))
+
+
+func pot_add_drop() -> bool:
+	return _tea_op(func() -> bool: return sim.active.tea.pot_add_drop(sim))
+
+
+func pot_remove_drop() -> bool:
+	return _tea_op(func() -> bool: return sim.active.tea.pot_remove_drop(sim))
+
+
+## Adds |deg| of stir (either direction); returns the stirred degrees, capped at the stir target
+## (0 with an empty pot).
+func pot_stir(deg: float) -> float:
+	var v := sim.active.tea.pot_stir(sim, deg)
+	SaveService.request_save()
+	return v
+
+
+func pot_pour() -> StringName:
+	return _brew(false)
+
+
+## Simple brewing (Settings): one tap, no stir.
+func simple_brew() -> StringName:
+	return _brew(true)
+
+
+func _brew(simple: bool) -> StringName:
+	_sync()
+	if not sim.state.tea_unlocked:
+		return &""
+	var r := sim.active.tea.pour(sim, simple, sim.state.t)
+	_after_action()
+	return r
+
+
+func _tea_op(op: Callable) -> bool:
+	_sync()
+	if not sim.state.tea_unlocked:
+		return false
+	var ok: bool = op.call()
+	_after_action()
+	return ok
+
+
+## Cups and treats waiting: [{recipe, made_unix, drops, petals, kind}].
+func tray() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for c: Dictionary in sim.state.tray:
+		var d := c.duplicate(true)
+		d["kind"] = sim.active.tea.recipe_kind(StringName(c["recipe"]))
+		out.append(d)
+	return out
+
+
+## Offers tray cup [param tray_index] to a present friend. {reaction, petals_back, wish_granted,
+## affection, recipe, flower} or {} (no such cup, or the friend is not here).
+func offer_cup(tray_index: int, species: StringName) -> Dictionary:
+	_sync()
+	var res := sim.active.tea.offer(sim, tray_index, species, sim.state.t)
+	_after_action()
+	return res
+
+
+## recipe id -> unix time first brewed (the book).
+func recipes_found() -> Dictionary:
+	return sim.state.recipes_found.duplicate()
+
+
+## {loves, likes, seen}: the recipes whose reaction is known (seen, or all at ♥3).
+func tea_prefs_seen(species: StringName) -> Dictionary:
+	return sim.active.tea.known_prefs(sim, species)
+
+
+func buy_teaware(id: StringName) -> bool:
+	_sync()
+	var ok := sim.active.tea.buy_teaware(sim, id)
+	_after_action()
+	return ok
+
+
+func use_teaware(id: StringName) -> bool:
+	_sync()
+	var ok := sim.active.tea.use_teaware(sim, id)
+	_after_action()
+	return ok
+
+
+## {owned: Array[String] (defaults included), in_use: {teapot, cup, cloth}}.
+func teaware() -> Dictionary:
+	var owned: Array[String] = []
+	for id: StringName in content.teaware_by_id:
+		if sim.active.tea.owns_teaware(sim, id):
+			owned.append(String(id))
+	return {"owned": owned, "in_use": sim.active.tea.teaware_in_use(sim)}
+
+
+# --- Active F3 Free décor placement
+
+## One record per owned movable copy: {id "set#n", set, x, y, rot, stored, stack, level}.
+func decor_layout() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for p: Dictionary in sim.state.decor_layout:
+		out.append(p.duplicate())
+	return out
+
+
+## Placed copies of a set (wish gates, fx); attraction keeps counting owned copies.
+func decor_placed_count(set_id: StringName) -> int:
+	return sim.active.decor_placed_count(sim, set_id)
+
+
+## The pure placement rules (validate / sockets / snap / magnet / nudge, ACTIVE_DECOR §4-§5) for
+## the live drag; pass [method decor_context] and [method decor_layout].
+func decor_rules() -> DecorPlacementRules:
+	return sim.active.decor
+
+
+func decor_context() -> Dictionary:
+	return sim.active.context(sim)
+
+
+## Settles piece [param piece_id] at [param pos_norm] (snap, nudge or float home) and commits.
+## rot >= 0 sets the turn step too. {ok, pos, nudged, socket, reason, merge}; ok false = it floats
+## home and nothing changed (show the reason's DECOR_HINT_* key).
+func move_decor(piece_id: String, pos_norm: Vector2, rot: int = -1) -> Dictionary:
+	_sync()
+	var res := sim.active.move(sim, piece_id, pos_norm, rot)
+	if bool(res.get("ok", false)):
+		_face_cluster(piece_id)
+	_after_action()
+	return res
+
+
+## Turn one step; returns the new step or -1.
+func turn_decor(piece_id: String) -> int:
+	_sync()
+	var r := sim.active.turn(sim, piece_id)
+	if r >= 0:
+		_edit_turned[piece_id] = true
+	_after_action()
+	return r
+
+
+## Put away into the tray (a cairn base takes its stack). The piece keeps counting for friends.
+func store_decor(piece_id: String) -> bool:
+	_sync()
+	var ok := sim.active.store(sim, piece_id)
+	_after_action()
+	return ok
+
+
+## Takes one stored piece of a set out to [param pos_norm]; Vector2.INF = "Find a spot".
+func take_out_decor(set_id: StringName, pos_norm: Vector2 = Vector2.INF) -> Dictionary:
+	_sync()
+	var res := sim.active.take_out(sim, set_id, pos_norm)
+	_after_action()
+	return res
+
+
+## "Lift a pebble": the top pebble of a stack, now a loose piece to set down. Its id or "".
+func lift_pebble(stack_id: String) -> String:
+	_sync()
+	var id := sim.active.lift_pebble(sim, stack_id)
+	_after_action()
+	return id
+
+
+## One-step undo of the last edit-mode commit. False (nothing changed) if there is none.
+func undo_decor() -> bool:
+	_sync()
+	var ok := sim.active.undo(sim)
+	_after_action()
+	return ok
+
+
+func can_undo_decor() -> bool:
+	return sim.active.can_undo()
+
+
+## Enters or leaves Active F3 edit mode (wish checks pause; spots recompute on exit).
+func set_edit_mode(on: bool) -> bool:
+	_sync()
+	var ok := sim.active.set_edit_mode(sim, on)
+	if ok:
+		_edit_turned.clear()
+	_after_action()
+	return ok
+
+
+func edit_mode() -> bool:
+	return sim != null and sim.active.edit_mode
+
+
+## A spot's position now (normalised frame): derived spots follow the placed décor (§7).
+func spot_position(spot_id: StringName) -> Vector2:
+	return sim.active.spot_pos(spot_id)
+
+
+## Beautify (decor_placement.json face_cluster): a dropped pinwheel or lantern takes the turn step
+## most common in its cluster unless the player turned it in this edit session.
+func _face_cluster(piece_id: String) -> void:
+	var beautify: Dictionary = content.decor_placement["beautify"]
+	if _edit_turned.has(piece_id) or not bool(beautify.get("face_cluster", false)):
+		return
+	var i := DecorPlacementRules.find(sim.state.decor_layout, piece_id)
+	var rec: Dictionary = sim.state.decor_layout[i]
+	var set_id := StringName(rec["set"])
+	if set_id != &"leaf_pinwheel" and set_id != DecorPlacementRules.LANTERN:
+		return
+	for cl: Array in sim.active.decor.clusters(sim.state.decor_layout, set_id):
+		var ids := cl.map(func(p: Variant) -> String: return String((p as Dictionary)["id"]))
+		if not ids.has(piece_id) or cl.size() < 2:
+			continue
+		var votes := {}
+		for p: Variant in cl:
+			var q: Dictionary = p
+			if String(q["id"]) != piece_id:
+				votes[int(q["rot"])] = int(votes.get(int(q["rot"]), 0)) + 1
+		var best := int(rec["rot"])
+		var best_n := 0
+		for r: int in votes:
+			if int(votes[r]) > best_n:
+				best_n = int(votes[r])
+				best = r
+		rec["rot"] = best
+
+
 # ================================================================= back button (I3)
 
 ## The top-most open card/sheet registers a handler that closes it (and removes itself).
@@ -463,6 +855,43 @@ func _emit_retention(ev: Dictionary, offline: bool) -> void:
 			cousin_arrived.emit(StringName(ev["variant"]), StringName(ev["species"]), bool(ev["first"]))
 		WorldSim.EV_KEEPSAKE:
 			keepsake_added.emit(StringName(ev["species"]))
+		_:
+			_emit_active(ev)
+
+
+## Typed Active Play v1 signals (GDD §14.11 a5; the same events also went out as sim_event).
+func _emit_active(ev: Dictionary) -> void:
+	match StringName(ev["type"]):
+		WorldSim.EV_WISH_OPENED:
+			wish_opened.emit(StringName(ev["species"]), StringName(ev["wish"]), bool(ev["visible"]))
+		WorldSim.EV_WISH_SHOWN:
+			wish_shown.emit(StringName(ev["species"]), StringName(ev["wish"]))
+		WorldSim.EV_WISH_HELD:
+			wish_held.emit(StringName(ev["species"]), StringName(ev["wish"]))
+		WorldSim.EV_WISH_GRANTED:
+			wish_granted.emit(StringName(ev["species"]), StringName(ev["wish"]), int(ev["affection"]),
+				StringName(ev["gift_flower"]), bool(ev["first_stamp"]), bool(ev["on_arrival"]))
+		WorldSim.EV_TEA_UNLOCKED:
+			tea_nook_awake.emit()
+		WorldSim.EV_PETALS:
+			petals_harvested.emit(StringName(ev["bed"]), ev["counts"])
+		WorldSim.EV_RECIPE_FOUND:
+			recipe_found.emit(StringName(ev["recipe"]))
+		WorldSim.EV_TEA_OFFERED:
+			tea_offered.emit(StringName(ev["species"]), StringName(ev["recipe"]), StringName(ev["reaction"]),
+				int(ev["petals_back"]))
+		WorldSim.EV_TEAWARE:
+			if not bool(ev["bought"]):
+				teaware_changed.emit(StringName(ev["slot"]), StringName(ev["id"]))
+		WorldSim.EV_DECOR_PLACED:
+			decor_placed.emit(StringName(ev["set"]), String(ev["piece"]), ev["pos"], int(ev["rot_deg"]))
+		WorldSim.EV_DECOR_STORED:
+			decor_stored.emit(StringName(ev["set"]), String(ev["piece"]))
+		WorldSim.EV_DECOR_EDIT:
+			if bool(ev["on"]):
+				decor_edit_entered.emit()
+			else:
+				decor_edit_exited.emit()
 
 
 ## The creature layer reports who is napping (view-side state, ARCHITECTURE §5.4): sleepers
@@ -473,6 +902,12 @@ func report_sleepers(species: PackedStringArray) -> void:
 	_sleepers = species
 	if is_ready:
 		_push_audio_state()
+
+
+## True while [param species] naps in the hollow (from report_sleepers; Active F2: a cup offered
+## to a napping friend waits beside it, ACTIVE_TEA §7).
+func is_napping(species: StringName) -> bool:
+	return _sleepers.has(String(species))
 
 
 ## AudioDirector.set_world_state (AUDIO_BIBLE §8.7, §11): owned chime shells, the voice_step of
@@ -505,6 +940,7 @@ func _suspend() -> void:
 	_sync()
 	sim.dismiss_greeter()
 	_greeter_left_s = -1.0
+	sim.active.set_edit_mode(sim, false)  # the app always resumes in play mode (ACTIVE_DECOR §2)
 	if sim.has_events():
 		_dispatch(sim.drain_events(), false)
 	_suspended_at_unix = Clock.now_unix()

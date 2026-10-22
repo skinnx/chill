@@ -120,7 +120,7 @@ func test_scroll_has_no_canvas_group_mask() -> void:
 	await wait_frames(1)
 	for n: Node in s.find_children("*", "CanvasItem", true, false):
 		assert_eq((n as CanvasItem).clip_children, CanvasItem.CLIP_CHILDREN_DISABLED, "%s has no clip_children" % n.name)
-	assert_eq(UiBatch.FADE_BOTTOM_PX, 96.0, "the bottom fade is 96 px (QA r4)")
+	assert_eq(UiBatch.FADE_BOTTOM_PX, 120.0, "the bottom fade is 120 px, shown only while more waits below (round 6)")
 
 
 func test_surface_instance_data_is_two_slots() -> void:
@@ -180,24 +180,29 @@ func test_dock_labels_take_the_full_200_percent_size() -> void:
 	add_child_autofree(dock)
 	dock.layout(SCREEN, SAFE_BOTTOM)
 	var h100 := dock.pill_rect().size.y
+	var w100 := dock.pill_rect().size.x
 	var base := {}
+	var icons := {}
 	for id: StringName in DockView.ORDER:
-		base[id] = dock.button(id).label.get_theme_font_size(&"font_size")
+		base[id] = dock.button(id).label.get_combined_minimum_size().y
+		icons[id] = dock.button(id).icon_px
 	Settings.set_value(Settings.TEXT_SCALE, TEXT_200)
 	dock.theme = UiTheme.theme
 	await wait_frames(2)
 	dock.layout(SCREEN, SAFE_BOTTOM)
+	var full := roundi(float(ThemeBuilder.SIZE_CAPTION) * RATIO_200)
 	for id: StringName in DockView.ORDER:
 		var b := dock.button(id)
-		assert_eq(b.label.get_theme_font_size(&"font_size"), roundi(float(ThemeBuilder.SIZE_CAPTION) * RATIO_200),
-				"%s label = Caption 36 x 2.0" % id)
-		assert_true(b.label.get_combined_minimum_size().y >= 1.8 * float(base[id]), "%s label really grew" % id)
-		assert_eq(b.icon_px, DockView.ICON_PX, "icons never shrink")
-		var font := b.label.get_theme_font(&"font")
 		var fs := b.label.get_theme_font_size(&"font_size")
+		assert_true(fs >= roundi(float(full) * DockView.LABEL_SHRINK_FLOOR), "%s label near Caption 36 x 2.0 (%d)" % [id, fs])
+		assert_true(b.label.get_combined_minimum_size().y >= 1.6 * float(base[id]), "%s label really grew" % id)
+		assert_eq(b.icon_px, float(icons[id]), "icons never shrink")
+		var font := b.label.get_theme_font(&"font")
 		var w := font.get_string_size(b.label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-		assert_true(w + DockView.ICON_PX <= b.size.x, "%s icon + label fit the wide tab" % id)
-	assert_gt(dock.pill_rect().size.y, h100, "the dock grows (2 x 2 grid)")
+		assert_true(w <= b.size.x - DockView.label_pad() * 2.0 + 0.5, "%s label fits its tab" % id)
+	assert_gt(dock.pill_rect().size.y, h100, "the pebble grows taller")
+	assert_true(dock.pill_rect().size.x >= w100, "... and wider")
+	assert_true(dock.pill_rect().position.x >= DockView.PILL_SIDE - 0.5, "never wider than the screen")
 
 
 func test_top_bar_numerals_scale_with_text() -> void:

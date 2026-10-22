@@ -1,6 +1,6 @@
 // Every project shader global (project.godot [shader_globals], Art Bible §4.1), declared once.
 // Writers: TimeOfDay (palette, weather, celestial), Clock (g_time, g_motion), Main via TimeOfDay
-// (g_world_offset). Shaders only READ them (ARCHITECTURE §12).
+// (g_world_offset, g_cam_pan). Shaders only READ them (ARCHITECTURE §12).
 //
 // Rule for every shader in the project: never declare a `global uniform g_*` yourself; include
 // this file (world_light.gdshaderinc, lamps.gdshaderinc and finish users get it automatically).
@@ -24,6 +24,15 @@ global uniform vec2 g_moon_pos;
 global uniform vec2 g_celestial;
 global uniform vec2 g_halo;
 global uniform vec2 g_world_offset;
+// Map pan (canvas px, ARCHITECTURE §3.4): the camera's offset from its home view, idle drift
+// excluded. g_sun_pos / g_moon_pos stay pinned to the world (lighting and shadows never change
+// with the view); the sun and moon DISCS sit on L1 (scroll 0.02), so anything drawn around a disc
+// (sky body, sun veil, light shafts) adds celestial_shift() = g_cam_pan * (1 - L1).
+global uniform vec2 g_cam_pan;
+const float CELESTIAL_SCROLL = 0.02;
+vec2 celestial_shift() {
+	return g_cam_pan * (1.0 - CELESTIAL_SCROLL);
+}
 // Palette colours (sRGB, as stored in palettes.json).
 global uniform vec4 g_sky_top;
 global uniform vec4 g_sky_mid;

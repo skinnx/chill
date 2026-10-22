@@ -18,16 +18,19 @@ const ACCENT_ACTIVE := "fill-opacity=\"1\""
 ## px between atlas cells (no bleeding under bilinear filtering).
 const ATLAS_GAP := 4.0
 
-## [name, px, active] of every HUD icon (TopBarView ICON_PX 72 / badge 36, DockView 84, sparkle 30).
-## The HUD atlas holds each of these twice: as drawn by day and in the night-chrome variant
-## ([method night_source]: night_ink strokes, a stronger accent layer).
+## [name, px, active] of every HUD icon (TopBarView ICON_PX 72 / badge 36 incl. the Settings gear,
+## DockView's plush tab icons 96 / hero 108 with their sleepy and basket-fill variants, the sleepy
+## "z z" 42 and the sparkle 30). The HUD atlas holds each of these twice: as drawn by day and in the
+## night-chrome variant ([method variant_source]).
 const HUD_ATLAS: Array = [
 	[&"dew", 72.0, false], [&"watch", 72.0, false], [&"watch_closed", 72.0, false],
 	[&"dawn", 72.0, false], [&"sun", 72.0, false], [&"golden", 72.0, false], [&"dusk", 72.0, false],
 	[&"moon", 72.0, false], [&"breeze", 36.0, false], [&"rain", 36.0, false],
-	[&"settings", 84.0, false], [&"settings", 84.0, true], [&"garden", 84.0, false], [&"garden", 84.0, true],
-	[&"basket", 84.0, false], [&"basket", 84.0, true], [&"album", 84.0, false], [&"album", 84.0, true],
-	[&"sparkle", 30.0, false],
+	[&"gear", 72.0, false], [&"gear", 72.0, true],
+	[&"dock_garden", 108.0, false], [&"dock_garden_sleep", 108.0, false],
+	[&"dock_basket", 96.0, false], [&"dock_basket_sleep", 96.0, false], [&"dock_basket_1", 96.0, false],
+	[&"dock_basket_2", 96.0, false], [&"dock_basket_3", 96.0, false], [&"dock_album", 96.0, false],
+	[&"sleep_z", 42.0, false], [&"sparkle", 30.0, false],
 ]
 
 ## Round 5: every icon the sheets and modal cards draw, at its drawn size: one atlas (day and
@@ -177,6 +180,11 @@ static func variant_source(src: String, active: bool, night: bool) -> String:
 		src = src.replace(ink, night_ink)
 		var nt := UiTokens.alpha_section(&"night_chrome")
 		src = src.replace(ACCENT_ATTR, "fill-opacity=\"%s\"" % str(float(nt.get("icon_secondary", 0.6))))
+		# round 6: the plush dock icons keep their colours; their cocoa outline turns into a cream
+		# sticker edge on the dim glass (palettes dock_icon.outline_night)
+		var di: Dictionary = ContentRegistry.palettes().get("dock_icon", {})
+		if di.has("outline") and di.has("outline_night"):
+			src = src.replace(String(di["outline"]), String(di["outline_night"]))
 	return src
 
 

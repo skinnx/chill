@@ -521,6 +521,10 @@ Base: `tools/qa/capture.sh still --size=1080x2400 --seed=7 --frames=120 --no-sav
 | Album grid | `--tod=0.4 --qa-sheet=album` (`--qa-tab=1` Photos, `2` Postcards) | 12 portrait wells (studio light, studio diorama) |
 | Album friend at night | `--fixture=night_lanterns --tod=0.95 --qa-friend=puffmoss` | night chrome dock/chips, neutral sheet, crisp studio-lit portrait |
 | Basket / Settings | `--qa-sheet=basket` / `--qa-sheet=settings` | — |
+| Settings scrolled (round 6) | `--size=720x1600 --set=language:vi --qa-sheet=settings --qa-scroll=0.5` (`0` top, `1` end, or `640px`) | every option label inside its segment, the selected one inside the thumb; fades only where more waits |
+| Large detent | `--qa-sheet=garden --qa-detent=large` | the sheet up to the top bar + 24 |
+| Friend detail with Pet | `--qa-met=3 --qa-friend=present` | a visiting friend: Pet pill and hearts inside the card |
+| Rename above the keyboard | `--qa-met=3 --qa-friend=puffmoss --qa-rename --qa-kb=1000` | grey block = simulated keyboard; the sheet's bottom clears it, the field (primary edge, ink selection) and "Done" are in view |
 | Recap / new friend / leave / toast / captions | `--qa-recap`, `--qa-newfriend=honeyhum`, `--qa-leave`, `--qa-toast`, `--qa-captions` | overlays (no auto-dismiss) |
 | Ambient watch | `--qa-ambient` | HUD hidden |
 | Night chrome | `--fixture=night_lanterns --tod=1.0` (also dusk `--tod=0.82`) | dim warm-navy glass, night_ink labels/icons (switch at g_lights >= 0.6, back <= 0.4) |
@@ -531,8 +535,10 @@ peaks at 80 ms, ripple runs 380 ms; best stills 60-120 ms).
 
 | Frame | Add | Shows at peak |
 |---|---|---|
-| dock tab | `--tod=0.4 --qa-press=garden --qa-press-t=60` | squash on the baseline, press capsule, ripple under icon + label |
-| dock tab at night | `--fixture=night_lanterns --tod=1.0 --qa-press=garden --qa-press-t=60` | light capped ripple (0.12) on the night capsule |
+| dock tab | `--tod=0.4 --qa-press=basket --qa-press-t=60` | squash toward the bubble's bottom, press bubble, ripple in the tab's accent |
+| dock tab at night | `--fixture=night_lanterns --tod=1.0 --qa-press=garden --qa-press-t=60` | light capped ripple (0.12) on the night bubble |
+| Settings gear | `--qa-press=settings` (alias `gear`) | the top bar gear's plate press |
+| onboarding dock | no fixture (fresh install) | Garden / Basket / Album asleep: full colour, sleepy icons + "z z" |
 | primary pill | `--tod=0.4 --qa-sheet=garden --qa-press=primary --qa-press-t=90` | pressed primary_deep fill, lighter-primary splash UNDER the white label (>= 5.2:1 at the crest) |
 | segmented tab | `--tod=0.4 --qa-sheet=album --qa-press=tab --qa-press-t=90` | ripple inside the track segment |
 | friend card | `--tod=0.4 --qa-sheet=album --qa-press=card --qa-press-t=90` | card dip + ripple |
