@@ -84,7 +84,7 @@ func _fill() -> void:
 		_choice_row(&"haptics", "SET_HAPTICS", ["SET_HAPTICS_OFF", "SET_HAPTICS_SUBTLE", "SET_HAPTICS_FULL"],
 				Settings.HAPTIC_MODES, Settings.HAPTICS),
 		_toggle_row(&"hand", "SET_LEFT_HANDED", "SET_LEFT_HANDED_DESC", Settings.LEFT_HANDED),
-	])
+	] + _tea_rows())
 	_group(tr("SET_LANGUAGE"), [
 		_choice_row(&"language", "SET_LANGUAGE", ["SET_LANGUAGE_DEVICE", "LANG_EN", "LANG_VI"], Settings.LANGUAGES,
 				Settings.LANGUAGE),
@@ -95,6 +95,14 @@ func _fill() -> void:
 		_text_row(tr("SET_CREDITS_BODY")),
 		_text_row(I18n.fmt(&"SET_VERSION", {"version": version})),
 	])
+
+
+## Active F2: "Simple brewing" (one Brew tap instead of stir and pour; follows Reduce Motion
+## until set), shown once the tea nook is awake (ACTIVE_TEA §4, §10).
+func _tea_rows() -> Array:
+	if Game.sim == null or not Game.tea_unlocked():
+		return []
+	return [_toggle_row(&"hand", "TEA_SETTING_SIMPLE", "TEA_SETTING_SIMPLE_DESC", Settings.SIMPLE_BREWING)]
 
 
 func _group(caption: String, rows: Array) -> void:

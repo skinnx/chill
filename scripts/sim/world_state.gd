@@ -22,6 +22,17 @@ const SIGN_TEMPLATE := {"mystery": "", "index": 0, "type": "", "appear_t": 0.0, 
 const NEST_TEMPLATE := {"style": "", "built_t": 0.0, "stage": 0}
 const SCENE_TEMPLATE := {"scene": "", "phase": "", "weather": "", "world_t": 0.0, "shown_s": 0.0}
 const MEMORY_TEMPLATE := {"scene": "", "phase": "", "weather": "", "world_t": 0.0, "unix": 0.0}
+## Bumped when the content-aware Active Play migration changes (see [member active_v], GDD §14.9).
+const ACTIVE_VERSION := 1
+const WISH_OPEN := "open"
+const WISH_HELD := "held"
+const WISH_TEMPLATE := {"species": "", "wish": "", "opened_t": 0.0, "state": "open", "taps": 0, "placed": false}
+const VISIT_COUNT_TEMPLATE := {"arrive_t": 0.0, "n": 0}
+const TRAY_TEMPLATE := {"recipe": "", "made_unix": 0.0, "drops": 0}
+const DECOR_PIECE_TEMPLATE := {"id": "", "set": "", "x": 0.0, "y": 0.0, "rot": 0, "stored": false, "stack": "",
+	"level": 0}
+## "No wish yet" for the global wish gap that survives a JSON round trip (-INF does not).
+const NEVER_T := -1.0e18
 
 ## Seed fixed at install; drives the weather plan and seeds [member rng_state].
 var install_seed: int = 0
@@ -121,6 +132,55 @@ var last_bg_t: float = -1.0
 ## Foreground opens so far (the wave-delay hash key, GDD §13.2.2).
 var open_count: int = 0
 
+# --- Active Play v1 (GDD §14.9; schema 3). Nothing here decays or expires (AP2).
+## 0 = loaded from an older save: WorldSim runs ActiveRules.migrate_v1 once (décor anchors -> free
+## positions, tea unlock) and sets it to [constant ACTIVE_VERSION].
+var active_v: int = 0
+## Active F1: pending wishes (<= max_pending) {species, wish, opened_t, state open/held, taps, placed}.
+var wishes: Array[Dictionary] = []
+## Foreground spawn checks so far (the hash index n) and foreground seconds since the last one.
+var wish_checks: int = 0
+var wish_fg_s: float = 0.0
+## World t of the last spawn or grant (global gap); species -> the same per friend.
+var wish_last_t: float = NEVER_T
+var wish_friend_t: Dictionary = {}
+## species -> {arrive_t, n}: wishes spawned during the visit that arrived at arrive_t (cap per visit).
+var wish_visit_count: Dictionary = {}
+## species -> previous wish id (repeat_mult).
+var wish_last_id: Dictionary = {}
+## species -> world t of the last affection-granting wish (its own 20 h rest).
+var wish_aff_t: Dictionary = {}
+## species -> bitmask over GameContent.wishes order (stamps; never decreases).
+var wish_stamps: Dictionary = {}
+var wishes_granted: int = 0
+var wish_tutorial_done: bool = false
+## World t the wish list card was last opened (its unread dot).
+var wish_list_seen_t: float = 0.0
+## Active F2: the tea nook has appeared.
+var tea_unlocked: bool = false
+## "bed_id:slot" -> petal anchor (world t); absent = the stem's bloom time (ACTIVE_TEA §2.1).
+var petal_from_t: Dictionary = {}
+## flower -> petals in its jar.
+var pantry: Dictionary = {}
+## {petals: Array[String], drops: int, stir_deg: float}; survives closing the sheet and the app.
+var pot: Dictionary = {"petals": [], "drops": 0, "stir_deg": 0.0}
+## Cups and treats waiting (<= tray.slots): {recipe, made_unix, drops, petals: Array[String]}.
+var tray: Array[Dictionary] = []
+## recipe id -> unix time first brewed.
+var recipes_found: Dictionary = {}
+## species -> Array[String] recipes whose reaction the player has seen.
+var tea_prefs_seen: Dictionary = {}
+## species -> world t of the last affection-granting cup (its own 20 h rest).
+var tea_aff_t: Dictionary = {}
+var teaware_owned: Array[String] = []
+## slot -> teaware id in use; a missing slot uses the free default.
+var teaware_set: Dictionary = {}
+var cups_offered: int = 0
+var tea_flags: Dictionary = {}
+## Active F3: one entry per owned movable décor copy {id "set#n", set, x, y, rot, stored, stack, level}.
+## x/y are frame-normalised foot positions (x may leave [0, 1] into the pan wings).
+var decor_layout: Array[Dictionary] = []
+
 
 func to_dict() -> Dictionary:
 	return {
@@ -173,6 +233,32 @@ func to_dict() -> Dictionary:
 		"signature_gifts": signature_gifts.duplicate(),
 		"last_bg_t": last_bg_t,
 		"open_count": open_count,
+		"active_v": active_v,
+		"wishes": _copy_records(wishes),
+		"wish_checks": wish_checks,
+		"wish_fg_s": wish_fg_s,
+		"wish_last_t": wish_last_t,
+		"wish_friend_t": wish_friend_t.duplicate(),
+		"wish_visit_count": wish_visit_count.duplicate(true),
+		"wish_last_id": wish_last_id.duplicate(),
+		"wish_aff_t": wish_aff_t.duplicate(),
+		"wish_stamps": wish_stamps.duplicate(),
+		"wishes_granted": wishes_granted,
+		"wish_tutorial_done": wish_tutorial_done,
+		"wish_list_seen_t": wish_list_seen_t,
+		"tea_unlocked": tea_unlocked,
+		"petal_from_t": petal_from_t.duplicate(),
+		"pantry": pantry.duplicate(),
+		"pot": pot.duplicate(true),
+		"tray": _copy_records(tray),
+		"recipes_found": recipes_found.duplicate(),
+		"tea_prefs_seen": tea_prefs_seen.duplicate(true),
+		"tea_aff_t": tea_aff_t.duplicate(),
+		"teaware_owned": teaware_owned.duplicate(),
+		"teaware_set": teaware_set.duplicate(),
+		"cups_offered": cups_offered,
+		"tea_flags": tea_flags.duplicate(),
+		"decor_layout": _copy_records(decor_layout),
 	}
 
 
@@ -254,7 +340,54 @@ static func from_dict(d: Dictionary) -> WorldState:
 	s.signature_gifts = _float_map(d.get("signature_gifts", {}))
 	s.last_bg_t = float(d.get("last_bg_t", -1.0))
 	s.open_count = maxi(0, int(d.get("open_count", 0)))
+	_active_from_dict(s, d)
 	return s
+
+
+## Active Play v1 fields (GDD §14.9), coerced like the rest.
+static func _active_from_dict(s: WorldState, d: Dictionary) -> void:
+	s.active_v = maxi(0, int(d.get("active_v", 0)))
+	s.wishes = _records(d.get("wishes", []), WISH_TEMPLATE)
+	s.wish_checks = maxi(0, int(d.get("wish_checks", 0)))
+	s.wish_fg_s = maxf(0.0, float(d.get("wish_fg_s", 0.0)))
+	s.wish_last_t = float(d.get("wish_last_t", NEVER_T))
+	s.wish_friend_t = _float_map(d.get("wish_friend_t", {}))
+	s.wish_visit_count = _record_map(d.get("wish_visit_count", {}), VISIT_COUNT_TEMPLATE)
+	s.wish_last_id = _string_map(d.get("wish_last_id", {}))
+	s.wish_aff_t = _float_map(d.get("wish_aff_t", {}))
+	s.wish_stamps = _int_map(d.get("wish_stamps", {}))
+	s.wishes_granted = maxi(0, int(d.get("wishes_granted", 0)))
+	s.wish_tutorial_done = bool(d.get("wish_tutorial_done", false))
+	s.wish_list_seen_t = float(d.get("wish_list_seen_t", 0.0))
+	s.tea_unlocked = bool(d.get("tea_unlocked", false))
+	s.petal_from_t = _float_map(d.get("petal_from_t", {}))
+	s.pantry = _int_map(d.get("pantry", {}))
+	var pot: Variant = d.get("pot", {})
+	if pot is Dictionary:
+		var pd: Dictionary = pot
+		s.pot = {"petals": Array(_strings(pd.get("petals", []))), "drops": maxi(0, int(pd.get("drops", 0))),
+			"stir_deg": maxf(0.0, float(pd.get("stir_deg", 0.0)))}
+	var tray: Variant = d.get("tray", [])
+	if tray is Array:
+		for v: Variant in tray:
+			if v is Dictionary:
+				var rec := _coerce(v, TRAY_TEMPLATE)
+				rec["petals"] = Array(_strings((v as Dictionary).get("petals", [])))
+				s.tray.append(rec)
+	s.recipes_found = _float_map(d.get("recipes_found", {}))
+	var seen: Variant = d.get("tea_prefs_seen", {})
+	if seen is Dictionary:
+		for k: Variant in seen:
+			s.tea_prefs_seen[String(k)] = Array(_strings(seen[k]))
+	s.tea_aff_t = _float_map(d.get("tea_aff_t", {}))
+	s.teaware_owned = _strings(d.get("teaware_owned", []))
+	s.teaware_set = _string_map(d.get("teaware_set", {}))
+	s.cups_offered = maxi(0, int(d.get("cups_offered", 0)))
+	var flags: Variant = d.get("tea_flags", {})
+	if flags is Dictionary:
+		for k: Variant in flags:
+			s.tea_flags[String(k)] = bool(flags[k])
+	s.decor_layout = _records(d.get("decor_layout", []), DECOR_PIECE_TEMPLATE)
 
 
 func duplicate_state() -> WorldState:

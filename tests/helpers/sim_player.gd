@@ -41,6 +41,11 @@ var max_price: int = 0
 var first_visit_t: float = INF
 var species_after_first_session: int = 0
 
+## Active Play v1 (GDD §14): play the wish clock, help visible wishes, gather, brew and offer.
+var active_play: bool = false
+var wishes_helped: int = 0
+var cups_offered: int = 0
+
 var _last_snapshot: Dictionary = {}
 var _last_ambient: String = ""
 
@@ -127,6 +132,8 @@ func play(schedule: Array[Vector2]) -> SimPlayer:
 		_pet_all()
 		budget -= _shop(budget)
 		_boats()
+		if active_play:
+			_active_session(start, length)
 		sim.advance(start + length)
 		if key >= 180:
 			sim.collect()
@@ -142,6 +149,78 @@ func play(schedule: Array[Vector2]) -> SimPlayer:
 	for t: float in sim.state.met.values():
 		first_visit_t = minf(first_visit_t, t - install_unix)
 	return self
+
+
+## One minute at a time: the wish clock, then help with visible wishes through the action each
+## asks for, gather petals, and brew a cup for a present friend (simple brewing).
+func _active_session(start: float, length: float) -> void:
+	var t := start
+	while t + 60.0 <= start + length:
+		t += 60.0
+		sim.advance(t)
+		sim.active.wishes.foreground_tick(sim, 60.0)
+		for w: Dictionary in sim.state.wishes.duplicate():
+			if String(w["state"]) != WorldState.WISH_OPEN or rng.randf() > 0.6:
+				continue
+			_help(StringName(w["species"]), StringName(w["wish"]), t)
+		if sim.state.tea_unlocked:
+			sim.active.tea.harvest_bed(sim, &"", t)
+			if not sim.state.present.is_empty() and rng.randf() < 0.3:
+				_brew_and_offer(StringName(sim.state.present[rng.randi_range(0, sim.state.present.size() - 1)]["species"]), t)
+			if sim.catalogue_options().is_empty():
+				for x: Dictionary in GameContent._records(content.tea["teaware"]):
+					if sim.active.tea.buy_teaware(sim, StringName(x["id"])):
+						break
+
+
+func _help(species: StringName, wish: StringName, t: float) -> void:
+	var tg: Dictionary = content.wish_targets[wish]
+	var before := sim.state.wishes_granted
+	match StringName(tg["kind"]):
+		&"pet":
+			sim.pet(species, sim.unix_at(t))
+		&"boat":
+			sim.float_boat()
+		&"play_taps":
+			for i in int(tg["n"]):
+				sim.active.wishes.on_action(sim, WishRules.ACT_TAP_CREATURE, {"species": species}, t)
+		&"chime_tap":
+			sim.active.wishes.on_action(sim, WishRules.ACT_RING_CHIME, {}, t)
+		&"stream_tap":
+			sim.active.wishes.on_action(sim, WishRules.ACT_STREAM_TAP, {}, t)
+		&"decor_tap":
+			sim.active.wishes.on_action(sim, WishRules.ACT_DECOR_TAP, {"set": String(tg["arg"])}, t)
+		&"bed_invite":
+			for s: Dictionary in sim.state.stems:
+				if String(s["flower"]) == String(tg["arg"]) and int(s["stage"]) >= WorldSim.STAGE_BLOOM:
+					sim.active.wishes.on_action(sim, WishRules.ACT_BED_TAP, {"bed": StringName(s["bed"])}, t)
+					break
+		&"decor_near":
+			var fav := sim.active.favourite_spot_pos(sim, species)
+			for p: Dictionary in sim.state.decor_layout:
+				if String(p["set"]) == String(tg["arg"]):
+					sim.active.move(sim, String(p["id"]), sim.active.decor.offset_norm(fav, Vector2(30.0, 30.0)))
+					break
+		_:
+			_brew_and_offer(species, t)
+	if sim.state.wishes_granted > before:
+		wishes_helped += 1
+
+
+func _brew_and_offer(species: StringName, t: float) -> void:
+	var best := &""
+	for f: Dictionary in content.flowers:
+		if sim.active.tea.pantry_of(sim, StringName(f["id"])) >= 2:
+			best = StringName(f["id"])
+			break
+	if best == &"" or sim.state.tray.size() >= 6:
+		return
+	sim.active.tea.pot_add_petal(sim, best)
+	sim.active.tea.pot_add_petal(sim, best)
+	if sim.active.tea.pour(sim, true, t) == &"":
+		return
+	if not sim.active.tea.offer(sim, sim.state.tray.size() - 1, species, t).is_empty():
+		cups_offered += 1
 
 
 func _shop(budget: int) -> int:

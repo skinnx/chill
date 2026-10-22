@@ -3,7 +3,8 @@ extends CanvasLayer
 ## QA overlay of every hit area (user arg --debug-hits; docs/ARCHITECTURE.md §3.5, docs/QA.md):
 ##  * World: what WorldPan resolves - each GROUP_HIT layer's world_hit_shapes() (mosslings, beds,
 ##    props, décor, the brook band), outlined in its priority colour with the fat-finger slop as a
-##    faint outer ring, labelled with its name and size in dp.
+##    faint outer ring, labelled with its name and size in dp. In Active F3 edit mode it shows the
+##    GROUP_HIT_EDIT targets instead (pieces at prio 8, the selected one 9).
 ##  * UI: every visible Control that takes presses, in screen px - targets (buttons, sliders,
 ##    fields: green, or red when under 48 dp; dock tabs must reach 76 dp, HUD 72 dp) and consumers
 ##    (sheets, scrims, bands, the dock pebble, the toast: grey hatch-free fill), with the overlap
@@ -23,6 +24,7 @@ const MIN_UI_DP := 48.0
 const GAP_DP := 8.0
 const PRINT_EVERY := 30
 const PRIO_COLORS := {
+	9: Color(1.0, 1.0, 1.0), 8: Color(0.9, 0.95, 0.6),
 	7: Color(0.0, 0.9, 0.9), 6: Color(1.0, 0.35, 0.55), 5: Color(1.0, 0.85, 0.1), 4: Color(1.0, 0.55, 0.1),
 	3: Color(0.55, 0.4, 1.0), 2: Color(0.2, 0.5, 1.0), 1: Color(0.1, 0.8, 1.0),
 }
@@ -99,7 +101,8 @@ func _draw_all() -> void:
 	var world_live := pan != null and pan.is_inside_tree() and not (pan.blocked.is_valid() and bool(pan.blocked.call()))
 	summary["world_blocked"] = not world_live
 	if world_live:
-		for n: Node in pan.get_tree().get_nodes_in_group(WorldPan.GROUP_HIT):
+		var group := WorldPan.GROUP_HIT_EDIT if pan.edit_mode else WorldPan.GROUP_HIT  # Active F3 edit targets
+		for n: Node in pan.get_tree().get_nodes_in_group(group):
 			if not n.has_method(&"world_hit_shapes") or (n is CanvasItem and not (n as CanvasItem).is_visible_in_tree()):
 				continue
 			for sh: Variant in n.call(&"world_hit_shapes"):

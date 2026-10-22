@@ -31,6 +31,9 @@ const CAPTIONS := &"captions"
 const HAPTICS := &"haptics"
 const LEFT_HANDED := &"left_handed"
 const LANGUAGE := &"language"
+## Active F2 Tea (ACTIVE_TEA §4): one Brew tap instead of stir and pour. Until the player sets it,
+## it follows Reduce Motion (TeaSheet.simple_brewing).
+const SIMPLE_BREWING := &"simple_brewing"
 
 const TEXT_SCALES: Array[int] = [100, 115, 130, 150, 200]
 const MUSIC_MODES: Array[String] = ["on", "ambience", "off"]
@@ -57,6 +60,7 @@ const DEFAULTS := {
 	HAPTICS: "subtle",
 	LEFT_HANDED: false,
 	LANGUAGE: "auto",
+	SIMPLE_BREWING: false,
 }
 ## Keys whose default is read from the OS when the player has not set them.
 const OS_DEFAULT_KEYS: Array[StringName] = [REDUCE_MOTION, TEXT_SCALE]
@@ -206,4 +210,7 @@ func reset_to_defaults() -> void:
 
 
 func _os_default(key: StringName) -> Variant:
+	if key == SIMPLE_BREWING:
+		# Simple brewing follows Reduce Motion until the player sets it (ACTIVE_TEA §4)
+		return get_value(REDUCE_MOTION)
 	return _os_cache.get(key, DEFAULTS[key])

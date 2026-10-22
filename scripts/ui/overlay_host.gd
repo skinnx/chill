@@ -151,11 +151,29 @@ func hide_toast() -> void:
 
 
 func _place_toast() -> void:
-	var w := minf(_toast_label.get_combined_minimum_size().x + TOAST_PAD * 2.0, _screen.x - CARD_SIDE * 2.0)
-	_toast.size = Vector2(w, TOAST_H)
+	# one line when it fits; a longer line (e.g. the Active F1 gift line in en at 1080 px) wraps
+	# inside the padded pill instead of running past its edges
+	_toast_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	var one := _toast_label.get_combined_minimum_size().x + TOAST_PAD * 2.0
+	var max_w := _screen.x - CARD_SIDE * 2.0
+	var w := minf(one, max_w)
+	var h := TOAST_H
+	if one > max_w:
+		_toast_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		var font := _toast_label.get_theme_font(&"font")
+		var fs := _toast_label.get_theme_font_size(&"font_size")
+		var line_h := font.get_height(fs)
+		var block := font.get_multiline_string_size(_toast_label.text, HORIZONTAL_ALIGNMENT_CENTER,
+				w - TOAST_PAD * 2.0, fs, -1, TextServer.BREAK_MANDATORY | TextServer.BREAK_WORD_BOUND)
+		var lines := maxi(roundi(block.y / line_h), 1)
+		# reshape now so the label drops its cached one-line minimum width before it is sized
+		_toast_label.size = Vector2(w - TOAST_PAD * 2.0, 0.0)
+		_toast_label.get_line_count()
+		h = TOAST_H + float(lines - 1) * line_h
+	_toast.size = Vector2(w, h)
 	_toast.position = Vector2((_screen.x - w) * 0.5, maxf(TOAST_Y, _safe.position.y + TOAST_Y - 120.0) - TOAST_H * 0.5)
-	_toast_label.size = _toast.size
-	_toast_label.position = Vector2.ZERO
+	_toast_label.position = Vector2(TOAST_PAD, 0.0)
+	_toast_label.size = Vector2(w - TOAST_PAD * 2.0, h)
 
 
 # ------------------------------------------------------------------ captions
@@ -591,4 +609,6 @@ func show_bed_card(bed: StringName) -> void:
 			soonest = minf(soonest, left)
 	if soonest < INF:
 		text = "%s · %s" % [text, I18n.fmt(&"GARDEN_BLOOMS_IN", {"time": I18n.duration_text(maxf(soonest, 60.0))})]
+	# Active F2: spare petals and the next one (TeaSheet)
+	text = TeaSheet.bed_card_text(bed, text)
 	show_toast(text)

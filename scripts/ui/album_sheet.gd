@@ -7,6 +7,10 @@ extends UiSheet
 ## detail card (portrait, name with a rename pencil, Pet when visiting, favourite spot, hearts,
 ## first met, likes). Photos: live polaroids of the poses taken. Postcards: newest first, an
 ## unread dot, tap to read. Names are editable (12 characters, filtered to the fonts' coverage).
+##
+## Active F1 Wishes (wish section, WishAlbum): the Friends tab opens with a Wishes chip (unread dot)
+## that pushes the wish list card like a friend page; the friend detail gains the wishing row, the
+## Active F2 Tea line and the wish stamps. QA: --qa-wish-list opens the list page.
 
 # Data boundary: values read from JSON / Dictionaries are Variants and each one is converted
 # explicitly (int(), float(), String() ...) where it is read; the analyzer still flags every
@@ -56,6 +60,8 @@ var _count: Label
 var _tab: int = 0
 var _friend: StringName = &""
 var _name_edit: LineEdit
+## Active F1 wish section: --qa-wish-list opens the wish list page once.
+var _qa_wish_list: bool = OS.get_cmdline_user_args().has("--qa-wish-list")
 
 
 func _init() -> void:
@@ -192,6 +198,14 @@ func _fill() -> void:
 	if Game.sim == null:
 		return
 	_count.text = "%d / %d" % [Game.sim.met_count(), ContentRegistry.content.species.size()]
+	if _qa_wish_list and _friend == &"" and _tab == 0:
+		_qa_wish_list = false
+		_friend = WishAlbum.PAGE
+		_tabs.visible = false
+		_back.visible = true
+	if _friend == WishAlbum.PAGE:  # Active F1 wish section: the wish list card
+		WishAlbum.build_list(_list, self)
+		return
 	if _friend != &"":
 		_build_detail(_friend)
 		return
@@ -230,6 +244,8 @@ func _grid() -> GridContainer:
 # ------------------------------------------------------------------ friends
 
 func _build_friends() -> void:
+	if Game.feature_on(&"wishes"):  # Active F1 wish section: the Wishes chip
+		_list.add_child(WishAlbum.chip(func() -> void: show_friend(WishAlbum.PAGE)))
 	var g := _grid()
 	_list.add_child(g)
 	var w := (body.size.x - SIDE * 2.0 - float(GAP * (g.columns - 1))) / float(g.columns)
@@ -403,6 +419,8 @@ func _build_detail(sp: StringName) -> void:
 			Game.pet(sp)
 			_fill())
 		v.add_child(pet)
+	if Game.feature_on(&"wishes"):  # Active F1 wish section: wishing row, tea line, stamps
+		WishAlbum.detail_section(v, sp, self)
 	v.add_child(_fact(tr("ALBUM_FAVOURITE_SPOT"), _spot_text(sp, s)))
 	var met_unix := float(sim.state.met.get(String(sp), 0.0))
 	if met_unix > 0.0:

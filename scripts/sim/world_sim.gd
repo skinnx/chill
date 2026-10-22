@@ -48,6 +48,25 @@ const EV_SCENE_ARCHIVED := &"scene_archived"  ## memory {scene, cast, phase, wea
 const EV_COUSIN_MET := &"cousin_met"      ## {variant, species}
 const EV_COUSIN_ARRIVED := &"cousin_arrived"  ## {variant, species, first}
 const EV_KEEPSAKE := &"keepsake"          ## {species}
+# Active Play v1 (GDD §14.11; WishRules / TeaRules / ActiveRules emit these)
+const EV_WISH_OPENED := &"wish_opened"    ## {species, wish, visible}
+const EV_WISH_SHOWN := &"wish_shown"      ## {species, wish} a held wish took a visible slot
+const EV_WISH_HELD := &"wish_held"        ## {species, wish} its friend left (kept, never lost)
+const EV_WISH_PROGRESS := &"wish_progress"  ## {species, wish, taps, needed} play_taps
+const EV_WISH_PLACED := &"wish_placed"    ## {species, wish} decor_near set while away: granted on arrival
+## {species, wish, affection, gift_flower, first_stamp, on_arrival, granted_pose}
+const EV_WISH_GRANTED := &"wish_granted"
+const EV_TEA_UNLOCKED := &"tea_unlocked"  ## {}
+const EV_PETALS := &"petals"              ## {bed, counts: {flower: n}}
+const EV_BREWED := &"brewed"              ## {recipe, kind, new, tray_index}
+const EV_RECIPE_FOUND := &"recipe_found"  ## {recipe, found, total}
+## {species, recipe, reaction, affection, petals_back, flower, wish_granted, greeter}
+const EV_TEA_OFFERED := &"tea_offered"
+const EV_TEAWARE := &"teaware"            ## {slot, id, bought, cost}
+const EV_DECOR_PLACED := &"decor_placed"  ## {set, piece, pos: Vector2, rot_deg} after the settle only
+const EV_DECOR_STORED := &"decor_stored"  ## {set, piece}
+const EV_DECOR_EDIT := &"decor_edit"      ## {on}
+const EV_DECOR_UNDONE := &"decor_undone"  ## {op}
 
 const STAGE_SEED := 0
 const STAGE_SPROUT := 1
@@ -63,6 +82,8 @@ var content: GameContent
 var state: WorldState
 ## Retention v1 rules (GDD §13): mysteries, signs, nests, cousins, scenes. Holds no reference back.
 var retention: RetentionRules
+## Active Play v1 (GDD §14): wishes, tea, free décor placement. Holds no reference back.
+var active: ActiveRules
 
 var _eco: Dictionary
 var _ob: Dictionary
@@ -95,9 +116,13 @@ func _init(p_content: GameContent, p_state: WorldState) -> void:
 	_lmax = float(_eco["lambda_max_per_h"]) / TodMath.SECONDS_PER_HOUR
 	_lhalf = float(_eco["snug_half"])
 	retention = RetentionRules.new(content)
+	active = ActiveRules.new(content)
 	_rebuild_caches()
 	if state.retention_v < WorldState.RETENTION_VERSION:
 		retention.migrate_v1(self)  # a schema-1 save (GDD §13.6); events reach the next drain
+	if state.active_v < WorldState.ACTIVE_VERSION:
+		active.migrate_v1(self)  # a schema-2 save (GDD §14.9): décor anchors -> free positions
+	active.on_load(self)
 
 
 ## A fresh install: world clock 0 at [param now_unix], onboarding scheduled (GDD §3.4).
@@ -112,6 +137,7 @@ static func new_game(p_content: GameContent, install_seed: int, now_unix: float,
 	seeder.seed = install_seed
 	st.rng_state = seeder.state
 	st.retention_v = WorldState.RETENTION_VERSION
+	st.active_v = WorldState.ACTIVE_VERSION
 	var sim := WorldSim.new(p_content, st)
 	sim._start_onboarding()
 	return sim
@@ -170,6 +196,8 @@ func advance(to_t: float) -> int:
 	if not _dirty and to_t < _next_t:
 		_settle_cup(to_t)
 		state.t = to_t
+		if not state.tea_unlocked:
+			active.tea.check_unlock(self, to_t)
 		return 0
 	var n := 0
 	while true:
@@ -209,6 +237,8 @@ func advance(to_t: float) -> int:
 			state.next_candidate_t += _expo(_lmax)
 	_settle_cup(to_t)
 	state.t = to_t
+	if not state.tea_unlocked:
+		active.tea.check_unlock(self, to_t)  # the nook wakes after onboarding (ACTIVE_TEA §2.3)
 	return n
 
 
@@ -291,6 +321,7 @@ func buy_decor(decor_id: StringName) -> bool:
 	state.owned[String(decor_id)] = index + 1
 	_snug += float(content.decor_by_id[decor_id]["snug"])
 	_emit(EV_PLACED, {"decor": decor_id, "index": index, "cost": cost})
+	active.on_decor_bought(self, decor_id, index)  # Active F3: the new copy's free position
 	if first_ever:
 		_send_event_postcard(&"first_decor", state.t)
 	retention.check_mysteries(self, state.t)
@@ -341,6 +372,7 @@ func float_boat() -> bool:
 			watchers.append(StringName(p["species"]))
 			_add_affection(StringName(p["species"]), int(_eco["affection_per_boat"]), state.t)
 	_emit(EV_BOAT, {"count": state.boats, "watchers": watchers})
+	active.wishes.on_action(self, WishRules.ACT_BOAT, {}, state.t)
 	if state.boats == 10:
 		_send_event_postcard(&"boats_10", state.t)
 	return true
@@ -364,6 +396,7 @@ func pet(species: StringName, now_unix: float) -> bool:
 		state.last_pet_unix[String(species)] = now_unix
 		_add_affection(species, int(_eco["affection_per_pet"]), state.t)
 	_emit(EV_PETTED, {"species": species, "credited": credited})
+	active.wishes.on_action(self, WishRules.ACT_PET, {"species": species}, state.t)
 	return credited
 
 
@@ -381,10 +414,16 @@ func add_greeter(at_t: float) -> StringName:
 		return &""
 	var species := pool[_rng.randi_range(0, pool.size() - 1)]
 	state.rng_state = _rng.state
+	# GDD §14.2.3: preferably a friend holding a wish, who brings it (the draw above still runs,
+	# so the world RNG stream is the same with or without Active Play).
+	var holder := active.wishes.greeter_pick(self)
+	if holder != &"" and pool.has(holder):
+		species = holder
 	state.present.append({"species": String(species), "arrive_t": at_t,
 		"depart_t": at_t + float(_eco["greeter_stay_s"]), "gift_dew": 0, "gift_item": "",
 		"boat_credit": true, "pet_credit": false, "scripted": false, "greeter": true, "cousin": ""})
 	_emit(EV_GREETER_ARRIVED, {"species": species})
+	active.wishes.on_arrive(self, species, at_t)
 	_dirty = true
 	return species
 
@@ -396,6 +435,7 @@ func dismiss_greeter() -> void:
 		var p: Dictionary = state.present[i]
 		state.present.remove_at(i)
 		_emit(EV_GREETER_LEFT, {"species": StringName(p["species"])})
+		active.wishes.on_depart(self, StringName(p["species"]), state.t)
 		_dirty = true
 
 
@@ -566,6 +606,11 @@ func displayed_values() -> PackedInt32Array:
 	var out := PackedInt32Array([state.dew, basket_dew(), floori(state.cup)])
 	for o: Dictionary in catalogue_options():
 		out.append(int(o["price"]))
+	# Active F2 (GDD §14.7): teaware prices, jar counts and the drop price are shown too
+	out.append_array(active.tea.teaware_for_sale(self))
+	for f: String in state.pantry:
+		out.append(int(state.pantry[f]))
+	out.append(int(content.tea["dew_drop"]["cost_dew"]))
 	return out
 
 
@@ -585,7 +630,9 @@ func monotone_snapshot() -> Dictionary:
 		"memories_and_pending": state.memories.size() + (0 if state.pending_scene.is_empty() else 1),
 		"scenes_seen": state.scenes_seen.duplicate(), "keepsakes": state.keepsakes.size(),
 		"signature_gifts": state.signature_gifts.size(),
-		"postcards_and_waiting": state.postcards.size() + state.postcards_waiting.size()}
+		"postcards_and_waiting": state.postcards.size() + state.postcards_waiting.size(),
+		# Active Play v1 (GDD §14.9, AP2)
+		"active": active.monotone_items(self)}
 
 
 func _hearts_map() -> Dictionary:
@@ -701,6 +748,7 @@ func _grow(i: int, t: float) -> void:
 		_send_event_postcard(&"first_bloom_by_purchase", t)
 	if stage == STAGE_BLOOM:
 		retention.check_mysteries(self, t)
+		active.tea.check_unlock(self, t)
 
 
 func _candidate(t: float) -> void:
@@ -807,6 +855,7 @@ func _arrive(t: float, species: StringName, stay: float, scripted_gift: int, scr
 	_emit(EV_ARRIVED, {"species": species, "debut": debut, "peek": false, "scripted": scripted,
 		"from_greeter": from_greeter, "depart_t": t + stay}, t)
 	retention.on_base_arrival(self, species, visit, t)
+	active.wishes.on_arrive(self, species, t)  # a held wish comes back (Active F1)
 	# Room for real visitors always wins over the greeter.
 	if state.present.size() > int(_eco["max_present"]):
 		dismiss_greeter()
@@ -817,6 +866,7 @@ func _depart(i: int, t: float) -> void:
 	var p: Dictionary = state.present[i]
 	state.present.remove_at(i)
 	var species := StringName(p["species"])
+	active.wishes.on_depart(self, species, t)  # the friend keeps its wish (held)
 	if p["greeter"]:
 		_emit(EV_GREETER_LEFT, {"species": species}, t)
 		return
@@ -946,6 +996,27 @@ func has_postcard(id: String) -> bool:
 		if p["id"] == id:
 			return true
 	return false
+
+
+## World t at which stem [param i] bloomed (or will bloom): the default petal anchor.
+func stem_bloom_t(i: int) -> float:
+	var stem: Dictionary = state.stems[i]
+	return float(stem["planted_t"]) + _stage_times(stem)[STAGE_BLOOM - 1]
+
+
+func present_index(species: StringName) -> int:
+	return _present_index(species)
+
+
+## Affection from a rule object (wishes, tea); hearts and their unlocks follow as usual.
+func add_affection(species: StringName, n: int, t: float) -> void:
+	if n > 0:
+		_add_affection(species, n, t)
+
+
+## An event postcard by its trigger (economy.json or tea.json event_postcards), once.
+func send_trigger_postcard(trigger: StringName, t: float) -> void:
+	_send_event_postcard(trigger, t)
 
 
 ## Appends an event to the outbox (RetentionRules emits through this).

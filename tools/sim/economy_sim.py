@@ -16,9 +16,13 @@ Checks (exit code 1 on any failure):
       variant cousins (mysteries.json), away scenes (scenes.json) and the "content-left" metric:
       on how many of the first 30 local days did the player see >= 1 new discovery (species,
       heart, postcard, clue, scene, variant). Nothing may be missable or decrease.
+  A*  Active Play v1 (GDD section 14): wishes (wishes.json), petals, brewing and offering (tea.json), teaware
+      and dew-drop sinks; A1 >= 3 meaningful active actions available per reference session, A2 the
+      day-30 wallet median in its healthy range. --no-active reproduces the pre-Active model exactly.
 
 Usage:
   python3 tools/sim/economy_sim.py                # 10,000 random (30 d) + 2,000 reference players (80 d)
+  python3 tools/sim/economy_sim.py --active-parity-export tests/fixtures/active_parity.json
   python3 tools/sim/economy_sim.py --quick        # 500 random + 200 reference, about 20 s
   python3 tools/sim/economy_sim.py --players 500  # custom size
   python3 tools/sim/economy_sim.py --markdown out.md
@@ -60,13 +64,31 @@ POLICIES = (
 	("drain", 0.10, {30: 99, 180: 99, 300: 99, 600: 99}, 1.0, 1.0, 0.0, 0.0),  # also floats boats until broke
 )
 POLICY_NAMES = tuple(p[0] for p in POLICIES)
+# Active Play v1 (GDD 14) player behaviour, by policy: chance to help with a wish when it is seen,
+# tea cups per 5-min session, chance to offer a cup to a present friend, chance to try an unfound
+# recipe, and whether the player buys teaware once the garden catalogue is complete.
+ACTIVE = True  # --no-active reproduces the pre-Active model exactly (the "before" column)
+ACTIVE_POLICY = {
+	"gentle": {"wish_p": 0.5, "cups": 2, "offer_p": 0.6, "explore_p": 0.3, "teaware": True},
+	"keen": {"wish_p": 0.7, "cups": 3, "offer_p": 0.8, "explore_p": 0.5, "teaware": True},
+	"greedy": {"wish_p": 0.3, "cups": 1, "offer_p": 0.3, "explore_p": 0.2, "teaware": True},
+	"drain": {"wish_p": 0.3, "cups": 1, "offer_p": 0.3, "explore_p": 0.1, "teaware": False},
+}
+WISH_REACT_S = 20.0  # a player who helps does so about 20 s after noticing the bubble
+# A meaningful active action is one with a new outcome: a credited pet, a boat with watchers, an
+# affordable new copy or teaware piece, a sign to tap, petals to gather, a cup that warms a friend,
+# an unfound recipe, or an open wish. Arranging décor (always available) is not counted.
+ACTION_KINDS = ("pet", "boat", "buy", "sign", "harvest", "tea_offer", "tea_discover", "wish")
 POSES = ("nap", "nibble", "play", "wander", "sit_by_stream")
 
 
 # ---------------------------------------------------------------- content
+ACTIVE_FILES = ("wishes", "tea", "decor_placement")  # Active Play v1 (GDD section 14)
+
+
 def load_content(root: Path) -> dict:
 	data = {}
-	for name in ("species", "flora", "decor", "economy", "world", "spots", "friendship", "mysteries", "scenes"):
+	for name in ("species", "flora", "decor", "economy", "world", "spots", "friendship", "mysteries", "scenes") + ACTIVE_FILES:
 		with open(root / "data" / f"{name}.json", encoding="utf-8") as f:
 			data[name] = json.load(f)
 	return data
@@ -191,6 +213,116 @@ class Content:
 					{self.weather_index[w] for w in a["weather"]} or None, float(a["min_s"])) for a in c.get("away", [])],
 			})
 		self.ns_scenes = len(self.scenes)
+		self.active = ACTIVE
+		if self.active:
+			self._init_active(raw)
+
+	# ---- Active Play v1 (GDD 14): wishes.json, tea.json, decor_placement.json -------------
+	def _init_active(self, raw: dict) -> None:
+		wi, te, dp = raw["wishes"], raw["tea"], raw["decor_placement"]
+		self.wi_t = wi["tuning"]
+		self.wi_r = wi["reward"]
+		self.onboarding_end_s = float(self.eco["onboarding"]["poisson_start_s"])
+		ob = self.eco["onboarding"]
+		self.onboarding_friends = [self.species_index[ob[k]] for k in ("first_visitor", "second_visitor", "third_visitor")]
+		self.traits = [set(wi["traits"][s["id"]]) for s in self.species]
+		self.wish_ids = [w["id"] for w in wi["wishes"]]
+		self.wish_index = {w: i for i, w in enumerate(self.wish_ids)}
+		self.wishes = []
+		for w in wi["wishes"]:
+			kind, _, arg = w["target"].partition(":")
+			req = w["requires"]
+			sw = w["spawn_when"]
+			bo = w["boost"]
+			self.wishes.append({
+				"id": w["id"], "kind": kind, "arg": arg, "weight": float(w["weight"]), "tags": set(w["tags"]),
+				"bloomed": [(self.item_index[f][1], int(n)) for f, n in req.get("bloomed", {}).items()],
+				"owned": [(self.item_index[d][1], int(n)) for d, n in req.get("owned", {}).items()],
+				"feature": req.get("feature"), "buddy": bool(req.get("buddy_present")),
+				"not_near": bool(req.get("not_already_near")),
+				"near_decor": self.item_index[arg][1] if kind == "decor_near" else -1,
+				"phases": {self.phase_index[p] for p in sw.get("phases", [])} or None,
+				"weather": {self.weather_index[x] for x in sw.get("weather", [])} or None,
+				"boost_p": {self.phase_index[p]: float(m) for p, m in bo.get("phases", {}).items()},
+				"boost_w": {self.weather_index[x]: float(m) for x, m in bo.get("weather", {}).items()},
+				"prefer": {self.species_index[s] for s in w["prefer"]},
+				"only": {self.species_index[s] for s in w["species_only"]} or None,
+			})
+		self.nw = len(self.wishes)
+		self.wish_match = [[len(w["tags"] & self.traits[k]) for w in self.wishes] for k in range(self.ns)]
+		# tea
+		self.tea = te
+		self.tea_unlock_stems = int(te["unlock"]["requires_bloomed_stems"])
+		self.petal_hold = int(te["harvest"]["petal_hold_per_stem"])
+		self.petal_regrow = [INF] * self.nf
+		self.pantry_cap = [0] * self.nf
+		for p in te["petals"]:
+			f = self.item_index[p["flower"]][1]
+			self.petal_regrow[f] = float(p["petal_regrow_s"])
+			self.pantry_cap[f] = int(p["pantry_cap"])
+		self.drop_cost = int(te["dew_drop"]["cost_dew"])
+		self.pot_max_petals = int(te["pot"]["max_petals"])
+		self.pot_max_drops = int(te["pot"]["max_drops"])
+		self.treat_at_drops = int(te["pot"]["treat_at_drops"])
+		self.recipes = []  # (id, kind, petal counts tuple, drops) for named recipes; fallbacks last
+		self.recipe_index: dict = {}
+		self.fallback_by_drops: dict = {}
+		for r in te["recipes"]:
+			i = len(self.recipes)
+			self.recipe_index[r["id"]] = i
+			if r.get("match") == "fallback":
+				self.recipes.append((r["id"], r["kind"], None, None))
+				for dr in r["drops_any"]:
+					self.fallback_by_drops[int(dr)] = i
+				continue
+			counts = [0] * self.nf
+			for f, n in r["petals"].items():
+				counts[self.item_index[f][1]] = int(n)
+			self.recipes.append((r["id"], r["kind"], tuple(counts), int(r["drops"])))
+		self.nr = len(self.recipes)
+		self.named = [i for i, r in enumerate(self.recipes) if r[2] is not None]
+		self.recipe_by_key = {(self.recipes[i][2], self.recipes[i][3]): i for i in self.named}
+		self.loves = [set() for _ in range(self.ns)]
+		self.likes = [set() for _ in range(self.ns)]
+		self.gift_petal = [0] * self.ns
+		for sid, pr in te["species_prefs"].items():
+			k = self.species_index[sid]
+			self.loves[k] = {self.recipe_index[x] for x in pr["loves"]}
+			self.likes[k] = {self.recipe_index[x] for x in pr["likes"]}
+			self.gift_petal[k] = self.item_index[pr["gift_petal"]][1]
+		self.likes_revealed_at = int(te["likes_revealed_at_heart"])
+		of = te["offering"]
+		self.tea_aff = {"content": int(of["affection_content"]), "liked": int(of["affection_liked"]), "loved": int(of["affection_loved"])}
+		self.tea_back = {"content": 0, "liked": int(of["petals_back_liked"]), "loved": int(of["petals_back_loved"])}
+		self.tea_rest_s = float(of["affection_rest_s"])
+		self.teaware = sorted((int(x["cost"]), x["id"]) for x in te["teaware"] if int(x["cost"]) > 0)
+		self.teaware_total = sum(c for c, _ in self.teaware)
+		# decor placement: attraction keeps counting owned copies (placed + tucked away), so the
+		# visitor model is unchanged; only F1 decor_near wishes use positions
+		self.dp_count = dp["attraction"]["count"]
+		assert self.dp_count == "owned", "economy_sim models attraction on owned copies (decor_placement.attraction.count)"
+		# not_already_near (ACTIVE_WISHES 4.3) on the décor the sim player never moves: copy n of a set
+		# stands at its legacy anchor (all cairn pebbles at anchors[0]), so near_n[k][d] is the copy
+		# count from which a piece stands within near_dp of the friend's favourite spot (a spot
+		# derived from the same set is always near once a piece stands). INF = never near.
+		fr = raw["spots"]["frame"]
+		w_dp, h_dp = fr["width_px"] / fr["px_per_dp"], fr["height_px"] / fr["px_per_dp"]
+		spot_by = {x["id"]: x for x in raw["spots"]["spots"]}
+		anchors = {a["decor_id"]: a["positions"] for a in raw["spots"]["decor_anchors"]}
+		near_dp = float(self.wi_t["near_dp"])
+		self.near_n = [[INF] * self.nd for _ in range(self.ns)]
+		for k, sp in enumerate(self.species):
+			fav = spot_by[sp["favourite_spot"]]
+			for d, dd in enumerate(self.decor):
+				pos = anchors.get(dd["id"], [])
+				if fav.get("requires_item") == dd["id"]:
+					self.near_n[k][d] = 1
+					continue
+				for n in range(1, len(pos) + 1):
+					x, y = pos[0] if dd["id"] == "pebble_cairn" else pos[n - 1]
+					if math.hypot((x - fav["x"]) * w_dp, (y - fav["y"]) * h_dp) <= near_dp:
+						self.near_n[k][d] = n
+						break
 
 	@staticmethod
 	def price(base: float, growth: float, n: int) -> int:
@@ -347,6 +479,516 @@ class Player:
 		self.scene_returns = 0
 		self.memories = 0
 		self.missable = 0  # invariant counter: anything removed without the player seeing it
+		if C.active:
+			self._init_active_state()
+
+	# ------------------------------------------------------------ Active Play v1 (GDD 14)
+	def _init_active_state(self) -> None:
+		C = self.C
+		ns = C.ns
+		self.arng = Rng([BASE_SEED, self.seed, 3])  # player choices only: the world stream is untouched
+		self.apol = ACTIVE_POLICY[self.policy[0]]
+		# F1 wishes: open[k] = [wish, opened_t, visible]
+		self.w_open: dict = {}
+		self.w_checks = 0
+		self.w_fg = 0.0  # foreground seconds (the wish clock advances only while the app is open)
+		self.w_last_t = -INF
+		self.w_friend_t = [-INF] * ns
+		self.w_last_id = [-1] * ns
+		self.w_aff_t = [-INF] * ns
+		self.w_stamps: set = set()
+		self.w_granted = 0
+		self.w_spawned = 0
+		self.w_aff_given = 0
+		self.w_tutorial_done = False
+		self.w_near_done: set = set()  # (species, decor) pieces already placed near a favourite spot
+		self.w_decided: set = set()  # wishes the player already looked at in this session
+		# F2 tea
+		self.stems_pa = [[] for _ in range(C.nf)]  # petal anchor per bloomed stem
+		self.pantry = [0] * C.nf
+		self.recipes_found: set = set()
+		self.prefs_seen = [set() for _ in range(ns)]
+		self.tea_unlocked = False
+		self.tea_aff_t = [-INF] * ns
+		self.cups_offered = 0
+		self.cups_loved = 0
+		self.cups_brewed = 0
+		self.petals_gathered = 0
+		self.drops_spent = 0
+		self.tea_aff_given = 0
+		self.teaware_owned: set = set()
+		self.teaware_spent = 0
+
+	def visible_wishes(self) -> int:
+		return sum(1 for w in self.w_open.values() if w[2])
+
+	def wish_on_arrive(self, k: int, t: float) -> None:
+		w = self.w_open.get(k)
+		if w is not None and w[3]:
+			self.wish_grant(k, t)  # the piece was placed while the friend was away: granted on arrival
+		elif w is not None and not w[2] and self.visible_wishes() < self.C.wi_t["max_visible"]:
+			w[2] = True
+
+	def wish_fill_slots(self) -> None:
+		"""A freed visible slot goes to the oldest held wish of a present friend."""
+		present = {p[0] for p in self.present}
+		held = sorted((w[1], k) for k, w in self.w_open.items() if not w[2] and k in present)
+		for _, k in held:
+			if self.visible_wishes() >= self.C.wi_t["max_visible"]:
+				break
+			self.w_open[k][2] = True
+
+	def wish_on_depart(self, k: int) -> None:
+		w = self.w_open.get(k)
+		if w is not None and w[2]:
+			w[2] = False  # held: the friend keeps the wish for a later visit (never expires)
+			self.wish_fill_slots()
+
+	def tea_check_unlock(self) -> None:
+		if not self.tea_unlocked and self.t >= self.C.eco["onboarding"]["welcome_postcard_at_s"] \
+				and sum(self.bloomed) >= self.C.tea_unlock_stems:
+			self.tea_unlocked = True
+
+	def wish_eligible(self, k: int, wi: int, ph: int, wx: int, present_ids: set) -> bool:
+		C = self.C
+		w = C.wishes[wi]
+		if w["only"] is not None and k not in w["only"]:
+			return False
+		if w["phases"] is not None and ph not in w["phases"]:
+			return False
+		if w["weather"] is not None and wx not in w["weather"]:
+			return False
+		if w["feature"] == "tea" and not self.tea_unlocked:
+			return False
+		for f, n in w["bloomed"]:
+			if self.bloomed[f] < n:
+				return False
+		for d, n in w["owned"]:
+			if self.owned_d[d] < n:  # every owned piece is placed in the sim (nobody tucks away)
+				return False
+		if w["buddy"] and C.sp_best[k] not in present_ids:
+			return False
+		if w["not_near"] and ((k, w["near_decor"]) in self.w_near_done
+				or self.owned_d[w["near_decor"]] >= C.near_n[k][w["near_decor"]]):
+			return False
+		return True
+
+	def wish_open(self, k: int, wi: int, t: float, p: list) -> None:
+		# [wish, opened_t, visible, decor already placed near the favourite spot while the friend was away]
+		self.w_open[k] = [wi, t, self.visible_wishes() < self.C.wi_t["max_visible"], False]
+		self.w_last_t = t
+		self.w_friend_t[k] = t
+		self.w_last_id[k] = wi
+		self.w_spawned += 1
+		p[7] += 1
+
+	def wish_check(self, t: float) -> None:
+		"""ACTIVE_WISHES.md 4.1: one spawn check per 60 s of foreground time."""
+		C = self.C
+		tu = C.wi_t
+		n = self.w_checks
+		self.w_checks += 1
+		present = sorted(self.present, key=lambda p: C.sp_order[p[0]])
+		present_ids = {p[0] for p in present}
+		if not self.w_tutorial_done and t >= C.onboarding_end_s + tu["first_wish"]["after_onboarding_s"]:
+			for k in C.onboarding_friends:
+				p = next((q for q in present if q[0] == k), None)
+				if p is not None and k not in self.w_open:
+					self.wish_open(k, C.wish_index[tu["first_wish"]["wish"]], t, p)
+					self.w_tutorial_done = True
+					return
+		if self.visible_wishes() >= tu["max_visible"] or len(self.w_open) >= tu["max_pending"]:
+			return
+		if t - self.w_last_t < tu["global_gap_s"]:
+			return
+		if hash_u(self.seed, "wish_roll", n) >= tu["spawn_chance"]:
+			return
+		cands = [p for p in present if p[0] not in self.w_open and t - p[5] >= tu["min_present_s"]
+			and t - self.w_friend_t[p[0]] >= tu["friend_gap_s"] and p[7] < tu["max_spawned_per_visit"]]
+		if not cands:
+			return
+		p = cands[min(len(cands) - 1, int(hash_u(self.seed, "wish_friend", n) * len(cands)))]
+		k = p[0]
+		ph, wx = self.phase(t), self.weather(t)
+		ws = []
+		for wi in range(C.nw):
+			if not self.wish_eligible(k, wi, ph, wx, present_ids):
+				ws.append(0.0)
+				continue
+			w = C.wishes[wi]
+			x = w["weight"] * (1.0 + tu["trait_bonus"] * C.wish_match[k][wi])
+			if k in w["prefer"]:
+				x *= tu["prefer_mult"]
+			x *= w["boost_p"].get(ph, 1.0) * w["boost_w"].get(wx, 1.0)
+			if (k, wi) not in self.w_stamps:
+				x *= tu["unseen_mult"]
+			if self.w_last_id[k] == wi:
+				x *= tu["repeat_mult"]
+			ws.append(x)
+		tot = sum(ws)
+		if tot <= 0:
+			return
+		x = hash_u(self.seed, "wish_pick", n) * tot
+		acc = 0.0
+		pick = max(i for i, v in enumerate(ws) if v > 0)
+		for i, v in enumerate(ws):
+			acc += v
+			if v > 0 and x < acc:
+				pick = i
+				break
+		self.wish_open(k, pick, t, p)
+
+	def wish_grant(self, k: int, t: float) -> None:
+		C = self.C
+		wi = self.w_open.pop(k)[0]
+		self.w_granted += 1
+		self.w_last_t = t
+		self.w_friend_t[k] = t
+		if (k, wi) not in self.w_stamps:
+			self.w_stamps.add((k, wi))
+			self.novelty += 1
+		if t - self.w_aff_t[k] >= C.wi_r["wish_affection_rest_s"]:
+			self.w_aff_t[k] = t
+			self.w_aff_given += C.wi_r["affection_per_wish"]
+			self.add_affection(k, C.wi_r["affection_per_wish"], t)
+		if self.tea_unlocked:  # gift: one petal by the shared gift-petal rule (GDD 14.2.4)
+			f = self.gift_flower(k)
+			if self.pantry[f] < C.pantry_cap[f]:
+				self.pantry[f] += 1
+		w = C.wishes[wi]
+		if w["kind"] == "decor_near":
+			self.w_near_done.add((k, w["near_decor"]))
+		self.wish_fill_slots()
+
+	def gift_flower(self, k: int) -> int:
+		"""GDD 14.2.4: tea.json gift_petal if that flower has a bloomed stem, else the flower with the
+		most bloomed stems (ties: garden order). Shared by wish gifts and returned petals."""
+		C = self.C
+		f = C.gift_petal[k]
+		return f if self.bloomed[f] > 0 else max(range(C.nf), key=lambda i: self.bloomed[i])
+
+	# ---- F2 tea
+	def petals_ready(self, t: float) -> int:
+		C = self.C
+		n = 0
+		for f in range(C.nf):
+			room = C.pantry_cap[f] - self.pantry[f]
+			r = 0
+			for pa in self.stems_pa[f]:
+				r += min(C.petal_hold, int((t - pa) // C.petal_regrow[f]))
+			n += min(room, r)
+		return n
+
+	def harvest(self, t: float) -> int:
+		"""ACTIVE_TEA.md 2.1: gather every ready petal that fits; the rest waits on the flowers."""
+		C = self.C
+		got = 0
+		for f in range(C.nf):
+			reg = C.petal_regrow[f]
+			stems = self.stems_pa[f]
+			for i, pa in enumerate(stems):
+				room = C.pantry_cap[f] - self.pantry[f]
+				if room <= 0:
+					break
+				ready = min(C.petal_hold, int((t - pa) // reg))
+				if ready <= 0:
+					continue
+				k = min(ready, room)
+				stems[i] = pa + k * reg if ready < C.petal_hold else t - (ready - k) * reg
+				self.pantry[f] += k
+				got += k
+		self.petals_gathered += got
+		return got
+
+	def makeable(self, r: int) -> bool:
+		_, _, counts, drops = self.C.recipes[r]
+		if counts is None:
+			return False
+		if self.dew < drops * self.C.drop_cost:
+			return False
+		return all(self.pantry[f] >= n for f, n in enumerate(counts) if n)
+
+	def brew(self, r: int, fallback_petal: int = -1, drops: int = 0) -> int:
+		"""Brew a named recipe r, or (r < 0) the any-mix fallback from one petal and `drops` drops."""
+		C = self.C
+		if r >= 0:
+			_, _, counts, drops = C.recipes[r]
+			for f, n in enumerate(counts):
+				self.pantry[f] -= n
+		else:
+			self.pantry[fallback_petal] -= 1
+			r = C.fallback_by_drops[drops]
+		cost = drops * C.drop_cost
+		self.dew -= cost
+		self.drops_spent += cost
+		self.cups_brewed += 1
+		if r not in self.recipes_found:
+			self.recipes_found.add(r)
+			self.novelty += 1
+		return r
+
+	def reaction(self, k: int, r: int) -> str:
+		if r in self.C.loves[k]:
+			return "loved"
+		if r in self.C.likes[k]:
+			return "liked"
+		return "content"
+
+	def offer(self, p: list, r: int, t: float, petals: tuple | None) -> None:
+		"""ACTIVE_TEA.md 7: once per visit the cup warms the friendship; a matching wish is granted."""
+		C = self.C
+		k = p[0]
+		react = self.reaction(k, r)
+		self.cups_offered += 1
+		if react == "loved":
+			self.cups_loved += 1
+		self.prefs_seen[k].add(r)
+		p[6] = True  # offered this visit (player bookkeeping; the credit has its own rest clock)
+		if t - self.tea_aff_t[k] >= C.tea_rest_s:
+			self.tea_aff_t[k] = t
+			self.tea_aff_given += C.tea_aff[react]
+			self.add_affection(k, C.tea_aff[react], t)
+		if C.tea_back[react]:
+			f = self.gift_flower(k)
+			self.pantry[f] = min(C.pantry_cap[f], self.pantry[f] + C.tea_back[react])
+		w = self.w_open.get(k)
+		if w is not None and w[2] and self.tea_satisfies(w[0], k, r, petals):
+			self.wish_grant(k, t)
+
+	def tea_satisfies(self, wi: int, k: int, r: int, petals: tuple | None) -> bool:
+		C = self.C
+		w = C.wishes[wi]
+		kind, arg = w["kind"], w["arg"]
+		if kind == "tea":
+			return C.recipes[r][0] == arg
+		if w["buddy"] and C.sp_best[k] not in {p[0] for p in self.present}:
+			return False
+		if kind == "tea_kind":
+			return C.recipes[r][1] == arg
+		if kind == "tea_petal":
+			return petals is not None and petals[C.item_index[arg][1]] > 0
+		if kind == "tea_loved":
+			return r in C.loves[k]
+		return False
+
+	def known_prefs(self, k: int) -> set:
+		if self.hearts[k] >= self.C.likes_revealed_at:
+			return self.C.loves[k] | self.C.likes[k]
+		return self.prefs_seen[k]
+
+	def choose_cup(self, k: int, wish: int = -1) -> tuple | None:
+		"""Player choice: what the wish asks for, else a known love, a known like, sometimes an
+		unfound recipe, else any named recipe, else one petal of meadow tea. Returns (r, petal, drops)."""
+		C = self.C
+		known = self.known_prefs(k)
+		mk = [r for r in C.named if self.makeable(r)]
+		if wish >= 0:
+			w = C.wishes[wish]
+			ok = [r for r in mk if self.tea_satisfies(wish, k, r, C.recipes[r][2])]
+			if w["kind"] == "tea_loved" and not known & C.loves[k]:
+				# loves not revealed yet: a guess, and the friend's reaction reveals it
+				return (mk[int(self.arng.u() * len(mk))], -1, 0) if mk else None
+			if ok:
+				ok.sort(key=lambda r: (0 if r in C.loves[k] and r in known else 1 if r in C.likes[k] and r in known else 2, C.recipes[r][3]))
+				return (ok[0], -1, 0)
+			if w["kind"] == "tea_petal":
+				f = C.item_index[w["arg"]][1]
+				if self.pantry[f] > 0:
+					return (-1, f, 0)
+			if w["kind"] == "tea_kind":
+				drops = C.treat_at_drops if w["arg"] == "treat" else 0
+				f = max(range(C.nf), key=lambda i: self.pantry[i])
+				if self.pantry[f] > 0 and self.dew >= drops * C.drop_cost:
+					return (-1, f, drops)
+			return None
+		for tier in (C.loves[k] & known, C.likes[k] & known):
+			ok = [r for r in mk if r in tier]
+			if ok:
+				return (min(ok, key=lambda r: C.recipes[r][3]), -1, 0)
+		unfound = [r for r in mk if r not in self.recipes_found]
+		if unfound and self.arng.u() < self.apol["explore_p"]:
+			return (unfound[int(self.arng.u() * len(unfound))], -1, 0)
+		if mk:
+			return (mk[int(self.arng.u() * len(mk))], -1, 0)
+		f = max(range(C.nf), key=lambda i: self.pantry[i])
+		if self.pantry[f] > 0:
+			return (-1, f, 0)
+		return None
+
+	def serve(self, p: list, choice: tuple, t: float) -> None:
+		r, f, drops = choice
+		C = self.C
+		petals = C.recipes[r][2] if r >= 0 else tuple(1 if i == f else 0 for i in range(C.nf))
+		r = self.brew(r, f, drops)
+		self.offer(p, r, t, petals)
+
+	def tea_turn(self, t: float, cups: int) -> int:
+		"""One visit to the tea nook: gather, then cups for tea wishes first, then for present friends."""
+		if not self.tea_unlocked or cups <= 0:
+			return cups
+		self.harvest(t)
+		C = self.C
+		for p in sorted(self.present, key=lambda q: C.sp_order[q[0]]):
+			if cups <= 0:
+				break
+			w = self.w_open.get(p[0])
+			if w is None or not w[2] or C.wishes[w[0]]["kind"] not in ("tea", "tea_kind", "tea_petal", "tea_loved"):
+				continue
+			key = (p[0], w[0], w[1])
+			if key in self.w_decided:
+				continue
+			self.w_decided.add(key)
+			if self.arng.u() >= self.apol["wish_p"]:
+				continue
+			ch = self.choose_cup(p[0], w[0])
+			if ch is not None:
+				self.serve(p, ch, t)
+				cups -= 1
+		for p in sorted(self.present, key=lambda q: C.sp_order[q[0]]):
+			if cups <= 0:
+				break
+			key = ("offer", p[0], p[5])
+			if p[6] or key in self.w_decided:
+				continue
+			self.w_decided.add(key)
+			if self.arng.u() >= self.apol["offer_p"]:
+				continue
+			ch = self.choose_cup(p[0])
+			if ch is not None:
+				self.serve(p, ch, t)
+				cups -= 1
+		return cups
+
+	def held_actionable(self) -> list:
+		"""Held decor_near wishes can be worked on from the wish list while the friend is away (F3)."""
+		C = self.C
+		present = {p[0] for p in self.present}
+		return [k for k, w in self.w_open.items() if not w[2] and not w[3] and k not in present
+			and C.wishes[w[0]]["kind"] == "decor_near"]
+
+	def greeter_wish(self, t: float) -> int:
+		"""GDD 14: the greeter is preferably a friend holding a wish, and it brings that wish along."""
+		held = sorted((w[1], k) for k, w in self.w_open.items() if not w[2] and not w[3]
+			and self.discovered[k] and k not in {p[0] for p in self.present})
+		return held[0][1] if held else -1
+
+	def greeter_turn(self, k: int, t: float) -> None:
+		"""Helping the greeter's wish. Tea for a greeter gives no tea affection (tea.json greeter_affection)."""
+		C = self.C
+		w = self.w_open[k]
+		key = (k, w[0], w[1])
+		if key in self.w_decided:
+			return
+		self.w_decided.add(key)
+		if self.arng.u() >= self.apol["wish_p"]:
+			return
+		kind = C.wishes[w[0]]["kind"]
+		if kind in ("tea", "tea_kind", "tea_petal", "tea_loved"):
+			if not self.tea_unlocked:
+				return
+			self.harvest(t)
+			ch = self.choose_cup(k, w[0])
+			if ch is None:
+				return
+			r, f, drops = ch
+			petals = C.recipes[r][2] if r >= 0 else tuple(1 if i == f else 0 for i in range(C.nf))
+			r = self.brew(r, f, drops)
+			self.cups_offered += 1
+			self.prefs_seen[k].add(r)
+			if not self.tea_satisfies(w[0], k, r, petals):
+				return
+		elif kind == "boat":
+			if self.dew < self.eco["leaf_boat_cost"]:
+				return
+			self.float_boat()
+		self.wish_grant(k, t)
+
+	def wish_turn(self, t: float) -> None:
+		"""The player looks at each new visible bubble once per session and helps with chance wish_p
+		(tea wishes are handled in tea_turn). Every non-tea target is an action the player already has."""
+		C = self.C
+		for k in self.held_actionable():
+			w = self.w_open[k]
+			key = (k, w[0], w[1])
+			if key not in self.w_decided:
+				self.w_decided.add(key)
+				if self.arng.u() < self.apol["wish_p"]:
+					w[3] = True  # the piece now waits near the friend's spot
+		for p in list(self.present):
+			k = p[0]
+			w = self.w_open.get(k)
+			if w is None or not w[2]:
+				continue
+			kind = C.wishes[w[0]]["kind"]
+			if kind in ("tea", "tea_kind", "tea_petal", "tea_loved"):
+				continue
+			key = (k, w[0], w[1])
+			if key in self.w_decided:
+				continue
+			self.w_decided.add(key)
+			if self.arng.u() >= self.apol["wish_p"]:
+				continue
+			if kind == "pet" and not p[3]:
+				p[3] = True
+				self.add_affection(k, self.eco["affection_per_pet"], t)
+			elif kind == "boat":
+				if self.dew < self.eco["leaf_boat_cost"]:
+					continue
+				self.float_boat()
+			self.wish_grant(k, t)
+
+	def shop_teaware(self, budget: int) -> int:
+		"""Cosmetic teaware (tea.json), bought cheapest first once the garden catalogue is complete."""
+		if not self.tea_unlocked or not self.apol["teaware"] or self.options():
+			return 0
+		n = 0
+		for cost, tid in self.C.teaware:
+			if n >= budget:
+				break
+			if tid in self.teaware_owned or cost > self.dew:
+				continue
+			if self.rng.u() > self.policy[3]:
+				break
+			self.dew -= cost
+			self.teaware_spent += cost
+			self.teaware_owned.add(tid)
+			n += 1
+		return n
+
+	def actions_available(self, t: float) -> set:
+		"""Which meaningful active actions exist right now (ACTION_KINDS)."""
+		C = self.C
+		out = set()
+		if any(not p[3] for p in self.present):
+			out.add("pet")
+		if self.dew >= self.eco["leaf_boat_cost"] and any(not p[2] for p in self.present):
+			out.add("boat")
+		if any(c <= self.dew for _, _, c in self.options()) or (self.tea_unlocked and self.apol["teaware"] and any(
+				tid not in self.teaware_owned and c <= self.dew for c, tid in C.teaware)):
+			out.add("buy")
+		if any(s[0] <= t for s in self.signs[: C.max_visible_signs]):
+			out.add("sign")
+		if self.visible_wishes() > 0 or self.held_actionable():
+			out.add("wish")
+		if self.tea_unlocked:
+			ready = self.petals_ready(t)
+			if ready > 0:
+				out.add("harvest")
+			has_petal = ready > 0 or any(self.pantry)
+			if has_petal and any(t - self.tea_aff_t[p[0]] >= C.tea_rest_s for p in self.present):
+				out.add("tea_offer")
+			if len(self.recipes_found) < C.nr:
+				saved = list(self.pantry)
+				if ready:
+					self.pantry = [min(C.pantry_cap[f], self.pantry[f] + sum(
+						min(C.petal_hold, int((t - pa) // C.petal_regrow[f])) for pa in self.stems_pa[f]))
+						for f in range(C.nf)]
+				if any(self.makeable(r) for r in C.named if r not in self.recipes_found) or (
+						has_petal and any(C.fallback_by_drops[d] not in self.recipes_found and self.dew >= d * C.drop_cost
+							for d in C.fallback_by_drops)):
+					out.add("tea_discover")
+				self.pantry = saved
+		return out
 
 	# ------------------------------------------------------------ retention (GDD 13)
 	def reqs_hold(self, reqs: list) -> bool:
@@ -686,7 +1328,10 @@ class Player:
 		if len(self.present) >= self.eco["max_present"]:
 			self.leave_gift(k, gift)  # a peek visit: waves from the rim, gift goes straight to the basket
 			return
-		self.present.append([k, t + stay, False, False, gift])
+		# [species, depart_t, boat_credit, pet_credit, gift, arrive_t, offered tea this visit, wishes spawned this visit]
+		self.present.append([k, t + stay, False, False, gift, t, False, 0])
+		if C.active:
+			self.wish_on_arrive(k, t)
 		self.maybe_cousin(t, k)
 
 	def candidate(self, t: float) -> None:
@@ -714,6 +1359,8 @@ class Player:
 		self.cup_rate_h += self.C.fl_dew_h[f]
 		self.novelty += 1
 		self.check_mysteries(t)
+		if self.C.active:
+			self.stems_pa[f].append(t)  # a new bloom starts growing spare petals (tea.json harvest)
 
 	def advance(self, to_t: float) -> None:
 		"""Process every world event in (self.t, to_t] in time order. Never removes anything."""
@@ -743,8 +1390,10 @@ class Player:
 					self.novelty += 1
 			elif t_next == t_dep:
 				i = min(range(len(self.present)), key=lambda j: self.present[j][1])
-				k, _, _, _, gift = self.present.pop(i)
+				k, _, _, _, gift = self.present.pop(i)[:5]
 				self.leave_gift(k, gift)
+				if self.C.active:
+					self.wish_on_depart(k)
 			else:
 				self.candidate(self.next_cand)
 				self.next_cand += self.rng.expo(self.lmax)
@@ -899,7 +1548,14 @@ class Player:
 			sum(bin(x).count("1") for x in self.photos), len(self.postcards),
 			# retention (GDD 13.6): hearts, nests, clues + waiting signs, cousins, memories never decrease
 			tuple(self.hearts), sum(1 for x in self.nest_t if x != INF), self.clues + len(self.signs),
-			sum(1 for x in self.var_met_t if x != INF), self.memories, tuple(self.scene_seen))
+			sum(1 for x in self.var_met_t if x != INF), self.memories, tuple(self.scene_seen)) + self.active_snapshot()
+
+	def active_snapshot(self) -> tuple:
+		"""GDD 14: wishes never expire, petals in jars and ready on stems, recipes, stamps and teaware only grow."""
+		if not self.C.active:
+			return ()
+		return (len(self.w_open) + self.w_granted, tuple(self.pantry), self.petals_ready(self.t) + sum(self.pantry),
+			len(self.recipes_found), len(self.w_stamps), self.w_granted, len(self.teaware_owned), self.cups_offered)
 
 	def check_monotone(self, before: tuple, after: tuple) -> None:
 		for a, b in zip(before, after):
@@ -914,6 +1570,11 @@ class Player:
 		for _, _, c in self.options():
 			shown = max(shown, c)
 			self.max_price_seen = max(self.max_price_seen, c)
+		if self.C.active:
+			for c, _ in self.C.teaware:
+				shown = max(shown, c)
+				self.max_price_seen = max(self.max_price_seen, c)
+			shown = max(shown, max(self.pantry))
 		self.max_display = max(self.max_display, shown)
 
 	def income_per_min(self) -> float:
@@ -1024,6 +1685,7 @@ def run_player(args: tuple) -> dict:
 		"organic_new": 0, "content_afford": 0, "content_afford_n": 0,
 		"content_afford_ret": 0, "content_afford_ret_n": 0,
 		"mid_minutes": [], "e1": 0, "max_display": 0, "max_price": 0,
+		"act_n": [0] * (len(ACTION_KINDS) + 1), "act_kind": {}, "act_short": {},
 	}
 	last_snap = pl.snapshot()
 	last_novelty = pl.novelty
@@ -1043,13 +1705,14 @@ def run_player(args: tuple) -> dict:
 		if day30 is None and start >= SIM_DAYS * DAY:
 			pl.advance(SIM_DAYS * DAY)
 			day30 = (pl.dew, len(pl.postcards), sum(bin(x).count("1") for x in pl.photos),
-				sum(1 for h in pl.hearts if h >= 5), pl.disc_snapshot())
+				sum(1 for h in pl.hearts if h >= 5), pl.disc_snapshot(), active_day30(pl))
 		pl.advance(start)
 		if seed_pending and si > 0:
 			plant_tutorial_seed(pl, start + 5.0)  # tapped early in the next session
 			seed_pending = False
 		if si > 0:
 			pl.on_return(prev_end, start)  # GDD 13.4: a staged scene may be waiting
+		sign_avail = any(s[0] <= start for s in pl.signs[: C.max_visible_signs])
 		pl.tap_signs(start)
 		snap = pl.snapshot()
 		pl.check_monotone(last_snap, snap)
@@ -1073,6 +1736,17 @@ def run_player(args: tuple) -> dict:
 			res["e5_no_new"] += 1
 		pl.collect()
 		pl.track_display()
+		if C.active:
+			pl.tea_check_unlock()
+			pl.w_decided = set()
+			avail = pl.actions_available(start)
+			if sign_avail:
+				avail.add("sign")
+			g_wish = pl.greeter_wish(start) if greeter else -1
+			if greeter:
+				avail.add("pet")  # the greeter can be petted (GDD 5.6)
+			if g_wish >= 0:
+				avail.add("wish")  # ... and brings its held wish (GDD 14)
 		opts = pl.options()
 		cheapest_content = min((o[2] for o in opts), default=INF)
 		# install session: the free tutorial seed is the affordable action
@@ -1098,12 +1772,31 @@ def run_player(args: tuple) -> dict:
 		boat_cost = int(pl.eco["leaf_boat_cost"])
 		pl.pet_all(1 if L == 30 else 99)
 		budget -= pl.shop(budget)
+		if C.active:
+			budget -= pl.shop_teaware(budget)
 		boat_p = pl.policy[4]
 		if pl.policy[0] == "drain":
 			if pl.dew >= boat_cost:
 				pl.float_boat(pl.dew // boat_cost)
 		elif pl.dew >= boat_cost and pl.rng.u() < boat_p:
 			pl.float_boat()
+		if C.active:
+			# GDD 14: the tea nook, then one wish check per 60 s of foreground time
+			cups = 0 if L <= 30 else 1 if L < 300 else pl.apol["cups"] + (1 if L >= 600 else 0)
+			cups = pl.tea_turn(start, cups)
+			if g_wish >= 0 and g_wish in pl.w_open and g_wish not in {p[0] for p in pl.present}:
+				pl.greeter_turn(g_wish, start + WISH_REACT_S)
+			tk = start + (60.0 - pl.w_fg % 60.0)
+			while tk <= start + length:
+				pl.advance(tk)
+				pl.tea_check_unlock()
+				avail |= pl.actions_available(tk)
+				pl.wish_check(tk)
+				if tk + WISH_REACT_S <= start + length:
+					pl.wish_turn(tk)
+					cups = pl.tea_turn(tk, cups)
+				tk += 60.0
+			pl.w_fg += length
 		pl.advance(start + length)
 		pl.tap_signs(start + length)
 		if L >= 180:
@@ -1111,9 +1804,21 @@ def run_player(args: tuple) -> dict:
 			pl.collect()
 			pl.pet_all(99)
 			pl.track_display()
+			if C.active:
+				avail |= pl.actions_available(start + length)
 			pl.shop(budget)
+			if C.active:
+				pl.shop_teaware(budget)
 			if pl.policy[0] == "drain" and pl.dew >= boat_cost:
 				pl.float_boat(pl.dew // boat_cost)
+		if C.active:
+			na = len(avail & set(ACTION_KINDS))
+			res["act_n"][min(na, len(res["act_n"]) - 1)] += 1
+			for kname in avail:
+				res["act_kind"][kname] = res["act_kind"].get(kname, 0) + 1
+			if na < CONTENT.eco["validation_targets"]["active_actions_min"]:
+				key = "+".join(sorted(avail & set(ACTION_KINDS))) + f"|d{int(start // DAY)}|{'empty' if not pl.present else 'here'}"
+				res["act_short"][key] = res["act_short"].get(key, 0) + 1
 		if si == 0:
 			first_session_species = sum(pl.discovered)
 		# content-left (GDD 13.7): did this session show the player >= 1 new discovery?
@@ -1135,7 +1840,7 @@ def run_player(args: tuple) -> dict:
 	if day30 is None:
 		pl.advance(SIM_DAYS * DAY)
 		day30 = (pl.dew, len(pl.postcards), sum(bin(x).count("1") for x in pl.photos),
-			sum(1 for h in pl.hearts if h >= 5), pl.disc_snapshot())
+			sum(1 for h in pl.hearts if h >= 5), pl.disc_snapshot(), active_day30(pl))
 	pl.advance(days * DAY)
 	for d in day_marks:
 		species_at_day[d] = sum(1 for t in pl.discover_t if t <= d * DAY)
@@ -1154,6 +1859,8 @@ def run_player(args: tuple) -> dict:
 		"all_species_day": (max(pl.discover_t) / DAY) if all(pl.discovered) else INF,
 		"content_done_day": pl.content_done_t / DAY,
 		"final_dew": day30[0],
+		"active30": day30[5],
+		"active_end": active_day30(pl),
 		"items": pl.items_bought,
 		"postcards": day30[1],
 		"photos": day30[2],
@@ -1178,6 +1885,16 @@ def run_player(args: tuple) -> dict:
 		"signs_scheduled": pl.signs_scheduled,
 	})
 	return res
+
+
+def active_day30(pl: Player) -> dict:
+	if not pl.C.active:
+		return {}
+	return {"wishes_spawned": pl.w_spawned, "wishes_granted": pl.w_granted, "stamps": len(pl.w_stamps),
+		"wish_aff": pl.w_aff_given, "tea_aff": pl.tea_aff_given, "cups": pl.cups_offered, "loved": pl.cups_loved,
+		"recipes": len(pl.recipes_found), "petals": pl.petals_gathered, "drops_dew": pl.drops_spent,
+		"teaware_dew": pl.teaware_spent, "teaware_n": len(pl.teaware_owned), "open": len(pl.w_open),
+		"aff_total": sum(pl.affection)}
 
 
 # ---------------------------------------------------------------- offline / absence tests
@@ -1354,12 +2071,229 @@ def parity_trace() -> dict:
 	return {"seed": PARITY_SEED, "install_local_s": PARITY_INSTALL_LOCAL_S, "ops": ops, "steps": steps}
 
 
+# ---------------------------------------------------------------- Active Play v1 parity export (GDD 14.11 a8)
+ACTIVE_PARITY_SEED = 24680
+ACTIVE_PARITY_STAY_S = 1.0e9  # visitors leave only through explicit depart ops
+# Friends whose favourite spot is always on (its position never depends on décor), so the
+# not_already_near rule agrees between the reference (legacy anchors) and WorldSim (layout).
+ACTIVE_PARITY_FRIENDS = ("puffmoss", "buttonbud", "pebblepaw", "honeyhum", "fernwhisk", "dandelfluff", "bellkin",
+	"primpip", "moonpuff")
+ACTIVE_PARITY_ITEMS = {
+	"bloomed": {"sweet_clover": 3, "button_daisy": 2, "buttercup": 2, "forget_me_not": 2, "bluebell": 2, "primrose": 2,
+		"dandelion": 1, "moonbloom": 2},
+	"owned": {"leaf_pinwheel": 3, "pebble_cairn": 2, "toadstool_seat": 2, "stream_stones": 2, "firefly_lantern": 2,
+		"wind_chime": 1},
+	"bloom_t": 0.0, "dew": 400,
+}
+ACTIVE_PARITY_SKY = (("day", "clear"), ("day", "breeze"), ("golden", "clear"), ("dusk", "clear"), ("night", "clear"),
+	("night", "rain"), ("dawn", "rain"), ("day", "rain"))
+WISH_ACT = {"pet": "pet", "play_taps": "tap_creature", "chime_tap": "ring_chime", "bed_invite": "bed_tap",
+	"decor_tap": "decor_tap", "stream_tap": "stream_tap", "boat": "boat"}
+
+
+def parity_act(pl: Player, op: dict, t: float, taps: dict) -> None:
+	"""The reference side of a world action: every visible wish of a present friend it matches is
+	granted (collected first, then granted in wish order), as WorldSim's WishRules.on_action."""
+	C = pl.C
+	kind, args = op["kind"], op.get("args", {})
+	present = {p[0]: p for p in pl.present}
+	if kind == "pet":
+		p = present[C.species_index[args["species"]]]
+		if not p[3]:
+			p[3] = True
+			pl.add_affection(p[0], pl.eco["affection_per_pet"], t)
+	elif kind == "boat":
+		pl.float_boat()
+	hits = []
+	for k, w in pl.w_open.items():
+		if not w[2] or k not in present:
+			continue
+		wd = C.wishes[w[0]]
+		if WISH_ACT.get(wd["kind"]) != kind:
+			continue
+		if kind in ("pet", "tap_creature") and C.species_index[args["species"]] != k:
+			continue
+		if kind == "decor_tap" and args["set"] != wd["arg"]:
+			continue
+		if kind == "bed_tap" and pl.bloomed[C.item_index[wd["arg"]][1]] <= 0:
+			continue  # every parity stem stands in one bed
+		if kind == "tap_creature":
+			key = (k, w[1])
+			taps[key] = taps.get(key, 0) + 1
+			if taps[key] < int(wd["arg"]):
+				continue
+		hits.append(k)
+	for k in hits:
+		pl.wish_grant(k, t)
+
+
+def parity_brew(pl: Player, petals: list, drops: int, tray: list) -> int:
+	"""The reference side of a pot poured: the exact named mix, else the fallback for the drop count."""
+	C = pl.C
+	counts = [0] * C.nf
+	for f in petals:
+		counts[C.item_index[f][1]] += 1
+	r = C.recipe_by_key.get((tuple(counts), drops), C.fallback_by_drops[drops])
+	for f, n in enumerate(counts):
+		pl.pantry[f] -= n
+	pl.dew -= drops * C.drop_cost
+	pl.recipes_found.add(r)
+	tray.append((r, tuple(counts)))
+	return r
+
+
+def active_parity_trace() -> dict:
+	"""A scripted Active Play schedule generated online from the reference model and replayed by
+	tests/test_active_parity.gd: foreground wish checks at pinned phases and weather, visits and
+	departures, help with visible wishes through the action each asks for, gathering, brewing,
+	offering, and long gaps across the 20 h rests. No world-RNG draws; every wish draw is the hash."""
+	C = CONTENT
+	pl = Player(C, ACTIVE_PARITY_SEED, PARITY_INSTALL_LOCAL_S, POLICIES[1])
+	ids = [s["id"] for s in C.species]
+	flower_ids = [f["id"] for f in C.flowers]
+	ops: list = []
+	steps: list = []
+	tray: list = []
+	taps: dict = {}
+	rot = list(ACTIVE_PARITY_FRIENDS)
+	sky = {"phase": "day", "weather": "clear"}
+	pl.phase = lambda tt: C.phase_index[sky["phase"]]  # parity pins the sky (WorldSim's weather plan differs)
+	pl.weather = lambda tt: C.weather_index[sky["weather"]]
+
+	def record(op: dict) -> None:
+		ops.append(op)
+		steps.append({
+			"wishes": [[ids[k], C.wish_ids[w[0]], "open" if w[2] else "held", bool(w[3]), w[1]] for k, w in pl.w_open.items()],
+			"wish_checks": pl.w_checks, "wish_last_t": pl.w_last_t if pl.w_last_t != -INF else None,
+			"wish_friend_t": {ids[k]: pl.w_friend_t[k] for k in range(C.ns) if pl.w_friend_t[k] != -INF},
+			"wish_aff_t": {ids[k]: pl.w_aff_t[k] for k in range(C.ns) if pl.w_aff_t[k] != -INF},
+			"stamps": sorted(f"{ids[k]}/{C.wish_ids[wi]}" for k, wi in pl.w_stamps),
+			"wishes_granted": pl.w_granted, "tutorial_done": pl.w_tutorial_done,
+			"affection": {ids[k]: pl.affection[k] for k in range(C.ns)},
+			"tea_unlocked": pl.tea_unlocked,
+			"pantry": {flower_ids[f]: pl.pantry[f] for f in range(C.nf) if pl.pantry[f]},
+			"petal_anchors": {flower_ids[f]: list(pl.stems_pa[f]) for f in range(C.nf) if pl.stems_pa[f]},
+			"recipes_found": sorted(C.recipes[r][0] for r in pl.recipes_found),
+			"tray": [C.recipes[r][0] for r, _ in tray],
+			"tea_aff_t": {ids[k]: pl.tea_aff_t[k] for k in range(C.ns) if pl.tea_aff_t[k] != -INF},
+			"cups_offered": pl.cups_offered, "dew": pl.dew,
+			"present": sorted(ids[p[0]] for p in pl.present),
+		})
+
+	def apply(op: dict) -> None:
+		t = float(op["t"])
+		pl.t = max(pl.t, t)
+		pl.tea_check_unlock()  # WorldSim checks the nook as its clock reaches t, before the op
+		kind = op["op"]
+		if kind == "items":
+			it = ACTIVE_PARITY_ITEMS
+			pl.bloomed = [int(it["bloomed"].get(f, 0)) for f in flower_ids]
+			pl.owned_f = list(pl.bloomed)
+			pl.owned_d = [int(it["owned"].get(d["id"], 0)) for d in C.decor]
+			pl.stems_pa = [[float(it["bloom_t"])] * n for n in pl.bloomed]
+			pl.dew = int(it["dew"])
+		elif kind == "arrive":
+			pl.arrive(t, C.species_index[op["species"]], ACTIVE_PARITY_STAY_S, 0)
+		elif kind == "depart":
+			k = C.species_index[op["species"]]
+			pl.present = [p for p in pl.present if p[0] != k]
+			pl.wish_on_depart(k)
+		elif kind == "check":
+			sky["phase"], sky["weather"] = op["phase"], op["weather"]
+			pl.wish_check(t)
+		elif kind == "act":
+			parity_act(pl, op, t, taps)
+		elif kind == "harvest":
+			pl.harvest(t)
+		elif kind == "brew":
+			parity_brew(pl, op["petals"], int(op["drops"]), tray)
+		elif kind == "offer":
+			r, counts = tray.pop(int(op["index"]))
+			k = C.species_index[op["species"]]
+			p = next(q for q in pl.present if q[0] == k)
+			pl.offer(p, r, t, counts)
+		record(op)
+
+	def makeable_mix(r: int) -> list | None:
+		_, _, counts, drops = C.recipes[r]
+		if counts is None or pl.dew < drops * C.drop_cost or any(pl.pantry[f] < n for f, n in enumerate(counts)):
+			return None
+		return [flower_ids[f] for f, n in enumerate(counts) for _ in range(n)]
+
+	def cup_for(k: int, wi: int) -> tuple | None:
+		"""Petals and drops for a cup that grants wish wi of friend k (None if none can be made)."""
+		w = C.wishes[wi]
+		for r in C.named:
+			mix = makeable_mix(r)
+			if mix is not None and pl.tea_satisfies(wi, k, r, C.recipes[r][2]):
+				return mix, C.recipes[r][3]
+		if w["kind"] == "tea_petal" and pl.pantry[C.item_index[w["arg"]][1]] > 0:
+			return [w["arg"]], 0
+		if w["kind"] == "tea_kind":
+			f = max(range(C.nf), key=lambda i: pl.pantry[i])
+			drops = C.treat_at_drops if w["arg"] == "treat" else 0
+			if pl.pantry[f] > 0 and pl.dew >= drops * C.drop_cost:
+				return [flower_ids[f]], drops
+		return None
+
+	t = 100.0
+	apply({"op": "items", "t": t})
+	for i, sp in enumerate(rot[:3]):
+		apply({"op": "arrive", "t": 120.0 + 10.0 * i, "species": sp})
+	nxt = 3
+	t = 400.0
+	for step in range(260):
+		if step in (90, 170):
+			t += 80000.0  # past every 20 h rest (foreground time does not run while away)
+		ph, wx = ACTIVE_PARITY_SKY[(step // 5) % len(ACTIVE_PARITY_SKY)]
+		apply({"op": "check", "t": t, "phase": ph, "weather": wx})
+		if step % 9 == 4 and len(pl.present) >= 3:
+			oldest = min(pl.present, key=lambda p: p[5])
+			apply({"op": "depart", "t": t + 5.0, "species": ids[oldest[0]]})
+		if step % 9 == 6 and len(pl.present) < 4:
+			for _ in range(len(rot)):
+				sp = rot[nxt % len(rot)]
+				nxt += 1
+				if C.species_index[sp] not in {p[0] for p in pl.present}:
+					apply({"op": "arrive", "t": t + 6.0, "species": sp})
+					break
+		if step % 6 == 2 and pl.tea_unlocked:
+			apply({"op": "harvest", "t": t + 7.0})
+		for k, w in list(pl.w_open.items()):
+			if not w[2] or k not in {p[0] for p in pl.present} or (step + k) % 3 == 0:
+				continue
+			wd = C.wishes[w[0]]
+			if wd["kind"] in WISH_ACT:
+				act = WISH_ACT[wd["kind"]]
+				args = {"species": ids[k]} if act in ("pet", "tap_creature") else {"set": wd["arg"]} if act == "decor_tap" else {}
+				for _ in range(int(wd["arg"]) if act == "tap_creature" else 1):
+					apply({"op": "act", "t": t + 10.0, "kind": act, "args": args})
+			elif wd["kind"] in ("tea", "tea_kind", "tea_petal", "tea_loved") and pl.tea_unlocked and len(tray) < 6:
+				cup = cup_for(k, w[0])
+				if cup is not None:
+					apply({"op": "brew", "t": t + 12.0, "petals": cup[0], "drops": cup[1]})
+					apply({"op": "offer", "t": t + 13.0, "species": ids[k], "index": len(tray) - 1})
+		if step % 7 == 3 and pl.tea_unlocked and pl.present and len(tray) < 6:
+			# an exploratory cup for whoever is here first in album order: the next unfound recipe
+			for r in C.named:
+				mix = makeable_mix(r)
+				if mix is not None and r not in pl.recipes_found:
+					apply({"op": "brew", "t": t + 15.0, "petals": mix, "drops": C.recipes[r][3]})
+					k = min(pl.present, key=lambda p: C.sp_order[p[0]])[0]
+					apply({"op": "offer", "t": t + 16.0, "species": ids[k], "index": len(tray) - 1})
+					break
+		t += 60.0
+	return {"seed": ACTIVE_PARITY_SEED, "install_local_s": PARITY_INSTALL_LOCAL_S, "stay_s": ACTIVE_PARITY_STAY_S,
+		"items": ACTIVE_PARITY_ITEMS, "ops": ops, "steps": steps}
+
+
 # ---------------------------------------------------------------- driver
 CONTENT: Content | None = None
 
 
-def _init(root: str, ref_days: int = REF_DAYS) -> None:
-	global CONTENT, REF_DAYS
+def _init(root: str, ref_days: int = REF_DAYS, active: bool = True) -> None:
+	global CONTENT, REF_DAYS, ACTIVE
+	ACTIVE = active
 	CONTENT = Content(load_content(Path(root)))
 	REF_DAYS = ref_days
 
@@ -1395,11 +2329,22 @@ def main() -> int:
 	ap.add_argument("--markdown", default="", help="also write the results table to this file")
 	ap.add_argument("--ref-days", type=int, default=REF_DAYS, help="days simulated for reference players")
 	ap.add_argument("--quick", action="store_true", help="500 random + 200 reference players (smoke run)")
+	ap.add_argument("--no-active", action="store_true",
+		help="leave out Active Play v1 (wishes, tea, free decor): the pre-Active model, for before/after tables")
 	ap.add_argument("--parity-export", default="", metavar="PATH",
 		help="write the GDScript parity trace (tests/fixtures/retention_parity.json) and exit")
+	ap.add_argument("--active-parity-export", default="", metavar="PATH",
+		help="write the Active Play GDScript parity trace (tests/fixtures/active_parity.json) and exit")
 	args = ap.parse_args()
+	if args.active_parity_export:
+		_init(args.root, args.ref_days, True)
+		with open(args.active_parity_export, "w", encoding="utf-8") as f:
+			json.dump(active_parity_trace(), f, indent="\t", sort_keys=True)
+			f.write("\n")
+		print(f"active parity trace written to {args.active_parity_export}")
+		return 0
 	if args.parity_export:
-		_init(args.root, args.ref_days)
+		_init(args.root, args.ref_days, not args.no_active)
 		with open(args.parity_export, "w", encoding="utf-8") as f:
 			json.dump(parity_trace(), f, indent="\t", sort_keys=True)
 			f.write("\n")
@@ -1409,10 +2354,10 @@ def main() -> int:
 		args.players, args.reference = 500, 200
 
 	t0 = time.time()
-	_init(args.root, args.ref_days)
+	_init(args.root, args.ref_days, not args.no_active)
 	C = CONTENT
 	jobs = [(i, "random") for i in range(args.players)] + [(i, "reference") for i in range(args.reference)]
-	with Pool(args.workers, initializer=_init, initargs=(args.root, args.ref_days)) as pool:
+	with Pool(args.workers, initializer=_init, initargs=(args.root, args.ref_days, not args.no_active)) as pool:
 		results = pool.map(run_player, jobs, chunksize=64)
 	rnd = [r for r in results if r["kind"] == "random"]
 	ref = [r for r in results if r["kind"] == "reference"]
@@ -1486,6 +2431,50 @@ def main() -> int:
 		"nothing removed", absn["violations"] == 0)
 
 	info = []
+	if C.active:
+		# ---- Active Play v1 (GDD 14)
+		def act_share(rs: list) -> float:
+			tot = sum(sum(r["act_n"]) for r in rs)
+			ok = sum(sum(r["act_n"][tg["active_actions_min"]:]) for r in rs)
+			return ok / max(tot, 1)
+		sh = act_share(ref)
+		check(f"A1 Reference: sessions with >= {tg['active_actions_min']} meaningful active actions available",
+			f"{100 * sh:.1f} %", f">= {100 * tg['active_actions_session_share_min']:.0f} %", sh >= tg["active_actions_session_share_min"])
+		wal = [r["final_dew"] for r in results]
+		wal_ref = [r["final_dew"] for r in ref]
+		lo, hi = tg["day30_wallet_median"]
+		check("A2 Dew pile-up: wallet on day 30 (all players: p25 / median / p75; reference median)",
+			f"{fmt(pct(wal, 25), 0)} / {fmt(pct(wal, 50), 0)} / {fmt(pct(wal, 75), 0)}; {fmt(pct(wal_ref, 50), 0)}",
+			f"median {lo:,}-{hi:,}", lo <= pct(wal, 50) <= hi)
+		a30 = [r["active30"] for r in ref]
+		ar = [r["active30"] for r in rnd]
+		def med(key: str, rs: list = a30) -> str:
+			return fmt(pct([x[key] for x in rs], 50), 0)
+		hist = [sum(r["act_n"][i] for r in ref) for i in range(len(ACTION_KINDS) + 1)]
+		tot = max(sum(hist), 1)
+		info.append(("Active: reference sessions by number of meaningful actions available (0 / 1 / 2 / 3 / 4 / 5+)",
+			" / ".join(f"{100 * x / tot:.1f} %" for x in hist[:5] + [sum(hist[5:])])))
+		kinds_ref: dict = {}
+		for r in ref:
+			for kname, n in r["act_kind"].items():
+				kinds_ref[kname] = kinds_ref.get(kname, 0) + n
+		info.append(("Active: share of reference sessions offering each action",
+			", ".join(f"{kname} {100 * kinds_ref.get(kname, 0) / tot:.0f} %" for kname in ACTION_KINDS)))
+		info.append(("Active: random players, sessions with >= 3 actions available", f"{100 * act_share(rnd):.1f} %"))
+		info.append((f"Active F1: wishes spawned / granted by day {SIM_DAYS}, reference (median)", f"{med('wishes_spawned')} / {med('wishes_granted')}"))
+		info.append((f"Active F1: wish stamps by day {SIM_DAYS}, reference (median)", med("stamps")))
+		info.append((f"Active F1: wishes still open on day {SIM_DAYS}, reference (median / max)",
+			f"{med('open')} / {max(x['open'] for x in a30)}"))
+		info.append((f"Active F2: petals gathered / cups offered by day {SIM_DAYS}, reference (median)", f"{med('petals')} / {med('cups')}"))
+		loved = sum(x["loved"] for x in a30) / max(sum(x["cups"] for x in a30), 1)
+		info.append(("Active F2: share of offered cups that were loved, reference", f"{100 * loved:.0f} %"))
+		info.append((f"Active F2: recipes found by day {SIM_DAYS}, reference (median of {C.nr})", med("recipes")))
+		info.append((f"Active F2: teaware pieces / dew spent on teaware by day {SIM_DAYS}, reference (median of {len(C.teaware)}, {C.teaware_total:,} dew)",
+			f"{med('teaware_n')} / {med('teaware_dew')}"))
+		info.append((f"Active F2: dew spent on dew drops by day {SIM_DAYS}, reference / random (median)", f"{med('drops_dew')} / {med('drops_dew', ar)}"))
+		aff = sum(x["aff_total"] for x in a30)
+		info.append((f"Active: share of all affection by day {SIM_DAYS} from wishes / tea, reference",
+			f"{100 * sum(x['wish_aff'] for x in a30) / max(aff, 1):.0f} % / {100 * sum(x['tea_aff'] for x in a30) / max(aff, 1):.0f} %"))
 	frac = [r["new_days_30"] / max(r["played_days_30"], 1) for r in rnd]
 	info.append((f"Random: share of played days (first {SIM_DAYS}) with something new (p10 / median)",
 		f"{100 * pct_all(frac, 10):.0f} % / {100 * pct_all(frac, 50):.0f} %"))

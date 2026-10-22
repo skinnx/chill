@@ -1,0 +1,1149 @@
+{
+	"app_version": "0.2.0",
+	"format": "mossling-meadow-save",
+	"saved_at_unix": 1793260781.4375,
+	"schema": 2,
+	"sha256": "ca1b8c19024cc4c04b0d0d87a8af0c2dea741ba617db5a77e74e1d5af1d91519",
+	"world": {
+		"affection": {
+			"bellkin": 3,
+			"buttonbud": 21,
+			"capling": 6,
+			"dandelfluff": 7,
+			"fernwhisk": 7,
+			"honeyhum": 14,
+			"pebblepaw": 22,
+			"primpip": 15,
+			"puddlewump": 3,
+			"puffmoss": 25
+		},
+		"anchor_unix": 1792526400.0,
+		"anchor_world_t": 0.0,
+		"basket": [],
+		"basket_full_seen": true,
+		"boats": 13,
+		"clues": {},
+		"cousin_visits": {},
+		"cup": 8.62513420368614,
+		"cup_last_t": 734381.4375,
+		"dew": 0,
+		"first_bloom_postcard_sent": true,
+		"hearts_seen": {},
+		"install_seed": "777",
+		"installed_unix": 1792526400.0,
+		"items_bought": 102,
+		"keepsakes": {},
+		"last_bg_t": -1.0,
+		"last_collect_t": 733781.4375,
+		"last_pet_unix": {
+			"buttonbud": 1793087852.25,
+			"capling": 1793259881.4375,
+			"dandelfluff": 1793131608.4375,
+			"fernwhisk": 1793259881.4375,
+			"honeyhum": 1793131608.4375,
+			"pebblepaw": 1793174753.5,
+			"primpip": 1793131608.4375,
+			"puddlewump": 1793218171.5,
+			"puffmoss": 1793218171.5
+		},
+		"memories": [],
+		"met": {
+			"bellkin": 1793020840.5495267,
+			"buttonbud": 1792526511.7423272,
+			"capling": 1793018345.1293442,
+			"dandelfluff": 1792769627.230173,
+			"fernwhisk": 1792888777.752464,
+			"honeyhum": 1792718091.4923923,
+			"pebblepaw": 1792526610.0,
+			"primpip": 1792684532.0810902,
+			"puddlewump": 1793150578.47172,
+			"puffmoss": 1792526421.7423272
+		},
+		"mysteries": {
+			"bellkin": {
+				"kind": "species",
+				"ok_t": 494297.0618874352,
+				"open_t": 485010.75,
+				"solved_unix": 1793020840.5495267,
+				"target": "bellkin"
+			},
+			"capling": {
+				"kind": "species",
+				"ok_t": 491621.3351948231,
+				"open_t": 473610.75,
+				"solved_unix": 1793018345.1293442,
+				"target": "capling"
+			},
+			"dandelfluff": {
+				"kind": "species",
+				"ok_t": 241814.52341645668,
+				"open_t": 233942.421875,
+				"solved_unix": 1792769627.230173,
+				"target": "dandelfluff"
+			},
+			"fernwhisk": {
+				"kind": "species",
+				"ok_t": 361571.88387584995,
+				"open_t": 351927.0625,
+				"solved_unix": 1792888777.752464,
+				"target": "fernwhisk"
+			},
+			"glowmote": {
+				"kind": "species",
+				"ok_t": 750242.4351484221,
+				"open_t": 733781.4375,
+				"solved_unix": -1.0,
+				"target": "glowmote"
+			},
+			"honeyhum": {
+				"kind": "species",
+				"ok_t": 190039.416238356,
+				"open_t": 179405.578125,
+				"solved_unix": 1792718091.4923923,
+				"target": "honeyhum"
+			},
+			"moonpuff": {
+				"kind": "species",
+				"ok_t": 730820.621990773,
+				"open_t": 714571.5,
+				"solved_unix": -1.0,
+				"target": "moonpuff"
+			},
+			"primpip": {
+				"kind": "species",
+				"ok_t": 154330.11647527566,
+				"open_t": 146201.296875,
+				"solved_unix": 1792684532.0810902,
+				"target": "primpip"
+			},
+			"puddlewump": {
+				"kind": "species",
+				"ok_t": 621967.1603813325,
+				"open_t": 605208.4375,
+				"solved_unix": 1793150578.47172,
+				"target": "puddlewump"
+			}
+		},
+		"names": {},
+		"nests": {
+			"buttonbud": {
+				"built_t": 462662.6107818748,
+				"stage": 2,
+				"style": "petal_cup"
+			},
+			"pebblepaw": {
+				"built_t": 457707.86224656686,
+				"stage": 2,
+				"style": "pebble_ring"
+			},
+			"primpip": {
+				"built_t": 714714.0254013782,
+				"stage": 0,
+				"style": "petal_cup"
+			},
+			"puffmoss": {
+				"built_t": 344127.0625,
+				"stage": 2,
+				"style": "moss_bowl"
+			}
+		},
+		"next_candidate_t": 735123.9081005972,
+		"open_count": 0,
+		"owned": {
+			"bluebell": 4,
+			"buttercup": 10,
+			"button_daisy": 10,
+			"dandelion": 10,
+			"firefly_lantern": 7,
+			"forget_me_not": 7,
+			"leaf_pinwheel": 9,
+			"moonbloom": 5,
+			"pebble_cairn": 5,
+			"primrose": 4,
+			"stream_stones": 6,
+			"sweet_clover": 10,
+			"toadstool_seat": 9,
+			"wind_chime": 7
+		},
+		"pending_scene": {},
+		"photo_meta": {
+			"bellkin/nap": {
+				"phase": "dawn",
+				"weather": "clear",
+				"world_t": 637993.4080103602
+			},
+			"bellkin/sit_by_stream": {
+				"phase": "golden",
+				"weather": "clear",
+				"world_t": 592374.5287475678
+			},
+			"bellkin/wander": {
+				"phase": "dawn",
+				"weather": "clear",
+				"world_t": 647811.7556831397
+			},
+			"buttonbud/nap": {
+				"phase": "dusk",
+				"weather": "clear",
+				"world_t": 604199.6440928337
+			},
+			"buttonbud/nibble": {
+				"phase": "day",
+				"weather": "clear",
+				"world_t": 302808.1594774559
+			},
+			"buttonbud/play": {
+				"phase": "dawn",
+				"weather": "clear",
+				"world_t": 732472.3233344106
+			},
+			"buttonbud/sit_by_stream": {
+				"phase": "night",
+				"weather": "clear",
+				"world_t": 717098.5836699966
+			},
+			"buttonbud/wander": {
+				"phase": "day",
+				"weather": "clear",
+				"world_t": 665191.9040708358
+			},
+			"capling/play": {
+				"phase": "night",
+				"weather": "clear",
+				"world_t": 549210.7281857543
+			},
+			"capling/sit_by_stream": {
+				"phase": "night",
+				"weather": "clear",
+				"world_t": 637012.0960961503
+			},
+			"dandelfluff/play": {
+				"phase": "night",
+				"weather": "clear",
+				"world_t": 636105.6299355434
+			},
+			"dandelfluff/wander": {
+				"phase": "day",
+				"weather": "clear",
+				"world_t": 590469.3972135175
+			},
+			"fernwhisk/nap": {
+				"phase": "night",
+				"weather": "clear",
+				"world_t": 613741.9518580326
+			},
+			"fernwhisk/nibble": {
+				"phase": "dawn",
+				"weather": "clear",
+				"world_t": 639828.6075326963
+			},
+			"fernwhisk/wander": {
+				"phase": "dawn",
+				"weather": "rain",
+				"world_t": 473421.50095064606
+			},
+			"honeyhum/nap": {
+				"phase": "night",
+				"weather": "clear",
+				"world_t": 272844.3311733124
+			},
+			"honeyhum/nibble": {
+				"phase": "night",
+				"weather": "clear",
+				"world_t": 613226.4653023469
+			},
+			"honeyhum/play": {
+				"phase": "night",
+				"weather": "clear",
+				"world_t": 718303.6657022457
+			},
+			"pebblepaw/nap": {
+				"phase": "night",
+				"weather": "clear",
+				"world_t": 372870.28893507423
+			},
+			"pebblepaw/nibble": {
+				"phase": "dusk",
+				"weather": "clear",
+				"world_t": 518482.69215980766
+			},
+			"pebblepaw/sit_by_stream": {
+				"phase": "dawn",
+				"weather": "clear",
+				"world_t": 646147.7780386301
+			},
+			"pebblepaw/wander": {
+				"phase": "day",
+				"weather": "clear",
+				"world_t": 312944.8000272184
+			},
+			"primpip/nap": {
+				"phase": "night",
+				"weather": "clear",
+				"world_t": 440654.2642784234
+			},
+			"primpip/nibble": {
+				"phase": "night",
+				"weather": "clear",
+				"world_t": 696199.5352747102
+			},
+			"primpip/play": {
+				"phase": "dawn",
+				"weather": "clear",
+				"world_t": 550972.6897191429
+			},
+			"primpip/sit_by_stream": {
+				"phase": "day",
+				"weather": "clear",
+				"world_t": 590057.1768576804
+			},
+			"primpip/wander": {
+				"phase": "night",
+				"weather": "clear",
+				"world_t": 634926.078153682
+			},
+			"puddlewump/play": {
+				"phase": "dawn",
+				"weather": "clear",
+				"world_t": 647837.3696967303
+			},
+			"puddlewump/sit_by_stream": {
+				"phase": "golden",
+				"weather": "rain",
+				"world_t": 684498.2268498886
+			},
+			"puffmoss/nap": {
+				"phase": "dusk",
+				"weather": "clear",
+				"world_t": 604832.8034596891
+			},
+			"puffmoss/nibble": {
+				"phase": "dawn",
+				"weather": "clear",
+				"world_t": 731511.9081915576
+			},
+			"puffmoss/play": {
+				"phase": "dawn",
+				"weather": "clear",
+				"world_t": 647650.6747465468
+			},
+			"puffmoss/sit_by_stream": {
+				"phase": "day",
+				"weather": "clear",
+				"world_t": 583420.6977586106
+			},
+			"puffmoss/wander": {
+				"phase": "dawn",
+				"weather": "clear",
+				"world_t": 640703.3071986454
+			}
+		},
+		"photos": {
+			"bellkin": 25,
+			"buttonbud": 31,
+			"capling": 20,
+			"dandelfluff": 12,
+			"fernwhisk": 11,
+			"honeyhum": 7,
+			"pebblepaw": 27,
+			"primpip": 31,
+			"puddlewump": 20,
+			"puffmoss": 31
+		},
+		"postcards": [
+			{
+				"id": "welcome",
+				"read": false,
+				"received_unix": 1792526640.0,
+				"species": "",
+				"template": "POSTCARD_EVENT_WELCOME"
+			},
+			{
+				"id": "first_night",
+				"read": false,
+				"received_unix": 1792528860.3259423,
+				"species": "",
+				"template": "POSTCARD_EVENT_FIRST_NIGHT"
+			},
+			{
+				"id": "first_bloom",
+				"read": false,
+				"received_unix": 1792529220.0,
+				"species": "",
+				"template": "POSTCARD_EVENT_FIRST_BLOOM"
+			},
+			{
+				"id": "first_rain",
+				"read": false,
+				"received_unix": 1792549237.0529969,
+				"species": "",
+				"template": "POSTCARD_EVENT_FIRST_RAIN"
+			},
+			{
+				"id": "first_decor",
+				"read": false,
+				"received_unix": 1792570710.6601563,
+				"species": "",
+				"template": "POSTCARD_EVENT_FIRST_DECOR"
+			},
+			{
+				"id": "pebblepaw_h2",
+				"read": false,
+				"received_unix": 1792700405.578125,
+				"species": "pebblepaw",
+				"template": "POSTCARD_FRIEND_03"
+			},
+			{
+				"id": "puffmoss_h2",
+				"read": false,
+				"received_unix": 1792741742.421875,
+				"species": "puffmoss",
+				"template": "POSTCARD_FRIEND_01"
+			},
+			{
+				"id": "buttonbud_h2",
+				"read": false,
+				"received_unix": 1792742042.421875,
+				"species": "buttonbud",
+				"template": "POSTCARD_FRIEND_02"
+			},
+			{
+				"id": "brimming",
+				"read": false,
+				"received_unix": 1792825784.8328352,
+				"species": "",
+				"template": "POSTCARD_EVENT_BRIMMING"
+			},
+			{
+				"id": "primpip_h2",
+				"read": false,
+				"received_unix": 1792930003.386985,
+				"species": "primpip",
+				"template": "POSTCARD_FRIEND_11"
+			},
+			{
+				"id": "ten_boats",
+				"read": false,
+				"received_unix": 1792957506.65625,
+				"species": "",
+				"template": "POSTCARD_EVENT_TEN_BOATS"
+			},
+			{
+				"id": "honeyhum_h2",
+				"read": false,
+				"received_unix": 1793045697.65625,
+				"species": "honeyhum",
+				"template": "POSTCARD_FRIEND_04"
+			}
+		],
+		"postcards_waiting": [
+			"puffmoss_h4"
+		],
+		"present": [
+			{
+				"arrive_t": 730348.8148110148,
+				"boat_credit": true,
+				"cousin": "",
+				"depart_t": 735011.6894142863,
+				"gift_dew": 15,
+				"gift_item": "seed_pouch",
+				"greeter": false,
+				"pet_credit": true,
+				"scripted": false,
+				"species": "fernwhisk"
+			},
+			{
+				"arrive_t": 731073.1351618953,
+				"boat_credit": true,
+				"cousin": "",
+				"depart_t": 735122.0675711818,
+				"gift_dew": 20,
+				"gift_item": "seed_pouch",
+				"greeter": false,
+				"pet_credit": true,
+				"scripted": false,
+				"species": "capling"
+			},
+			{
+				"arrive_t": 733958.8374405146,
+				"boat_credit": false,
+				"cousin": "",
+				"depart_t": 736386.7550217152,
+				"gift_dew": 12,
+				"gift_item": "sig_daisy_button",
+				"greeter": false,
+				"pet_credit": false,
+				"scripted": false,
+				"species": "buttonbud"
+			}
+		],
+		"retention_v": 1,
+		"rng_state": "-4384802601638549155",
+		"scene_cast": {},
+		"scene_returns": 0,
+		"scenes_seen": {},
+		"scripted": [],
+		"seed_planted": true,
+		"seed_tap_t": 6.7423272132873535,
+		"signature_gifts": {
+			"buttonbud": 1792744671.911171,
+			"honeyhum": 1793047176.1166315,
+			"pebblepaw": 1792702560.2586703,
+			"primpip": 1792934397.3370183,
+			"puffmoss": 1792743786.133716
+		},
+		"signs": [
+			{
+				"anchor": "stump_bush",
+				"appear_t": 147755.68284563845,
+				"index": 0,
+				"mystery": "primpip",
+				"type": "footprints"
+			},
+			{
+				"anchor": "sun_stone_foot",
+				"appear_t": 152530.11647527566,
+				"index": 1,
+				"mystery": "primpip",
+				"type": "note"
+			},
+			{
+				"anchor": "fern_tuft",
+				"appear_t": 181211.26799499703,
+				"index": 0,
+				"mystery": "honeyhum",
+				"type": "dropped"
+			},
+			{
+				"anchor": "",
+				"appear_t": 188239.416238356,
+				"index": 1,
+				"mystery": "honeyhum",
+				"type": "note"
+			},
+			{
+				"anchor": "",
+				"appear_t": 235011.67392734505,
+				"index": 0,
+				"mystery": "dandelfluff",
+				"type": "dropped"
+			},
+			{
+				"anchor": "",
+				"appear_t": 240014.52341645668,
+				"index": 1,
+				"mystery": "dandelfluff",
+				"type": "note"
+			},
+			{
+				"anchor": "",
+				"appear_t": 353866.5771225828,
+				"index": 0,
+				"mystery": "fernwhisk",
+				"type": "rustle"
+			},
+			{
+				"anchor": "",
+				"appear_t": 359771.88387584995,
+				"index": 1,
+				"mystery": "fernwhisk",
+				"type": "note"
+			},
+			{
+				"anchor": "",
+				"appear_t": 475696.7898600041,
+				"index": 0,
+				"mystery": "capling",
+				"type": "footprints"
+			},
+			{
+				"anchor": "",
+				"appear_t": 482544.6411565174,
+				"index": 1,
+				"mystery": "capling",
+				"type": "rustle"
+			},
+			{
+				"anchor": "",
+				"appear_t": 489821.3351948231,
+				"index": 2,
+				"mystery": "capling",
+				"type": "note"
+			},
+			{
+				"anchor": "",
+				"appear_t": 486965.0550265281,
+				"index": 0,
+				"mystery": "bellkin",
+				"type": "rustle"
+			},
+			{
+				"anchor": "",
+				"appear_t": 492497.0618874352,
+				"index": 1,
+				"mystery": "bellkin",
+				"type": "note"
+			},
+			{
+				"anchor": "",
+				"appear_t": 606998.2412853688,
+				"index": 0,
+				"mystery": "puddlewump",
+				"type": "footprints"
+			},
+			{
+				"anchor": "",
+				"appear_t": 614901.3661185732,
+				"index": 1,
+				"mystery": "puddlewump",
+				"type": "dropped"
+			},
+			{
+				"anchor": "",
+				"appear_t": 620167.1603813325,
+				"index": 2,
+				"mystery": "puddlewump",
+				"type": "note"
+			},
+			{
+				"anchor": "",
+				"appear_t": 715798.0141865131,
+				"index": 0,
+				"mystery": "moonpuff",
+				"type": "dropped"
+			},
+			{
+				"anchor": "",
+				"appear_t": 721232.3693059798,
+				"index": 1,
+				"mystery": "moonpuff",
+				"type": "footprints"
+			},
+			{
+				"anchor": "",
+				"appear_t": 729020.621990773,
+				"index": 2,
+				"mystery": "moonpuff",
+				"type": "note"
+			},
+			{
+				"anchor": "",
+				"appear_t": 736706.2865981553,
+				"index": 0,
+				"mystery": "glowmote",
+				"type": "dropped"
+			},
+			{
+				"anchor": "",
+				"appear_t": 741018.8711424025,
+				"index": 1,
+				"mystery": "glowmote",
+				"type": "rustle"
+			},
+			{
+				"anchor": "",
+				"appear_t": 748442.4351484221,
+				"index": 2,
+				"mystery": "glowmote",
+				"type": "note"
+			}
+		],
+		"stems": [
+			{
+				"bed": "bed_1",
+				"flower": "sweet_clover",
+				"planted_t": 6.7423272132873535,
+				"slot": 0,
+				"stage": 3,
+				"tutorial": true
+			},
+			{
+				"bed": "bed_1",
+				"flower": "sweet_clover",
+				"planted_t": 300.0,
+				"slot": 1,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_1",
+				"flower": "sweet_clover",
+				"planted_t": 44310.66015625,
+				"slot": 2,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_1",
+				"flower": "forget_me_not",
+				"planted_t": 44310.66015625,
+				"slot": 3,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_1",
+				"flower": "primrose",
+				"planted_t": 44310.66015625,
+				"slot": 4,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_1",
+				"flower": "primrose",
+				"planted_t": 85613.2265625,
+				"slot": 8,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_1",
+				"flower": "button_daisy",
+				"planted_t": 85613.2265625,
+				"slot": 5,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_1",
+				"flower": "buttercup",
+				"planted_t": 85613.2265625,
+				"slot": 6,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_1",
+				"flower": "sweet_clover",
+				"planted_t": 85613.2265625,
+				"slot": 7,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_1",
+				"flower": "sweet_clover",
+				"planted_t": 85613.2265625,
+				"slot": 14,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_1",
+				"flower": "primrose",
+				"planted_t": 131201.296875,
+				"slot": 12,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_1",
+				"flower": "forget_me_not",
+				"planted_t": 131201.296875,
+				"slot": 10,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_1",
+				"flower": "button_daisy",
+				"planted_t": 131201.296875,
+				"slot": 13,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_1",
+				"flower": "button_daisy",
+				"planted_t": 173705.578125,
+				"slot": 15,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_1",
+				"flower": "buttercup",
+				"planted_t": 173705.578125,
+				"slot": 11,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_1",
+				"flower": "sweet_clover",
+				"planted_t": 173705.578125,
+				"slot": 9,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_2",
+				"flower": "sweet_clover",
+				"planted_t": 173705.578125,
+				"slot": 0,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_2",
+				"flower": "dandelion",
+				"planted_t": 215342.421875,
+				"slot": 1,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_2",
+				"flower": "buttercup",
+				"planted_t": 215342.421875,
+				"slot": 2,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_2",
+				"flower": "sweet_clover",
+				"planted_t": 215342.421875,
+				"slot": 3,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_2",
+				"flower": "dandelion",
+				"planted_t": 215342.421875,
+				"slot": 7,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_2",
+				"flower": "sweet_clover",
+				"planted_t": 215342.421875,
+				"slot": 6,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_2",
+				"flower": "dandelion",
+				"planted_t": 215342.421875,
+				"slot": 5,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_2",
+				"flower": "buttercup",
+				"planted_t": 257731.390625,
+				"slot": 9,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_2",
+				"flower": "moonbloom",
+				"planted_t": 257731.390625,
+				"slot": 4,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_2",
+				"flower": "bluebell",
+				"planted_t": 257731.390625,
+				"slot": 8,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_2",
+				"flower": "button_daisy",
+				"planted_t": 257731.390625,
+				"slot": 10,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_2",
+				"flower": "button_daisy",
+				"planted_t": 257731.390625,
+				"slot": 13,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_2",
+				"flower": "moonbloom",
+				"planted_t": 303908.71875,
+				"slot": 11,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_2",
+				"flower": "bluebell",
+				"planted_t": 303908.71875,
+				"slot": 15,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_2",
+				"flower": "sweet_clover",
+				"planted_t": 303908.71875,
+				"slot": 14,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_2",
+				"flower": "button_daisy",
+				"planted_t": 344127.0625,
+				"slot": 12,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_4",
+				"flower": "dandelion",
+				"planted_t": 344127.0625,
+				"slot": 0,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_3",
+				"flower": "forget_me_not",
+				"planted_t": 344127.0625,
+				"slot": 0,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_3",
+				"flower": "forget_me_not",
+				"planted_t": 344127.0625,
+				"slot": 1,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_4",
+				"flower": "dandelion",
+				"planted_t": 388600.59375,
+				"slot": 1,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_4",
+				"flower": "dandelion",
+				"planted_t": 388600.59375,
+				"slot": 3,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_3",
+				"flower": "buttercup",
+				"planted_t": 430806.65625,
+				"slot": 2,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_3",
+				"flower": "buttercup",
+				"planted_t": 430806.65625,
+				"slot": 5,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_3",
+				"flower": "buttercup",
+				"planted_t": 430806.65625,
+				"slot": 3,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_4",
+				"flower": "moonbloom",
+				"planted_t": 473610.75,
+				"slot": 2,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_4",
+				"flower": "bluebell",
+				"planted_t": 473610.75,
+				"slot": 4,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_3",
+				"flower": "primrose",
+				"planted_t": 473610.75,
+				"slot": 4,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_4",
+				"flower": "moonbloom",
+				"planted_t": 519297.65625,
+				"slot": 6,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_3",
+				"flower": "button_daisy",
+				"planted_t": 519297.65625,
+				"slot": 6,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_3",
+				"flower": "buttercup",
+				"planted_t": 519297.65625,
+				"slot": 14,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_4",
+				"flower": "dandelion",
+				"planted_t": 561452.25,
+				"slot": 5,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_3",
+				"flower": "forget_me_not",
+				"planted_t": 561452.25,
+				"slot": 8,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_3",
+				"flower": "buttercup",
+				"planted_t": 605208.4375,
+				"slot": 11,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_3",
+				"flower": "button_daisy",
+				"planted_t": 605208.4375,
+				"slot": 9,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_3",
+				"flower": "forget_me_not",
+				"planted_t": 605208.4375,
+				"slot": 7,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_4",
+				"flower": "bluebell",
+				"planted_t": 648353.5,
+				"slot": 10,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_3",
+				"flower": "button_daisy",
+				"planted_t": 648353.5,
+				"slot": 15,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_4",
+				"flower": "dandelion",
+				"planted_t": 648353.5,
+				"slot": 9,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_4",
+				"flower": "dandelion",
+				"planted_t": 648353.5,
+				"slot": 8,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_3",
+				"flower": "button_daisy",
+				"planted_t": 691771.5,
+				"slot": 10,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_4",
+				"flower": "moonbloom",
+				"planted_t": 691771.5,
+				"slot": 11,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_4",
+				"flower": "dandelion",
+				"planted_t": 691771.5,
+				"slot": 12,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_3",
+				"flower": "forget_me_not",
+				"planted_t": 691771.5,
+				"slot": 13,
+				"stage": 3,
+				"tutorial": false
+			},
+			{
+				"bed": "bed_3",
+				"flower": "buttercup",
+				"planted_t": 733481.4375,
+				"slot": 12,
+				"stage": 1,
+				"tutorial": false
+			}
+		],
+		"t": 734381.4375,
+		"tz_offset_s": 0.0,
+		"variants_met": {},
+		"visit_aff_t": {
+			"bellkin": 659683.2716447321,
+			"buttonbud": 714611.2637797359,
+			"capling": 731073.1351618953,
+			"dandelfluff": 710152.6657983384,
+			"fernwhisk": 730348.8148110148,
+			"honeyhum": 696572.8579241914,
+			"pebblepaw": 725951.0206569652,
+			"primpip": 714714.0254013782,
+			"puddlewump": 720136.795442387,
+			"puffmoss": 710883.1966722616
+		}
+	}
+}

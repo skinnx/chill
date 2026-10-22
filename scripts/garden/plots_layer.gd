@@ -31,6 +31,16 @@ extends Node2D
 ## unfurl with its sparkles), ready (ready buds glowing and swelling, no touch). The bed is
 ## --qa-ready=<bed_id> (default QA_BED). DecorLayer handles the décor kinds (lantern, pinwheel,
 ## chime, place).
+##
+## Active F2 Tea & Treats (GDD §14.2, ACTIVE_TEA §2): a bloomed stem grows spare petals; a bed
+## with ready petals shows up to 3 loose petal glints resting on its leaves (stamps in the bed's own
+## mesh: no extra draw call; dimmed to 50 % while that flower's jar is full) and ranks like a ready
+## bud (WorldPan.PRIO_PETAL_BED). The bed release runs, in order: ready buds unfurl, else the
+## petals are gathered (Game.harvest_bed: they lift and arc to the tea nook's jar on the `move`
+## spring, S28, TICK), else the stems sway; every release also reports Game.world_action(&"bed_tap")
+## for Active F1 wishes. The layer hosts the tea nook prop (TeaNook). QA: --qa-tea-gather=<bed>[@<ms>]
+## taps that bed for its petals QA_TOUCH_AT_S after the world is ready and freezes the flight <ms>
+## later (default 260).
 
 # Data boundary: values read from JSON / Dictionaries are Variants and each one is converted
 # explicitly (int(), float(), String() ...) where it is read; the analyzer still flags every
@@ -41,6 +51,10 @@ extends Node2D
 signal bed_card_requested(bed_id: StringName)
 ## A tap on a bed with room while [member choose_mode] is on.
 signal bed_chosen(bed_id: StringName)
+## Active F2: a tap found ready petals but [param flower]'s jar is full (the UI shows TEA_JAR_FULL).
+signal jar_full(flower: StringName)
+## Active F2: petals were gathered from [param bed_id] (flower -> count).
+signal petals_gathered(bed_id: StringName, counts: Dictionary)
 
 const SHADER_PATH := "res://shaders/flora/flora_bed.gdshader"
 const CUE_TOUCH := &"S01"
@@ -103,6 +117,18 @@ const QA_TOUCH_AT_S := 1.2
 const QA_TAP_S := 0.08
 ## Touch rings on beds lie on the ground (flattened ellipse).
 const RING_SQUASH := 0.55
+const CUE_PETALS := &"S28"
+const HAPTIC_TICK := {"full": "TICK"}
+const ARG_QA_TEA_GATHER := "--qa-tea-gather="
+const QA_GATHER_MS := 260.0
+## Petal glints rest on a leaf beside the stem's foot (design px x depth) and dim to 50 % while
+## the flower's jar is full (ACTIVE_TEA §2.2).
+const GLINT_OFFSET := Vector2(-18.0, -24.0)
+const GLINT_PETAL_SCALE := 1.45
+const GLINT_SPARK_OFFSET := Vector2(-6.0, -22.0)
+const GLINT_FULL_ALPHA := 0.5
+## Gathered petals leave from a little above the stem's foot (the leaves they rested on).
+const GATHER_FROM_UP := 26.0
 
 static var current: PlotsLayer = null
 
@@ -143,6 +169,13 @@ var _qa_t: float = -1.0
 var _qa_step: int = 0
 var _qa_frozen: bool = false
 var _qa_ring: TouchRing
+var _nook: TeaNook
+var _flight: PetalFlight
+## bed id -> [glint count, jar-full dim] last built into its mesh.
+var _glints: Dictionary = {}
+var _qa_gather_bed: StringName = &""
+var _qa_gather_ms: float = -1.0
+var _qa_gather_t: float = -1.0
 
 
 class BedView:
@@ -245,11 +278,23 @@ func _ready() -> void:
 	_bezier_decel = CubicBezier.from_array((curves[String(plant["seed_arc_curve"])] as Dictionary)["bezier"])
 	for b: Dictionary in _content.beds:
 		_make_bed(b)
+	if _content.tea.has("nook"):
+		_nook = TeaNook.new()
+		_nook.name = "TeaNook"
+		add_child(_nook)
+		_flight = PetalFlight.new()
+		_flight.name = "PetalFlight"
+		add_child(_flight)
 	for a: String in OS.get_cmdline_user_args():
 		if a.begins_with(ARG_QA_READY):
 			_qa_ready = StringName(a.trim_prefix(ARG_QA_READY))
 		elif a.begins_with(ARG_QA_UNFURL):
 			_qa_unfurl_s = maxf(0.0, a.trim_prefix(ARG_QA_UNFURL).to_float())
+		elif a.begins_with(ARG_QA_TEA_GATHER):
+			var gv := a.trim_prefix(ARG_QA_TEA_GATHER).split("@")
+			_qa_gather_bed = StringName(gv[0])
+			_qa_gather_ms = gv[1].to_float() if gv.size() > 1 else QA_GATHER_MS
+			_qa_gather_t = 0.0
 		elif a.begins_with(ARG_QA_GARDEN):
 			var kv := a.trim_prefix(ARG_QA_GARDEN).split(":")
 			_qa_kind = kv[0]
@@ -366,6 +411,8 @@ func _on_sim_event(ev: Dictionary) -> void:
 			_mark(v.bed)
 			_update_seed_hint()
 			_refresh_choose_glow()
+		WorldSim.EV_PETALS, WorldSim.EV_TEA_UNLOCKED, WorldSim.EV_BREWED, WorldSim.EV_TEA_OFFERED:
+			_refresh_glints()
 		WorldSim.EV_STAGE:
 			var i2 := int(ev["stem"])
 			var v2 := _view_for(i2)
@@ -423,6 +470,9 @@ func _process(delta: float) -> void:
 	var refresh := _growth_t >= GROWTH_REFRESH_S
 	if refresh:
 		_growth_t = 0.0
+		_refresh_glints()
+	if _qa_gather_t >= 0.0:
+		_step_qa_gather(delta)
 	var auto_after := float(_ready_cfg["auto_unfurl_after_s"])
 	var auto_rate := _unfurl_total_s * 1000.0 / float(_ready_cfg["auto_unfurl_ms"])
 	var anim_by_bed: Dictionary = {}
@@ -587,6 +637,7 @@ func _build_into(bv: BedView, mi: MeshInstance2D, index_of: Array[int], with_ext
 	var extras: Array[Dictionary] = []
 	if not with_extras:
 		extras = _seed_extras(bv)
+		extras.append_array(_glint_extras(bv))
 	else:
 		for i in index_of:
 			var v: StemView = _views.get(i)
@@ -823,7 +874,9 @@ func world_hit_shapes() -> Array:
 func _prio(bv: BedView) -> int:
 	if choose_mode and Game.sim != null and GardenRules.has_room(_content, Game.sim.state.stems, bv.id):
 		return WorldPan.PRIO_CHOOSE_BED
-	return WorldPan.PRIO_READY_BED if claims(bv.centre) else WorldPan.PRIO_BED
+	if claims(bv.centre):
+		return WorldPan.PRIO_READY_BED
+	return WorldPan.PRIO_PETAL_BED if has_petals(bv.id) else WorldPan.PRIO_BED
 
 
 func _local(canvas_pos: Vector2) -> Vector2:
@@ -884,10 +937,138 @@ func _tap_bed(bv: BedView) -> void:
 		if v.bed == bv.id and v.ready_s >= 0.0 and v.unfurl_s < 0.0:
 			_start_unfurl(v, 1.0, stagger * float(n), n == 0)
 			n += 1
-	if n == 0:
+	if n == 0 and not _gather(bv):
 		bv.sway_t = 0.0
 		AudioDirector.play_cue(CUE_RUSTLE, {"position": _canvas_of(bv.centre)})
 		FrameGovernor.hold_for(TAP_SWAY_DECAY_S * 3.0)
+	# Active F1: every bed release reports itself, whichever branch ran (GDD §14.2 rule 1)
+	Game.world_action(&"bed_tap", {"bed": bv.id})
+
+
+## Active F2 petal branch: gathers every ready petal that fits; they lift off the leaves and arc to
+## the nook's jar. True when the tap was about petals (gathered, or the jars were full).
+func _gather(bv: BedView) -> bool:
+	if not has_petals(bv.id):
+		return false
+	var origins := _petal_origins(bv)
+	var got := Game.harvest_bed(bv.id)
+	if got.is_empty():
+		# the jars are full: the petals simply wait on the flowers (T3); a kind note, no buzz
+		var flower: StringName = &""
+		for o: Dictionary in origins:
+			flower = StringName(o["flower"])
+			break
+		bv.sway_t = 0.0
+		jar_full.emit(flower)
+		return true
+	var launch: Array[Dictionary] = []
+	for o: Dictionary in origins:
+		var f := String(o["flower"])
+		if int(got.get(f, 0)) > 0:
+			got[f] = int(got[f]) - 1
+			launch.append(o)
+	var counts := Game.sim.active.tea.ready_by_flower(Game.sim, bv.id, Game.sim.state.t)
+	_refresh_glints()
+	TeaArt.cue(CUE_PETALS, {"world": true, "position": _canvas_of(bv.centre)}, HAPTIC_TICK)
+	if _flight != null and _nook != null:
+		var nook := _nook
+		_flight.launch(launch, _nook.jar_point(), float(TeaArt.tea_num("harvest", "stagger_ms", 40.0)) * UiTokens.MS,
+				func() -> void:
+					if is_instance_valid(nook):
+						nook.catch_petals())
+	petals_gathered.emit(bv.id, counts)
+	return true
+
+
+## One entry per ready petal of [param bv]: {pos (design px, the leaf it rests on), flower}.
+func _petal_origins(bv: BedView) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var sim := Game.sim
+	var t := Game.world_now()
+	for i in sim.state.stems.size():
+		var s: Dictionary = sim.state.stems[i]
+		if StringName(String(s["bed"])) != bv.id:
+			continue
+		var k := sim.active.tea.stem_ready(sim, i, t)
+		var root := _stem_root(i)
+		var d := depth_scale(root.y)
+		for j in k:
+			out.append({"pos": root + Vector2(GLINT_OFFSET.x * d + float(j) * 10.0, -GATHER_FROM_UP * d),
+				"flower": StringName(String(s["flower"]))})
+	return out
+
+
+## Petal glints (ACTIVE_TEA §2.2): 1 per 2 ready petals, at most glints_max_per_bed, on the stems
+## holding petals; each a loose petal in the flower's own colour on a leaf plus a slow twinkle.
+func _glint_extras(bv: BedView) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	if Game.sim == null or not Game.tea_unlocked():
+		return out
+	var harvest: Dictionary = _content.tea.get("harvest", {})
+	var ready := Game.petals_ready(bv.id)
+	if ready <= 0:
+		return out
+	var per := float(harvest.get("petals_per_glint", 2))
+	var want := mini(ceili(float(ready) / per), int(harvest.get("glints_max_per_bed", 3)))
+	var sim := Game.sim
+	var t := Game.world_now()
+	var stems: Array[int] = []
+	for i in sim.state.stems.size():
+		if StringName(String(sim.state.stems[i]["bed"])) == bv.id and sim.active.tea.stem_ready(sim, i, t) > 0:
+			stems.append(i)
+	# the front-most stems carry the glints (they read best)
+	stems.sort_custom(func(a: int, b: int) -> bool: return _stem_root(a).y > _stem_root(b).y)
+	for k in mini(want, stems.size()):
+		var i := stems[k]
+		var flower := StringName(String(sim.state.stems[i]["flower"]))
+		var full := sim.active.tea.room(sim, flower) <= 0
+		var root := _stem_root(i)
+		var d := depth_scale(root.y)
+		var p := root - bv.node.position + GLINT_OFFSET * d
+		var alpha := GLINT_FULL_ALPHA if full else 1.0
+		out.append({"stamp": "petal_round", "pos": p, "scale": d * GLINT_PETAL_SCALE, "part": FloraBuilder.PART_PETAL,
+			"row": FloraBuilder.row_of(_content, flower), "alpha": alpha})
+		out.append({"stamp": "glint", "pos": p + GLINT_SPARK_OFFSET * d, "scale": d * 1.1, "part": FloraBuilder.PART_GLINT,
+			"row": FloraBuilder.ROW_FX, "alpha": alpha * 0.9})
+	return out
+
+
+## Marks the beds whose glints changed (count or jar-full dim) for a rebuild.
+func _refresh_glints() -> void:
+	if Game.sim == null:
+		return
+	var full := 0
+	for f: StringName in _content.petals_by_flower:
+		full = full * 2 + (1 if Game.sim.active.tea.room(Game.sim, f) <= 0 else 0)
+	for bv: BedView in _beds.values():
+		var n := Game.petals_ready(bv.id) if Game.tea_unlocked() else 0
+		var key := "%d|%d" % [n, full]
+		if String(_glints.get(bv.id, "")) != key:
+			_glints[bv.id] = key
+			bv.dirty = true
+			set_process(true)
+
+
+## --qa-tea-gather: tap the bed for its petals at QA_TOUCH_AT_S, freeze the flight <ms> later.
+func _step_qa_gather(delta: float) -> void:
+	if not Game.is_ready:
+		return
+	_qa_gather_t += delta
+	var bv: BedView = _beds.get(_qa_gather_bed)
+	if bv == null:
+		_qa_gather_t = -1.0
+		return
+	if _qa_gather_t >= QA_TOUCH_AT_S and _qa_gather_t - delta < QA_TOUCH_AT_S:
+		_touch_down(bv, bv.centre)
+		_press_bed = bv.id
+		_press_long_sent = false
+		_release_press(true)
+	if _qa_gather_t >= QA_TOUCH_AT_S + _qa_gather_ms / 1000.0:
+		_qa_gather_t = -1.0
+		if _flight != null:
+			_flight.freeze()
+		if is_instance_valid(_qa_ring):
+			_qa_ring.freeze_at(_qa_gather_ms / 1000.0)
 
 
 ## True when a touch at [param pos] belongs to a bed that outranks décor (GDD §2.5 hit priority:
@@ -902,7 +1083,12 @@ func claims(pos: Vector2) -> bool:
 	for v: StemView in _views.values():
 		if v.bed == bed and v.ready_s >= 0.0 and v.unfurl_s < 0.0:
 			return true
-	return false
+	return has_petals(bed)
+
+
+## Active F2: the bed holds spare petals a tap would gather (or that wait for jar room).
+func has_petals(bed: StringName) -> bool:
+	return Game.sim != null and Game.tea_unlocked() and Game.petals_ready(bed) > 0
 
 
 ## Design-px hit rect of a bed (UI: the bed card anchor).

@@ -14,7 +14,8 @@ extends Control
 ##  * left-handed mirroring and safe areas.
 ##
 ## QA user args (tools/qa/capture.sh still ... --qa-sheet=garden):
-##   --qa-sheet=garden|album|basket|settings   open that sheet instantly once the world is ready
+##   --qa-sheet=garden|album|basket|settings|tea   open that sheet instantly once the world is ready
+##                         (Tea: see TeaSheet --qa-tea for its mid-interaction states)
 ##   --qa-tab=<n>          select tab n of the open sheet (Garden: 1 = Décor; Album: 1 Photos, 2 Postcards)
 ##   --qa-recap            show the welcome-back card with sample lines (no auto-dismiss)
 ##   --qa-peek             hold the time chip's label peek open
@@ -76,7 +77,7 @@ const QA_SETTLE_FRAMES := 6
 ## --qa-met: friends met this many days apart, hearts cycling 1..5, photos and two postcards.
 const QA_MET_DAY_S := 86400.0
 const QA_PHOTO_BITS := [0b00001, 0b00011, 0b10101, 0b01111, 0b11111]
-const SHEETS: Array[StringName] = [&"settings", &"garden", &"basket", &"album"]
+const SHEETS: Array[StringName] = [&"settings", &"garden", &"basket", &"album", &"tea"]
 ## New-friend card waits for the friend to settle (GDD §3.4 "When Pip settles").
 const NEW_FRIEND_DELAY_S := 3.0
 const MAILBOX_ACTION := &"open_postcards"
@@ -105,6 +106,8 @@ var _night_tween: Tween
 var _qa_frames: int = 0
 ## Swallows the rest of the gesture whose first touch woke the HUD from ambient watch.
 var _wake_gate := PointerGate.new()
+## Active F3 edit mode is on (DecorEdit): the top bar and dock make way for the edit chrome.
+var _decor_edit: bool = false
 
 @onready var _safe_area: SafeAreaContainer = $SafeArea
 @onready var _sheets_host: Control = $Sheets
@@ -152,6 +155,8 @@ func _ready() -> void:
 		_refresh_onboarding()
 		sheets.refresh())
 	Game.leave_requested.connect(func() -> void: overlays.show_leave())
+	Game.decor_edit_entered.connect(_on_decor_edit.bind(true))
+	Game.decor_edit_exited.connect(_on_decor_edit.bind(false))
 	TimeOfDay.globals_updated.connect(_on_globals)
 	_on_globals({&"g_lights": float(TimeOfDay.scalars.get("lights", 0.0))})
 	AudioDirector.cue_played.connect(overlays.on_cue_played)
@@ -180,7 +185,7 @@ func _process(delta: float) -> void:
 		_qa_frames += 1
 		if _qa_frames % QA_DRAWCALL_EVERY == 0:
 			print("qa-drawcalls: %d" % int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)))
-	if ambient or sheets.is_open() or overlays.is_modal_open():
+	if ambient or sheets.is_open() or overlays.is_modal_open() or _decor_edit:
 		_idle_s = 0.0
 		return
 	if not Settings.get_bool(Settings.AUTO_HIDE_UI):
@@ -294,8 +299,37 @@ func _set_chrome_input(enabled: bool) -> void:
 ## The top bar's band takes presses while the world is in view; under an open sheet the scrim does
 ## (a tap there closes the sheet as before), and in ambient watch the wake gate does.
 func _sync_band() -> void:
-	var on := not ambient and not sheets.is_open()
+	var on := not ambient and not sheets.is_open() and not _decor_edit
 	top_bar.band.mouse_filter = Control.MOUSE_FILTER_STOP if on else Control.MOUSE_FILTER_IGNORE
+
+
+## Active F3 edit mode (ACTIVE_DECOR §2, §11): the sheet exits, the top bar and the dock fade out on
+## `short` and take no presses (the DecorEditChrome takes their places); back in play they return.
+## Ambient watch and its auto-hide timer are off meanwhile.
+func _on_decor_edit(on: bool) -> void:
+	_decor_edit = on
+	if on:
+		if ambient:
+			set_ambient(false, true)
+		sheets.close()
+	var chrome := sheets.chrome
+	chrome.visible = true
+	var t := Motion.tween(chrome, "modulate:a", 0.0 if on else 1.0, &"short")
+	if on:
+		# hidden once faded: an invisible top bar and dock would still cost their draw calls
+		t.finished.connect(func() -> void: chrome.visible = not _decor_edit)
+	_set_chrome_input(not on)
+
+
+## Where the Active F3 edit chrome lives: above the sheets and the dock, under the modal cards and
+## the toast.
+func edit_chrome_host() -> Control:
+	return _sheets_host
+
+
+## The OS safe-area margins (position = left, top; size = right, bottom) in screen px.
+func safe_margins() -> Rect2:
+	return _safe
 
 
 func open_sheet(id: StringName, instant: bool = false) -> void:
@@ -327,6 +361,8 @@ func _make_sheet(id: StringName) -> UiSheet:
 			return b
 		&"settings":
 			return SettingsSheet.new()
+		&"tea":
+			return TeaSheet.make(self)
 	return null
 
 
@@ -410,6 +446,8 @@ func _connect_world() -> void:
 	if PlotsLayer.current != null:
 		PlotsLayer.current.bed_chosen.connect(_on_bed_chosen)
 		PlotsLayer.current.bed_card_requested.connect(func(bed: StringName) -> void: overlays.show_bed_card(bed))
+	# Active F2: the tea nook prop, the petal toasts and --qa-tea (TeaSheet owns the wiring)
+	TeaSheet.wire(self)
 
 
 func _on_prop_tapped(_prop: StringName, action: StringName, _pos: Vector2) -> void:

@@ -78,7 +78,10 @@
 		"retention_new_days_min": 30,
 		"last_heart5_day_median": [45, 70],
 		"heart3_by_day": 14,
-		"heart3_species_median_min": 6
+		"heart3_species_median_min": 6,
+		"active_actions_min": 3,
+		"active_actions_session_share_min": 0.95,
+		"day30_wallet_median": [5000, 20000]
 	},
 	"gift_items": [
 		{"id": "acorn_cup", "name_key": "GIFT_ACORN_CUP"},

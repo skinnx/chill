@@ -25,6 +25,12 @@ extends Node
 ##   a sheet or modal card is open ([member blocked]) does nothing (the GUI consumed it anyway).
 ## - No pan STARTS within 24 dp of a side edge (spots.json safe_x, I2); taps there still work.
 ## - A press that finds no target is an empty press: two of them within double_tap_ms glide home.
+##   Every empty tap within the slop also emits [signal empty_tapped] (Active F3: "tap a spot").
+## - Active Play v1 (GDD §14.11 a6): a pressed target may [method claim_drag] while the finger is
+##   still within the slop (the décor long-press: the same finger then carries the piece). While
+##   Active F3 edit mode is on ([member edit_mode], driven by Game.decor_edit_entered/exited),
+##   only nodes in [constant GROUP_HIT_EDIT] are asked for targets (pieces prio 8, +1 selected);
+##   everything else is ground. [method nudge] pans inside the rest bounds (edge pan).
 
 # Data boundary: values read from JSON / Dictionaries are Variants and each one is converted
 # explicitly (int(), float(), String() ...) where it is read; the analyzer still flags every
@@ -37,12 +43,16 @@ signal drag_started
 signal motion_started
 ## A world target was picked for a press (QA, tests): its layer node and key.
 signal target_pressed(layer: Node, key: Variant)
+## A tap on empty ground (released within the slop), in viewport px (Active F3 destinations).
+signal empty_tapped(canvas_pos: Vector2)
 
 enum Kind { NONE, PRESS, MOVE, RELEASE }
 
 ## Nodes that offer world targets implement world_hit / world_press / world_release (and
 ## world_drag when their candidate sets "drag": true).
 const GROUP_HIT := &"world_hit"
+## Active F3: while edit mode is on, only these nodes offer targets (the DecorEdit controller).
+const GROUP_HIT_EDIT := &"world_hit_edit"
 ## GDD §2.5 hit priority, highest first (choose-a-bed mode lifts beds with room above all).
 const PRIO_CHOOSE_BED := 7
 const PRIO_MOSSLING := 6
@@ -51,6 +61,14 @@ const PRIO_PROP := 4
 const PRIO_DECOR := 3
 const PRIO_BED := 2
 const PRIO_STREAM := 1
+## Active Play v1 (GDD §2.5 as amended by §14.4 D5): a bed with ready petals ranks like a ready
+## bud, the tea nook like a prop, still décor pieces (cairn, toadstool, stone) like the stream;
+## edit-mode pieces outrank everything (+1 for the selected one).
+const PRIO_PETAL_BED := 5
+const PRIO_TEA_NOOK := 4
+const PRIO_STILL := 1
+const PRIO_EDIT := 8
+const PRIO_EDIT_SELECTED := 9
 ## Fat-finger slop around every world hit area and the upward aim offset of a touch (dp).
 const SLOP_DP := 9.0
 const AIM_UP_DP := 3.0
@@ -71,6 +89,11 @@ var aim_up_px: float = 9.0
 var velocity_window_s: float = 0.1
 var double_tap_s: float = 0.3
 var double_tap_slop_px: float = 48.0
+## Active F3 edit mode (only GROUP_HIT_EDIT nodes are asked); follows Game's edit signals.
+var edit_mode: bool = false
+## A double tap on empty ground glides home (ACTIVE_DECOR §3.1: not while an edit-mode piece is
+## selected or a tray piece is in hand, where a ground tap is a destination). DecorEdit sets it.
+var double_tap_home: bool = true
 
 var _down: bool = false
 var _down_touch: bool = false
@@ -92,11 +115,28 @@ var _empty: bool = false
 
 func _enter_tree() -> void:
 	current = self
+	var g := get_node_or_null(^"/root/Game")
+	if g != null and g.has_signal(&"decor_edit_entered") and not g.is_connected(&"decor_edit_entered", _on_edit_entered):
+		g.connect(&"decor_edit_entered", _on_edit_entered)
+		g.connect(&"decor_edit_exited", _on_edit_exited)
 
 
 func _exit_tree() -> void:
 	if current == self:
 		current = null
+	var g := get_node_or_null(^"/root/Game")
+	if g != null and g.is_connected(&"decor_edit_entered", _on_edit_entered):
+		g.disconnect(&"decor_edit_entered", _on_edit_entered)
+		g.disconnect(&"decor_edit_exited", _on_edit_exited)
+
+
+func _on_edit_entered() -> void:
+	edit_mode = true
+
+
+func _on_edit_exited() -> void:
+	edit_mode = false
+	double_tap_home = true
 
 
 ## Reads the tokens (motion_tokens world.pan, spots.json frame/safe_x, the drag threshold).
@@ -150,11 +190,37 @@ func cancel() -> void:
 	_down = false
 
 
+## True while a sheet or modal card is open (the world takes no press; wish checks pause).
+func is_blocked() -> bool:
+	return _is_blocked()
+
+
+## The pressed target takes over the drag mid-press (Active F3 long-press on a piece): the pan
+## is disarmed and later motion arrives as world_drag(key, pos), the release as
+## world_release(key, pos, true). Only while a target is held and no pan has started.
+func claim_drag() -> bool:
+	if _target == null or _dragging or not _down:
+		return false
+	_target_drag = true
+	_armed = false
+	return true
+
+
+## Moves the pan by [param delta_px] inside the rest bounds (no rubber band, no glide): the edge
+## pan while a piece is carried near a side edge.
+func nudge(delta_px: Vector2) -> void:
+	if delta_px == Vector2.ZERO:
+		return
+	body.snap(body.offset() + delta_px / maxf(zoom, 0.01))
+	FrameGovernor.poke()
+
+
 ## Picks the one world target for a press at [param canvas_pos] (viewport px) among [param layers]
-## (default: the GROUP_HIT nodes). Returns {} or the winning candidate with "layer" added.
+## (default: the GROUP_HIT nodes; GROUP_HIT_EDIT ones in edit mode). Returns {} or the winning
+## candidate with "layer" added.
 func resolve(canvas_pos: Vector2, layers: Array = []) -> Dictionary:
 	if layers.is_empty() and is_inside_tree():
-		layers = get_tree().get_nodes_in_group(GROUP_HIT)
+		layers = get_tree().get_nodes_in_group(GROUP_HIT_EDIT if edit_mode else GROUP_HIT)
 	var best := {}
 	for n: Variant in layers:
 		var layer := n as Node
@@ -303,6 +369,7 @@ func _on_release() -> void:
 		get_viewport().set_input_as_handled()
 		return
 	if _empty and _ev_pos.distance_to(_press) <= threshold_px:
+		empty_tapped.emit(_press)
 		_on_empty_tap()
 	_empty = false
 
@@ -323,7 +390,7 @@ func _on_empty_tap() -> void:
 	var prev := Vector2(_last_tap.x, _last_tap.y)
 	if now - _last_tap.z <= double_tap_s and prev.distance_to(_press) <= double_tap_slop_px:
 		_last_tap = Vector3(0.0, 0.0, -INF)
-		if body.offset().length() > 1.0:
+		if body.offset().length() > 1.0 and double_tap_home:
 			go_home()
 		return
 	_last_tap = Vector3(_press.x, _press.y, now)

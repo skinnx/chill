@@ -14,6 +14,11 @@ Checks:
     friends, unique 3-part postcard stories, timing windows, sign anchors (hit floors, 8 dp gaps, clear
     of beds/props/spots/nests), variant palettes (cr_* tokens that exist in palettes.json, fur within the
     V2 saturation band), scene conditions, casts and caption placeholders
+  * Active Play v1 (GDD 14): wishes.json (target grammar, references, the "fulfillable now" requires,
+    traits, coverage), tea.json (recipes unique and well-formed, fallbacks, preferences, petals, teaware,
+    the tea nook as a static tap target), decor_placement.json (every set, rotation renders, the walkable
+    rim, legacy anchors valid or nudgeable out of hard exclusions, derived spots, stream-stone reach for
+    the F1 stones wish, hit floors) and sound-cue ids unique across the three features
 
 Usage:
   python3 tools/sim/validate_content.py           # validate, exit 1 on any problem
@@ -25,13 +30,15 @@ import argparse
 import csv
 import io
 import json
+import math
 import re
 import sys
 import unicodedata
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-DATA_FILES = ("species", "flora", "decor", "economy", "world", "spots", "friendship", "mysteries", "scenes")
+DATA_FILES = ("species", "flora", "decor", "economy", "world", "spots", "friendship", "mysteries", "scenes",
+	"wishes", "tea", "decor_placement")
 SNAKE = re.compile(r"^[a-z][a-z0-9_]*$")
 KEY = re.compile(r"^[A-Z][A-Z0-9_]*$")
 PLACEHOLDER = re.compile(r"\{([a-z_]+)\}")
@@ -226,8 +233,9 @@ def check_data(d: dict, rep: Report) -> set:
 			rep.err(f"{x['id']}: missing anchor")
 		elif len(a["positions"]) != x["max_copies"]:
 			rep.err(f"{x['id']}: anchor has {len(a['positions'])} positions, max_copies {x['max_copies']}")
-	check_layout(spots, rep)
+	check_layout(spots, rep, d.get("tea"))
 	keys |= check_retention(d, rep)
+	keys |= check_active(d, rep)
 	return keys
 
 
@@ -572,7 +580,7 @@ def check_retention_strings(d: dict, rows: dict, rep: Report) -> None:
 			rep.err(f"{v['desc_key']}: a cousin description names its base friend with {{name}}")
 
 
-def check_layout(spots: dict, rep: Report) -> None:
+def check_layout(spots: dict, rep: Report, tea: dict | None = None) -> None:
 	zones = {z["id"]: z for z in spots["zones"]}
 	tend, dock = zones["tend"], zones["dock"]
 	targets = []
@@ -581,6 +589,9 @@ def check_layout(spots: dict, rep: Report) -> None:
 	for p in spots["props"]:
 		if p["hit_dp"] > 0:
 			targets.append((p["id"], p["x"], p["y"], p["hit_dp"], p["hit_dp"], False))
+	if tea:  # Active F2: the tea nook is a static prop target on the stump (optional, look zone)
+		n = tea["nook"]
+		targets.append((n["prop_id"], n["x"], n["y"], n["hit_dp"], n["hit_dp"], False))
 	st = spots["stream"]
 	if st["tap_band_y1"] > dock["y0"] - GAP_DP * PX_PER_DP / FRAME_H:
 		rep.err("stream tap band reaches the dock")
@@ -606,6 +617,334 @@ def check_layout(spots: dict, rep: Report) -> None:
 			gy = abs(a[2] - b[2]) * FRAME_H - (a[4] + b[4]) * PX_PER_DP / 2.0
 			if max(gx, gy) < GAP_DP * PX_PER_DP:
 				rep.err(f"targets {a[0]} and {b[0]} closer than {GAP_DP} dp")
+
+
+# ---------------------------------------------------------------- Active Play v1 (GDD 14)
+WISH_KINDS = {"pet": None, "play_taps": "int", "chime_tap": None, "bed_invite": "flower", "decor_near": "decor",
+	"decor_tap": "decor", "boat": None, "stream_tap": None, "tea": "recipe", "tea_kind": "kind", "tea_petal": "flower",
+	"tea_loved": None}
+TEA_KINDS = {"tea", "tea_kind", "tea_petal", "tea_loved"}
+
+
+def _seg_dist_dp(px: float, py: float, poly: list) -> float:
+	"""Distance in dp from a frame-normalized point to a frame-normalized polyline."""
+	best = INF_DP
+	sx, sy = FRAME_W / PX_PER_DP, FRAME_H / PX_PER_DP
+	for (ax, ay), (bx, by) in zip(poly, poly[1:]):
+		ax, ay, bx, by, qx, qy = ax * sx, ay * sy, bx * sx, by * sy, px * sx, py * sy
+		dx, dy = bx - ax, by - ay
+		t = 0.0 if dx == dy == 0 else max(0.0, min(1.0, ((qx - ax) * dx + (qy - ay) * dy) / (dx * dx + dy * dy)))
+		best = min(best, ((qx - ax - t * dx) ** 2 + (qy - ay - t * dy) ** 2) ** 0.5)
+	return best
+
+
+INF_DP = float("inf")
+
+
+def check_active(d: dict, rep: Report) -> set:
+	keys: set[str] = set()
+	wi, te, dp = d["wishes"], d["tea"], d["decor_placement"]
+	eco, spots, world = d["economy"], d["spots"], d["world"]
+	species = d["species"]["species"]
+	sp_by = {s["id"]: s for s in species}
+	flowers = {f["id"]: f for f in d["flora"]["flowers"]}
+	decor = {x["id"]: x for x in d["decor"]["decor"]}
+	phase_ids = {p["id"] for p in world["phases"]}
+	weather_ids = {w["id"] for w in world["weather"]}
+	spot_by = {s["id"]: s for s in spots["spots"]}
+	for name, doc in (("wishes", wi), ("tea", te), ("decor_placement", dp)):
+		if not doc.get("doc"):
+			rep.err(f"{name}.json: missing doc string")
+	# ---- tea.json
+	recipes = {r["id"]: r for r in te["recipes"]}
+	if len(recipes) != len(te["recipes"]):
+		rep.err("tea.recipes: duplicate ids")
+	seen_mix: dict = {}
+	fallbacks: dict = {}
+	for r in te["recipes"]:
+		rid = r["id"]
+		if not SNAKE.match(rid):
+			rep.err(f"recipe {rid}: id is not snake_case")
+		keys.update([r["name_key"], r["desc_key"], r["hint_key"]])
+		if r.get("match") == "fallback":
+			for dr in r["drops_any"]:
+				if dr in fallbacks:
+					rep.err(f"tea: two fallbacks for {dr} drops ({fallbacks[dr]}, {rid})")
+				fallbacks[dr] = rid
+				if (r["kind"] == "treat") != (dr == te["pot"]["treat_at_drops"]):
+					rep.err(f"recipe {rid}: kind must be treat exactly when drops == treat_at_drops")
+			continue
+		n = sum(r["petals"].values())
+		if not (te["pot"]["min_petals"] <= n <= te["pot"]["max_petals"]) or not (0 <= r["drops"] <= te["pot"]["max_drops"]):
+			rep.err(f"recipe {rid}: {n} petals / {r['drops']} drops outside the pot limits")
+		if (r["kind"] == "treat") != (r["drops"] == te["pot"]["treat_at_drops"]):
+			rep.err(f"recipe {rid}: kind must be treat exactly when drops == treat_at_drops")
+		for f in r["petals"]:
+			if f not in flowers:
+				rep.err(f"recipe {rid}: unknown flower {f}")
+		mix = (tuple(sorted(r["petals"].items())), r["drops"])
+		if mix in seen_mix:
+			rep.err(f"recipes {seen_mix[mix]} and {rid} share the same mix")
+		seen_mix[mix] = rid
+	if set(fallbacks) != set(range(te["pot"]["max_drops"] + 1)):
+		rep.err("tea: exactly one fallback recipe for every drop count")
+	orders = [r["book_order"] for r in te["recipes"]]
+	if sorted(orders) != list(range(1, len(orders) + 1)):
+		rep.err("tea.recipes: book_order must be 1..n without gaps")
+	loved_or_liked: set = set()
+	if set(te["species_prefs"]) != set(sp_by):
+		rep.err("tea.species_prefs must list every species once")
+	for sid, pr in te["species_prefs"].items():
+		for rid in pr["loves"] + pr["likes"]:
+			if rid not in recipes or recipes[rid].get("match") == "fallback":
+				rep.err(f"tea.species_prefs.{sid}: {rid} is not a named recipe")
+		if set(pr["loves"]) & set(pr["likes"]) or len(pr["loves"]) != 2 or len(pr["likes"]) != 3:
+			rep.err(f"tea.species_prefs.{sid}: 2 loves and 3 likes, no overlap")
+		if pr["gift_petal"] not in flowers:
+			rep.err(f"tea.species_prefs.{sid}: unknown gift_petal")
+		loved_or_liked |= set(pr["loves"]) | set(pr["likes"])
+	for rid, r in recipes.items():
+		if r.get("match") != "fallback" and rid not in loved_or_liked:
+			rep.err(f"recipe {rid}: loved or liked by nobody")
+	pet_rows = {p["flower"]: p for p in te["petals"]}
+	if set(pet_rows) != set(flowers):
+		rep.err("tea.petals must have one row per flower")
+	for f, p in pet_rows.items():
+		if p["petal_regrow_s"] <= 0 or p["pantry_cap"] < te["harvest"]["petal_hold_per_stem"] or p["pantry_cap"] > 99:
+			rep.err(f"tea.petals.{f}: regrow > 0 and hold <= pantry_cap <= 99 (E6)")
+	h = te["harvest"]
+	if h["harms_flower"] or h["affects_dew_or_attraction"]:
+		rep.err("tea.harvest: harvesting never harms a flower or changes dew/attraction (ACTIVE_TEA T1)")
+	of = te["offering"]
+	if min(of["affection_content"], of["affection_liked"]) < 1 or of["affection_loved"] < of["affection_liked"]:
+		rep.err("tea.offering: every reaction gives >= 1 affection (no dislikes) and loved >= liked")
+	if of["greeter_affection"] != 0:
+		rep.err("tea.offering.greeter_affection must be 0 (GDD 5.6: the greeter gives nothing)")
+	if not (0 <= of["affection_rest_s"] <= 86400):
+		rep.err("tea.offering.affection_rest_s outside [0, 86400]")
+	keys.add(te["dew_drop"]["name_key"])
+	if not (1 <= te["dew_drop"]["cost_dew"] <= 99):
+		rep.err("tea.dew_drop.cost_dew outside 1..99")
+	slots: dict = {}
+	tw_ids = set()
+	for x in te["teaware"]:
+		keys.add(x["name_key"])
+		if x["id"] in tw_ids or not SNAKE.match(x["id"]):
+			rep.err(f"teaware {x['id']}: duplicate or not snake_case")
+		tw_ids.add(x["id"])
+		if x.get("default"):
+			if x["cost"] != 0 or x["slot"] in slots:
+				rep.err(f"teaware {x['id']}: one free default per slot")
+			slots[x["slot"]] = x["id"]
+		elif not (0 < x["cost"] <= eco["display_max"]):
+			rep.err(f"teaware {x['id']}: cost outside 1..{eco['display_max']}")
+	if set(slots) != {x["slot"] for x in te["teaware"]}:
+		rep.err("teaware: every slot needs a free default")
+	if te["teaware_snug"] != 0:
+		rep.err("teaware_snug must be 0 (visitor maths untouched)")
+	for p in te["event_postcards"]:
+		keys.add(p["template"])
+		if p["id"] in {x["id"] for x in eco["event_postcards"]}:
+			rep.err(f"tea event postcard {p['id']} clashes with economy.event_postcards")
+	nook = te["nook"]
+	if nook["on_prop"] not in {p["id"] for p in spots["props"]}:
+		rep.err("tea.nook.on_prop is not a spots.json prop")
+	keys.update(["TEA_NOOK_NAME", "TEA_NOOK_A11Y"])
+	hooks = set(te["wish_hooks"]["types"])
+	if {t.split(":")[0] for t in hooks} != TEA_KINDS:
+		rep.err("tea.wish_hooks.types must be exactly the F1 tea target kinds")
+	# ---- wishes.json
+	tu, rw = wi["tuning"], wi["reward"]
+	if not (1 <= tu["max_visible"] <= tu["max_pending"]) or tu["max_per_friend"] != 1:
+		rep.err("wishes.tuning: 1 <= max_visible <= max_pending, max_per_friend 1")
+	if not (0 < tu["spawn_chance"] <= 1) or min(tu["spawn_check_s"], tu["global_gap_s"], tu["friend_gap_s"]) <= 0:
+		rep.err("wishes.tuning: spawn timings must be positive and 0 < spawn_chance <= 1")
+	if tu["near_dp"] != dp["attraction"]["near_dp_for_wishes"]:
+		rep.err("wishes.tuning.near_dp must equal decor_placement.attraction.near_dp_for_wishes")
+	if rw["affection_per_wish"] < 1 or not (0 <= rw["wish_affection_rest_s"] <= 3 * 86400):
+		rep.err("wishes.reward: affection_per_wish >= 1, rest within 0..3 days")
+	if set(wi["traits"]) != set(sp_by):
+		rep.err("wishes.traits must list every species once")
+	ids = [w["id"] for w in wi["wishes"]]
+	if len(set(ids)) != len(ids):
+		rep.err("wishes: duplicate ids (and the list is append-only: wish_stamps are a bitmask over its order)")
+	if len(ids) > 62:
+		rep.err("wishes: at most 62 wishes fit the wish_stamps int64 bitmask")
+	prefer_n = {s: 0 for s in sp_by}
+	match_n = {s: 0 for s in sp_by}
+	if wi["tuning"]["first_wish"]["wish"] not in ids:
+		rep.err("wishes.tuning.first_wish: unknown wish")
+	water = spots["stream"]["polyline"]
+	for w in wi["wishes"]:
+		wid = w["id"]
+		if not SNAKE.match(wid):
+			rep.err(f"wish {wid}: id is not snake_case")
+		keys.update([w["title_key"], w["hint_key"]])
+		kind, _, arg = w["target"].partition(":")
+		if kind not in WISH_KINDS:
+			rep.err(f"wish {wid}: unknown target kind {kind}")
+			continue
+		want = WISH_KINDS[kind]
+		req = w["requires"]
+		for k2 in req:
+			if k2 not in {"bloomed", "owned", "feature", "buddy_present", "not_already_near"}:
+				rep.err(f"wish {wid}: unknown requires key {k2}")
+		if want == "flower" and arg not in flowers:
+			rep.err(f"wish {wid}: unknown flower {arg}")
+		elif want == "decor" and arg not in decor:
+			rep.err(f"wish {wid}: unknown decor {arg}")
+		elif want == "recipe" and arg not in recipes:
+			rep.err(f"wish {wid}: unknown recipe {arg}")
+		elif want == "kind" and arg not in {"tea", "treat"}:
+			rep.err(f"wish {wid}: tea_kind must be tea or treat")
+		elif want == "int" and not arg.isdigit():
+			rep.err(f"wish {wid}: {kind} needs a count")
+		elif want is None and arg:
+			rep.err(f"wish {wid}: {kind} takes no argument")
+		for f, n in req.get("bloomed", {}).items():
+			if f not in flowers or not (1 <= n <= flowers[f]["max_copies"]):
+				rep.err(f"wish {wid}: impossible bloomed requirement {f}:{n}")
+		for x, n in req.get("owned", {}).items():
+			if x not in decor or not (1 <= n <= decor[x]["max_copies"]):
+				rep.err(f"wish {wid}: impossible owned requirement {x}:{n}")
+		# the "fulfillable now" rule (ACTIVE_WISHES 4.3): the means to grant must be required to appear
+		if kind in ("bed_invite", "tea_petal") and req.get("bloomed", {}).get(arg, 0) < 1:
+			rep.err(f"wish {wid}: needs bloomed {{{arg}: 1}} to be fulfillable when it appears")
+		if kind in ("decor_near", "decor_tap") and req.get("owned", {}).get(arg, 0) < 1:
+			rep.err(f"wish {wid}: needs owned {{{arg}: 1}}")
+		if kind == "chime_tap" and req.get("owned", {}).get("wind_chime", 0) < 1:
+			rep.err(f"wish {wid}: needs owned {{wind_chime: 1}}")
+		if kind == "tea" and arg in recipes:
+			for f in recipes[arg].get("petals", {}):
+				if req.get("bloomed", {}).get(f, 0) < 1:
+					rep.err(f"wish {wid}: tea:{arg} needs bloomed {{{f}: 1}} (tea.wish_hooks.feasible_only)")
+		if kind in TEA_KINDS and req.get("feature") != "tea":
+			rep.err(f"wish {wid}: tea targets need feature tea")
+		if kind == "decor_near" and (req.get("feature") != dp["feature_flag"] or not req.get("not_already_near")):
+			rep.err(f"wish {wid}: decor_near needs feature {dp['feature_flag']} and not_already_near")
+		if req.get("feature") not in (None, "tea", dp["feature_flag"]):
+			rep.err(f"wish {wid}: unknown feature {req.get('feature')}")
+		if kind in TEA_KINDS and w["target"].split(":")[0] + (":<" + ("recipe_id" if kind == "tea" else "flower_id") + ">" if kind in ("tea", "tea_petal") else (":" + arg if arg else "")) not in hooks:
+			rep.err(f"wish {wid}: target {w['target']} is not in tea.wish_hooks.types")
+		for p in w["spawn_when"].get("phases", []) + list(w["boost"].get("phases", {})):
+			if p not in phase_ids:
+				rep.err(f"wish {wid}: unknown phase {p}")
+		for x in w["spawn_when"].get("weather", []) + list(w["boost"].get("weather", {})):
+			if x not in weather_ids:
+				rep.err(f"wish {wid}: unknown weather {x}")
+		for sid in w["prefer"] + w["species_only"]:
+			if sid not in sp_by:
+				rep.err(f"wish {wid}: unknown species {sid}")
+			elif sid in w["prefer"]:
+				prefer_n[sid] += 1
+		for sid in sp_by:
+			if set(w["tags"]) & set(wi["traits"].get(sid, [])):
+				match_n[sid] += 1
+		if not w["icon"] or not w["granted_pose"] or w["weight"] <= 0:
+			rep.err(f"wish {wid}: icon, granted_pose and a positive weight are required")
+		if kind == "decor_near" and arg == "stream_stones":
+			for sid in w["species_only"] or list(sp_by):
+				fav = spot_by.get(sp_by.get(sid, {}).get("favourite_spot"))
+				if fav and _seg_dist_dp(fav["x"], fav["y"], water) > tu["near_dp"]:
+					rep.err(f"wish {wid}: {sid}'s favourite spot is more than {tu['near_dp']} dp from the water line")
+	for sid in sp_by:
+		if prefer_n[sid] < 2 or match_n[sid] < 6:
+			rep.err(f"wishes: {sid} needs >= 2 preferred and >= 6 trait-matching wishes ({prefer_n[sid]} / {match_n[sid]})")
+	# ---- decor_placement.json
+	sets = dp["sets"]
+	if set(sets) != set(decor):
+		rep.err("decor_placement.sets must list every decor id once")
+	for sid, st in sets.items():
+		if st["movable"]:
+			if len(st.get("rot_render", [])) != st["rot_steps"] or st["rot_steps"] < 1:
+				rep.err(f"decor_placement.sets.{sid}: rot_render must hold rot_steps entries")
+			if st["footprint_r_dp"] <= 0 or st["same_set_min_dp"] <= 0:
+				rep.err(f"decor_placement.sets.{sid}: footprint and spacing must be positive")
+	area = dp["area"]
+	gt = area["ground_top"]
+	if any(b[0] <= a[0] for a, b in zip(gt, gt[1:])) or gt[0][0] > area["x_min"] or gt[-1][0] < area["x_max"]:
+		rep.err("decor_placement.area.ground_top must be x-sorted and span x_min..x_max")
+	if not (area["x_min"] < 0 < 1 < area["x_max"]) or area["ground_bottom_y"] > {z["id"]: z for z in spots["zones"]}["tend"]["y1"]:
+		rep.err("decor_placement.area: wings outside the frame, bottom at or above the tend zone's bottom")
+	hit = dp["hit"]
+	if min(hit["edit_piece_hit_dp"], hit["still_piece_hit_dp"]) < PLAY_HIT_MIN_DP or hit["edit_piece_hit_dp_look_zone"] < LOOK_HIT_MIN_DP:
+		rep.err("decor_placement.hit: edit and still-piece hits below the I2 floors")
+	if hit["edit_hit_min_dp_after_clip"] < 48 or dp["storage"]["tile_dp"] < 48 or dp["storage"]["tile_gap_dp"] < GAP_DP:
+		rep.err("decor_placement: clipped hits and tray tiles >= 48 dp, gaps >= 8 dp")
+	if hit["prio_edit_piece"] <= 7 or hit["prio_still_piece_play"] != 1:
+		rep.err("decor_placement.hit: edit pieces outrank every play target, still pieces sit at the stream's priority")
+	if dp["attraction"]["count"] != "owned":
+		rep.err("decor_placement.attraction.count must stay 'owned' (economy_sim parity, GDD 14)")
+	keys.add(dp["auto_place"]["first_tip"])
+	for spot_id, ds in dp["derived_spots"].items():
+		if spot_id == "rule" or not isinstance(ds, dict):
+			continue
+		sp = spot_by.get(spot_id)
+		if sp is None or sp["requires_item"] != ds["set"] or sp["requires_min"] < ds["min"]:
+			rep.err(f"decor_placement.derived_spots.{spot_id}: must match a gated spots.json spot of {ds['set']}")
+	# legacy anchors: hard exclusions (hard props, the tea nook) must leave valid ground within the nudge radius
+	cl = dp["clearances"]
+	hard = [(p["x"], p["y"] + p["cy_dp"] * PX_PER_DP / FRAME_H, p["rx_dp"], p["ry_dp"], p.get("gap_dp", cl["gap_dp"]))
+		for p in cl["props"] if p["hard"]]
+	hard.append((nook["x"], nook["y"], nook["f3_exclusion_radius_dp"], nook["f3_exclusion_radius_dp"], 0.0))
+
+	def blocked(x: float, y: float, r: float) -> bool:
+		for cx, cy, rx, ry, gap in hard:
+			dx = (x - cx) * FRAME_W / PX_PER_DP
+			dy = (y - cy) * FRAME_H / PX_PER_DP
+			if (dx / (rx + r + gap)) ** 2 + (dy / (ry + r + gap)) ** 2 < 1.0:
+				return True
+		return False
+	nud = dp["snap"]["invalid_drop"]
+	for a in spots["decor_anchors"]:
+		st = sets.get(a["decor_id"], {})
+		if not st.get("movable"):
+			continue
+		for i, (x, y) in enumerate(a["positions"]):
+			if not blocked(x, y, st["footprint_r_dp"]):
+				continue
+			ok = False
+			rad = nud["nudge_step_dp"]
+			while rad <= nud["nudge_search_dp"] and not ok:
+				for j in range(32):
+					ang = 2 * math.pi * j / 32
+					nx = x + rad * PX_PER_DP / FRAME_W * math.cos(ang)
+					ny = y + rad * PX_PER_DP / FRAME_H * math.sin(ang)
+					if not blocked(nx, ny, st["footprint_r_dp"]) and ny <= area["ground_bottom_y"]:
+						ok = True
+						break
+				rad += nud["nudge_step_dp"]
+			if not ok:
+				rep.err(f"{a['decor_id']} anchors[{i}]: inside a hard exclusion and not nudgeable within {nud['nudge_search_dp']} dp")
+	# ---- sound-cue ids: one meaning per id across the three features (GDD 14.8)
+	cues: dict = {}
+	pres = wi["presentation"]
+	for cid, what in ((pres["cue_appear"], "wish_appear"), (pres["cue_granted"], "wish_granted")):
+		cues.setdefault(cid, set()).add(what)
+	for cid, what in te["audio_cues"].items():
+		if re.match(r"^S\d+$", cid):
+			cues.setdefault(cid, set()).add(what)
+	for what, cid in dp["audio"].items():
+		if what != "note" and re.match(r"^S\d+$", str(cid)) and int(cid[1:]) >= 26:
+			cues.setdefault(cid, set()).add("decor_" + ("lift" if what == "take_out" else what))
+	for cid, whats in cues.items():
+		if len(whats) > 1:
+			rep.err(f"sound cue {cid} claimed for {sorted(whats)}")
+	return keys
+
+
+def check_active_strings(d: dict, rows: dict, rep: Report) -> None:
+	"""Placeholder contracts of the Active Play strings."""
+	allowed = {"name", "spot", "friend"}
+	for w in d["wishes"]["wishes"]:
+		for k in (w["title_key"], w["hint_key"]):
+			ph = set(PLACEHOLDER.findall(rows.get(k, ("", ""))[0]))
+			if not ph <= allowed:
+				rep.err(f"{k}: wish copy may use only {sorted(allowed)}")
+			if "friend" in ph and not w["requires"].get("buddy_present"):
+				rep.err(f"{k}: {{friend}} needs requires.buddy_present")
+		if w["target"].startswith("decor_near") and "{spot}" not in rows.get(w["hint_key"], ("", ""))[0]:
+			rep.err(f"{w['hint_key']}: a decor_near hint names the friend's {{spot}}")
 
 
 # ---------------------------------------------------------------- strings
@@ -664,6 +1003,7 @@ def main() -> int:
 	needed = check_data(d, rep)
 	rows = check_strings(needed, rep)
 	check_retention_strings(d, rows, rep)
+	check_active_strings(d, rows, rep)
 	if rep.errors:
 		print(f"{len(rep.errors)} problem(s):")
 		print("\n".join("  " + e for e in rep.errors))
@@ -671,7 +1011,8 @@ def main() -> int:
 	print(f"content OK: {len(d['species']['species'])} species, {len(d['flora']['flowers'])} flowers, "
 		f"{len(d['decor']['decor'])} decor, {len(d['spots']['spots'])} spots, {len(d['spots']['beds'])} beds; "
 		f"retention: {len(d['mysteries']['variants'])} cousins, {len(d['mysteries']['anchors'])} sign anchors, "
-		f"{len(d['scenes']['scenes'])} scenes; "
+		f"{len(d['scenes']['scenes'])} scenes; active: {len(d['wishes']['wishes'])} wishes, "
+		f"{len(d['tea']['recipes'])} recipes, {len(d['tea']['teaware'])} teaware, {len(d['decor_placement']['sets'])} decor sets; "
 		f"{len(needed)} referenced string keys present")
 	return 0
 

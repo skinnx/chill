@@ -19,15 +19,15 @@ extends RefCounted
 
 const FORMAT := "mossling-meadow-save"
 ## Bump when WorldState.to_dict() changes shape; add a migration from the previous schema.
-## 1: MVP. 2: Retention v1 (GDD §13.6), additive fields only.
-const SCHEMA := 2
+## 1: MVP. 2: Retention v1 (GDD §13.6). 3: Active Play v1 (GDD §14.9). Additive fields only.
+const SCHEMA := 3
 const SOURCE_MAIN := &"main"
 const SOURCE_TMP := &"tmp"
 const SOURCE_BACKUP := &"backup"
 const SOURCE_NONE := &"none"
 
 ## Schemas that have a forward migration to N + 1 ([method migrate]).
-const MIGRATABLE: Array[int] = [1]
+const MIGRATABLE: Array[int] = [1, 2]
 ## Retention v1 fields a schema-1 world gains, all empty (GDD §13.6). Kept literal here, not read
 ## from WorldState, so this migration keeps meaning "1 -> 2" after later schemas change the state.
 const RETENTION_V1_DEFAULTS := {
@@ -35,6 +35,16 @@ const RETENTION_V1_DEFAULTS := {
 	"mysteries": {}, "signs": [], "clues": {}, "variants_met": {}, "cousin_visits": {}, "scene_returns": 0,
 	"scenes_seen": {}, "scene_cast": {}, "pending_scene": {}, "memories": [], "keepsakes": {},
 	"signature_gifts": {}, "last_bg_t": -1.0, "open_count": 0,
+}
+## Active Play v1 fields a schema-2 world gains (GDD §14.9), all empty and active_v 0, so WorldSim
+## runs ActiveRules.migrate_v1 (décor anchors -> free positions, tea unlock) once at load. Literal
+## for the same reason as above.
+const ACTIVE_V1_DEFAULTS := {
+	"active_v": 0, "wishes": [], "wish_checks": 0, "wish_fg_s": 0.0, "wish_last_t": -1.0e18, "wish_friend_t": {},
+	"wish_visit_count": {}, "wish_last_id": {}, "wish_aff_t": {}, "wish_stamps": {}, "wishes_granted": 0,
+	"wish_tutorial_done": false, "wish_list_seen_t": 0.0, "tea_unlocked": false, "petal_from_t": {}, "pantry": {},
+	"pot": {"petals": [], "drops": 0, "stir_deg": 0.0}, "tray": [], "recipes_found": {}, "tea_prefs_seen": {},
+	"tea_aff_t": {}, "teaware_owned": [], "teaware_set": {}, "cups_offered": 0, "tea_flags": {}, "decor_layout": [],
 }
 
 var path: String
@@ -154,16 +164,25 @@ static func migrate(from_schema: int, world: Dictionary) -> Dictionary:
 			# Retention v1 (GDD §13.6): every new field empty and retention_v 0, so WorldSim runs
 			# the content-aware steps (hearts_seen, nests, keepsakes, earned ♥4/♥5 postcards,
 			# mysteries) once at load. Basket entries gain signature = false via WorldState.
-			for key: String in RETENTION_V1_DEFAULTS:
-				if not w.has(key):
-					var def: Variant = RETENTION_V1_DEFAULTS[key]
-					if def is Dictionary:
-						w[key] = (def as Dictionary).duplicate(true)
-					elif def is Array:
-						w[key] = (def as Array).duplicate(true)
-					else:
-						w[key] = def
+			_add_defaults(w, RETENTION_V1_DEFAULTS)
+		2:
+			# Active Play v1 (GDD §14.9): every new field empty and active_v 0; the content-aware
+			# step (décor anchors -> decor_layout, tea_unlocked) runs in WorldSim at load.
+			_add_defaults(w, ACTIVE_V1_DEFAULTS)
 	return w
+
+
+## Adds each missing key of [param defaults] (deep copies); never overwrites an existing key.
+static func _add_defaults(w: Dictionary, defaults: Dictionary) -> void:
+	for key: String in defaults:
+		if not w.has(key):
+			var def: Variant = defaults[key]
+			if def is Dictionary:
+				w[key] = (def as Dictionary).duplicate(true)
+			elif def is Array:
+				w[key] = (def as Array).duplicate(true)
+			else:
+				w[key] = def
 
 
 static func checksum(world: Dictionary) -> String:

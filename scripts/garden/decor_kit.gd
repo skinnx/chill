@@ -108,9 +108,10 @@ func _build_lut() -> Image:
 
 ## Appends part [param id] to [param q] like [method sprite] would place it: its pivot at
 ## [param pos] (stamp-local px), [param depth] x its depth-1 size, turned by [param rot].
-## [param group] GROUP_HEAD quads turn about the stamp's i_head pivot.
+## [param group] GROUP_HEAD quads turn about the stamp's i_head pivot. [param scale_x] squashes the quad
+## about its pivot (Active F3 turn renders: -1 mirrors it, 0.72 is the pinwheel's three-quarter view).
 func add_quad(q: Quads, id: String, pos: Vector2, depth: float = 1.0, rot: float = 0.0, material_id: String = "",
-		emission: float = -1.0, group: int = GROUP_STATIC) -> void:
+		emission: float = -1.0, group: int = GROUP_STATIC, scale_x: float = 1.0) -> void:
 	var p: Dictionary = parts.get(id, {})
 	if p.is_empty():
 		push_warning("DecorKit: unknown part %s" % id)
@@ -128,6 +129,7 @@ func add_quad(q: Quads, id: String, pos: Vector2, depth: float = 1.0, rot: float
 	var base := q.verts.size()
 	for corner: Vector2 in [Vector2(0, 0), Vector2(1, 0), Vector2(1, 1), Vector2(0, 1)]:
 		var local := (corner - pivot) * region.size * k
+		local.x *= scale_x
 		q.verts.append(pos + local.rotated(rot))
 		q.uvs.append((region.position + corner * region.size) / _atlas_size)
 		q.c0.append_array([corner.x, corner.y, region.size.x, region.size.y])

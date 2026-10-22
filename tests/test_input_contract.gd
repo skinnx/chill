@@ -180,7 +180,12 @@ func _tap(at: Vector2) -> void:
 
 ## Taps far enough apart in time that the 350 ms debounce never merges them.
 func _settle() -> void:
+	# TapGuard measures real ticks; a SceneTreeTimer counts frame deltas and can fire a long
+	# frame early under load (the old flake), so wait on the same clock the guard reads.
+	var until := Time.get_ticks_msec() + TapGuard.DEBOUNCE_MS + 30
 	await get_tree().create_timer(float(TapGuard.DEBOUNCE_MS + 30) / 1000.0).timeout
+	while Time.get_ticks_msec() < until:
+		await get_tree().process_frame
 
 
 func _frames(n: int = 4) -> void:
