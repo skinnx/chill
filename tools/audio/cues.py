@@ -1,0 +1,145 @@
+"""SFX cue table: GDD interaction -> sound layers, pitch rule, bus, heard loudness, haptic, caption.
+
+`heard_lufs_m` is the loudest-400-ms loudness as it reaches Master (file + layer gain + bus gain),
+dual-mono, relative to a -18 LUFS-I mix (06 §0.5). A layer may state its own `heard_lufs_m`
+(multi-layer cues); otherwise it inherits the cue's. Layer gains (`gain_db` in the manifest) are
+derived from these in synth.py, so the numbers below are the only place a level is stated.
+
+Pitch rules (implemented by the AudioDirector, docs/AUDIO_BIBLE.md §8.6):
+  walk           random walk of +-1 pentatonic step from the previous note, reflected at the range
+  ladder         step 0, 1, 2 ... (cap) through the current set; resets after `reset_s` without a hit
+  chord_root     the current chord's root pc placed in range, then `voice_step` set-steps
+  species        pent_step(base, voice_step) in the current set, octave-wrapped into range
+  chord_fifth    the current chord's fifth pc placed in range
+  below_last     snap(last note of `of` - 5 semitones), wrapped into range
+  fixed          a fixed MIDI note on a universal pitch class (D, G or A: in every chord set)
+  chord_clip     pick the variant rendered for the current chord clip
+  variant        pick a random variant, never the same one twice in a row
+  shell_run      owned shells whose pc is in the current set (all owned if none), see S21
+"""
+from __future__ import annotations
+
+TICK_FULL = {"subtle": None, "full": "TICK"}
+NO_HAPTIC = {"subtle": None, "full": None}
+
+CUES = {
+	"S01": {"name": "tap", "event": "Any touch-down: UI control (UI bus) or world object (SFX bus)",
+		"trigger": "touch-down", "bus": "UI", "world_bus": "SFX", "heard_lufs_m": -24.0,
+		"layers": [{"bank": "plip", "pitch": {"rule": "walk", "start": 72}}],
+		"haptic": TICK_FULL, "caption": None, "max_voices": 2,
+		"visual_twin": "tint +6 L*, UI scale 0.96 in 80 ms / world squash 0.94"},
+	"S02": {"name": "collect", "event": "Collect dew / a gift (each item of Collect all)",
+		"trigger": "per item as it lands on the counter", "bus": "SFX", "heard_lufs_m": -21.0,
+		"layers": [{"bank": "dew", "pitch": {"rule": "ladder", "start": 72, "cap": 7, "reset_s": 1.5}}],
+		"haptic": {"subtle": "DOUBLE", "full": "DOUBLE"}, "haptic_once_per_burst": True,
+		"caption": "CAPTION_COLLECT", "max_voices": 3,
+		"visual_twin": "gifts fly to the HUD, counter rolls 600 ms"},
+	"S03": {"name": "pet_purr", "event": "Long-press / stroke a mossling (loops while held)",
+		"trigger": "at 450 ms hold; loops; 150 ms release", "bus": "SFX", "heard_lufs_m": -23.0,
+		"layers": [{"bank": "purr", "pitch": {"rule": "chord_root", "uses_voice_step": True}}],
+		"loop": True, "release_s": 0.15, "attack_s": 0.08, "player": "dedicated",
+		"haptic": {"subtle": None, "full": "TICK", "full_repeat_ms": 120},
+		"caption": "CAPTION_PURR", "max_voices": 1,
+		"visual_twin": "radial fill, squash 0.88, hearts on release"},
+	"S04": {"name": "bud_unfurl", "event": "Tap a ready bud (600 ms unfurl)",
+		"trigger": "touch-down", "bus": "SFX", "heard_lufs_m": -21.0,
+		"layers": [{"bank": "unfurl", "pitch": {"rule": "chord_clip"}}],
+		"haptic": {"subtle": None, "full": "TICK", "full_delay_ms": 600},
+		"caption": "CAPTION_BLOOM", "max_voices": 2,
+		"visual_twin": "unfurl 600 ms, 3-5 sparkles"},
+	"S05": {"name": "plant_place", "event": "Plant a flower / place a decor piece (incl. tutorial seed)",
+		"trigger": "when the seed lands / piece settles", "bus": "SFX", "heard_lufs_m": -22.0,
+		"layers": [{"bank": "soil", "pitch": {"rule": "variant"}, "heard_lufs_m": -25.5},
+			{"bank": "mar", "pitch": {"rule": "chord_root", "range": [55, 66]}, "heard_lufs_m": -24.5}],
+		"haptic": TICK_FULL, "caption": "CAPTION_PLANT", "max_voices": 2,
+		"visual_twin": "seed arc 320 ms, soil puff / piece settles 500 ms"},
+	"S06": {"name": "water", "event": "Tap the stream / water ripple",
+		"trigger": "touch-down", "bus": "SFX", "heard_lufs_m": -24.0,
+		"layers": [{"bank": "bubbles", "pitch": {"rule": "variant"}}],
+		"haptic": NO_HAPTIC, "caption": "CAPTION_SPLASH", "max_voices": 2,
+		"visual_twin": "ripple ring to 36 dp in 380 ms"},
+	"S07": {"name": "sheet_open", "event": "Open a sheet / panel / postcard",
+		"trigger": "as the sheet starts to rise", "bus": "UI", "heard_lufs_m": -28.0,
+		"layers": [{"bank": "paper", "pitch": {"rule": "variant"}}],
+		"haptic": NO_HAPTIC, "caption": None, "max_voices": 1, "duck": "sheet_open",
+		"visual_twin": "sheet rises"},
+	"S08": {"name": "sheet_close", "event": "Close / back",
+		"trigger": "touch-down on close or Back", "bus": "UI", "heard_lufs_m": -26.0,
+		"layers": [{"bank": "tok", "pitch": {"rule": "chord_fifth", "range": [55, 64]}}],
+		"haptic": NO_HAPTIC, "caption": None, "max_voices": 1, "duck": "release",
+		"visual_twin": "sheet exits"},
+	"S09": {"name": "new_friend", "event": "New species arrives (new-friend card) / milestone",
+		"trigger": "as the card rises", "bus": "SFX", "heard_lufs_m": -18.0,
+		"layers": [{"bank": "friend", "pitch": {"rule": "chord_clip"}}],
+		"pad_swell": True, "voice_hush": True,
+		"haptic": {"subtle": "MEDIUM", "full": "MEDIUM"}, "caption": None, "max_voices": 1,
+		"visual_twin": "new-friend card rises (emphasized 500 ms)"},
+	"S10": {"name": "welcome_back", "event": "Welcome-back recap card",
+		"trigger": "as the recap card appears", "bus": "SFX", "heard_lufs_m": -19.0,
+		"layers": [{"bank": "welcome", "pitch": {"rule": "chord_clip"}}],
+		"pad_swell": True, "voice_hush": True,
+		"haptic": {"subtle": "MEDIUM", "full": "MEDIUM", "once": True}, "caption": None, "max_voices": 1,
+		"visual_twin": "frosted recap card"},
+	"S11": {"name": "not_possible", "event": "Not affordable / not possible (never a buzz)",
+		"trigger": "touch-down", "bus": "UI", "heard_lufs_m": -28.0,
+		"layers": [{"bank": "tok", "pitch": {"rule": "below_last", "of": "S08", "range": [50, 64]}}],
+		"haptic": NO_HAPTIC, "caption": None, "max_voices": 1,
+		"visual_twin": "price chip pulse, +-2 dp wiggle (never red)"},
+	"S12": {"name": "creature_arrive_nap", "event": "A mossling arrives (up a fifth) / curls up to nap (down)",
+		"trigger": "on fade-in end / on curl-up", "bus": "SFX", "heard_lufs_m": -25.0, "nap_offset_db": -2.0,
+		"layers": [{"bank": "ep", "heard_lufs_m": -27.5, "pitch": {"rule": "species", "base": 67, "uses_voice_step": True,
+			"second_note": {"interval": 7, "gap_s": 0.14}}}],
+		"haptic": NO_HAPTIC, "caption": None, "max_voices": 2,
+		"visual_twin": "fade-in 400 ms / curls up"},
+	"S13": {"name": "creature_chirp", "event": "Tap a mossling (it turns to you and chirps)",
+		"trigger": "touch-down", "bus": "SFX", "heard_lufs_m": -25.0,
+		"layers": [{"bank": "coo", "pitch": {"rule": "species", "base": 67, "uses_voice_step": True}}],
+		"haptic": TICK_FULL, "caption": "CAPTION_CHIRP", "max_voices": 2,
+		"visual_twin": "look-at, chirp bubble, name tag 2 s"},
+	"S14": {"name": "snore", "event": "Tap a napping mossling (it stays asleep) / idle snore",
+		"trigger": "touch-down", "bus": "SFX", "heard_lufs_m": -30.0,
+		"layers": [{"bank": "snore", "pitch": {"rule": "variant"}}],
+		"haptic": NO_HAPTIC, "caption": "CAPTION_SNORE", "max_voices": 1,
+		"visual_twin": "Zz bubble, breathing 5-6 s"},
+	"S15": {"name": "toggle", "event": "Settings toggle / segmented choice",
+		"trigger": "touch-up (value change)", "bus": "UI", "heard_lufs_m": -28.0,
+		"layers": [{"bank": "click", "pitch": {"rule": "fixed", "on": 81, "off": 74}}],
+		"haptic": TICK_FULL, "caption": None, "max_voices": 1,
+		"visual_twin": "knob slides 160 ms, track tint"},
+	"S16": {"name": "postcard", "event": "Postcard arrives (mailbox flag pops up)",
+		"trigger": "as the flag pops", "bus": "SFX", "heard_lufs_m": -24.0,
+		"layers": [{"bank": "postcard", "pitch": {"rule": "chord_clip"}}],
+		"haptic": NO_HAPTIC, "caption": "CAPTION_POSTCARD", "max_voices": 1,
+		"visual_twin": "mailbox flag pops up, wiggles every 8 s"},
+	"S17": {"name": "leaf_boat", "event": "Float a leaf boat",
+		"trigger": "touch-down", "bus": "SFX", "heard_lufs_m": -24.0,
+		"layers": [{"bank": "boat", "pitch": {"rule": "variant"}}],
+		"haptic": TICK_FULL, "caption": "CAPTION_BOAT", "max_voices": 2,
+		"visual_twin": "boat launches at the spring rock"},
+	"S18": {"name": "bed_rustle", "event": "Tap a bed with no ready buds",
+		"trigger": "touch-down", "bus": "SFX", "heard_lufs_m": -27.0,
+		"layers": [{"bank": "rustle", "pitch": {"rule": "variant"}}],
+		"haptic": NO_HAPTIC, "caption": None, "max_voices": 2,
+		"visual_twin": "stems sway"},
+	"S19": {"name": "pinwheel", "event": "Tap a leaf pinwheel (spin burst)",
+		"trigger": "touch-down", "bus": "SFX", "heard_lufs_m": -27.0,
+		"layers": [{"bank": "swish", "pitch": {"rule": "variant"}}],
+		"haptic": NO_HAPTIC, "caption": None, "max_voices": 2,
+		"visual_twin": "pinwheel spin burst"},
+	"S20": {"name": "lantern", "event": "Tap a firefly lantern (brighten)",
+		"trigger": "touch-down", "bus": "SFX", "heard_lufs_m": -26.0,
+		"layers": [{"bank": "chime", "pitch": {"rule": "fixed", "midi": 81}}],
+		"haptic": NO_HAPTIC, "caption": None, "max_voices": 2,
+		"visual_twin": "lantern brightens +60 % (200 ms in, 2 s hold, 1.2 s out), 2-3 fireflies released (Art Bible §6.6)"},
+	"S21": {"name": "wind_chime", "event": "Tap the shell wind chime (falling run) / breeze gusts ring it",
+		"trigger": "touch-down / gust timer", "bus": "SFX", "gust_bus": "Ambience", "heard_lufs_m": -23.0,
+		"gust_heard_lufs_m": -31.0,
+		"layers": [{"bank": "shell", "heard_lufs_m": -25.5, "pitch": {"rule": "shell_run", "tap_gap_s": 0.11, "tap_gap_jitter_s": 0.015,
+			"tap_step_db": -1.5, "gust_notes": [1, 3], "gust_gap_s": [0.18, 0.40]}}],
+		"haptic": NO_HAPTIC, "caption": "CAPTION_CHIME", "max_voices": 4,
+		"visual_twin": "shells swing; Bellkin sways"},
+}
+
+# Every reward has a sound (A4): S02 collect, S04 bloom, S09 new friend, S10 welcome back,
+# S16 postcard, hearts after petting ride on S03's release.
+REWARD_CUES = ["S02", "S04", "S09", "S10", "S16"]

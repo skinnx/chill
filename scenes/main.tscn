@@ -1,0 +1,167 @@
+[gd_scene load_steps=16 format=3]
+
+[ext_resource type="Script" path="res://scripts/main/main.gd" id="1_main"]
+[ext_resource type="Script" path="res://scripts/main/layout_debug.gd" id="3_dbg"]
+[ext_resource type="Script" path="res://scripts/ui/safe_area_container.gd" id="4_safe"]
+[ext_resource type="Script" path="res://scripts/ui/hud_controller.gd" id="u1_hud"]
+[ext_resource type="PackedScene" path="res://scenes/garden/plots_layer.tscn" id="5_plots"]
+[ext_resource type="PackedScene" path="res://scenes/garden/decor_layer.tscn" id="6_decor"]
+[ext_resource type="PackedScene" path="res://scenes/creatures/creature_layer.tscn" id="7_creatures"]
+[ext_resource type="PackedScene" path="res://scenes/world/sky.tscn" id="w1_sky"]
+[ext_resource type="PackedScene" path="res://scenes/world/far_hills.tscn" id="w2_far"]
+[ext_resource type="PackedScene" path="res://scenes/world/mid_hills.tscn" id="w3_mid"]
+[ext_resource type="PackedScene" path="res://scenes/world/meadow.tscn" id="w4_meadow"]
+[ext_resource type="PackedScene" path="res://scenes/world/stream.tscn" id="w5_stream"]
+[ext_resource type="PackedScene" path="res://scenes/world/props.tscn" id="w6_props"]
+[ext_resource type="PackedScene" path="res://scenes/world/foreground.tscn" id="w7_fg"]
+[ext_resource type="PackedScene" path="res://scenes/world/air.tscn" id="w8_air"]
+
+[node name="Main" type="Node2D"]
+script = ExtResource("1_main")
+
+[node name="Camera2D" type="Camera2D" parent="."]
+position = Vector2(540, 960)
+
+[node name="World" type="Node2D" parent="."]
+
+[node name="Sky" type="Parallax2D" parent="World"]
+scroll_scale = Vector2(0, 0)
+
+[node name="SkyQuad" parent="World/Sky" instance=ExtResource("w1_sky")]
+
+[node name="Celestial" type="Parallax2D" parent="World"]
+scroll_scale = Vector2(0.02, 0.02)
+
+[node name="FarHills" type="Parallax2D" parent="World"]
+scroll_scale = Vector2(0.1, 0.1)
+
+[node name="FarLayer" parent="World/FarHills" instance=ExtResource("w2_far")]
+
+[node name="MidHills" type="Parallax2D" parent="World"]
+scroll_scale = Vector2(0.3, 0.3)
+
+[node name="TreeLine" parent="World/MidHills" instance=ExtResource("w3_mid")]
+
+[node name="Ground" type="Parallax2D" parent="World"]
+
+[node name="Meadow" type="Node2D" parent="World/Ground"]
+
+[node name="MeadowGround" parent="World/Ground/Meadow" instance=ExtResource("w4_meadow")]
+
+[node name="Stream" type="Node2D" parent="World/Ground"]
+
+[node name="Brook" parent="World/Ground/Stream" instance=ExtResource("w5_stream")]
+
+[node name="Play" type="Node2D" parent="World/Ground"]
+y_sort_enabled = true
+
+[node name="Props" type="Node2D" parent="World/Ground/Play"]
+y_sort_enabled = true
+
+[node name="PropsLayer" parent="World/Ground/Play/Props" instance=ExtResource("w6_props")]
+
+[node name="Plots" type="Node2D" parent="World/Ground/Play"]
+y_sort_enabled = true
+
+[node name="PlotsLayer" parent="World/Ground/Play/Plots" instance=ExtResource("5_plots")]
+
+[node name="Decor" type="Node2D" parent="World/Ground/Play"]
+y_sort_enabled = true
+
+[node name="DecorLayer" parent="World/Ground/Play/Decor" instance=ExtResource("6_decor")]
+
+[node name="Creatures" type="Node2D" parent="World/Ground/Play"]
+y_sort_enabled = true
+
+[node name="CreatureLayer" parent="World/Ground/Play/Creatures" instance=ExtResource("7_creatures")]
+
+[node name="Particles" type="Node2D" parent="World/Ground"]
+
+[node name="Air" parent="World/Ground/Particles" instance=ExtResource("w8_air")]
+
+[node name="LayoutDebug" type="Node2D" parent="World/Ground"]
+script = ExtResource("3_dbg")
+
+[node name="Foreground" type="Parallax2D" parent="World"]
+scroll_scale = Vector2(1.3, 1.3)
+
+[node name="FrameLayer" parent="World/Foreground" instance=ExtResource("w7_fg")]
+
+[node name="HUD" type="CanvasLayer" parent="."]
+layer = 10
+
+[node name="HudRoot" type="Control" parent="HUD"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("u1_hud")
+
+[node name="SafeArea" type="MarginContainer" parent="HUD/HudRoot"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("4_safe")
+
+[node name="Layout" type="VBoxContainer" parent="HUD/HudRoot/SafeArea"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="TopBar" type="HBoxContainer" parent="HUD/HudRoot/SafeArea/Layout"]
+custom_minimum_size = Vector2(0, 216)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Spacer" type="Control" parent="HUD/HudRoot/SafeArea/Layout"]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+
+[node name="Dock" type="Control" parent="HUD/HudRoot/SafeArea/Layout"]
+custom_minimum_size = Vector2(0, 240)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Sheets" type="Control" parent="HUD/HudRoot"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Overlays" type="Control" parent="HUD/HudRoot"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="DebugReadout" type="Label" parent="HUD/HudRoot"]
+visible = false
+layout_mode = 1
+offset_left = 48.0
+offset_top = 380.0
+offset_right = 1032.0
+offset_bottom = 640.0
+theme_type_variation = &"CaptionLabel"
+
+[node name="BootCover" type="ColorRect" parent="HUD/HudRoot"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.941, 0.933, 0.914, 1)

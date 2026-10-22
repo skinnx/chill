@@ -1,0 +1,16 @@
+{
+  "name": "mossling-meadow-web-smoke",
+  "private": true,
+  "description": "Boots the exported Web build in headless Chromium (SwiftShader WebGL2) and fails on console errors. docs/QA.md §2.3.",
+  "type": "module",
+  "license": "UNLICENSED",
+  "scripts": {
+    "smoke": "node web_smoke.mjs"
+  },
+  "dependencies": {
+    "puppeteer-core": "25.15.0"
+  },
+  "optionalDependencies": {
+    "@sparticuz/chromium": "153.0.0"
+  }
+}

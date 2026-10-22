@@ -1,0 +1,450 @@
+{
+	"schema": 1,
+	"doc": "Normalized positions (x right, y down) inside the 1080x1920 play frame, which is anchored to the BOTTOM of the viewport. Taller phones add sky above y=0. See docs/GDD.md section 2.",
+	"frame": {"width_px": 1080, "height_px": 1920, "anchor": "bottom", "px_per_dp": 3},
+	"zones": [
+		{"id": "hud", "y0": 0.075, "y1": 0.175, "note": "only overlaps the frame on 16:9 phones"},
+		{"id": "look", "y0": 0.175, "y1": 0.44, "note": "optional delight targets only, hit >= 64 dp"},
+		{"id": "tend", "y0": 0.44, "y1": 0.785, "note": "core targets, hit >= 60 dp"},
+		{"id": "dock", "y0": 0.797, "y1": 0.934, "note": "UI dock; world renders under it, no world targets"},
+		{"id": "gesture", "y0": 0.934, "y1": 1.0, "note": "nothing interactive"}
+	],
+	"safe_x": {"x0": 0.067, "x1": 0.933, "note": "no drag may START outside this band (24 dp edge rule)"},
+	"stream": {
+		"polyline": [
+			[1.04, 0.742],
+			[0.9, 0.752],
+			[0.76, 0.766],
+			[0.62, 0.774],
+			[0.5, 0.772],
+			[0.36, 0.778],
+			[0.22, 0.786],
+			[0.08, 0.79],
+			[-0.04, 0.795]
+		],
+		"water_width": 0.036,
+		"tap_band_y0": 0.748,
+		"tap_band_y1": 0.784
+	},
+	"entries": [
+		{"id": "entry_fern_gap", "x": -0.08, "y": 0.585},
+		{"id": "entry_stump", "x": 1.08, "y": 0.455},
+		{"id": "entry_hill", "x": 0.56, "y": 0.355},
+		{"id": "entry_streamside", "x": -0.08, "y": 0.745}
+	],
+	"spots": [
+		{
+			"id": "sun_stone",
+			"name_key": "SPOT_SUN_STONE",
+			"x": 0.5,
+			"y": 0.565,
+			"capacity": 2,
+			"behaviours": ["nap", "play"],
+			"shelter": false,
+			"requires_item": "",
+			"requires_min": 0
+		},
+		{
+			"id": "moss_cushion",
+			"name_key": "SPOT_MOSS_CUSHION",
+			"x": 0.35,
+			"y": 0.595,
+			"capacity": 1,
+			"behaviours": ["nap", "play"],
+			"shelter": false,
+			"requires_item": "",
+			"requires_min": 0
+		},
+		{
+			"id": "clover_bank",
+			"name_key": "SPOT_CLOVER_BANK",
+			"x": 0.65,
+			"y": 0.595,
+			"capacity": 1,
+			"behaviours": ["nibble", "nap"],
+			"shelter": false,
+			"requires_item": "",
+			"requires_min": 0
+		},
+		{
+			"id": "fern_shade",
+			"name_key": "SPOT_FERN_SHADE",
+			"x": 0.08,
+			"y": 0.585,
+			"capacity": 1,
+			"behaviours": ["nap", "wander"],
+			"shelter": true,
+			"requires_item": "",
+			"requires_min": 0
+		},
+		{
+			"id": "stream_bend",
+			"name_key": "SPOT_STREAM_BEND",
+			"x": 0.33,
+			"y": 0.752,
+			"capacity": 1,
+			"behaviours": ["sit_by_stream"],
+			"shelter": false,
+			"requires_item": "",
+			"requires_min": 0
+		},
+		{
+			"id": "willow_root",
+			"name_key": "SPOT_WILLOW_ROOT",
+			"x": 0.13,
+			"y": 0.43,
+			"capacity": 1,
+			"behaviours": ["nap", "wander"],
+			"shelter": true,
+			"requires_item": "",
+			"requires_min": 0
+		},
+		{
+			"id": "hill_crest",
+			"name_key": "SPOT_HILL_CREST",
+			"x": 0.56,
+			"y": 0.405,
+			"capacity": 1,
+			"behaviours": ["wander", "play"],
+			"shelter": false,
+			"requires_item": "",
+			"requires_min": 0
+		},
+		{
+			"id": "stump_hollow",
+			"name_key": "SPOT_STUMP_HOLLOW",
+			"x": 0.9,
+			"y": 0.437,
+			"capacity": 1,
+			"behaviours": ["nap"],
+			"shelter": true,
+			"requires_item": "",
+			"requires_min": 0
+		},
+		{
+			"id": "moon_rock",
+			"name_key": "SPOT_MOON_ROCK",
+			"x": 0.74,
+			"y": 0.385,
+			"capacity": 1,
+			"behaviours": ["nap", "wander"],
+			"shelter": false,
+			"requires_item": "",
+			"requires_min": 0
+		},
+		{
+			"id": "toadstool_ring",
+			"name_key": "SPOT_TOADSTOOL_RING",
+			"x": 0.32,
+			"y": 0.43,
+			"capacity": 2,
+			"behaviours": ["play", "nap"],
+			"shelter": true,
+			"requires_item": "toadstool_seat",
+			"requires_min": 3
+		},
+		{
+			"id": "stream_stones",
+			"name_key": "SPOT_STREAM_STONES",
+			"x": 0.66,
+			"y": 0.77,
+			"capacity": 1,
+			"behaviours": ["sit_by_stream", "play"],
+			"shelter": false,
+			"requires_item": "stream_stones",
+			"requires_min": 3
+		},
+		{
+			"id": "lantern_nook",
+			"name_key": "SPOT_LANTERN_NOOK",
+			"x": 0.905,
+			"y": 0.738,
+			"capacity": 1,
+			"behaviours": ["nap", "sit_by_stream"],
+			"shelter": false,
+			"requires_item": "firefly_lantern",
+			"requires_min": 3
+		},
+		{
+			"id": "cairn_side",
+			"name_key": "SPOT_CAIRN_SIDE",
+			"x": 0.15,
+			"y": 0.742,
+			"capacity": 1,
+			"behaviours": ["sit_by_stream", "nap"],
+			"shelter": false,
+			"requires_item": "pebble_cairn",
+			"requires_min": 3
+		}
+	],
+	"beds": [
+		{
+			"id": "bed_1",
+			"name_key": "BED_1_NAME",
+			"x": 0.5,
+			"y": 0.69,
+			"fill_order": 1,
+			"hit_w_dp": 90,
+			"hit_h_dp": 63,
+			"capacity": 16,
+			"stems": [
+				[0.0, 0.0],
+				[-0.0065, -0.0196],
+				[-0.0385, -0.0067],
+				[0.0397, 0.0058],
+				[-0.0199, 0.025],
+				[0.0227, -0.0257],
+				[0.0464, -0.0131],
+				[-0.0346, -0.0229],
+				[-0.0459, 0.0158],
+				[0.0231, 0.0297],
+				[0.0524, 0.0248],
+				[0.0744, 0.0144],
+				[-0.0797, 0.0052],
+				[0.0733, -0.021],
+				[-0.0808, -0.0165],
+				[0.0938, -0.0065]
+			],
+			"nibble_points": [[0.385, 0.702], [0.615, 0.702]]
+		},
+		{
+			"id": "bed_2",
+			"name_key": "BED_2_NAME",
+			"x": 0.2,
+			"y": 0.66,
+			"fill_order": 2,
+			"hit_w_dp": 90,
+			"hit_h_dp": 63,
+			"capacity": 16,
+			"stems": [
+				[0.0, 0.0],
+				[0.0304, -0.0056],
+				[-0.0257, -0.011],
+				[-0.0375, 0.0074],
+				[0.0211, 0.0208],
+				[0.007, -0.0248],
+				[-0.0243, 0.0278],
+				[0.0431, -0.0209],
+				[-0.0639, -0.0013],
+				[-0.0438, -0.0273],
+				[0.0708, 0.0051],
+				[-0.0555, 0.0253],
+				[-0.0708, -0.0185],
+				[0.0747, -0.0173],
+				[-0.0829, 0.0125],
+				[-0.0922, -0.0042]
+			],
+			"nibble_points": [[0.085, 0.672], [0.315, 0.672]]
+		},
+		{
+			"id": "bed_3",
+			"name_key": "BED_3_NAME",
+			"x": 0.8,
+			"y": 0.66,
+			"fill_order": 3,
+			"hit_w_dp": 90,
+			"hit_h_dp": 63,
+			"capacity": 16,
+			"stems": [
+				[0.0, 0.0],
+				[-0.029, -0.006],
+				[0.0288, 0.0071],
+				[0.0238, -0.0139],
+				[-0.0306, 0.0211],
+				[0.048, -0.0052],
+				[-0.0009, 0.0303],
+				[0.0118, -0.03],
+				[-0.0271, -0.0269],
+				[0.0338, 0.0291],
+				[-0.0628, -0.002],
+				[0.0636, 0.0204],
+				[-0.0749, 0.0148],
+				[-0.0762, -0.0186],
+				[0.0806, -0.0129],
+				[0.0965, 0.006]
+			],
+			"nibble_points": [[0.685, 0.672], [0.915, 0.672]]
+		},
+		{
+			"id": "bed_4",
+			"name_key": "BED_4_NAME",
+			"x": 0.22,
+			"y": 0.515,
+			"fill_order": 4,
+			"hit_w_dp": 90,
+			"hit_h_dp": 63,
+			"capacity": 16,
+			"stems": [
+				[0.0, 0.0],
+				[0.0306, 0.0002],
+				[-0.0173, -0.0146],
+				[0.0039, 0.0181],
+				[-0.0302, 0.0108],
+				[0.033, 0.0214],
+				[-0.0473, -0.0102],
+				[0.0167, -0.0278],
+				[-0.0197, 0.0294],
+				[0.0543, 0.0103],
+				[-0.0483, 0.0237],
+				[-0.0433, -0.0275],
+				[0.0604, -0.0171],
+				[-0.0724, 0.0028],
+				[0.0871, -0.0017],
+				[-0.0939, -0.0098]
+			],
+			"nibble_points": [[0.105, 0.527], [0.335, 0.527]]
+		},
+		{
+			"id": "bed_5",
+			"name_key": "BED_5_NAME",
+			"x": 0.78,
+			"y": 0.515,
+			"fill_order": 5,
+			"hit_w_dp": 90,
+			"hit_h_dp": 63,
+			"capacity": 16,
+			"stems": [
+				[0.0, 0.0],
+				[-0.0335, -0.0004],
+				[0.0318, 0.0101],
+				[0.0455, -0.0063],
+				[-0.016, 0.0255],
+				[-0.0152, -0.0264],
+				[0.0201, 0.0264],
+				[0.0131, -0.0304],
+				[-0.0495, -0.0202],
+				[-0.0604, 0.0128],
+				[0.0542, 0.023],
+				[0.0535, -0.0256],
+				[0.0768, 0.0116],
+				[-0.0833, -0.0144],
+				[0.0888, -0.0072],
+				[-0.0949, 0.001]
+			],
+			"nibble_points": [[0.665, 0.527], [0.895, 0.527]]
+		}
+	],
+	"decor_anchors": [
+		{
+			"decor_id": "firefly_lantern",
+			"layout": "path",
+			"positions": [
+				[0.93, 0.7159],
+				[0.82, 0.726],
+				[0.71, 0.7349],
+				[0.6, 0.7397],
+				[0.49, 0.7384],
+				[0.38, 0.7431],
+				[0.27, 0.7491],
+				[0.16, 0.7537],
+				[0.06, 0.7568],
+				[0.985, 0.7]
+			]
+		},
+		{
+			"decor_id": "stream_stones",
+			"layout": "path",
+			"positions": [
+				[0.66, 0.7677],
+				[0.7, 0.7734],
+				[0.62, 0.77],
+				[0.74, 0.7711],
+				[0.58, 0.7693],
+				[0.78, 0.768],
+				[0.54, 0.7687],
+				[0.82, 0.764],
+				[0.5, 0.768],
+				[0.86, 0.76]
+			]
+		},
+		{
+			"decor_id": "leaf_pinwheel",
+			"layout": "scatter",
+			"positions": [
+				[0.5, 0.418],
+				[0.62, 0.392],
+				[0.68, 0.428],
+				[0.46, 0.392],
+				[0.8, 0.405],
+				[0.585, 0.437],
+				[0.7, 0.372],
+				[0.42, 0.43],
+				[0.83, 0.378],
+				[0.52, 0.372]
+			]
+		},
+		{
+			"decor_id": "toadstool_seat",
+			"layout": "ring",
+			"positions": [
+				[0.32, 0.408],
+				[0.32, 0.452],
+				[0.4008, 0.4232],
+				[0.2392, 0.4368],
+				[0.37, 0.4478],
+				[0.27, 0.4122],
+				[0.37, 0.4122],
+				[0.27, 0.4478],
+				[0.4008, 0.4368],
+				[0.2392, 0.4232]
+			]
+		},
+		{
+			"decor_id": "pebble_cairn",
+			"layout": "stack",
+			"positions": [
+				[0.045, 0.728],
+				[0.045, 0.7195],
+				[0.045, 0.711],
+				[0.045, 0.7025],
+				[0.045, 0.694],
+				[0.045, 0.6855],
+				[0.045, 0.677],
+				[0.045, 0.6685],
+				[0.045, 0.66],
+				[0.045, 0.6515]
+			]
+		},
+		{
+			"decor_id": "wind_chime",
+			"layout": "string",
+			"positions": [
+				[0.2595, 0.336],
+				[0.2685, 0.342],
+				[0.2775, 0.336],
+				[0.2865, 0.342],
+				[0.2955, 0.336],
+				[0.3045, 0.342],
+				[0.3135, 0.336],
+				[0.3225, 0.342],
+				[0.3315, 0.336],
+				[0.3405, 0.342]
+			]
+		}
+	],
+	"props": [
+		{"id": "sun_stone_rock", "x": 0.5, "y": 0.585, "w_dp": 87, "h_dp": 40, "tap_action": "", "hit_dp": 0},
+		{"id": "basket", "x": 0.5, "y": 0.48, "w_dp": 44, "h_dp": 36, "tap_action": "open_basket", "hit_dp": 64},
+		{
+			"id": "mailbox",
+			"x": 0.09,
+			"y": 0.395,
+			"w_dp": 30,
+			"h_dp": 48,
+			"tap_action": "open_postcards",
+			"hit_dp": 64
+		},
+		{
+			"id": "wind_chime_branch",
+			"x": 0.3,
+			"y": 0.336,
+			"w_dp": 40,
+			"h_dp": 60,
+			"tap_action": "ring_chime",
+			"hit_dp": 64
+		},
+		{"id": "stump", "x": 0.9, "y": 0.445, "w_dp": 70, "h_dp": 60, "tap_action": "", "hit_dp": 0},
+		{"id": "spring_rock", "x": 0.95, "y": 0.735, "w_dp": 60, "h_dp": 40, "tap_action": "", "hit_dp": 0},
+		{"id": "willow", "x": 0.12, "y": 0.3, "w_dp": 140, "h_dp": 170, "tap_action": "", "hit_dp": 0}
+	]
+}

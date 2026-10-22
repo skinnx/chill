@@ -1,0 +1,1101 @@
+{
+	"schema": 1,
+	"name": "Felted Diorama palettes",
+	"doc": "docs/ART_BIBLE.md §3. TOD base slots and UI tokens are verbatim from docs/research/05 §0.4; every other colour is derived as stated in derived_formulas (OKLab mixes) or authored in ART_BIBLE §3.4-3.5.",
+	"format": {
+		"color": "sRGB hex #RRGGBB (Color.html())",
+		"alpha": "separate float 0..1",
+		"interpolation": "Gradient.GRADIENT_COLOR_SPACE_OKLAB, offset = g_day (keys in tod.gradient_keys); scalars lerp linearly on the same keys",
+		"shader_space": "Compatibility 2D blends in non-linear sRGB; multiply tokens as stored"
+	},
+	"tod": {
+		"order": [
+			"dawn",
+			"day",
+			"golden",
+			"dusk",
+			"night"
+		],
+		"base_slots": [
+			"sky_top",
+			"sky_mid",
+			"sky_horizon",
+			"glow",
+			"far",
+			"mid",
+			"near",
+			"fg",
+			"ambient",
+			"key",
+			"shadow",
+			"accent"
+		],
+		"derived_formulas": {
+			"ground_back": "oklab_mix(oklab_mix(near, mid, 0.20), sky_horizon, 0.06)",
+			"ground_front": "near",
+			"ground_back_lit": "oklab_mix(ground_back, key, scalars.ground_light)",
+			"ground_front_lit": "oklab_mix(ground_front, key, scalars.ground_light)",
+			"ground_path": "oklab_mix(oklab_mix(ground_back_lit, sky_horizon, 0.18), materials.soil.detail, 0.22)",
+			"grass_tip": "oklab_mix(oklab_mix(near, mid, 0.15), key, 0.28)",
+			"grass_root": "oklab_mix(near, shadow, 0.25)",
+			"water_deep": "oklab_mix(oklab_mix(near, shadow, 0.40), sky_top, 0.30)",
+			"water_shallow": "oklab_mix(sky_mid, sky_horizon, 0.55)",
+			"water_bank": "oklab_mix(near, shadow, 0.30)",
+			"cloud_lit": "oklab_mix(sky_horizon, glow, 0.60)",
+			"cloud_shade": "oklab_mix(sky_mid, shadow, 0.18)",
+			"far_haze": "oklab_mix(far, sky_horizon, 0.30)  (L2 haze in shader goes 0.55-0.70 toward sky_horizon with height; this is the crest value)",
+			"mid_haze": "oklab_mix(mid, sky_horizon, 0.15)"
+		},
+		"gradient_keys": [
+			{
+				"g_day": 0.0,
+				"palette": "night"
+			},
+			{
+				"g_day": 0.2,
+				"palette": "dawn"
+			},
+			{
+				"g_day": 0.4,
+				"palette": "day"
+			},
+			{
+				"g_day": 0.6,
+				"palette": "golden"
+			},
+			{
+				"g_day": 0.8,
+				"palette": "dusk"
+			},
+			{
+				"g_day": 1.0,
+				"palette": "night"
+			}
+		],
+		"time_source": "data/world.json",
+		"palettes": {
+			"dawn": {
+				"sky_top": "#8EA3D8",
+				"sky_mid": "#C8B5E0",
+				"sky_horizon": "#F7CBB7",
+				"glow": "#FFE6C7",
+				"far": "#C9B9D6",
+				"mid": "#9E99BE",
+				"near": "#648A79",
+				"fg": "#3B6365",
+				"ambient": "#E2D6EE",
+				"key": "#FFD6AE",
+				"shadow": "#5D5C8E",
+				"accent": "#FFB59E",
+				"accent_2": null,
+				"ground_back": "#78918A",
+				"ground_front": "#648A79",
+				"ground_back_lit": "#88998F",
+				"ground_front_lit": "#77937F",
+				"ground_path": "#A6A597",
+				"grass_tip": "#96A18F",
+				"grass_root": "#627F7F",
+				"water_deep": "#6E859C",
+				"water_shallow": "#E2C2CB",
+				"water_bank": "#627D80",
+				"cloud_lit": "#FCDBC1",
+				"cloud_shade": "#B4A4D1",
+				"far_haze": "#D7BFCD",
+				"mid_haze": "#ABA1BE"
+			},
+			"day": {
+				"sky_top": "#6FB6EC",
+				"sky_mid": "#9ED2F2",
+				"sky_horizon": "#D6EEF6",
+				"glow": "#FFF5D6",
+				"far": "#A8D4CC",
+				"mid": "#7DBF91",
+				"near": "#5D9D74",
+				"fg": "#39795D",
+				"ambient": "#FFFFFF",
+				"key": "#FFF1C2",
+				"shadow": "#3B6C8C",
+				"accent": "#FFC56E",
+				"accent_2": "#FFB3C7",
+				"ground_back": "#6AA881",
+				"ground_front": "#5D9D74",
+				"ground_back_lit": "#86B58C",
+				"ground_front_lit": "#7CAC81",
+				"ground_path": "#A1BC9E",
+				"grass_tip": "#90B88C",
+				"grass_root": "#54917C",
+				"water_deep": "#5797A0",
+				"water_shallow": "#BDE1F4",
+				"water_bank": "#528F7D",
+				"cloud_lit": "#EFF2E3",
+				"cloud_shade": "#8BBFDF",
+				"far_haze": "#B6DCD8",
+				"mid_haze": "#8BC6A0"
+			},
+			"golden": {
+				"sky_top": "#7A8DCB",
+				"sky_mid": "#E8A3A1",
+				"sky_horizon": "#FFCB7D",
+				"glow": "#FFE29E",
+				"far": "#DCAA8F",
+				"mid": "#A49874",
+				"near": "#6D8155",
+				"fg": "#5A4A62",
+				"ambient": "#FFE0C2",
+				"key": "#FFC266",
+				"shadow": "#6A4E80",
+				"accent": "#FF8C7A",
+				"accent_2": null,
+				"ground_back": "#808A5D",
+				"ground_front": "#6D8155",
+				"ground_back_lit": "#999560",
+				"ground_front_lit": "#8A8E59",
+				"ground_path": "#B1A271",
+				"grass_tip": "#9B955F",
+				"grass_root": "#6D7562",
+				"water_deep": "#707886",
+				"water_shallow": "#F5B98F",
+				"water_bank": "#6C7365",
+				"cloud_lit": "#FFD991",
+				"cloud_shade": "#D0939C",
+				"far_haze": "#E6B48B",
+				"mid_haze": "#B1A076"
+			},
+			"dusk": {
+				"sky_top": "#2D3A70",
+				"sky_mid": "#6C5C9E",
+				"sky_horizon": "#F0A08C",
+				"glow": "#FFB98E",
+				"far": "#6F6494",
+				"mid": "#4E487C",
+				"near": "#214948",
+				"fg": "#11303A",
+				"ambient": "#B3A3D1",
+				"key": "#FF9E7E",
+				"shadow": "#1F2244",
+				"accent": "#FFC46B",
+				"accent_2": null,
+				"ground_back": "#384E56",
+				"ground_front": "#214948",
+				"ground_back_lit": "#445359",
+				"ground_front_lit": "#314E4C",
+				"ground_path": "#77716F",
+				"grass_tip": "#66625E",
+				"grass_root": "#213F48",
+				"water_deep": "#243A53",
+				"water_shallow": "#B28398",
+				"water_bank": "#213D47",
+				"cloud_lit": "#F9AF8D",
+				"cloud_shade": "#5D518D",
+				"far_haze": "#947794",
+				"mid_haze": "#645680"
+			},
+			"night": {
+				"sky_top": "#111938",
+				"sky_mid": "#1D2954",
+				"sky_horizon": "#3D4F8C",
+				"glow": "#DDE7FF",
+				"far": "#2E3C6B",
+				"mid": "#222E58",
+				"near": "#052D2D",
+				"fg": "#051B25",
+				"ambient": "#5D6AA0",
+				"key": "#9DB4FF",
+				"shadow": "#0B1130",
+				"accent": "#FFC978",
+				"accent_2": null,
+				"ground_back": "#0F303B",
+				"ground_front": "#052D2D",
+				"ground_back_lit": "#153542",
+				"ground_front_lit": "#0B3234",
+				"ground_path": "#415260",
+				"grass_tip": "#325166",
+				"grass_root": "#07262E",
+				"water_deep": "#0B2032",
+				"water_shallow": "#2E3D72",
+				"water_bank": "#07252E",
+				"cloud_lit": "#99A8D1",
+				"cloud_shade": "#1A254D",
+				"far_haze": "#324275",
+				"mid_haze": "#263360"
+			}
+		},
+		"scalars": {
+			"dawn": {
+				"rim": 0.6,
+				"backlight": 0.35,
+				"ground_light": 0.12,
+				"halo_scale": 1.0,
+				"halo_alpha": 0.22,
+				"stars": 0.15,
+				"lights": 0.15,
+				"shafts": 0.5,
+				"shadow_alpha": 0.26,
+				"cloud_shadow": 0.1,
+				"mist": 0.2
+			},
+			"day": {
+				"rim": 0.35,
+				"backlight": 0.1,
+				"ground_light": 0.18,
+				"halo_scale": 1.0,
+				"halo_alpha": 0.18,
+				"stars": 0.0,
+				"lights": 0.0,
+				"shafts": 0.7,
+				"shadow_alpha": 0.3,
+				"cloud_shadow": 0.12,
+				"mist": 0.0
+			},
+			"golden": {
+				"rim": 0.8,
+				"backlight": 1.0,
+				"ground_light": 0.2,
+				"halo_scale": 1.5,
+				"halo_alpha": 0.3,
+				"stars": 0.0,
+				"lights": 0.1,
+				"shafts": 1.0,
+				"shadow_alpha": 0.35,
+				"cloud_shadow": 0.1,
+				"mist": 0.04
+			},
+			"dusk": {
+				"rim": 0.8,
+				"backlight": 0.6,
+				"ground_light": 0.06,
+				"halo_scale": 1.3,
+				"halo_alpha": 0.26,
+				"stars": 0.45,
+				"lights": 0.75,
+				"shafts": 0.0,
+				"shadow_alpha": 0.18,
+				"cloud_shadow": 0.0,
+				"mist": 0.08
+			},
+			"night": {
+				"rim": 0.5,
+				"backlight": 0.2,
+				"ground_light": 0.04,
+				"halo_scale": 0.8,
+				"halo_alpha": 0.15,
+				"stars": 1.0,
+				"lights": 1.0,
+				"shafts": 0.0,
+				"shadow_alpha": 0.22,
+				"cloud_shadow": 0.0,
+				"mist": 0.06
+			}
+		},
+		"celestial": {
+			"doc": "Positions in design-frame px (1080x1920, bottom-anchored; add the world offset for canvas px). Keyed by local clock hour; Catmull-Rom through the keys; fade in/out over fade_minutes at the first/last key. Phase boundaries come from data/world.json.",
+			"disc_px": {
+				"sun": 96,
+				"moon": 84
+			},
+			"design_frame": [
+				1080,
+				1920
+			],
+			"scene_center": [
+				540,
+				1150
+			],
+			"horizon_y": 690,
+			"sun": [
+				[
+					5.0,
+					120,
+					700
+				],
+				[
+					6.0,
+					200,
+					540
+				],
+				[
+					8.0,
+					380,
+					430
+				],
+				[
+					12.5,
+					780,
+					380
+				],
+				[
+					16.5,
+					640,
+					560
+				],
+				[
+					17.5,
+					560,
+					640
+				],
+				[
+					18.75,
+					590,
+					760
+				]
+			],
+			"moon": [
+				[
+					20.0,
+					1000,
+					700
+				],
+				[
+					21.0,
+					900,
+					480
+				],
+				[
+					23.5,
+					820,
+					380
+				],
+				[
+					2.0,
+					620,
+					330
+				],
+				[
+					4.0,
+					420,
+					400
+				],
+				[
+					5.25,
+					260,
+					560
+				]
+			],
+			"fade_minutes": 30,
+			"moon_color": "#DDE7FF",
+			"moon_maria": "#C3CDEB",
+			"star": "#F4F1FF",
+			"sun_dir_rule": "g_sun_dir = normalize(body_pos - scene_center) of the brighter visible body (sun before moon)",
+			"elevation_rule": "elev = clamp((horizon_y - body_y) / 400, 0.05, 1.0); shadow length factor = clamp(0.35 / elev, 0.35, 2.5)"
+		}
+	},
+	"weather": {
+		"doc": "Wind, cloud cover, rain particle count and crossfade time are owned by data/world.json (weather[]). This block is only the art transform applied by the PaletteDriver, scaled by g_rain (0..1, follows the weather crossfade).",
+		"rain_transform": {
+			"chroma_mul": 0.55,
+			"sky_L_add": -0.04,
+			"key_chroma_mul": 0.4,
+			"key_L_add": -0.06,
+			"rim_mul": 0.5,
+			"backlight_mul": 0.2,
+			"shafts_mul": 0.0,
+			"ground_light_mul": 0.3,
+			"halo_alpha_mul": 0.4,
+			"cloud_shadow_mul": 0.0,
+			"ground_wet_sheen": 0.15,
+			"mist_add": 0.1,
+			"then": "g_ambient *= world.json weather.ambient_mult",
+			"applies_to": [
+				"sky_top",
+				"sky_mid",
+				"sky_horizon",
+				"far",
+				"mid",
+				"near",
+				"fg",
+				"ambient",
+				"shadow",
+				"glow",
+				"ground_back",
+				"ground_front",
+				"ground_back_lit",
+				"ground_front_lit",
+				"ground_path",
+				"grass_tip",
+				"grass_root",
+				"water_deep",
+				"water_shallow",
+				"water_bank",
+				"cloud_lit",
+				"cloud_shade",
+				"far_haze",
+				"mid_haze"
+			]
+		},
+		"gust": {
+			"k": 62,
+			"period_s": 9.677,
+			"speed_px_s": 180,
+			"spacing_px": 1742,
+			"amp": 0.35,
+			"note": "shader-side travelling gust on top of world.json g_wind"
+		},
+		"wind_k": {
+			"formula": "(0.5 + g_wind) / 0.85",
+			"note": "sway amplitude factor: clear 1.0, rain 1.24, breeze 1.59 (GDD breeze sway x1.6)"
+		},
+		"cloud_autoscroll_px_s": {
+			"clear": -12,
+			"breeze": -16,
+			"rain": -16
+		}
+	},
+	"ui": {
+		"surface": "#F0EEE9",
+		"surface_hi": "#FFFDF8",
+		"ink": "#2A2838",
+		"ink_2": "#5D596E",
+		"primary": "#4A6FD6",
+		"coral": "#FF9A7A",
+		"leaf": "#256F5C",
+		"gold": "#FFCB57",
+		"scrim": "#1B1A2E"
+	},
+	"ui_derived": {
+		"primary_pressed": "#3A5DC2",
+		"leaf_pressed": "#11614E",
+		"primary_tint": "#E8ECF6",
+		"leaf_tint": "#E5EBE4",
+		"coral_tint": "#FFECE1",
+		"gold_tint": "#FFF3D8",
+		"toggle_off_track": "#C4C2C5",
+		"toggle_off_border": "#5D596E",
+		"primary_deep": "#2E4CA6",
+		"ink_soft": "#47445A",
+		"hud_night_tint": "#BEC2D6",
+		"night_glass": "#353A56",
+		"night_glass_rim": "#7A80A8",
+		"night_ink": "#EDEAF2",
+		"night_capsule": "#484E76",
+		"night_track": "#454B6E",
+		"raised": "#FFFDF8"
+	},
+	"ui_night": {
+		"doc": "round 5 (QA r4 #22/#25: near-white sheets at night): after dark (the HUD's night chrome switch) the sheets, cards and modal cards are built in this scheme: a dim warm-navy glass sheet (surface, under the live veil), raised cards (surface_hi), cream ink, darker recessed tracks. Overrides ui / ui_derived tokens by name (UiTokens.sc, ThemeBuilder night theme); pill fills, toggles' leaf track, thumbs and the gold ring keep their day values.",
+		"surface": "#2C304D",
+		"surface_hi": "#3A3F62",
+		"ink": "#EDEAF2",
+		"ink_2": "#B7B4CB",
+		"ink_soft": "#D2CFE0",
+		"primary": "#9FB3F5",
+		"primary_tint": "#2B3052",
+		"primary_deep": "#DCE4FF",
+		"leaf": "#A3DEC7",
+		"leaf_tint": "#2E4C46",
+		"coral_tint": "#553E4D",
+		"gold_tint": "#4E4838",
+		"toggle_off_track": "#575C80",
+		"toggle_off_border": "#A3A1BC",
+		"raised": "#565D8C"
+	},
+	"ui_alpha": {
+		"glass_live_tint": 0.66,
+		"glass_live_tint_range": [
+			0.6,
+			0.72
+		],
+		"glass_live_adaptive": {
+			"min": 0.66,
+			"max": 0.9,
+			"backdrop_luma_lo": 0.05,
+			"backdrop_luma_hi": 0.45,
+			"formula": "tint = mix(max, min, smoothstep(lo, hi, luma(backdrop_blurred)))"
+		},
+		"text_on_glass": "ink only (ink_2 is allowed on opaque surface/surface_hi only)",
+		"glass_faux_fill": 0.84,
+		"glass_faux_fill_range": [
+			0.8,
+			0.88
+		],
+		"reduce_transparency_fill": 1.0,
+		"rim_top_left": 0.6,
+		"rim_bottom_right": 0.1,
+		"inner_bottom_shadow": 0.06,
+		"shadow_e1": 0.06,
+		"shadow_e2": 0.12,
+		"shadow_e3": 0.16,
+		"scrim_sheet": 0.24,
+		"scrim_modal": 0.4,
+		"divider": 0.1,
+		"icon_duotone_secondary": 0.4,
+		"backdrop_saturation": 1.15,
+		"glass_lod": 3.5,
+		"night_chrome": {
+			"doc": "round 4 (QA r3 night glare): after dark the HUD chrome (top chips + dock) switches to a dim warm-navy glass (ui_derived.night_glass at fill) with night_ink labels and icons; on/off are g_lights thresholds (hysteresis), the switch crossfades over durations_ms.hud_ambient_fade. Sheets keep their light glass, dimmed neutrally by sheet_dim x g_lights and with the live tint held at live_tint (no moon / halo bleed).",
+			"on": 0.6,
+			"off": 0.4,
+			"fill": 0.88,
+			"sheet_dim": 0.08,
+			"live_tint": 0.94,
+			"icon_secondary": 0.6
+		}
+	},
+	"icon_accent": {
+		"garden": "leaf",
+		"album": "coral",
+		"basket": "gold",
+		"settings": "primary",
+		"dew": "gold",
+		"heart": "coral",
+		"time": "gold",
+		"weather": "primary",
+		"watch": "primary",
+		"postcard": "coral",
+		"close": "ink_2",
+		"check": "leaf"
+	},
+	"creatures": {
+		"doc": "cr_* tokens are referenced by data/species.json rig.{fur,fur_2,belly,accent}. species_resolved is derived (do not hand-edit); pattern_ink_source per pattern type is in ART_BIBLE §5.6.",
+		"tokens": {
+			"cr_cream": "#F2E3CD",
+			"cr_snow": "#F2F1EC",
+			"cr_oat": "#E6D5AD",
+			"cr_honey": "#F6DB96",
+			"cr_peach": "#F7CDB4",
+			"cr_mist": "#D5DEE8",
+			"cr_moss": "#D3E4C3",
+			"cr_sage": "#D2DBC6",
+			"cr_lilac": "#DCD1E6",
+			"cr_dusk": "#A9A8D4",
+			"cr_fern": "#A7CB93",
+			"cr_slate": "#9FA9BE",
+			"cr_cocoa": "#B39380",
+			"cr_blush": "#F2B7B0",
+			"cr_rose": "#EE9FA6",
+			"cr_berry": "#DA8CA8",
+			"cr_sun": "#FFD27A",
+			"cr_sky": "#A9D3EC",
+			"cr_leaf": "#86B97B",
+			"cr_glow": "#FFE3A3",
+			"cr_eye": "#3A2E3F",
+			"cr_eye_shine": "#FFFDF8",
+			"cr_cheek": "#EF9F9F",
+			"cr_pond": "#A9DCD3"
+		},
+		"pattern_ink_source": {
+			"none": null,
+			"belly": "belly",
+			"freckles": "accent",
+			"socks": "fur_2",
+			"back_stripes": "fur_2",
+			"cap": "fur_2",
+			"cap_spots": "fur_2",
+			"spots": "fur_2",
+			"cheeks": "fur_2",
+			"patch": "fur_2",
+			"stripe": "fur_2",
+			"gradient": "fur_2"
+		},
+		"species_resolved": {
+			"puffmoss": {
+				"fur": "#D3E4C3",
+				"fur_2": "#A7CB93",
+				"belly": "#F2E3CD",
+				"accent": "#EE9FA6",
+				"tip": "#E7EDD6",
+				"pattern_ink": "#F2E3CD",
+				"pattern_ink_deepened": false,
+				"cheek": "#EF9F9F",
+				"cheek_alpha": 0.5,
+				"eye": "#3A2E3F",
+				"eye_shine": "#FFFDF8",
+				"shade_preview": "#A3BFAB",
+				"tokens": {
+					"fur": "cr_moss",
+					"fur_2": "cr_fern",
+					"belly": "cr_cream",
+					"accent": "cr_rose"
+				}
+			},
+			"buttonbud": {
+				"fur": "#F2E3CD",
+				"fur_2": "#E6D5AD",
+				"belly": "#F2F1EC",
+				"accent": "#FFD27A",
+				"tip": "#F8ECDC",
+				"pattern_ink": "#FFD27A",
+				"pattern_ink_deepened": false,
+				"cheek": "#EF9F9F",
+				"cheek_alpha": 0.5,
+				"eye": "#3A2E3F",
+				"eye_shine": "#FFFDF8",
+				"shade_preview": "#CEBAAE",
+				"tokens": {
+					"fur": "cr_cream",
+					"fur_2": "cr_oat",
+					"belly": "cr_snow",
+					"accent": "cr_sun"
+				}
+			},
+			"pebblepaw": {
+				"fur": "#D5DEE8",
+				"fur_2": "#9FA9BE",
+				"belly": "#F2F1EC",
+				"accent": "#A9D3EC",
+				"tip": "#E8EAEB",
+				"pattern_ink": "#9FA9BE",
+				"pattern_ink_deepened": false,
+				"cheek": "#EF9F9F",
+				"cheek_alpha": 0.5,
+				"eye": "#3A2E3F",
+				"eye_shine": "#FFFDF8",
+				"shade_preview": "#B1B7C0",
+				"tokens": {
+					"fur": "cr_mist",
+					"fur_2": "cr_slate",
+					"belly": "cr_snow",
+					"accent": "cr_sky"
+				}
+			},
+			"honeyhum": {
+				"fur": "#F6DB96",
+				"fur_2": "#B39380",
+				"belly": "#F2E3CD",
+				"accent": "#FFD27A",
+				"tip": "#FAE8BF",
+				"pattern_ink": "#B39380",
+				"pattern_ink_deepened": false,
+				"cheek": "#EF9F9F",
+				"cheek_alpha": 0.5,
+				"eye": "#3A2E3F",
+				"eye_shine": "#FFFDF8",
+				"shade_preview": "#DBAD82",
+				"tokens": {
+					"fur": "cr_honey",
+					"fur_2": "cr_cocoa",
+					"belly": "cr_cream",
+					"accent": "cr_sun"
+				}
+			},
+			"fernwhisk": {
+				"fur": "#D2DBC6",
+				"fur_2": "#A7CB93",
+				"belly": "#F2E3CD",
+				"accent": "#86B97B",
+				"tip": "#E6E8D8",
+				"pattern_ink": "#A7CB93",
+				"pattern_ink_deepened": false,
+				"cheek": "#EF9F9F",
+				"cheek_alpha": 0.5,
+				"eye": "#3A2E3F",
+				"eye_shine": "#FFFDF8",
+				"shade_preview": "#A6B6A9",
+				"tokens": {
+					"fur": "cr_sage",
+					"fur_2": "cr_fern",
+					"belly": "cr_cream",
+					"accent": "cr_leaf"
+				}
+			},
+			"dandelfluff": {
+				"fur": "#F2F1EC",
+				"fur_2": "#F2E3CD",
+				"belly": "#F2F1EC",
+				"accent": "#A9D3EC",
+				"tip": "#F8F4ED",
+				"pattern_ink": "#E1D3BD",
+				"pattern_ink_deepened": true,
+				"cheek": "#EF9F9F",
+				"cheek_alpha": 0.5,
+				"eye": "#3A2E3F",
+				"eye_shine": "#FFFDF8",
+				"shade_preview": "#C9CAC6",
+				"tokens": {
+					"fur": "cr_snow",
+					"fur_2": "cr_cream",
+					"belly": "cr_snow",
+					"accent": "cr_sky"
+				}
+			},
+			"bellkin": {
+				"fur": "#A9D3EC",
+				"fur_2": "#DCD1E6",
+				"belly": "#F2F1EC",
+				"accent": "#DA8CA8",
+				"tip": "#D0E4ED",
+				"pattern_ink": "#F2F1EC",
+				"pattern_ink_deepened": false,
+				"cheek": "#EF9F9F",
+				"cheek_alpha": 0.5,
+				"eye": "#3A2E3F",
+				"eye_shine": "#FFFDF8",
+				"shade_preview": "#8EAAC3",
+				"tokens": {
+					"fur": "cr_sky",
+					"fur_2": "cr_lilac",
+					"belly": "cr_snow",
+					"accent": "cr_berry"
+				}
+			},
+			"primpip": {
+				"fur": "#F7CDB4",
+				"fur_2": "#F2B7B0",
+				"belly": "#F2E3CD",
+				"accent": "#EE9FA6",
+				"tip": "#FBE0CE",
+				"pattern_ink": "#E1A7A0",
+				"pattern_ink_deepened": true,
+				"cheek": "#EF9F9F",
+				"cheek_alpha": 0.5,
+				"eye": "#3A2E3F",
+				"eye_shine": "#FFFDF8",
+				"shade_preview": "#CEA59F",
+				"tokens": {
+					"fur": "cr_peach",
+					"fur_2": "cr_blush",
+					"belly": "cr_cream",
+					"accent": "cr_rose"
+				}
+			},
+			"capling": {
+				"fur": "#E6D5AD",
+				"fur_2": "#EE9FA6",
+				"belly": "#F2E3CD",
+				"accent": "#F2F1EC",
+				"tip": "#F1E5CA",
+				"pattern_ink": "#EE9FA6",
+				"pattern_ink_deepened": false,
+				"cheek": "#EF9F9F",
+				"cheek_alpha": 0.5,
+				"eye": "#3A2E3F",
+				"eye_shine": "#FFFDF8",
+				"shade_preview": "#C7AA92",
+				"tokens": {
+					"fur": "cr_oat",
+					"fur_2": "cr_rose",
+					"belly": "cr_cream",
+					"accent": "cr_snow"
+				}
+			},
+			"puddlewump": {
+				"fur": "#A9DCD3",
+				"fur_2": "#D2DBC6",
+				"belly": "#F2F1EC",
+				"accent": "#A9D3EC",
+				"tip": "#D1E9DF",
+				"pattern_ink": "#C2CBB6",
+				"pattern_ink_deepened": true,
+				"cheek": "#EF9F9F",
+				"cheek_alpha": 0.5,
+				"eye": "#3A2E3F",
+				"eye_shine": "#FFFDF8",
+				"shade_preview": "#88B2B9",
+				"tokens": {
+					"fur": "cr_pond",
+					"fur_2": "cr_sage",
+					"belly": "cr_snow",
+					"accent": "cr_sky"
+				}
+			},
+			"glowmote": {
+				"fur": "#A9A8D4",
+				"fur_2": "#9FA9BE",
+				"belly": "#DCD1E6",
+				"accent": "#FFE3A3",
+				"tip": "#CFCCE1",
+				"pattern_ink": "#909AAE",
+				"pattern_ink_deepened": true,
+				"cheek": "#EF9F9F",
+				"cheek_alpha": 0.5,
+				"eye": "#3A2E3F",
+				"eye_shine": "#FFFDF8",
+				"shade_preview": "#8385A9",
+				"tokens": {
+					"fur": "cr_dusk",
+					"fur_2": "cr_slate",
+					"belly": "cr_lilac",
+					"accent": "cr_glow"
+				}
+			},
+			"moonpuff": {
+				"fur": "#DCD1E6",
+				"fur_2": "#F2F1EC",
+				"belly": "#F2F1EC",
+				"accent": "#FFE3A3",
+				"tip": "#ECE2EA",
+				"pattern_ink": "#F2F1EC",
+				"pattern_ink_deepened": false,
+				"cheek": "#EF9F9F",
+				"cheek_alpha": 0.5,
+				"eye": "#3A2E3F",
+				"eye_shine": "#FFFDF8",
+				"shade_preview": "#B2ACBF",
+				"tokens": {
+					"fur": "cr_lilac",
+					"fur_2": "cr_snow",
+					"belly": "cr_snow",
+					"accent": "cr_glow"
+				}
+			}
+		}
+	},
+	"flora": {
+		"doc": "fl_* tokens are referenced by data/flora.json petal_token. petal/leaf = [lit, shade, detail] tone-mask triples.",
+		"tone_mask": "SVG paints R=lit, G=shade, B=detail; shader: (R*lit + G*shade + B*detail) * g_ambient, then key/shadow lighting",
+		"flowers": {
+			"fl_clover": {
+				"flower_id": "sweet_clover",
+				"form": "globe",
+				"petal": [
+					"#F4C6D3",
+					"#C1A3BA",
+					"#FCE6EE"
+				],
+				"leaf": [
+					"#6FAE74",
+					"#348971",
+					"#A2C89E"
+				],
+				"stem": "#68A678",
+				"bud": "#A1B895",
+				"night_emission": 0.0
+			},
+			"fl_daisy": {
+				"flower_id": "button_daisy",
+				"form": "daisy",
+				"petal": [
+					"#FBF3E4",
+					"#D6CAC1",
+					"#FFC86E"
+				],
+				"leaf": [
+					"#72AA6E",
+					"#37866B",
+					"#A3C59A"
+				],
+				"stem": "#6BA373",
+				"bud": "#A2C497",
+				"night_emission": 0.0
+			},
+			"fl_buttercup": {
+				"flower_id": "buttercup",
+				"form": "cup",
+				"petal": [
+					"#FFD877",
+					"#E6A76D",
+					"#FFF3C4"
+				],
+				"leaf": [
+					"#74AB70",
+					"#3A876D",
+					"#A5C69B"
+				],
+				"stem": "#6DA475",
+				"bud": "#A7BB73",
+				"night_emission": 0.0
+			},
+			"fl_forget_me_not": {
+				"flower_id": "forget_me_not",
+				"form": "cluster",
+				"petal": [
+					"#BCD4F7",
+					"#9CACCA",
+					"#FFE08A"
+				],
+				"leaf": [
+					"#7AAF7C",
+					"#468A74",
+					"#A9C8A3"
+				],
+				"stem": "#72A77F",
+				"bud": "#91BDA8",
+				"night_emission": 0.0
+			},
+			"fl_bluebell": {
+				"flower_id": "bluebell",
+				"form": "bell",
+				"petal": [
+					"#CBC7F3",
+					"#A3A3C7",
+					"#ECE9FC"
+				],
+				"leaf": [
+					"#78AE80",
+					"#468977",
+					"#A7C8A6"
+				],
+				"stem": "#70A683",
+				"bud": "#96B8A9",
+				"night_emission": 0.0
+			},
+			"fl_primrose": {
+				"flower_id": "primrose",
+				"form": "primrose",
+				"petal": [
+					"#FBE6A6",
+					"#E0B88F",
+					"#F6C76E"
+				],
+				"leaf": [
+					"#86B886",
+					"#53937D",
+					"#B0CEAA"
+				],
+				"stem": "#7CAF88",
+				"bud": "#B0C891",
+				"night_emission": 0.0
+			},
+			"fl_dandelion": {
+				"flower_id": "dandelion",
+				"form": "puff",
+				"petal": [
+					"#F7F5EE",
+					"#D1CDC8",
+					"#CFD8C2"
+				],
+				"leaf": [
+					"#7FB077",
+					"#488C71",
+					"#ACC9A0"
+				],
+				"stem": "#76A87B",
+				"bud": "#A9C8A0",
+				"night_emission": 0.0
+			},
+			"fl_moonbloom": {
+				"flower_id": "moonbloom",
+				"form": "lily",
+				"petal": [
+					"#DCEAFA",
+					"#B9C2D0",
+					"#FFF1C2"
+				],
+				"leaf": [
+					"#7FB2A0",
+					"#5C8B8B",
+					"#ACCABB"
+				],
+				"stem": "#76A99E",
+				"bud": "#A0C5BF",
+				"night_emission": 0.25
+			}
+		},
+		"terrain_note": "grass, ground, hills and water use the per-TOD palette slots directly (no ambient multiply)"
+	},
+	"materials": {
+		"stone_warm": {
+			"lit": "#DCD3C8",
+			"shade": "#B7ACA6",
+			"detail": "#E9DFC9"
+		},
+		"stone_cool": {
+			"lit": "#CFCAD8",
+			"shade": "#A7A5B1",
+			"detail": "#A8C98F"
+		},
+		"pebble_alt": {
+			"lit": "#C3C9D8",
+			"shade": "#9FA3AF",
+			"detail": "#E4E0EA"
+		},
+		"wood_bark": {
+			"lit": "#B9957D",
+			"shade": "#936F69",
+			"detail": "#D7BCA6"
+		},
+		"wood_cut": {
+			"lit": "#E6CFB1",
+			"shade": "#C3A696",
+			"detail": "#C9A487"
+		},
+		"wicker": {
+			"lit": "#DDBB8E",
+			"shade": "#BB917B",
+			"detail": "#F0DDBA"
+		},
+		"wood_painted": {
+			"lit": "#E7B9A3",
+			"shade": "#BD9290",
+			"detail": "#FFF3E6"
+		},
+		"roof_slate": {
+			"lit": "#9FA9BE",
+			"shade": "#7D8495",
+			"detail": "#C9D0DE"
+		},
+		"willow_leaf": {
+			"lit": "#A6CC95",
+			"shade": "#70A88B",
+			"detail": "#D2E6C2"
+		},
+		"moss": {
+			"lit": "#A8D08A",
+			"shade": "#6BAD87",
+			"detail": "#D9EBC0"
+		},
+		"toadstool_cap": {
+			"lit": "#F1B9A6",
+			"shade": "#C59396",
+			"detail": "#FFF6EA"
+		},
+		"toadstool_stem": {
+			"lit": "#F4EBDD",
+			"shade": "#CFC2BB",
+			"detail": "#E6C9AE"
+		},
+		"pinwheel_a": {
+			"lit": "#9CC88A",
+			"shade": "#63A484",
+			"detail": "#D9EBC0"
+		},
+		"pinwheel_b": {
+			"lit": "#F6D58C",
+			"shade": "#DAA77B",
+			"detail": "#FFF1C2"
+		},
+		"lantern_jar": {
+			"lit": "#DCEFF0",
+			"shade": "#B8C6CC",
+			"detail": "#F4FAFF"
+		},
+		"lantern_light": {
+			"lit": "#FFE9C8",
+			"shade": "#DCBEAD",
+			"detail": "#FFC978",
+			"night_emission": 0.85
+		},
+		"chime_ceramic": {
+			"lit": "#D6E4EA",
+			"shade": "#B3BCC3",
+			"detail": "#F7D7E0"
+		},
+		"string": {
+			"lit": "#CBBBA8",
+			"shade": "#A7948A",
+			"detail": "#E8DCCB"
+		},
+		"soil": {
+			"lit": "#A48978",
+			"shade": "#7F6560",
+			"detail": "#C7AE9A"
+		},
+		"glow_mushroom": {
+			"lit": "#FFE7AE",
+			"shade": "#E2BA97",
+			"detail": "#FFF6DA",
+			"night_emission": 0.55
+		},
+		"leaf_boat": {
+			"lit": "#8FC07C",
+			"shade": "#539C7A",
+			"detail": "#D2E6C2"
+		}
+	},
+	"fx": {
+		"firefly_core": "#FFE7A6",
+		"firefly_halo": "accent",
+		"dust_mote": "glow",
+		"pollen": "#FFF1C2",
+		"seed_pappus": "#FFFDF8",
+		"petal_fall": "flora.flowers.fl_clover.petal[0]",
+		"rain_streak": "oklab_mix(sky_horizon, #FFFDF8, 0.30)",
+		"rain_streak_alpha": [
+			0.25,
+			0.4
+		],
+		"ripple": "oklab_mix(water_shallow, #FFFDF8, 0.50)",
+		"sparkle": "#FFFDF8",
+		"heart": "#FF9A7A",
+		"zzz": "#FFFDF8"
+	}
+}

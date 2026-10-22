@@ -1,0 +1,12 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/world/silhouette_layer.gd" id="1_sil"]
+[ext_resource type="Script" path="res://scripts/world/cloud_layer.gd" id="2_cloud"]
+
+[node name="FarLayer" type="Node2D"]
+
+[node name="Clouds" type="Node2D" parent="."]
+script = ExtResource("2_cloud")
+
+[node name="Hills" type="Node2D" parent="."]
+script = ExtResource("1_sil")

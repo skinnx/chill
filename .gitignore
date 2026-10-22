@@ -3,7 +3,8 @@
 /android/
 *.translation
 export_presets.local.cfg
-/build/
+/build/*
+!/build/.gdignore
 /exports/
 *.tmp
 # OS / editor
@@ -13,3 +14,10 @@ Thumbs.db
 .idea/
 # QA output (regenerated)
 /qa/out/
+# GUT / test output
+/reports/
+# Python bytecode (tools/)
+__pycache__/
+*.pyc
+# Node tooling (tools/qa/web; package-lock.json is committed)
+node_modules/

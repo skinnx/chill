@@ -1,0 +1,12 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/world/props_layer.gd" id="1_props"]
+[ext_resource type="Script" path="res://scripts/world/grass_field.gd" id="2_grass"]
+
+[node name="PropsLayer" type="Node2D"]
+y_sort_enabled = true
+script = ExtResource("1_props")
+
+[node name="Grass" type="Node2D" parent="."]
+y_sort_enabled = true
+script = ExtResource("2_grass")

@@ -1,0 +1,4 @@
+@expo-google-fonts/nunito@0.4.2 (npm), tarball sha512 d4a096a61c3f236ba0a9fb3d8911d40a43d39e898d8063ed17802fa95aaea042b1af410bfa670b34b81e8b1b2c95b69215ebd147afca240137b1cf20d15698d1
+Subset by tools/fonts/build_fonts.py: Latin + Vietnamese, all layout features kept.
+The copyright line of OFL.txt declares no Reserved Font Name, so the subset files
+keep the original family names. Licence: SIL Open Font License 1.1 (OFL.txt).

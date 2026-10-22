@@ -1,0 +1,656 @@
+{
+	"schema": 1,
+	"doc": "docs/ART_BIBLE.md §10. Durations in ms unless the key says _s. Beziers are CSS cubic-bezier (x1,y1,x2,y2), used through PropertyTweener.set_custom_interpolator with TRANS_LINEAR. fallback = closest built-in Tween transition/ease (max abs error vs bezier from 05 §0.2).",
+	"principle": "fast feedback, slow world",
+	"durations_ms": {
+		"instant": 0,
+		"micro": 100,
+		"release_settle": 330,
+		"short": 200,
+		"standard": 320,
+		"emphasized": 500,
+		"celebrate": 900,
+		"celebrate_range": [
+			700,
+			1200
+		],
+		"celebrate_max_input_block": 1000,
+		"stagger_step": 30,
+		"stagger_cap": 240,
+		"exit_factor": 0.65,
+		"fade_in_min": 300,
+		"long_press": 450,
+		"long_press_fill_start": 150,
+		"unfurl": 600,
+		"reduce_motion_crossfade": 150,
+		"hud_ambient_fade": 600,
+		"label_peek_hold": 4000
+	},
+	"ranges_ms": {
+		"micro": [
+			80,
+			120
+		],
+		"short": [
+			150,
+			240
+		],
+		"standard": [
+			280,
+			360
+		],
+		"emphasized": [
+			450,
+			600
+		]
+	},
+	"curves": {
+		"micro": {
+			"trans": "QUAD",
+			"ease": "OUT"
+		},
+		"standard": {
+			"bezier": [
+				0.2,
+				0.0,
+				0.0,
+				1.0
+			],
+			"fallback": {
+				"trans": "CUBIC",
+				"ease": "OUT"
+			},
+			"fallback_max_err": 0.13
+		},
+		"emphasized_decel": {
+			"bezier": [
+				0.05,
+				0.7,
+				0.1,
+				1.0
+			],
+			"fallback": {
+				"trans": "EXPO",
+				"ease": "OUT"
+			},
+			"fallback_max_err": 0.155
+		},
+		"emphasized": {
+			"bezier": [
+				0.2,
+				0.0,
+				0.0,
+				1.0
+			],
+			"alt_spring": "move"
+		},
+		"exit": {
+			"bezier": [
+				0.3,
+				0.0,
+				0.8,
+				0.15
+			],
+			"fallback": {
+				"trans": "CUBIC",
+				"ease": "IN"
+			},
+			"fallback_max_err": 0.046
+		},
+		"ambient": {
+			"bezier": [
+				0.37,
+				0.0,
+				0.63,
+				1.0
+			],
+			"fallback": {
+				"trans": "SINE",
+				"ease": "IN_OUT"
+			},
+			"fallback_max_err": 0.002
+		},
+		"world": {
+			"trans": "SINE",
+			"ease": "IN_OUT",
+			"note": "or linear for constant-speed drifts (clouds)"
+		}
+	},
+	"tokens": {
+		"instant": {
+			"duration": "instant"
+		},
+		"micro": {
+			"duration": "micro",
+			"curve": "micro"
+		},
+		"release": {
+			"spring": "pop",
+			"fallback": {
+				"trans": "BACK",
+				"ease": "OUT",
+				"duration_ms": 330
+			}
+		},
+		"short": {
+			"duration": "short",
+			"curve": "standard"
+		},
+		"standard": {
+			"duration": "standard",
+			"curve": "emphasized_decel"
+		},
+		"emphasized": {
+			"duration": "emphasized",
+			"curve": "emphasized",
+			"or_spring": "move"
+		},
+		"exit": {
+			"duration_factor": "exit_factor",
+			"curve": "exit"
+		},
+		"celebrate": {
+			"duration": "celebrate",
+			"spring": "pop",
+			"particles": "sparkle_4_6"
+		},
+		"stagger": {
+			"step": "stagger_step",
+			"cap": "stagger_cap"
+		},
+		"ambient": {
+			"period_s": [
+				3.0,
+				12.77
+			],
+			"curve": "ambient"
+		},
+		"world": {
+			"period_s": [
+				20,
+				180
+			],
+			"curve": "world"
+		},
+		"tod": {
+			"crossfade": "data/world.json phase_crossfade_s (2400 s)",
+			"space": "oklab"
+		}
+	},
+	"springs": {
+		"press": {
+			"f_hz": 6.0,
+			"zeta": 0.9,
+			"stiffness": 1421.2,
+			"damping": 67.86,
+			"overshoot": 0.0015,
+			"settle_ms": 118,
+			"swiftui_duration_bounce": [
+				0.167,
+				0.1
+			],
+			"use": "touch-down, finger tracking"
+		},
+		"move": {
+			"f_hz": 2.4,
+			"zeta": 0.8,
+			"stiffness": 227.4,
+			"damping": 24.13,
+			"overshoot": 0.0152,
+			"settle_ms": 332,
+			"swiftui_duration_bounce": [
+				0.417,
+				0.2
+			],
+			"use": "panels, drag release, sheets"
+		},
+		"pop": {
+			"f_hz": 3.2,
+			"zeta": 0.6,
+			"stiffness": 404.3,
+			"damping": 24.13,
+			"overshoot": 0.0948,
+			"settle_ms": 332,
+			"swiftui_duration_bounce": [
+				0.312,
+				0.4
+			],
+			"use": "rewards, release pop"
+		},
+		"jelly": {
+			"f_hz": 2.6,
+			"zeta": 0.4,
+			"stiffness": 266.9,
+			"damping": 13.07,
+			"overshoot": 0.2538,
+			"settle_ms": 612,
+			"swiftui_duration_bounce": [
+				0.385,
+				0.6
+			],
+			"use": "creature body only, amplitude <= 12 %"
+		},
+		"follow": {
+			"f_hz": 1.6,
+			"zeta": 0.35,
+			"stiffness": 101.1,
+			"damping": 7.04,
+			"overshoot": 0.3092,
+			"settle_ms": 1137,
+			"swiftui_duration_bounce": [
+				0.625,
+				0.65
+			],
+			"use": "secondary motion: ears, leaves, antennae, hanging chime"
+		},
+		"integrator": {
+			"method": "analytic",
+			"method_note": "closed-form damped-oscillator step (scripts/motion/spring.gd): exact at any dt, stable at 30 fps and through hitches, no sub-steps",
+			"mass": 1.0,
+			"rest_epsilon": {
+				"x": 0.0005,
+				"v": 0.002
+			}
+		}
+	},
+	"time": {
+		"g_time_wrap_s": 600,
+		"rule": "every looping frequency is k/600 Hz with integer k (period 600/k s)",
+		"ambient_k": [
+			200,
+			124,
+			76,
+			47
+		],
+		"ambient_periods_s": [
+			3.0,
+			4.8387,
+			7.8947,
+			12.766
+		]
+	},
+	"loops_k": {
+		"breathe_awake": [
+			134,
+			171
+		],
+		"breathe_asleep": [
+			100,
+			120
+		],
+		"grass_sway": [
+			120,
+			300
+		],
+		"flower_sway": [
+			120,
+			270
+		],
+		"ear_wind": [
+			124,
+			124
+		],
+		"antenna_bob": [
+			76,
+			76
+		],
+		"gust": [
+			62,
+			62
+		],
+		"star_twinkle": [
+			120,
+			300
+		],
+		"firefly_cycle": [
+			86,
+			100
+		],
+		"lantern_breath": [
+			181,
+			181
+		],
+		"light_shaft_sway": [
+			50,
+			72
+		],
+		"seed_bob": [
+			120,
+			120
+		],
+		"chime_idle": [
+			47,
+			47
+		],
+		"bulb_glow": [
+			124,
+			124
+		],
+		"glow_mushroom": [
+			76,
+			76
+		],
+		"zzz_emit": [
+			124,
+			124
+		],
+		"water_flow_a": [
+			60,
+			60
+		],
+		"water_flow_b": [
+			50,
+			50
+		],
+		"water_glint": [
+			76,
+			124
+		],
+		"cloud_shadow_drift": [
+			5,
+			5
+		]
+	},
+	"loops_spatial": {
+		"water_flow_a": {
+			"tile_px": 540,
+			"speed_px_s": 54,
+			"note": "540 px tile / 54 px/s = 10 s = 600/60"
+		},
+		"water_flow_b": {
+			"tile_px": 360,
+			"speed_px_s": 30,
+			"note": "360 px tile / 30 px/s = 12 s = 600/50"
+		},
+		"cloud_shadow_drift": {
+			"tile_px": 1800,
+			"speed_px_s": 15,
+			"note": "1800 px tile / 15 px/s = 120 s = 600/5"
+		},
+		"gust": {
+			"spacing_px": 1742,
+			"speed_px_s": 180,
+			"note": "phase = fract(g_time*62/600 - x/1742)"
+		},
+		"mist_drift": {
+			"tile_px": 1800,
+			"speed_px_s": 6,
+			"note": "6 px/s x 600 s = 2 tiles"
+		}
+	},
+	"creature": {
+		"breathe": {
+			"inhale_fraction": 0.4,
+			"awake_scale": [
+				0.99,
+				1.025
+			],
+			"asleep_amplitude_y": 0.035,
+			"asleep_scale": [
+				0.985,
+				1.035
+			],
+			"pivot": "feet",
+			"period_rule": "per-creature period = 600/k with an integer k drawn (seeded) from loops_k.breathe_awake / breathe_asleep; never scaled outside those ranges (V5 3.5-4.5 s awake, 5-6 s asleep; C4 k/600 loops)"
+		},
+		"blink": {
+			"interval_s": [
+				2.0,
+				6.0
+			],
+			"double_p": 0.15,
+			"close_ms": 50,
+			"hold_ms": 20,
+			"open_ms": 70,
+			"double_gap_ms": 110,
+			"suppress_when": [
+				"asleep",
+				"petting",
+				"hop_air"
+			]
+		},
+		"tap": {
+			"squash": 0.94,
+			"squash_ms": 80,
+			"return": "jelly",
+			"ear_lag_ms": [
+				40,
+				80
+			],
+			"look_at": "standard",
+			"name_tag_ms": 2000,
+			"second_tap_opens_card_ms": 2000,
+			"cooldown_ms": 250,
+			"source": "GDD §3.1, §8.3"
+		},
+		"hop": {
+			"anticipation_squash": 0.92,
+			"anticipation_ms": [
+				90,
+				120
+			],
+			"air_stretch": 1.1,
+			"land_squash": 0.88,
+			"height_bu": [
+				0.18,
+				0.3
+			],
+			"distance_px": [
+				40,
+				70
+			],
+			"air_ms": 300,
+			"path": "parabola",
+			"return": "jelly",
+			"gap_ms": [
+				180,
+				420
+			]
+		},
+		"pet": {
+			"fill_start_ms": 150,
+			"trigger_ms": 450,
+			"hold_squash": 0.88,
+			"hold_spring": "jelly",
+			"lean_deg_max": 4.0,
+			"lean_spring": "move",
+			"happy_eyes": true,
+			"blush_boost": 0.25,
+			"wiggle_hz": 1.6,
+			"wiggle_deg": 2.0,
+			"hearts_on_release": 3,
+			"release": "jelly",
+			"release_overshoot_target": 1.04,
+			"stroke_drag_px": 24,
+			"source": "GDD §3.1"
+		},
+		"sleep": {
+			"enter_ms": 1200,
+			"squash_rest": 0.94,
+			"ear_droop_deg": {
+				"none": 0,
+				"round": 0,
+				"tuft": 15,
+				"pointed_soft": 15,
+				"bell": 11.5,
+				"leaf": 25,
+				"nub": 0,
+				"long": 60
+			},
+			"ear_droop_note": "keys = creature_rig.json catalog.ear ids (Art Bible §5.7 nap: tuft/pointed 0.26 rad, bell 0.20, leaf 0.44)",
+			"zzz_rise_px": 40,
+			"zzz_life_s": 3.0
+		},
+		"arrive": {
+			"fade_ms": 400,
+			"hops": [
+				2,
+				4
+			],
+			"enter_from": "species.entry (data/spots.json entries; GDD §4.1.3)"
+		},
+		"max_squash_deviation": 0.2
+	},
+	"flora": {
+		"ready_bud": {
+			"glow_k": 76,
+			"glow_alpha": 0.25,
+			"swell": 1.04,
+			"auto_unfurl_after_s": 20,
+			"auto_unfurl_ms": 2400,
+			"tutorial_hint_ring_after_s": 3,
+			"source": "GDD §3.1"
+		},
+		"unfurl": {
+			"total_ms": 600,
+			"anticipation_ms": 60,
+			"bud_swell": 1.08,
+			"petal_open_ms": 420,
+			"petal_stagger_ms": 30,
+			"petal_curve": "emphasized_decel",
+			"stem_stretch": 1.06,
+			"stem_spring": "move",
+			"leaves_spring": "follow",
+			"color_bloom_ms": 420,
+			"sparkles": [
+				3,
+				5
+			],
+			"sparkle_ms": 400
+		},
+		"grow_step": {
+			"stretch_y": 1.08,
+			"spring": "move",
+			"new_part_from_scale": 0.6,
+			"new_part_spring": "pop",
+			"new_part_fade_ms": 300
+		},
+		"sway": {
+			"amp_tip_px": [
+				12,
+				24
+			],
+			"hz_range": [
+				0.2,
+				0.45
+			]
+		},
+		"plant": {
+			"seed_arc_ms": 320,
+			"seed_arc_curve": "emphasized_decel",
+			"soil_puff_ms": 120
+		},
+		"decor_settle_ms": 500
+	},
+	"world": {
+		"cloud_drift_dp_s": [
+			2,
+			6
+		],
+		"camera_drift_max_dp_s": 4,
+		"camera_drift_period_s": [
+			30,
+			60
+		],
+		"zoom_max": 0.05,
+		"zoom_min_ms": 1200,
+		"weather_crossfade": "data/world.json weather_crossfade_s (30 s)",
+		"tod_crossfade": "data/world.json phase_crossfade_s (2400 s)",
+		"gust_every_s": 9.677,
+		"gust_speed_dp_s": 60,
+		"idle_fps_after_s": 8,
+		"parallax_tilt_max_dp": {
+			"L2": 2,
+			"L5": 8
+		}
+	},
+	"ui": {
+		"press_scale": 0.96,
+		"press_ms": 80,
+		"press_tint_dL": 0.06,
+		"world_touch_squash": 0.94,
+		"release": "pop",
+		"ring": {
+			"radius_dp": 36,
+			"ms": 380,
+			"alpha": [
+				0.35,
+				0.0
+			]
+		},
+		"sparkles": [
+			3,
+			5
+		],
+		"sheet_open": {
+			"duration": "standard",
+			"curve": "emphasized_decel",
+			"rise_px": 96
+		},
+		"sheet_close": {
+			"duration_factor": "exit_factor",
+			"curve": "exit",
+			"note": "0.65 x 320 = 208 ms (GDD §8.1: about 210 ms)"
+		},
+		"sheet_swap": {
+			"duration": "short",
+			"type": "crossfade"
+		},
+		"swipe_dismiss": {
+			"distance_frac": 0.25,
+			"velocity_px_s": 1000
+		},
+		"card_rise": {
+			"duration": "emphasized"
+		},
+		"recap_auto_dismiss_ms": 5000,
+		"auto_hide_after_s": 60,
+		"auto_hide_note": "GDD §1.5 / §7.6 'Hide buttons while I watch': ambient watch mode after this long without input (HUD + dock fade over durations_ms.hud_ambient_fade)",
+		"not_affordable_wiggle_dp": 2,
+		"not_affordable_spring": "follow",
+		"stream_ripple_ms": 380,
+		"tutorial_hint_ring": {
+			"radius_dp": 36,
+			"expand_ms": 1200,
+			"period_s": 3.0,
+			"alpha": 0.8,
+			"stroke_dp": 2,
+			"seed_after_s": 6.5,
+			"source": "GDD §3.4 (seed from 6.5 s, every 3 s; ready bud after flora.ready_bud.tutorial_hint_ring_after_s); 3 s = 600/200"
+		},
+		"leaf_boat": {
+			"launch": "spring_rock",
+			"drift_s": 40,
+			"max_on_water": 3,
+			"queue_gap_s": 4,
+			"bob_k": 124,
+			"bob_deg": 4
+		},
+		"toggle_thumb": "micro",
+		"counter_tick": {
+			"per_step_ms": 40,
+			"max_ms": 600,
+			"pop": "pop",
+			"scale": 1.08
+		},
+		"amplitude_max": 0.06
+	},
+	"reduce_motion": {
+		"g_motion": 0.3,
+		"spatial_to_crossfade_ms": 150,
+		"parallax": 0.0,
+		"camera_drift": false,
+		"particles_mul": 0.3,
+		"ambient_min_period_s": 4.0,
+		"springs": "critically damped (zeta 1.0), same f",
+		"squash_mul": 0.5,
+		"hop": "glide (no stretch), fade-position 300 ms"
+	},
+	"safety": {
+		"max_flashes_per_s": 3,
+		"max_brightness_mod_hz": 3,
+		"no_linear_spatial_tweens": true,
+		"no_screen_shake": true,
+		"no_pop_in": true
+	}
+}

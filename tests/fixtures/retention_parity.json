@@ -1,0 +1,5434 @@
+{
+	"install_local_s": 72000.0,
+	"ops": [
+		{
+			"op": "visit",
+			"species": "puffmoss",
+			"t": 30.0
+		},
+		{
+			"op": "visit",
+			"species": "buttonbud",
+			"t": 150.0
+		},
+		{
+			"op": "visit",
+			"species": "pebblepaw",
+			"t": 210.0
+		},
+		{
+			"bloomed": {
+				"buttercup": 2,
+				"forget_me_not": 3
+			},
+			"op": "items",
+			"owned": {
+				"toadstool_seat": 5
+			},
+			"t": 1000.0
+		},
+		{
+			"op": "tap_signs",
+			"t": 4000.0
+		},
+		{
+			"op": "visit",
+			"species": "puffmoss",
+			"t": 40000.0
+		},
+		{
+			"op": "visit",
+			"species": "puffmoss",
+			"t": 80000.0
+		},
+		{
+			"n": 20,
+			"op": "pet",
+			"species": "puffmoss",
+			"t": 81000.0
+		},
+		{
+			"n": 30,
+			"op": "pet",
+			"species": "buttonbud",
+			"t": 81000.0
+		},
+		{
+			"n": 45,
+			"op": "pet",
+			"species": "pebblepaw",
+			"t": 81000.0
+		},
+		{
+			"op": "tap_signs",
+			"t": 90000.0
+		},
+		{
+			"op": "visit",
+			"species": "honeyhum",
+			"t": 100000.0
+		},
+		{
+			"bloomed": {
+				"bluebell": 3,
+				"buttercup": 2,
+				"dandelion": 2,
+				"forget_me_not": 3,
+				"moonbloom": 5,
+				"primrose": 3,
+				"sweet_clover": 4
+			},
+			"boats": 10,
+			"op": "items",
+			"owned": {
+				"firefly_lantern": 5,
+				"pebble_cairn": 3,
+				"stream_stones": 5,
+				"toadstool_seat": 5,
+				"wind_chime": 5
+			},
+			"t": 110000.0
+		},
+		{
+			"op": "tap_signs",
+			"t": 130000.0
+		},
+		{
+			"op": "return",
+			"present": [
+				"puffmoss"
+			],
+			"prev_end": 140000.0,
+			"profile": [
+				[
+					"night",
+					"clear",
+					7200.0
+				],
+				[
+					"dawn",
+					"rain",
+					2800.0
+				]
+			],
+			"t": 150000.0
+		},
+		{
+			"op": "return",
+			"present": [],
+			"prev_end": 150000.0,
+			"profile": [],
+			"t": 151000.0
+		},
+		{
+			"op": "return",
+			"present": [],
+			"prev_end": 152000.0,
+			"profile": [
+				[
+					"night",
+					"clear",
+					3600.0
+				]
+			],
+			"t": 160000.0
+		},
+		{
+			"op": "return",
+			"present": [
+				"honeyhum"
+			],
+			"prev_end": 158000.0,
+			"profile": [
+				[
+					"day",
+					"rain",
+					3600.0
+				]
+			],
+			"t": 166000.0
+		},
+		{
+			"op": "return",
+			"present": [
+				"honeyhum",
+				"buttonbud"
+			],
+			"prev_end": 164000.0,
+			"profile": [
+				[
+					"dusk",
+					"clear",
+					3600.0
+				]
+			],
+			"t": 172000.0
+		},
+		{
+			"op": "return",
+			"present": [],
+			"prev_end": 170000.0,
+			"profile": [
+				[
+					"golden",
+					"breeze",
+					9000.0
+				]
+			],
+			"t": 178000.0
+		},
+		{
+			"op": "return",
+			"present": [
+				"honeyhum"
+			],
+			"prev_end": 176000.0,
+			"profile": [
+				[
+					"night",
+					"rain",
+					5400.0
+				]
+			],
+			"t": 184000.0
+		},
+		{
+			"op": "return",
+			"present": [
+				"honeyhum",
+				"buttonbud"
+			],
+			"prev_end": 182000.0,
+			"profile": [
+				[
+					"day",
+					"clear",
+					8000.0
+				]
+			],
+			"t": 190000.0
+		},
+		{
+			"op": "tap_signs",
+			"t": 199000.0
+		},
+		{
+			"op": "visit",
+			"species": "fernwhisk",
+			"t": 200000.0
+		},
+		{
+			"op": "visit",
+			"species": "dandelfluff",
+			"t": 200100.0
+		},
+		{
+			"op": "visit",
+			"species": "bellkin",
+			"t": 200200.0
+		},
+		{
+			"op": "visit",
+			"species": "primpip",
+			"t": 200300.0
+		},
+		{
+			"op": "visit",
+			"species": "capling",
+			"t": 200400.0
+		},
+		{
+			"op": "visit",
+			"species": "puddlewump",
+			"t": 200500.0
+		},
+		{
+			"op": "visit",
+			"species": "glowmote",
+			"t": 200600.0
+		},
+		{
+			"op": "visit",
+			"species": "moonpuff",
+			"t": 200700.0
+		},
+		{
+			"n": 20,
+			"op": "pet",
+			"species": "puffmoss",
+			"t": 210000.0
+		},
+		{
+			"bloomed": {
+				"bluebell": 3,
+				"buttercup": 2,
+				"dandelion": 2,
+				"forget_me_not": 3,
+				"moonbloom": 5,
+				"primrose": 3,
+				"sweet_clover": 4
+			},
+			"boats": 10,
+			"op": "items",
+			"owned": {
+				"firefly_lantern": 5,
+				"pebble_cairn": 10,
+				"stream_stones": 5,
+				"toadstool_seat": 5,
+				"wind_chime": 5
+			},
+			"t": 215000.0
+		},
+		{
+			"op": "tap_signs",
+			"t": 300000.0
+		},
+		{
+			"op": "tap_signs",
+			"t": 345000.0
+		},
+		{
+			"op": "visit",
+			"species": "puffmoss",
+			"t": 421200.0
+		},
+		{
+			"op": "visit",
+			"species": "pebblepaw",
+			"t": 428400.0
+		},
+		{
+			"op": "return",
+			"present": [],
+			"prev_end": 509400.0,
+			"profile": [
+				[
+					"night",
+					"clear",
+					3700.0
+				]
+			],
+			"t": 518400.0
+		},
+		{
+			"op": "return",
+			"present": [
+				"puffmoss"
+			],
+			"prev_end": 529400.0,
+			"profile": [
+				[
+					"night",
+					"clear",
+					4000.0
+				],
+				[
+					"dusk",
+					"rain",
+					2000.0
+				]
+			],
+			"t": 538400.0
+		},
+		{
+			"op": "return",
+			"present": [
+				"puffmoss",
+				"glowmote"
+			],
+			"prev_end": 549400.0,
+			"profile": [
+				[
+					"night",
+					"clear",
+					3700.0
+				]
+			],
+			"t": 558400.0
+		},
+		{
+			"op": "return",
+			"present": [
+				"puffmoss",
+				"glowmote",
+				"moonpuff"
+			],
+			"prev_end": 569400.0,
+			"profile": [
+				[
+					"night",
+					"clear",
+					4000.0
+				],
+				[
+					"dusk",
+					"rain",
+					2000.0
+				]
+			],
+			"t": 578400.0
+		},
+		{
+			"op": "return",
+			"present": [],
+			"prev_end": 589400.0,
+			"profile": [
+				[
+					"night",
+					"clear",
+					3700.0
+				]
+			],
+			"t": 598400.0
+		},
+		{
+			"op": "return",
+			"present": [
+				"puffmoss"
+			],
+			"prev_end": 609400.0,
+			"profile": [
+				[
+					"night",
+					"clear",
+					4000.0
+				],
+				[
+					"dusk",
+					"rain",
+					2000.0
+				]
+			],
+			"t": 618400.0
+		},
+		{
+			"op": "return",
+			"present": [
+				"puffmoss",
+				"glowmote"
+			],
+			"prev_end": 629400.0,
+			"profile": [
+				[
+					"night",
+					"clear",
+					3700.0
+				]
+			],
+			"t": 638400.0
+		},
+		{
+			"op": "return",
+			"present": [
+				"puffmoss",
+				"glowmote",
+				"moonpuff"
+			],
+			"prev_end": 649400.0,
+			"profile": [
+				[
+					"night",
+					"clear",
+					4000.0
+				],
+				[
+					"dusk",
+					"rain",
+					2000.0
+				]
+			],
+			"t": 658400.0
+		},
+		{
+			"op": "return",
+			"present": [],
+			"prev_end": 669400.0,
+			"profile": [
+				[
+					"night",
+					"clear",
+					3700.0
+				]
+			],
+			"t": 678400.0
+		},
+		{
+			"op": "return",
+			"present": [
+				"puffmoss"
+			],
+			"prev_end": 689400.0,
+			"profile": [
+				[
+					"night",
+					"clear",
+					4000.0
+				],
+				[
+					"dusk",
+					"rain",
+					2000.0
+				]
+			],
+			"t": 698400.0
+		},
+		{
+			"op": "return",
+			"present": [
+				"puffmoss",
+				"glowmote"
+			],
+			"prev_end": 709400.0,
+			"profile": [
+				[
+					"night",
+					"clear",
+					3700.0
+				]
+			],
+			"t": 718400.0
+		},
+		{
+			"op": "return",
+			"present": [
+				"puffmoss",
+				"glowmote",
+				"moonpuff"
+			],
+			"prev_end": 729400.0,
+			"profile": [
+				[
+					"night",
+					"clear",
+					4000.0
+				],
+				[
+					"dusk",
+					"rain",
+					2000.0
+				]
+			],
+			"t": 738400.0
+		}
+	],
+	"seed": 12345,
+	"steps": [
+		{
+			"affection": {
+				"bellkin": 0,
+				"buttonbud": 0,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 0,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 1
+			},
+			"clues": 0,
+			"cousins": {},
+			"hearts": {
+				"bellkin": 0,
+				"buttonbud": 0,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 0,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 0
+			},
+			"mysteries": {},
+			"nests": {},
+			"scene": null,
+			"signs": [],
+			"story_postcards": [],
+			"visit_aff_t": {
+				"puffmoss": 30.0
+			},
+			"waiting": []
+		},
+		{
+			"affection": {
+				"bellkin": 0,
+				"buttonbud": 1,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 0,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 1
+			},
+			"clues": 0,
+			"cousins": {},
+			"hearts": {
+				"bellkin": 0,
+				"buttonbud": 0,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 0,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 0
+			},
+			"mysteries": {},
+			"nests": {},
+			"scene": null,
+			"signs": [],
+			"story_postcards": [],
+			"visit_aff_t": {
+				"buttonbud": 150.0,
+				"puffmoss": 30.0
+			},
+			"waiting": []
+		},
+		{
+			"affection": {
+				"bellkin": 0,
+				"buttonbud": 1,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 1,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 1
+			},
+			"clues": 0,
+			"cousins": {},
+			"hearts": {
+				"bellkin": 0,
+				"buttonbud": 0,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 0,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 0
+			},
+			"mysteries": {},
+			"nests": {},
+			"scene": null,
+			"signs": [],
+			"story_postcards": [],
+			"visit_aff_t": {
+				"buttonbud": 150.0,
+				"pebblepaw": 210.0,
+				"puffmoss": 30.0
+			},
+			"waiting": []
+		},
+		{
+			"affection": {
+				"bellkin": 0,
+				"buttonbud": 1,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 1,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 1
+			},
+			"clues": 0,
+			"cousins": {},
+			"hearts": {
+				"bellkin": 0,
+				"buttonbud": 0,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 0,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 0
+			},
+			"mysteries": {
+				"capling": [
+					1000.0,
+					21200.261818856874
+				],
+				"fernwhisk": [
+					1000.0,
+					9242.864810627394
+				],
+				"honeyhum": [
+					1000.0,
+					8348.724826907506
+				]
+			},
+			"nests": {},
+			"scene": null,
+			"signs": [
+				[
+					"capling",
+					0,
+					2311.3106634785977
+				],
+				[
+					"fernwhisk",
+					0,
+					3030.45030026772
+				],
+				[
+					"honeyhum",
+					0,
+					4338.033225941251
+				],
+				[
+					"honeyhum",
+					1,
+					6548.724826907505
+				],
+				[
+					"fernwhisk",
+					1,
+					7442.864810627394
+				],
+				[
+					"capling",
+					1,
+					9794.39248206708
+				],
+				[
+					"capling",
+					2,
+					19400.261818856874
+				]
+			],
+			"story_postcards": [],
+			"visit_aff_t": {
+				"buttonbud": 150.0,
+				"pebblepaw": 210.0,
+				"puffmoss": 30.0
+			},
+			"waiting": []
+		},
+		{
+			"affection": {
+				"bellkin": 0,
+				"buttonbud": 1,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 1,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 1
+			},
+			"clues": 2,
+			"cousins": {},
+			"hearts": {
+				"bellkin": 0,
+				"buttonbud": 0,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 0,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 0
+			},
+			"mysteries": {
+				"capling": [
+					1000.0,
+					21200.261818856874
+				],
+				"fernwhisk": [
+					1000.0,
+					9242.864810627394
+				],
+				"honeyhum": [
+					1000.0,
+					8348.724826907506
+				]
+			},
+			"nests": {},
+			"scene": null,
+			"signs": [
+				[
+					"honeyhum",
+					0,
+					4338.033225941251
+				],
+				[
+					"honeyhum",
+					1,
+					6548.724826907505
+				],
+				[
+					"fernwhisk",
+					1,
+					7442.864810627394
+				],
+				[
+					"capling",
+					1,
+					9794.39248206708
+				],
+				[
+					"capling",
+					2,
+					19400.261818856874
+				]
+			],
+			"story_postcards": [],
+			"visit_aff_t": {
+				"buttonbud": 150.0,
+				"pebblepaw": 210.0,
+				"puffmoss": 30.0
+			},
+			"waiting": []
+		},
+		{
+			"affection": {
+				"bellkin": 0,
+				"buttonbud": 1,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 1,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 1
+			},
+			"clues": 2,
+			"cousins": {},
+			"hearts": {
+				"bellkin": 0,
+				"buttonbud": 0,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 0,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 0
+			},
+			"mysteries": {
+				"capling": [
+					1000.0,
+					21200.261818856874
+				],
+				"fernwhisk": [
+					1000.0,
+					9242.864810627394
+				],
+				"honeyhum": [
+					1000.0,
+					8348.724826907506
+				]
+			},
+			"nests": {},
+			"scene": null,
+			"signs": [
+				[
+					"honeyhum",
+					0,
+					4338.033225941251
+				],
+				[
+					"honeyhum",
+					1,
+					6548.724826907505
+				],
+				[
+					"fernwhisk",
+					1,
+					7442.864810627394
+				],
+				[
+					"capling",
+					1,
+					9794.39248206708
+				],
+				[
+					"capling",
+					2,
+					19400.261818856874
+				]
+			],
+			"story_postcards": [],
+			"visit_aff_t": {
+				"buttonbud": 150.0,
+				"pebblepaw": 210.0,
+				"puffmoss": 30.0
+			},
+			"waiting": []
+		},
+		{
+			"affection": {
+				"bellkin": 0,
+				"buttonbud": 1,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 1,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 2
+			},
+			"clues": 2,
+			"cousins": {},
+			"hearts": {
+				"bellkin": 0,
+				"buttonbud": 0,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 0,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 0
+			},
+			"mysteries": {
+				"capling": [
+					1000.0,
+					21200.261818856874
+				],
+				"fernwhisk": [
+					1000.0,
+					9242.864810627394
+				],
+				"honeyhum": [
+					1000.0,
+					8348.724826907506
+				]
+			},
+			"nests": {},
+			"scene": null,
+			"signs": [
+				[
+					"honeyhum",
+					0,
+					4338.033225941251
+				],
+				[
+					"honeyhum",
+					1,
+					6548.724826907505
+				],
+				[
+					"fernwhisk",
+					1,
+					7442.864810627394
+				],
+				[
+					"capling",
+					1,
+					9794.39248206708
+				],
+				[
+					"capling",
+					2,
+					19400.261818856874
+				]
+			],
+			"story_postcards": [],
+			"visit_aff_t": {
+				"buttonbud": 150.0,
+				"pebblepaw": 210.0,
+				"puffmoss": 80000.0
+			},
+			"waiting": []
+		},
+		{
+			"affection": {
+				"bellkin": 0,
+				"buttonbud": 1,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 1,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 22
+			},
+			"clues": 2,
+			"cousins": {},
+			"hearts": {
+				"bellkin": 0,
+				"buttonbud": 0,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 0,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 3
+			},
+			"mysteries": {
+				"capling": [
+					1000.0,
+					21200.261818856874
+				],
+				"fernwhisk": [
+					1000.0,
+					9242.864810627394
+				],
+				"honeyhum": [
+					1000.0,
+					8348.724826907506
+				]
+			},
+			"nests": {
+				"puffmoss": 81000.0
+			},
+			"scene": null,
+			"signs": [
+				[
+					"honeyhum",
+					0,
+					4338.033225941251
+				],
+				[
+					"honeyhum",
+					1,
+					6548.724826907505
+				],
+				[
+					"fernwhisk",
+					1,
+					7442.864810627394
+				],
+				[
+					"capling",
+					1,
+					9794.39248206708
+				],
+				[
+					"capling",
+					2,
+					19400.261818856874
+				]
+			],
+			"story_postcards": [
+				"puffmoss_h2"
+			],
+			"visit_aff_t": {
+				"buttonbud": 150.0,
+				"pebblepaw": 210.0,
+				"puffmoss": 80000.0
+			},
+			"waiting": []
+		},
+		{
+			"affection": {
+				"bellkin": 0,
+				"buttonbud": 31,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 1,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 22
+			},
+			"clues": 2,
+			"cousins": {},
+			"hearts": {
+				"bellkin": 0,
+				"buttonbud": 4,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 0,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 3
+			},
+			"mysteries": {
+				"capling": [
+					1000.0,
+					21200.261818856874
+				],
+				"fernwhisk": [
+					1000.0,
+					9242.864810627394
+				],
+				"honeyhum": [
+					1000.0,
+					8348.724826907506
+				]
+			},
+			"nests": {
+				"buttonbud": 81000.0,
+				"puffmoss": 81000.0
+			},
+			"scene": null,
+			"signs": [
+				[
+					"honeyhum",
+					0,
+					4338.033225941251
+				],
+				[
+					"honeyhum",
+					1,
+					6548.724826907505
+				],
+				[
+					"fernwhisk",
+					1,
+					7442.864810627394
+				],
+				[
+					"capling",
+					1,
+					9794.39248206708
+				],
+				[
+					"capling",
+					2,
+					19400.261818856874
+				]
+			],
+			"story_postcards": [
+				"buttonbud_h2",
+				"puffmoss_h2"
+			],
+			"visit_aff_t": {
+				"buttonbud": 150.0,
+				"pebblepaw": 210.0,
+				"puffmoss": 80000.0
+			},
+			"waiting": [
+				"buttonbud_h4"
+			]
+		},
+		{
+			"affection": {
+				"bellkin": 0,
+				"buttonbud": 31,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 46,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 22
+			},
+			"clues": 2,
+			"cousins": {},
+			"hearts": {
+				"bellkin": 0,
+				"buttonbud": 4,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 5,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 3
+			},
+			"mysteries": {
+				"capling": [
+					1000.0,
+					21200.261818856874
+				],
+				"fernwhisk": [
+					1000.0,
+					9242.864810627394
+				],
+				"honeyhum": [
+					1000.0,
+					8348.724826907506
+				]
+			},
+			"nests": {
+				"buttonbud": 81000.0,
+				"pebblepaw": 81000.0,
+				"puffmoss": 81000.0
+			},
+			"scene": null,
+			"signs": [
+				[
+					"honeyhum",
+					0,
+					4338.033225941251
+				],
+				[
+					"honeyhum",
+					1,
+					6548.724826907505
+				],
+				[
+					"fernwhisk",
+					1,
+					7442.864810627394
+				],
+				[
+					"capling",
+					1,
+					9794.39248206708
+				],
+				[
+					"capling",
+					2,
+					19400.261818856874
+				]
+			],
+			"story_postcards": [
+				"buttonbud_h2",
+				"pebblepaw_h2",
+				"pebblepaw_h5",
+				"puffmoss_h2"
+			],
+			"visit_aff_t": {
+				"buttonbud": 150.0,
+				"pebblepaw": 210.0,
+				"puffmoss": 80000.0
+			},
+			"waiting": [
+				"buttonbud_h4",
+				"pebblepaw_h4"
+			]
+		},
+		{
+			"affection": {
+				"bellkin": 0,
+				"buttonbud": 31,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 46,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 22
+			},
+			"clues": 7,
+			"cousins": {},
+			"hearts": {
+				"bellkin": 0,
+				"buttonbud": 4,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 5,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 3
+			},
+			"mysteries": {
+				"capling": [
+					1000.0,
+					21200.261818856874
+				],
+				"fernwhisk": [
+					1000.0,
+					9242.864810627394
+				],
+				"honeyhum": [
+					1000.0,
+					8348.724826907506
+				]
+			},
+			"nests": {
+				"buttonbud": 81000.0,
+				"pebblepaw": 81000.0,
+				"puffmoss": 81000.0
+			},
+			"scene": null,
+			"signs": [],
+			"story_postcards": [
+				"buttonbud_h2",
+				"pebblepaw_h2",
+				"pebblepaw_h5",
+				"puffmoss_h2"
+			],
+			"visit_aff_t": {
+				"buttonbud": 150.0,
+				"pebblepaw": 210.0,
+				"puffmoss": 80000.0
+			},
+			"waiting": [
+				"buttonbud_h4",
+				"pebblepaw_h4"
+			]
+		},
+		{
+			"affection": {
+				"bellkin": 0,
+				"buttonbud": 31,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 1,
+				"moonpuff": 0,
+				"pebblepaw": 46,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 22
+			},
+			"clues": 7,
+			"cousins": {},
+			"hearts": {
+				"bellkin": 0,
+				"buttonbud": 4,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 5,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 3
+			},
+			"mysteries": {
+				"capling": [
+					1000.0,
+					21200.261818856874
+				],
+				"fernwhisk": [
+					1000.0,
+					9242.864810627394
+				],
+				"honeyhum": [
+					1000.0,
+					8348.724826907506
+				]
+			},
+			"nests": {
+				"buttonbud": 81000.0,
+				"pebblepaw": 81000.0,
+				"puffmoss": 81000.0
+			},
+			"scene": null,
+			"signs": [],
+			"story_postcards": [
+				"buttonbud_h2",
+				"buttonbud_h4",
+				"pebblepaw_h2",
+				"pebblepaw_h5",
+				"puffmoss_h2"
+			],
+			"visit_aff_t": {
+				"buttonbud": 150.0,
+				"honeyhum": 100000.0,
+				"pebblepaw": 210.0,
+				"puffmoss": 80000.0
+			},
+			"waiting": [
+				"pebblepaw_h4"
+			]
+		},
+		{
+			"affection": {
+				"bellkin": 0,
+				"buttonbud": 31,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 1,
+				"moonpuff": 0,
+				"pebblepaw": 46,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 22
+			},
+			"clues": 7,
+			"cousins": {},
+			"hearts": {
+				"bellkin": 0,
+				"buttonbud": 4,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 5,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 3
+			},
+			"mysteries": {
+				"bellkin": [
+					110000.0,
+					122150.87898004179
+				],
+				"capling": [
+					1000.0,
+					21200.261818856874
+				],
+				"dandelfluff": [
+					110000.0,
+					121996.28813336499
+				],
+				"fernwhisk": [
+					1000.0,
+					9242.864810627394
+				],
+				"glowmote": [
+					110000.0,
+					131146.37409807925
+				],
+				"honeyhum": [
+					1000.0,
+					8348.724826907506
+				],
+				"moonpuff": [
+					110000.0,
+					127896.90740823082
+				],
+				"primpip": [
+					110000.0,
+					117537.16619782078
+				],
+				"puddlewump": [
+					110000.0,
+					126680.15832131478
+				]
+			},
+			"nests": {
+				"buttonbud": 81000.0,
+				"pebblepaw": 81000.0,
+				"puffmoss": 81000.0
+			},
+			"scene": null,
+			"signs": [
+				[
+					"moonpuff",
+					0,
+					111306.86376553701
+				],
+				[
+					"bellkin",
+					0,
+					112713.00483113309
+				],
+				[
+					"puddlewump",
+					0,
+					112877.85410222273
+				],
+				[
+					"glowmote",
+					0,
+					113019.82955884855
+				],
+				[
+					"primpip",
+					0,
+					113519.11706874924
+				],
+				[
+					"dandelfluff",
+					0,
+					113526.52262825875
+				],
+				[
+					"primpip",
+					1,
+					115737.16619782078
+				],
+				[
+					"puddlewump",
+					1,
+					116855.32073997243
+				],
+				[
+					"moonpuff",
+					1,
+					117909.01462831451
+				],
+				[
+					"dandelfluff",
+					1,
+					120196.28813336499
+				],
+				[
+					"glowmote",
+					1,
+					120292.01971559406
+				],
+				[
+					"bellkin",
+					1,
+					120350.87898004179
+				],
+				[
+					"puddlewump",
+					2,
+					124880.15832131478
+				],
+				[
+					"moonpuff",
+					2,
+					126096.90740823082
+				],
+				[
+					"glowmote",
+					2,
+					129346.37409807925
+				]
+			],
+			"story_postcards": [
+				"buttonbud_h2",
+				"buttonbud_h4",
+				"pebblepaw_h2",
+				"pebblepaw_h5",
+				"puffmoss_h2"
+			],
+			"visit_aff_t": {
+				"buttonbud": 150.0,
+				"honeyhum": 100000.0,
+				"pebblepaw": 210.0,
+				"puffmoss": 80000.0
+			},
+			"waiting": [
+				"pebblepaw_h4"
+			]
+		},
+		{
+			"affection": {
+				"bellkin": 0,
+				"buttonbud": 31,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 1,
+				"moonpuff": 0,
+				"pebblepaw": 46,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 22
+			},
+			"clues": 22,
+			"cousins": {},
+			"hearts": {
+				"bellkin": 0,
+				"buttonbud": 4,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 5,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 3
+			},
+			"mysteries": {
+				"bellkin": [
+					110000.0,
+					122150.87898004179
+				],
+				"capling": [
+					1000.0,
+					21200.261818856874
+				],
+				"dandelfluff": [
+					110000.0,
+					121996.28813336499
+				],
+				"fernwhisk": [
+					1000.0,
+					9242.864810627394
+				],
+				"glowmote": [
+					110000.0,
+					131146.37409807925
+				],
+				"honeyhum": [
+					1000.0,
+					8348.724826907506
+				],
+				"moonpuff": [
+					110000.0,
+					127896.90740823082
+				],
+				"primpip": [
+					110000.0,
+					117537.16619782078
+				],
+				"puddlewump": [
+					110000.0,
+					126680.15832131478
+				]
+			},
+			"nests": {
+				"buttonbud": 81000.0,
+				"pebblepaw": 81000.0,
+				"puffmoss": 81000.0
+			},
+			"scene": null,
+			"signs": [],
+			"story_postcards": [
+				"buttonbud_h2",
+				"buttonbud_h4",
+				"pebblepaw_h2",
+				"pebblepaw_h5",
+				"puffmoss_h2"
+			],
+			"visit_aff_t": {
+				"buttonbud": 150.0,
+				"honeyhum": 100000.0,
+				"pebblepaw": 210.0,
+				"puffmoss": 80000.0
+			},
+			"waiting": [
+				"pebblepaw_h4"
+			]
+		},
+		{
+			"affection": {
+				"bellkin": 0,
+				"buttonbud": 31,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 1,
+				"moonpuff": 0,
+				"pebblepaw": 46,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 22
+			},
+			"clues": 22,
+			"cousins": {},
+			"hearts": {
+				"bellkin": 0,
+				"buttonbud": 4,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 5,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 3
+			},
+			"mysteries": {
+				"bellkin": [
+					110000.0,
+					122150.87898004179
+				],
+				"capling": [
+					1000.0,
+					21200.261818856874
+				],
+				"dandelfluff": [
+					110000.0,
+					121996.28813336499
+				],
+				"fernwhisk": [
+					1000.0,
+					9242.864810627394
+				],
+				"glowmote": [
+					110000.0,
+					131146.37409807925
+				],
+				"honeyhum": [
+					1000.0,
+					8348.724826907506
+				],
+				"moonpuff": [
+					110000.0,
+					127896.90740823082
+				],
+				"primpip": [
+					110000.0,
+					117537.16619782078
+				],
+				"puddlewump": [
+					110000.0,
+					126680.15832131478
+				]
+			},
+			"nests": {
+				"buttonbud": 81000.0,
+				"pebblepaw": 81000.0,
+				"puffmoss": 81000.0
+			},
+			"scene": {
+				"cast": [],
+				"r": 1,
+				"scene": null
+			},
+			"signs": [],
+			"story_postcards": [
+				"buttonbud_h2",
+				"buttonbud_h4",
+				"pebblepaw_h2",
+				"pebblepaw_h5",
+				"puffmoss_h2"
+			],
+			"visit_aff_t": {
+				"buttonbud": 150.0,
+				"honeyhum": 100000.0,
+				"pebblepaw": 210.0,
+				"puffmoss": 80000.0
+			},
+			"waiting": [
+				"pebblepaw_h4"
+			]
+		},
+		{
+			"affection": {
+				"bellkin": 0,
+				"buttonbud": 31,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 1,
+				"moonpuff": 0,
+				"pebblepaw": 46,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 22
+			},
+			"clues": 22,
+			"cousins": {},
+			"hearts": {
+				"bellkin": 0,
+				"buttonbud": 4,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 5,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 3
+			},
+			"mysteries": {
+				"bellkin": [
+					110000.0,
+					122150.87898004179
+				],
+				"capling": [
+					1000.0,
+					21200.261818856874
+				],
+				"dandelfluff": [
+					110000.0,
+					121996.28813336499
+				],
+				"fernwhisk": [
+					1000.0,
+					9242.864810627394
+				],
+				"glowmote": [
+					110000.0,
+					131146.37409807925
+				],
+				"honeyhum": [
+					1000.0,
+					8348.724826907506
+				],
+				"moonpuff": [
+					110000.0,
+					127896.90740823082
+				],
+				"primpip": [
+					110000.0,
+					117537.16619782078
+				],
+				"puddlewump": [
+					110000.0,
+					126680.15832131478
+				]
+			},
+			"nests": {
+				"buttonbud": 81000.0,
+				"pebblepaw": 81000.0,
+				"puffmoss": 81000.0
+			},
+			"scene": null,
+			"signs": [],
+			"story_postcards": [
+				"buttonbud_h2",
+				"buttonbud_h4",
+				"pebblepaw_h2",
+				"pebblepaw_h5",
+				"puffmoss_h2"
+			],
+			"visit_aff_t": {
+				"buttonbud": 150.0,
+				"honeyhum": 100000.0,
+				"pebblepaw": 210.0,
+				"puffmoss": 80000.0
+			},
+			"waiting": [
+				"pebblepaw_h4"
+			]
+		},
+		{
+			"affection": {
+				"bellkin": 0,
+				"buttonbud": 31,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 1,
+				"moonpuff": 0,
+				"pebblepaw": 46,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 22
+			},
+			"clues": 22,
+			"cousins": {},
+			"hearts": {
+				"bellkin": 0,
+				"buttonbud": 4,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 5,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 3
+			},
+			"mysteries": {
+				"bellkin": [
+					110000.0,
+					122150.87898004179
+				],
+				"capling": [
+					1000.0,
+					21200.261818856874
+				],
+				"dandelfluff": [
+					110000.0,
+					121996.28813336499
+				],
+				"fernwhisk": [
+					1000.0,
+					9242.864810627394
+				],
+				"glowmote": [
+					110000.0,
+					131146.37409807925
+				],
+				"honeyhum": [
+					1000.0,
+					8348.724826907506
+				],
+				"moonpuff": [
+					110000.0,
+					127896.90740823082
+				],
+				"primpip": [
+					110000.0,
+					117537.16619782078
+				],
+				"puddlewump": [
+					110000.0,
+					126680.15832131478
+				]
+			},
+			"nests": {
+				"buttonbud": 81000.0,
+				"pebblepaw": 81000.0,
+				"puffmoss": 81000.0
+			},
+			"scene": {
+				"cast": [],
+				"r": 2,
+				"scene": null
+			},
+			"signs": [],
+			"story_postcards": [
+				"buttonbud_h2",
+				"buttonbud_h4",
+				"pebblepaw_h2",
+				"pebblepaw_h5",
+				"puffmoss_h2"
+			],
+			"visit_aff_t": {
+				"buttonbud": 150.0,
+				"honeyhum": 100000.0,
+				"pebblepaw": 210.0,
+				"puffmoss": 80000.0
+			},
+			"waiting": [
+				"pebblepaw_h4"
+			]
+		},
+		{
+			"affection": {
+				"bellkin": 0,
+				"buttonbud": 31,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 1,
+				"moonpuff": 0,
+				"pebblepaw": 46,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 22
+			},
+			"clues": 22,
+			"cousins": {},
+			"hearts": {
+				"bellkin": 0,
+				"buttonbud": 4,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 5,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 3
+			},
+			"mysteries": {
+				"bellkin": [
+					110000.0,
+					122150.87898004179
+				],
+				"capling": [
+					1000.0,
+					21200.261818856874
+				],
+				"dandelfluff": [
+					110000.0,
+					121996.28813336499
+				],
+				"fernwhisk": [
+					1000.0,
+					9242.864810627394
+				],
+				"glowmote": [
+					110000.0,
+					131146.37409807925
+				],
+				"honeyhum": [
+					1000.0,
+					8348.724826907506
+				],
+				"moonpuff": [
+					110000.0,
+					127896.90740823082
+				],
+				"primpip": [
+					110000.0,
+					117537.16619782078
+				],
+				"puddlewump": [
+					110000.0,
+					126680.15832131478
+				]
+			},
+			"nests": {
+				"buttonbud": 81000.0,
+				"pebblepaw": 81000.0,
+				"puffmoss": 81000.0
+			},
+			"scene": {
+				"cast": [],
+				"r": 3,
+				"scene": null
+			},
+			"signs": [],
+			"story_postcards": [
+				"buttonbud_h2",
+				"buttonbud_h4",
+				"pebblepaw_h2",
+				"pebblepaw_h5",
+				"puffmoss_h2"
+			],
+			"visit_aff_t": {
+				"buttonbud": 150.0,
+				"honeyhum": 100000.0,
+				"pebblepaw": 210.0,
+				"puffmoss": 80000.0
+			},
+			"waiting": [
+				"pebblepaw_h4"
+			]
+		},
+		{
+			"affection": {
+				"bellkin": 0,
+				"buttonbud": 31,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 1,
+				"moonpuff": 0,
+				"pebblepaw": 46,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 22
+			},
+			"clues": 22,
+			"cousins": {},
+			"hearts": {
+				"bellkin": 0,
+				"buttonbud": 4,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 5,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 3
+			},
+			"mysteries": {
+				"bellkin": [
+					110000.0,
+					122150.87898004179
+				],
+				"capling": [
+					1000.0,
+					21200.261818856874
+				],
+				"dandelfluff": [
+					110000.0,
+					121996.28813336499
+				],
+				"fernwhisk": [
+					1000.0,
+					9242.864810627394
+				],
+				"glowmote": [
+					110000.0,
+					131146.37409807925
+				],
+				"honeyhum": [
+					1000.0,
+					8348.724826907506
+				],
+				"moonpuff": [
+					110000.0,
+					127896.90740823082
+				],
+				"primpip": [
+					110000.0,
+					117537.16619782078
+				],
+				"puddlewump": [
+					110000.0,
+					126680.15832131478
+				]
+			},
+			"nests": {
+				"buttonbud": 81000.0,
+				"pebblepaw": 81000.0,
+				"puffmoss": 81000.0
+			},
+			"scene": {
+				"cast": [],
+				"r": 4,
+				"scene": null
+			},
+			"signs": [],
+			"story_postcards": [
+				"buttonbud_h2",
+				"buttonbud_h4",
+				"pebblepaw_h2",
+				"pebblepaw_h5",
+				"puffmoss_h2"
+			],
+			"visit_aff_t": {
+				"buttonbud": 150.0,
+				"honeyhum": 100000.0,
+				"pebblepaw": 210.0,
+				"puffmoss": 80000.0
+			},
+			"waiting": [
+				"pebblepaw_h4"
+			]
+		},
+		{
+			"affection": {
+				"bellkin": 0,
+				"buttonbud": 31,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 1,
+				"moonpuff": 0,
+				"pebblepaw": 46,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 22
+			},
+			"clues": 22,
+			"cousins": {},
+			"hearts": {
+				"bellkin": 0,
+				"buttonbud": 4,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 5,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 3
+			},
+			"mysteries": {
+				"bellkin": [
+					110000.0,
+					122150.87898004179
+				],
+				"capling": [
+					1000.0,
+					21200.261818856874
+				],
+				"dandelfluff": [
+					110000.0,
+					121996.28813336499
+				],
+				"fernwhisk": [
+					1000.0,
+					9242.864810627394
+				],
+				"glowmote": [
+					110000.0,
+					131146.37409807925
+				],
+				"honeyhum": [
+					1000.0,
+					8348.724826907506
+				],
+				"moonpuff": [
+					110000.0,
+					127896.90740823082
+				],
+				"primpip": [
+					110000.0,
+					117537.16619782078
+				],
+				"puddlewump": [
+					110000.0,
+					126680.15832131478
+				]
+			},
+			"nests": {
+				"buttonbud": 81000.0,
+				"pebblepaw": 81000.0,
+				"puffmoss": 81000.0
+			},
+			"scene": {
+				"cast": [],
+				"r": 5,
+				"scene": null
+			},
+			"signs": [],
+			"story_postcards": [
+				"buttonbud_h2",
+				"buttonbud_h4",
+				"pebblepaw_h2",
+				"pebblepaw_h5",
+				"puffmoss_h2"
+			],
+			"visit_aff_t": {
+				"buttonbud": 150.0,
+				"honeyhum": 100000.0,
+				"pebblepaw": 210.0,
+				"puffmoss": 80000.0
+			},
+			"waiting": [
+				"pebblepaw_h4"
+			]
+		},
+		{
+			"affection": {
+				"bellkin": 0,
+				"buttonbud": 31,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 1,
+				"moonpuff": 0,
+				"pebblepaw": 46,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 22
+			},
+			"clues": 22,
+			"cousins": {},
+			"hearts": {
+				"bellkin": 0,
+				"buttonbud": 4,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 5,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 3
+			},
+			"mysteries": {
+				"bellkin": [
+					110000.0,
+					122150.87898004179
+				],
+				"capling": [
+					1000.0,
+					21200.261818856874
+				],
+				"dandelfluff": [
+					110000.0,
+					121996.28813336499
+				],
+				"fernwhisk": [
+					1000.0,
+					9242.864810627394
+				],
+				"glowmote": [
+					110000.0,
+					131146.37409807925
+				],
+				"honeyhum": [
+					1000.0,
+					8348.724826907506
+				],
+				"moonpuff": [
+					110000.0,
+					127896.90740823082
+				],
+				"primpip": [
+					110000.0,
+					117537.16619782078
+				],
+				"puddlewump": [
+					110000.0,
+					126680.15832131478
+				]
+			},
+			"nests": {
+				"buttonbud": 81000.0,
+				"pebblepaw": 81000.0,
+				"puffmoss": 81000.0
+			},
+			"scene": {
+				"cast": [
+					"honeyhum",
+					"pebblepaw",
+					"buttonbud"
+				],
+				"r": 6,
+				"scene": "nap_pile"
+			},
+			"signs": [],
+			"story_postcards": [
+				"buttonbud_h2",
+				"buttonbud_h4",
+				"pebblepaw_h2",
+				"pebblepaw_h5",
+				"puffmoss_h2"
+			],
+			"visit_aff_t": {
+				"buttonbud": 150.0,
+				"honeyhum": 100000.0,
+				"pebblepaw": 210.0,
+				"puffmoss": 80000.0
+			},
+			"waiting": [
+				"pebblepaw_h4"
+			]
+		},
+		{
+			"affection": {
+				"bellkin": 0,
+				"buttonbud": 31,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 1,
+				"moonpuff": 0,
+				"pebblepaw": 46,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 22
+			},
+			"clues": 22,
+			"cousins": {},
+			"hearts": {
+				"bellkin": 0,
+				"buttonbud": 4,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 5,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 3
+			},
+			"mysteries": {
+				"bellkin": [
+					110000.0,
+					122150.87898004179
+				],
+				"capling": [
+					1000.0,
+					21200.261818856874
+				],
+				"dandelfluff": [
+					110000.0,
+					121996.28813336499
+				],
+				"fernwhisk": [
+					1000.0,
+					9242.864810627394
+				],
+				"glowmote": [
+					110000.0,
+					131146.37409807925
+				],
+				"honeyhum": [
+					1000.0,
+					8348.724826907506
+				],
+				"moonpuff": [
+					110000.0,
+					127896.90740823082
+				],
+				"primpip": [
+					110000.0,
+					117537.16619782078
+				],
+				"puddlewump": [
+					110000.0,
+					126680.15832131478
+				]
+			},
+			"nests": {
+				"buttonbud": 81000.0,
+				"pebblepaw": 81000.0,
+				"puffmoss": 81000.0
+			},
+			"scene": {
+				"cast": [
+					"buttonbud",
+					"honeyhum"
+				],
+				"r": 7,
+				"scene": "flower_crowns"
+			},
+			"signs": [],
+			"story_postcards": [
+				"buttonbud_h2",
+				"buttonbud_h4",
+				"pebblepaw_h2",
+				"pebblepaw_h5",
+				"puffmoss_h2"
+			],
+			"visit_aff_t": {
+				"buttonbud": 150.0,
+				"honeyhum": 100000.0,
+				"pebblepaw": 210.0,
+				"puffmoss": 80000.0
+			},
+			"waiting": [
+				"pebblepaw_h4"
+			]
+		},
+		{
+			"affection": {
+				"bellkin": 0,
+				"buttonbud": 31,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 1,
+				"moonpuff": 0,
+				"pebblepaw": 46,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 22
+			},
+			"clues": 22,
+			"cousins": {},
+			"hearts": {
+				"bellkin": 0,
+				"buttonbud": 4,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 5,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 3
+			},
+			"mysteries": {
+				"bellkin": [
+					110000.0,
+					122150.87898004179
+				],
+				"capling": [
+					1000.0,
+					21200.261818856874
+				],
+				"dandelfluff": [
+					110000.0,
+					121996.28813336499
+				],
+				"fernwhisk": [
+					1000.0,
+					9242.864810627394
+				],
+				"glowmote": [
+					110000.0,
+					131146.37409807925
+				],
+				"honeyhum": [
+					1000.0,
+					8348.724826907506
+				],
+				"moonpuff": [
+					110000.0,
+					127896.90740823082
+				],
+				"primpip": [
+					110000.0,
+					117537.16619782078
+				],
+				"puddlewump": [
+					110000.0,
+					126680.15832131478
+				]
+			},
+			"nests": {
+				"buttonbud": 81000.0,
+				"pebblepaw": 81000.0,
+				"puffmoss": 81000.0
+			},
+			"scene": null,
+			"signs": [],
+			"story_postcards": [
+				"buttonbud_h2",
+				"buttonbud_h4",
+				"pebblepaw_h2",
+				"pebblepaw_h5",
+				"puffmoss_h2"
+			],
+			"visit_aff_t": {
+				"buttonbud": 150.0,
+				"honeyhum": 100000.0,
+				"pebblepaw": 210.0,
+				"puffmoss": 80000.0
+			},
+			"waiting": [
+				"pebblepaw_h4"
+			]
+		},
+		{
+			"affection": {
+				"bellkin": 0,
+				"buttonbud": 31,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 1,
+				"glowmote": 0,
+				"honeyhum": 1,
+				"moonpuff": 0,
+				"pebblepaw": 46,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 22
+			},
+			"clues": 22,
+			"cousins": {},
+			"hearts": {
+				"bellkin": 0,
+				"buttonbud": 4,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 5,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 3
+			},
+			"mysteries": {
+				"bellkin": [
+					110000.0,
+					122150.87898004179
+				],
+				"capling": [
+					1000.0,
+					21200.261818856874
+				],
+				"dandelfluff": [
+					110000.0,
+					121996.28813336499
+				],
+				"fernwhisk": [
+					1000.0,
+					9242.864810627394
+				],
+				"glowmote": [
+					110000.0,
+					131146.37409807925
+				],
+				"honeyhum": [
+					1000.0,
+					8348.724826907506
+				],
+				"moonpuff": [
+					110000.0,
+					127896.90740823082
+				],
+				"primpip": [
+					110000.0,
+					117537.16619782078
+				],
+				"puddlewump": [
+					110000.0,
+					126680.15832131478
+				]
+			},
+			"nests": {
+				"buttonbud": 81000.0,
+				"pebblepaw": 81000.0,
+				"puffmoss": 81000.0
+			},
+			"scene": null,
+			"signs": [],
+			"story_postcards": [
+				"buttonbud_h2",
+				"buttonbud_h4",
+				"pebblepaw_h2",
+				"pebblepaw_h5",
+				"puffmoss_h2"
+			],
+			"visit_aff_t": {
+				"buttonbud": 150.0,
+				"fernwhisk": 200000.0,
+				"honeyhum": 100000.0,
+				"pebblepaw": 210.0,
+				"puffmoss": 80000.0
+			},
+			"waiting": [
+				"pebblepaw_h4"
+			]
+		},
+		{
+			"affection": {
+				"bellkin": 0,
+				"buttonbud": 31,
+				"capling": 0,
+				"dandelfluff": 1,
+				"fernwhisk": 1,
+				"glowmote": 0,
+				"honeyhum": 1,
+				"moonpuff": 0,
+				"pebblepaw": 46,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 22
+			},
+			"clues": 22,
+			"cousins": {},
+			"hearts": {
+				"bellkin": 0,
+				"buttonbud": 4,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 5,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 3
+			},
+			"mysteries": {
+				"bellkin": [
+					110000.0,
+					122150.87898004179
+				],
+				"capling": [
+					1000.0,
+					21200.261818856874
+				],
+				"dandelfluff": [
+					110000.0,
+					121996.28813336499
+				],
+				"fernwhisk": [
+					1000.0,
+					9242.864810627394
+				],
+				"glowmote": [
+					110000.0,
+					131146.37409807925
+				],
+				"honeyhum": [
+					1000.0,
+					8348.724826907506
+				],
+				"moonpuff": [
+					110000.0,
+					127896.90740823082
+				],
+				"primpip": [
+					110000.0,
+					117537.16619782078
+				],
+				"puddlewump": [
+					110000.0,
+					126680.15832131478
+				]
+			},
+			"nests": {
+				"buttonbud": 81000.0,
+				"pebblepaw": 81000.0,
+				"puffmoss": 81000.0
+			},
+			"scene": null,
+			"signs": [],
+			"story_postcards": [
+				"buttonbud_h2",
+				"buttonbud_h4",
+				"pebblepaw_h2",
+				"pebblepaw_h5",
+				"puffmoss_h2"
+			],
+			"visit_aff_t": {
+				"buttonbud": 150.0,
+				"dandelfluff": 200100.0,
+				"fernwhisk": 200000.0,
+				"honeyhum": 100000.0,
+				"pebblepaw": 210.0,
+				"puffmoss": 80000.0
+			},
+			"waiting": [
+				"pebblepaw_h4"
+			]
+		},
+		{
+			"affection": {
+				"bellkin": 1,
+				"buttonbud": 31,
+				"capling": 0,
+				"dandelfluff": 1,
+				"fernwhisk": 1,
+				"glowmote": 0,
+				"honeyhum": 1,
+				"moonpuff": 0,
+				"pebblepaw": 46,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 22
+			},
+			"clues": 22,
+			"cousins": {},
+			"hearts": {
+				"bellkin": 0,
+				"buttonbud": 4,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 5,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 3
+			},
+			"mysteries": {
+				"bellkin": [
+					110000.0,
+					122150.87898004179
+				],
+				"capling": [
+					1000.0,
+					21200.261818856874
+				],
+				"dandelfluff": [
+					110000.0,
+					121996.28813336499
+				],
+				"fernwhisk": [
+					1000.0,
+					9242.864810627394
+				],
+				"glowmote": [
+					110000.0,
+					131146.37409807925
+				],
+				"honeyhum": [
+					1000.0,
+					8348.724826907506
+				],
+				"moonpuff": [
+					110000.0,
+					127896.90740823082
+				],
+				"primpip": [
+					110000.0,
+					117537.16619782078
+				],
+				"puddlewump": [
+					110000.0,
+					126680.15832131478
+				]
+			},
+			"nests": {
+				"buttonbud": 81000.0,
+				"pebblepaw": 81000.0,
+				"puffmoss": 81000.0
+			},
+			"scene": null,
+			"signs": [],
+			"story_postcards": [
+				"buttonbud_h2",
+				"buttonbud_h4",
+				"pebblepaw_h2",
+				"pebblepaw_h5",
+				"puffmoss_h2"
+			],
+			"visit_aff_t": {
+				"bellkin": 200200.0,
+				"buttonbud": 150.0,
+				"dandelfluff": 200100.0,
+				"fernwhisk": 200000.0,
+				"honeyhum": 100000.0,
+				"pebblepaw": 210.0,
+				"puffmoss": 80000.0
+			},
+			"waiting": [
+				"pebblepaw_h4"
+			]
+		},
+		{
+			"affection": {
+				"bellkin": 1,
+				"buttonbud": 31,
+				"capling": 0,
+				"dandelfluff": 1,
+				"fernwhisk": 1,
+				"glowmote": 0,
+				"honeyhum": 1,
+				"moonpuff": 0,
+				"pebblepaw": 46,
+				"primpip": 1,
+				"puddlewump": 0,
+				"puffmoss": 22
+			},
+			"clues": 22,
+			"cousins": {},
+			"hearts": {
+				"bellkin": 0,
+				"buttonbud": 4,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 5,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 3
+			},
+			"mysteries": {
+				"bellkin": [
+					110000.0,
+					122150.87898004179
+				],
+				"capling": [
+					1000.0,
+					21200.261818856874
+				],
+				"dandelfluff": [
+					110000.0,
+					121996.28813336499
+				],
+				"fernwhisk": [
+					1000.0,
+					9242.864810627394
+				],
+				"glowmote": [
+					110000.0,
+					131146.37409807925
+				],
+				"honeyhum": [
+					1000.0,
+					8348.724826907506
+				],
+				"moonpuff": [
+					110000.0,
+					127896.90740823082
+				],
+				"primpip": [
+					110000.0,
+					117537.16619782078
+				],
+				"puddlewump": [
+					110000.0,
+					126680.15832131478
+				]
+			},
+			"nests": {
+				"buttonbud": 81000.0,
+				"pebblepaw": 81000.0,
+				"puffmoss": 81000.0
+			},
+			"scene": null,
+			"signs": [],
+			"story_postcards": [
+				"buttonbud_h2",
+				"buttonbud_h4",
+				"pebblepaw_h2",
+				"pebblepaw_h5",
+				"puffmoss_h2"
+			],
+			"visit_aff_t": {
+				"bellkin": 200200.0,
+				"buttonbud": 150.0,
+				"dandelfluff": 200100.0,
+				"fernwhisk": 200000.0,
+				"honeyhum": 100000.0,
+				"pebblepaw": 210.0,
+				"primpip": 200300.0,
+				"puffmoss": 80000.0
+			},
+			"waiting": [
+				"pebblepaw_h4"
+			]
+		},
+		{
+			"affection": {
+				"bellkin": 1,
+				"buttonbud": 31,
+				"capling": 1,
+				"dandelfluff": 1,
+				"fernwhisk": 1,
+				"glowmote": 0,
+				"honeyhum": 1,
+				"moonpuff": 0,
+				"pebblepaw": 46,
+				"primpip": 1,
+				"puddlewump": 0,
+				"puffmoss": 22
+			},
+			"clues": 22,
+			"cousins": {},
+			"hearts": {
+				"bellkin": 0,
+				"buttonbud": 4,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 5,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 3
+			},
+			"mysteries": {
+				"bellkin": [
+					110000.0,
+					122150.87898004179
+				],
+				"capling": [
+					1000.0,
+					21200.261818856874
+				],
+				"dandelfluff": [
+					110000.0,
+					121996.28813336499
+				],
+				"fernwhisk": [
+					1000.0,
+					9242.864810627394
+				],
+				"glowmote": [
+					110000.0,
+					131146.37409807925
+				],
+				"honeyhum": [
+					1000.0,
+					8348.724826907506
+				],
+				"moonpuff": [
+					110000.0,
+					127896.90740823082
+				],
+				"primpip": [
+					110000.0,
+					117537.16619782078
+				],
+				"puddlewump": [
+					110000.0,
+					126680.15832131478
+				]
+			},
+			"nests": {
+				"buttonbud": 81000.0,
+				"pebblepaw": 81000.0,
+				"puffmoss": 81000.0
+			},
+			"scene": null,
+			"signs": [],
+			"story_postcards": [
+				"buttonbud_h2",
+				"buttonbud_h4",
+				"pebblepaw_h2",
+				"pebblepaw_h5",
+				"puffmoss_h2"
+			],
+			"visit_aff_t": {
+				"bellkin": 200200.0,
+				"buttonbud": 150.0,
+				"capling": 200400.0,
+				"dandelfluff": 200100.0,
+				"fernwhisk": 200000.0,
+				"honeyhum": 100000.0,
+				"pebblepaw": 210.0,
+				"primpip": 200300.0,
+				"puffmoss": 80000.0
+			},
+			"waiting": [
+				"pebblepaw_h4"
+			]
+		},
+		{
+			"affection": {
+				"bellkin": 1,
+				"buttonbud": 31,
+				"capling": 1,
+				"dandelfluff": 1,
+				"fernwhisk": 1,
+				"glowmote": 0,
+				"honeyhum": 1,
+				"moonpuff": 0,
+				"pebblepaw": 46,
+				"primpip": 1,
+				"puddlewump": 1,
+				"puffmoss": 22
+			},
+			"clues": 22,
+			"cousins": {},
+			"hearts": {
+				"bellkin": 0,
+				"buttonbud": 4,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 5,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 3
+			},
+			"mysteries": {
+				"bellkin": [
+					110000.0,
+					122150.87898004179
+				],
+				"capling": [
+					1000.0,
+					21200.261818856874
+				],
+				"dandelfluff": [
+					110000.0,
+					121996.28813336499
+				],
+				"fernwhisk": [
+					1000.0,
+					9242.864810627394
+				],
+				"glowmote": [
+					110000.0,
+					131146.37409807925
+				],
+				"honeyhum": [
+					1000.0,
+					8348.724826907506
+				],
+				"moonpuff": [
+					110000.0,
+					127896.90740823082
+				],
+				"primpip": [
+					110000.0,
+					117537.16619782078
+				],
+				"puddlewump": [
+					110000.0,
+					126680.15832131478
+				]
+			},
+			"nests": {
+				"buttonbud": 81000.0,
+				"pebblepaw": 81000.0,
+				"puffmoss": 81000.0
+			},
+			"scene": null,
+			"signs": [],
+			"story_postcards": [
+				"buttonbud_h2",
+				"buttonbud_h4",
+				"pebblepaw_h2",
+				"pebblepaw_h4",
+				"pebblepaw_h5",
+				"puffmoss_h2"
+			],
+			"visit_aff_t": {
+				"bellkin": 200200.0,
+				"buttonbud": 150.0,
+				"capling": 200400.0,
+				"dandelfluff": 200100.0,
+				"fernwhisk": 200000.0,
+				"honeyhum": 100000.0,
+				"pebblepaw": 210.0,
+				"primpip": 200300.0,
+				"puddlewump": 200500.0,
+				"puffmoss": 80000.0
+			},
+			"waiting": []
+		},
+		{
+			"affection": {
+				"bellkin": 1,
+				"buttonbud": 31,
+				"capling": 1,
+				"dandelfluff": 1,
+				"fernwhisk": 1,
+				"glowmote": 1,
+				"honeyhum": 1,
+				"moonpuff": 0,
+				"pebblepaw": 46,
+				"primpip": 1,
+				"puddlewump": 1,
+				"puffmoss": 22
+			},
+			"clues": 22,
+			"cousins": {},
+			"hearts": {
+				"bellkin": 0,
+				"buttonbud": 4,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 5,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 3
+			},
+			"mysteries": {
+				"bellkin": [
+					110000.0,
+					122150.87898004179
+				],
+				"capling": [
+					1000.0,
+					21200.261818856874
+				],
+				"dandelfluff": [
+					110000.0,
+					121996.28813336499
+				],
+				"fernwhisk": [
+					1000.0,
+					9242.864810627394
+				],
+				"glowmote": [
+					110000.0,
+					131146.37409807925
+				],
+				"honeyhum": [
+					1000.0,
+					8348.724826907506
+				],
+				"moonpuff": [
+					110000.0,
+					127896.90740823082
+				],
+				"primpip": [
+					110000.0,
+					117537.16619782078
+				],
+				"puddlewump": [
+					110000.0,
+					126680.15832131478
+				]
+			},
+			"nests": {
+				"buttonbud": 81000.0,
+				"pebblepaw": 81000.0,
+				"puffmoss": 81000.0
+			},
+			"scene": null,
+			"signs": [],
+			"story_postcards": [
+				"buttonbud_h2",
+				"buttonbud_h4",
+				"pebblepaw_h2",
+				"pebblepaw_h4",
+				"pebblepaw_h5",
+				"puffmoss_h2"
+			],
+			"visit_aff_t": {
+				"bellkin": 200200.0,
+				"buttonbud": 150.0,
+				"capling": 200400.0,
+				"dandelfluff": 200100.0,
+				"fernwhisk": 200000.0,
+				"glowmote": 200600.0,
+				"honeyhum": 100000.0,
+				"pebblepaw": 210.0,
+				"primpip": 200300.0,
+				"puddlewump": 200500.0,
+				"puffmoss": 80000.0
+			},
+			"waiting": []
+		},
+		{
+			"affection": {
+				"bellkin": 1,
+				"buttonbud": 31,
+				"capling": 1,
+				"dandelfluff": 1,
+				"fernwhisk": 1,
+				"glowmote": 1,
+				"honeyhum": 1,
+				"moonpuff": 1,
+				"pebblepaw": 46,
+				"primpip": 1,
+				"puddlewump": 1,
+				"puffmoss": 22
+			},
+			"clues": 22,
+			"cousins": {},
+			"hearts": {
+				"bellkin": 0,
+				"buttonbud": 4,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 5,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 3
+			},
+			"mysteries": {
+				"bellkin": [
+					110000.0,
+					122150.87898004179
+				],
+				"capling": [
+					1000.0,
+					21200.261818856874
+				],
+				"dandelfluff": [
+					110000.0,
+					121996.28813336499
+				],
+				"fernwhisk": [
+					1000.0,
+					9242.864810627394
+				],
+				"glowmote": [
+					110000.0,
+					131146.37409807925
+				],
+				"honeyhum": [
+					1000.0,
+					8348.724826907506
+				],
+				"moonpuff": [
+					110000.0,
+					127896.90740823082
+				],
+				"primpip": [
+					110000.0,
+					117537.16619782078
+				],
+				"puddlewump": [
+					110000.0,
+					126680.15832131478
+				]
+			},
+			"nests": {
+				"buttonbud": 81000.0,
+				"pebblepaw": 81000.0,
+				"puffmoss": 81000.0
+			},
+			"scene": null,
+			"signs": [],
+			"story_postcards": [
+				"buttonbud_h2",
+				"buttonbud_h4",
+				"pebblepaw_h2",
+				"pebblepaw_h4",
+				"pebblepaw_h5",
+				"puffmoss_h2"
+			],
+			"visit_aff_t": {
+				"bellkin": 200200.0,
+				"buttonbud": 150.0,
+				"capling": 200400.0,
+				"dandelfluff": 200100.0,
+				"fernwhisk": 200000.0,
+				"glowmote": 200600.0,
+				"honeyhum": 100000.0,
+				"moonpuff": 200700.0,
+				"pebblepaw": 210.0,
+				"primpip": 200300.0,
+				"puddlewump": 200500.0,
+				"puffmoss": 80000.0
+			},
+			"waiting": []
+		},
+		{
+			"affection": {
+				"bellkin": 1,
+				"buttonbud": 31,
+				"capling": 1,
+				"dandelfluff": 1,
+				"fernwhisk": 1,
+				"glowmote": 1,
+				"honeyhum": 1,
+				"moonpuff": 1,
+				"pebblepaw": 46,
+				"primpip": 1,
+				"puddlewump": 1,
+				"puffmoss": 42
+			},
+			"clues": 22,
+			"cousins": {},
+			"hearts": {
+				"bellkin": 0,
+				"buttonbud": 4,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 5,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 5
+			},
+			"mysteries": {
+				"bellkin": [
+					110000.0,
+					122150.87898004179
+				],
+				"capling": [
+					1000.0,
+					21200.261818856874
+				],
+				"dandelfluff": [
+					110000.0,
+					121996.28813336499
+				],
+				"fernwhisk": [
+					1000.0,
+					9242.864810627394
+				],
+				"glowmote": [
+					110000.0,
+					131146.37409807925
+				],
+				"honeyhum": [
+					1000.0,
+					8348.724826907506
+				],
+				"moonpuff": [
+					110000.0,
+					127896.90740823082
+				],
+				"primpip": [
+					110000.0,
+					117537.16619782078
+				],
+				"puddlewump": [
+					110000.0,
+					126680.15832131478
+				],
+				"twilight_puffmoss": [
+					210000.0,
+					318972.2483384932
+				]
+			},
+			"nests": {
+				"buttonbud": 81000.0,
+				"pebblepaw": 81000.0,
+				"puffmoss": 81000.0
+			},
+			"scene": null,
+			"signs": [
+				[
+					"twilight_puffmoss",
+					0,
+					215509.68925029333
+				],
+				[
+					"twilight_puffmoss",
+					1,
+					318972.2483384932
+				]
+			],
+			"story_postcards": [
+				"buttonbud_h2",
+				"buttonbud_h4",
+				"pebblepaw_h2",
+				"pebblepaw_h4",
+				"pebblepaw_h5",
+				"puffmoss_h2",
+				"puffmoss_h4",
+				"puffmoss_h5"
+			],
+			"visit_aff_t": {
+				"bellkin": 200200.0,
+				"buttonbud": 150.0,
+				"capling": 200400.0,
+				"dandelfluff": 200100.0,
+				"fernwhisk": 200000.0,
+				"glowmote": 200600.0,
+				"honeyhum": 100000.0,
+				"moonpuff": 200700.0,
+				"pebblepaw": 210.0,
+				"primpip": 200300.0,
+				"puddlewump": 200500.0,
+				"puffmoss": 80000.0
+			},
+			"waiting": []
+		},
+		{
+			"affection": {
+				"bellkin": 1,
+				"buttonbud": 31,
+				"capling": 1,
+				"dandelfluff": 1,
+				"fernwhisk": 1,
+				"glowmote": 1,
+				"honeyhum": 1,
+				"moonpuff": 1,
+				"pebblepaw": 46,
+				"primpip": 1,
+				"puddlewump": 1,
+				"puffmoss": 42
+			},
+			"clues": 22,
+			"cousins": {},
+			"hearts": {
+				"bellkin": 0,
+				"buttonbud": 4,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 5,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 5
+			},
+			"mysteries": {
+				"bellkin": [
+					110000.0,
+					122150.87898004179
+				],
+				"capling": [
+					1000.0,
+					21200.261818856874
+				],
+				"dandelfluff": [
+					110000.0,
+					121996.28813336499
+				],
+				"fernwhisk": [
+					1000.0,
+					9242.864810627394
+				],
+				"glowmote": [
+					110000.0,
+					131146.37409807925
+				],
+				"honeyhum": [
+					1000.0,
+					8348.724826907506
+				],
+				"moonpuff": [
+					110000.0,
+					127896.90740823082
+				],
+				"mossback_pebblepaw": [
+					215000.0,
+					314063.7352003956
+				],
+				"primpip": [
+					110000.0,
+					117537.16619782078
+				],
+				"puddlewump": [
+					110000.0,
+					126680.15832131478
+				],
+				"twilight_puffmoss": [
+					210000.0,
+					318972.2483384932
+				]
+			},
+			"nests": {
+				"buttonbud": 81000.0,
+				"pebblepaw": 81000.0,
+				"puffmoss": 81000.0
+			},
+			"scene": null,
+			"signs": [
+				[
+					"twilight_puffmoss",
+					0,
+					215509.68925029333
+				],
+				[
+					"mossback_pebblepaw",
+					0,
+					226366.9613119806
+				],
+				[
+					"mossback_pebblepaw",
+					1,
+					314063.7352003956
+				],
+				[
+					"twilight_puffmoss",
+					1,
+					318972.2483384932
+				]
+			],
+			"story_postcards": [
+				"buttonbud_h2",
+				"buttonbud_h4",
+				"pebblepaw_h2",
+				"pebblepaw_h4",
+				"pebblepaw_h5",
+				"puffmoss_h2",
+				"puffmoss_h4",
+				"puffmoss_h5"
+			],
+			"visit_aff_t": {
+				"bellkin": 200200.0,
+				"buttonbud": 150.0,
+				"capling": 200400.0,
+				"dandelfluff": 200100.0,
+				"fernwhisk": 200000.0,
+				"glowmote": 200600.0,
+				"honeyhum": 100000.0,
+				"moonpuff": 200700.0,
+				"pebblepaw": 210.0,
+				"primpip": 200300.0,
+				"puddlewump": 200500.0,
+				"puffmoss": 80000.0
+			},
+			"waiting": []
+		},
+		{
+			"affection": {
+				"bellkin": 1,
+				"buttonbud": 31,
+				"capling": 1,
+				"dandelfluff": 1,
+				"fernwhisk": 1,
+				"glowmote": 1,
+				"honeyhum": 1,
+				"moonpuff": 1,
+				"pebblepaw": 46,
+				"primpip": 1,
+				"puddlewump": 1,
+				"puffmoss": 42
+			},
+			"clues": 24,
+			"cousins": {},
+			"hearts": {
+				"bellkin": 0,
+				"buttonbud": 4,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 5,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 5
+			},
+			"mysteries": {
+				"bellkin": [
+					110000.0,
+					122150.87898004179
+				],
+				"capling": [
+					1000.0,
+					21200.261818856874
+				],
+				"dandelfluff": [
+					110000.0,
+					121996.28813336499
+				],
+				"fernwhisk": [
+					1000.0,
+					9242.864810627394
+				],
+				"glowmote": [
+					110000.0,
+					131146.37409807925
+				],
+				"honeyhum": [
+					1000.0,
+					8348.724826907506
+				],
+				"moonpuff": [
+					110000.0,
+					127896.90740823082
+				],
+				"mossback_pebblepaw": [
+					215000.0,
+					314063.7352003956
+				],
+				"primpip": [
+					110000.0,
+					117537.16619782078
+				],
+				"puddlewump": [
+					110000.0,
+					126680.15832131478
+				],
+				"twilight_puffmoss": [
+					210000.0,
+					318972.2483384932
+				]
+			},
+			"nests": {
+				"buttonbud": 81000.0,
+				"pebblepaw": 81000.0,
+				"puffmoss": 81000.0
+			},
+			"scene": null,
+			"signs": [
+				[
+					"mossback_pebblepaw",
+					1,
+					314063.7352003956
+				],
+				[
+					"twilight_puffmoss",
+					1,
+					318972.2483384932
+				]
+			],
+			"story_postcards": [
+				"buttonbud_h2",
+				"buttonbud_h4",
+				"pebblepaw_h2",
+				"pebblepaw_h4",
+				"pebblepaw_h5",
+				"puffmoss_h2",
+				"puffmoss_h4",
+				"puffmoss_h5"
+			],
+			"visit_aff_t": {
+				"bellkin": 200200.0,
+				"buttonbud": 150.0,
+				"capling": 200400.0,
+				"dandelfluff": 200100.0,
+				"fernwhisk": 200000.0,
+				"glowmote": 200600.0,
+				"honeyhum": 100000.0,
+				"moonpuff": 200700.0,
+				"pebblepaw": 210.0,
+				"primpip": 200300.0,
+				"puddlewump": 200500.0,
+				"puffmoss": 80000.0
+			},
+			"waiting": []
+		},
+		{
+			"affection": {
+				"bellkin": 1,
+				"buttonbud": 31,
+				"capling": 1,
+				"dandelfluff": 1,
+				"fernwhisk": 1,
+				"glowmote": 1,
+				"honeyhum": 1,
+				"moonpuff": 1,
+				"pebblepaw": 46,
+				"primpip": 1,
+				"puddlewump": 1,
+				"puffmoss": 42
+			},
+			"clues": 26,
+			"cousins": {},
+			"hearts": {
+				"bellkin": 0,
+				"buttonbud": 4,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 5,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 5
+			},
+			"mysteries": {
+				"bellkin": [
+					110000.0,
+					122150.87898004179
+				],
+				"capling": [
+					1000.0,
+					21200.261818856874
+				],
+				"dandelfluff": [
+					110000.0,
+					121996.28813336499
+				],
+				"fernwhisk": [
+					1000.0,
+					9242.864810627394
+				],
+				"glowmote": [
+					110000.0,
+					131146.37409807925
+				],
+				"honeyhum": [
+					1000.0,
+					8348.724826907506
+				],
+				"moonpuff": [
+					110000.0,
+					127896.90740823082
+				],
+				"mossback_pebblepaw": [
+					215000.0,
+					314063.7352003956
+				],
+				"primpip": [
+					110000.0,
+					117537.16619782078
+				],
+				"puddlewump": [
+					110000.0,
+					126680.15832131478
+				],
+				"twilight_puffmoss": [
+					210000.0,
+					318972.2483384932
+				]
+			},
+			"nests": {
+				"buttonbud": 81000.0,
+				"pebblepaw": 81000.0,
+				"puffmoss": 81000.0
+			},
+			"scene": null,
+			"signs": [],
+			"story_postcards": [
+				"buttonbud_h2",
+				"buttonbud_h4",
+				"pebblepaw_h2",
+				"pebblepaw_h4",
+				"pebblepaw_h5",
+				"puffmoss_h2",
+				"puffmoss_h4",
+				"puffmoss_h5"
+			],
+			"visit_aff_t": {
+				"bellkin": 200200.0,
+				"buttonbud": 150.0,
+				"capling": 200400.0,
+				"dandelfluff": 200100.0,
+				"fernwhisk": 200000.0,
+				"glowmote": 200600.0,
+				"honeyhum": 100000.0,
+				"moonpuff": 200700.0,
+				"pebblepaw": 210.0,
+				"primpip": 200300.0,
+				"puddlewump": 200500.0,
+				"puffmoss": 80000.0
+			},
+			"waiting": []
+		},
+		{
+			"affection": {
+				"bellkin": 1,
+				"buttonbud": 31,
+				"capling": 1,
+				"dandelfluff": 1,
+				"fernwhisk": 1,
+				"glowmote": 1,
+				"honeyhum": 1,
+				"moonpuff": 1,
+				"pebblepaw": 46,
+				"primpip": 1,
+				"puddlewump": 1,
+				"puffmoss": 43
+			},
+			"clues": 26,
+			"cousins": {
+				"twilight_puffmoss": 421200.0
+			},
+			"hearts": {
+				"bellkin": 0,
+				"buttonbud": 4,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 5,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 5
+			},
+			"mysteries": {
+				"bellkin": [
+					110000.0,
+					122150.87898004179
+				],
+				"capling": [
+					1000.0,
+					21200.261818856874
+				],
+				"dandelfluff": [
+					110000.0,
+					121996.28813336499
+				],
+				"fernwhisk": [
+					1000.0,
+					9242.864810627394
+				],
+				"glowmote": [
+					110000.0,
+					131146.37409807925
+				],
+				"honeyhum": [
+					1000.0,
+					8348.724826907506
+				],
+				"moonpuff": [
+					110000.0,
+					127896.90740823082
+				],
+				"mossback_pebblepaw": [
+					215000.0,
+					314063.7352003956
+				],
+				"primpip": [
+					110000.0,
+					117537.16619782078
+				],
+				"puddlewump": [
+					110000.0,
+					126680.15832131478
+				],
+				"twilight_puffmoss": [
+					210000.0,
+					318972.2483384932
+				]
+			},
+			"nests": {
+				"buttonbud": 81000.0,
+				"pebblepaw": 81000.0,
+				"puffmoss": 81000.0
+			},
+			"scene": null,
+			"signs": [],
+			"story_postcards": [
+				"buttonbud_h2",
+				"buttonbud_h4",
+				"pebblepaw_h2",
+				"pebblepaw_h4",
+				"pebblepaw_h5",
+				"puffmoss_h2",
+				"puffmoss_h4",
+				"puffmoss_h5"
+			],
+			"visit_aff_t": {
+				"bellkin": 200200.0,
+				"buttonbud": 150.0,
+				"capling": 200400.0,
+				"dandelfluff": 200100.0,
+				"fernwhisk": 200000.0,
+				"glowmote": 200600.0,
+				"honeyhum": 100000.0,
+				"moonpuff": 200700.0,
+				"pebblepaw": 210.0,
+				"primpip": 200300.0,
+				"puddlewump": 200500.0,
+				"puffmoss": 421200.0
+			},
+			"waiting": []
+		},
+		{
+			"affection": {
+				"bellkin": 1,
+				"buttonbud": 31,
+				"capling": 1,
+				"dandelfluff": 1,
+				"fernwhisk": 1,
+				"glowmote": 1,
+				"honeyhum": 1,
+				"moonpuff": 1,
+				"pebblepaw": 47,
+				"primpip": 1,
+				"puddlewump": 1,
+				"puffmoss": 43
+			},
+			"clues": 26,
+			"cousins": {
+				"mossback_pebblepaw": 428400.0,
+				"twilight_puffmoss": 421200.0
+			},
+			"hearts": {
+				"bellkin": 0,
+				"buttonbud": 4,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 5,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 5
+			},
+			"mysteries": {
+				"bellkin": [
+					110000.0,
+					122150.87898004179
+				],
+				"capling": [
+					1000.0,
+					21200.261818856874
+				],
+				"dandelfluff": [
+					110000.0,
+					121996.28813336499
+				],
+				"fernwhisk": [
+					1000.0,
+					9242.864810627394
+				],
+				"glowmote": [
+					110000.0,
+					131146.37409807925
+				],
+				"honeyhum": [
+					1000.0,
+					8348.724826907506
+				],
+				"moonpuff": [
+					110000.0,
+					127896.90740823082
+				],
+				"mossback_pebblepaw": [
+					215000.0,
+					314063.7352003956
+				],
+				"primpip": [
+					110000.0,
+					117537.16619782078
+				],
+				"puddlewump": [
+					110000.0,
+					126680.15832131478
+				],
+				"twilight_puffmoss": [
+					210000.0,
+					318972.2483384932
+				]
+			},
+			"nests": {
+				"buttonbud": 81000.0,
+				"pebblepaw": 81000.0,
+				"puffmoss": 81000.0
+			},
+			"scene": null,
+			"signs": [],
+			"story_postcards": [
+				"buttonbud_h2",
+				"buttonbud_h4",
+				"pebblepaw_h2",
+				"pebblepaw_h4",
+				"pebblepaw_h5",
+				"puffmoss_h2",
+				"puffmoss_h4",
+				"puffmoss_h5"
+			],
+			"visit_aff_t": {
+				"bellkin": 200200.0,
+				"buttonbud": 150.0,
+				"capling": 200400.0,
+				"dandelfluff": 200100.0,
+				"fernwhisk": 200000.0,
+				"glowmote": 200600.0,
+				"honeyhum": 100000.0,
+				"moonpuff": 200700.0,
+				"pebblepaw": 428400.0,
+				"primpip": 200300.0,
+				"puddlewump": 200500.0,
+				"puffmoss": 421200.0
+			},
+			"waiting": []
+		},
+		{
+			"affection": {
+				"bellkin": 1,
+				"buttonbud": 31,
+				"capling": 1,
+				"dandelfluff": 1,
+				"fernwhisk": 1,
+				"glowmote": 1,
+				"honeyhum": 1,
+				"moonpuff": 1,
+				"pebblepaw": 47,
+				"primpip": 1,
+				"puddlewump": 1,
+				"puffmoss": 43
+			},
+			"clues": 26,
+			"cousins": {
+				"mossback_pebblepaw": 428400.0,
+				"twilight_puffmoss": 421200.0
+			},
+			"hearts": {
+				"bellkin": 0,
+				"buttonbud": 4,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 5,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 5
+			},
+			"mysteries": {
+				"bellkin": [
+					110000.0,
+					122150.87898004179
+				],
+				"capling": [
+					1000.0,
+					21200.261818856874
+				],
+				"dandelfluff": [
+					110000.0,
+					121996.28813336499
+				],
+				"fernwhisk": [
+					1000.0,
+					9242.864810627394
+				],
+				"glowmote": [
+					110000.0,
+					131146.37409807925
+				],
+				"honeyhum": [
+					1000.0,
+					8348.724826907506
+				],
+				"moonpuff": [
+					110000.0,
+					127896.90740823082
+				],
+				"mossback_pebblepaw": [
+					215000.0,
+					314063.7352003956
+				],
+				"primpip": [
+					110000.0,
+					117537.16619782078
+				],
+				"puddlewump": [
+					110000.0,
+					126680.15832131478
+				],
+				"twilight_puffmoss": [
+					210000.0,
+					318972.2483384932
+				]
+			},
+			"nests": {
+				"buttonbud": 81000.0,
+				"pebblepaw": 81000.0,
+				"puffmoss": 81000.0
+			},
+			"scene": {
+				"cast": [],
+				"r": 8,
+				"scene": null
+			},
+			"signs": [],
+			"story_postcards": [
+				"buttonbud_h2",
+				"buttonbud_h4",
+				"pebblepaw_h2",
+				"pebblepaw_h4",
+				"pebblepaw_h5",
+				"puffmoss_h2",
+				"puffmoss_h4",
+				"puffmoss_h5"
+			],
+			"visit_aff_t": {
+				"bellkin": 200200.0,
+				"buttonbud": 150.0,
+				"capling": 200400.0,
+				"dandelfluff": 200100.0,
+				"fernwhisk": 200000.0,
+				"glowmote": 200600.0,
+				"honeyhum": 100000.0,
+				"moonpuff": 200700.0,
+				"pebblepaw": 428400.0,
+				"primpip": 200300.0,
+				"puddlewump": 200500.0,
+				"puffmoss": 421200.0
+			},
+			"waiting": []
+		},
+		{
+			"affection": {
+				"bellkin": 1,
+				"buttonbud": 31,
+				"capling": 1,
+				"dandelfluff": 1,
+				"fernwhisk": 1,
+				"glowmote": 1,
+				"honeyhum": 1,
+				"moonpuff": 1,
+				"pebblepaw": 47,
+				"primpip": 1,
+				"puddlewump": 1,
+				"puffmoss": 43
+			},
+			"clues": 26,
+			"cousins": {
+				"mossback_pebblepaw": 428400.0,
+				"twilight_puffmoss": 421200.0
+			},
+			"hearts": {
+				"bellkin": 0,
+				"buttonbud": 4,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 5,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 5
+			},
+			"mysteries": {
+				"bellkin": [
+					110000.0,
+					122150.87898004179
+				],
+				"capling": [
+					1000.0,
+					21200.261818856874
+				],
+				"dandelfluff": [
+					110000.0,
+					121996.28813336499
+				],
+				"fernwhisk": [
+					1000.0,
+					9242.864810627394
+				],
+				"glowmote": [
+					110000.0,
+					131146.37409807925
+				],
+				"honeyhum": [
+					1000.0,
+					8348.724826907506
+				],
+				"moonpuff": [
+					110000.0,
+					127896.90740823082
+				],
+				"mossback_pebblepaw": [
+					215000.0,
+					314063.7352003956
+				],
+				"primpip": [
+					110000.0,
+					117537.16619782078
+				],
+				"puddlewump": [
+					110000.0,
+					126680.15832131478
+				],
+				"twilight_puffmoss": [
+					210000.0,
+					318972.2483384932
+				]
+			},
+			"nests": {
+				"buttonbud": 81000.0,
+				"pebblepaw": 81000.0,
+				"puffmoss": 81000.0
+			},
+			"scene": {
+				"cast": [],
+				"r": 9,
+				"scene": null
+			},
+			"signs": [],
+			"story_postcards": [
+				"buttonbud_h2",
+				"buttonbud_h4",
+				"pebblepaw_h2",
+				"pebblepaw_h4",
+				"pebblepaw_h5",
+				"puffmoss_h2",
+				"puffmoss_h4",
+				"puffmoss_h5"
+			],
+			"visit_aff_t": {
+				"bellkin": 200200.0,
+				"buttonbud": 150.0,
+				"capling": 200400.0,
+				"dandelfluff": 200100.0,
+				"fernwhisk": 200000.0,
+				"glowmote": 200600.0,
+				"honeyhum": 100000.0,
+				"moonpuff": 200700.0,
+				"pebblepaw": 428400.0,
+				"primpip": 200300.0,
+				"puddlewump": 200500.0,
+				"puffmoss": 421200.0
+			},
+			"waiting": []
+		},
+		{
+			"affection": {
+				"bellkin": 1,
+				"buttonbud": 31,
+				"capling": 1,
+				"dandelfluff": 1,
+				"fernwhisk": 1,
+				"glowmote": 1,
+				"honeyhum": 1,
+				"moonpuff": 1,
+				"pebblepaw": 47,
+				"primpip": 1,
+				"puddlewump": 1,
+				"puffmoss": 43
+			},
+			"clues": 26,
+			"cousins": {
+				"mossback_pebblepaw": 428400.0,
+				"twilight_puffmoss": 421200.0
+			},
+			"hearts": {
+				"bellkin": 0,
+				"buttonbud": 4,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 5,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 5
+			},
+			"mysteries": {
+				"bellkin": [
+					110000.0,
+					122150.87898004179
+				],
+				"capling": [
+					1000.0,
+					21200.261818856874
+				],
+				"dandelfluff": [
+					110000.0,
+					121996.28813336499
+				],
+				"fernwhisk": [
+					1000.0,
+					9242.864810627394
+				],
+				"glowmote": [
+					110000.0,
+					131146.37409807925
+				],
+				"honeyhum": [
+					1000.0,
+					8348.724826907506
+				],
+				"moonpuff": [
+					110000.0,
+					127896.90740823082
+				],
+				"mossback_pebblepaw": [
+					215000.0,
+					314063.7352003956
+				],
+				"primpip": [
+					110000.0,
+					117537.16619782078
+				],
+				"puddlewump": [
+					110000.0,
+					126680.15832131478
+				],
+				"twilight_puffmoss": [
+					210000.0,
+					318972.2483384932
+				]
+			},
+			"nests": {
+				"buttonbud": 81000.0,
+				"pebblepaw": 81000.0,
+				"puffmoss": 81000.0
+			},
+			"scene": {
+				"cast": [
+					"puffmoss",
+					"glowmote",
+					"pebblepaw"
+				],
+				"r": 10,
+				"scene": "boat_regatta"
+			},
+			"signs": [],
+			"story_postcards": [
+				"buttonbud_h2",
+				"buttonbud_h4",
+				"pebblepaw_h2",
+				"pebblepaw_h4",
+				"pebblepaw_h5",
+				"puffmoss_h2",
+				"puffmoss_h4",
+				"puffmoss_h5"
+			],
+			"visit_aff_t": {
+				"bellkin": 200200.0,
+				"buttonbud": 150.0,
+				"capling": 200400.0,
+				"dandelfluff": 200100.0,
+				"fernwhisk": 200000.0,
+				"glowmote": 200600.0,
+				"honeyhum": 100000.0,
+				"moonpuff": 200700.0,
+				"pebblepaw": 428400.0,
+				"primpip": 200300.0,
+				"puddlewump": 200500.0,
+				"puffmoss": 421200.0
+			},
+			"waiting": []
+		},
+		{
+			"affection": {
+				"bellkin": 1,
+				"buttonbud": 31,
+				"capling": 1,
+				"dandelfluff": 1,
+				"fernwhisk": 1,
+				"glowmote": 1,
+				"honeyhum": 1,
+				"moonpuff": 1,
+				"pebblepaw": 47,
+				"primpip": 1,
+				"puddlewump": 1,
+				"puffmoss": 43
+			},
+			"clues": 26,
+			"cousins": {
+				"mossback_pebblepaw": 428400.0,
+				"twilight_puffmoss": 421200.0
+			},
+			"hearts": {
+				"bellkin": 0,
+				"buttonbud": 4,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 5,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 5
+			},
+			"mysteries": {
+				"bellkin": [
+					110000.0,
+					122150.87898004179
+				],
+				"capling": [
+					1000.0,
+					21200.261818856874
+				],
+				"dandelfluff": [
+					110000.0,
+					121996.28813336499
+				],
+				"fernwhisk": [
+					1000.0,
+					9242.864810627394
+				],
+				"glowmote": [
+					110000.0,
+					131146.37409807925
+				],
+				"honeyhum": [
+					1000.0,
+					8348.724826907506
+				],
+				"moonpuff": [
+					110000.0,
+					127896.90740823082
+				],
+				"mossback_pebblepaw": [
+					215000.0,
+					314063.7352003956
+				],
+				"primpip": [
+					110000.0,
+					117537.16619782078
+				],
+				"puddlewump": [
+					110000.0,
+					126680.15832131478
+				],
+				"twilight_puffmoss": [
+					210000.0,
+					318972.2483384932
+				]
+			},
+			"nests": {
+				"buttonbud": 81000.0,
+				"pebblepaw": 81000.0,
+				"puffmoss": 81000.0
+			},
+			"scene": {
+				"cast": [
+					"puffmoss",
+					"moonpuff"
+				],
+				"r": 11,
+				"scene": "pair_nap"
+			},
+			"signs": [],
+			"story_postcards": [
+				"buttonbud_h2",
+				"buttonbud_h4",
+				"pebblepaw_h2",
+				"pebblepaw_h4",
+				"pebblepaw_h5",
+				"puffmoss_h2",
+				"puffmoss_h4",
+				"puffmoss_h5"
+			],
+			"visit_aff_t": {
+				"bellkin": 200200.0,
+				"buttonbud": 150.0,
+				"capling": 200400.0,
+				"dandelfluff": 200100.0,
+				"fernwhisk": 200000.0,
+				"glowmote": 200600.0,
+				"honeyhum": 100000.0,
+				"moonpuff": 200700.0,
+				"pebblepaw": 428400.0,
+				"primpip": 200300.0,
+				"puddlewump": 200500.0,
+				"puffmoss": 421200.0
+			},
+			"waiting": []
+		},
+		{
+			"affection": {
+				"bellkin": 1,
+				"buttonbud": 31,
+				"capling": 1,
+				"dandelfluff": 1,
+				"fernwhisk": 1,
+				"glowmote": 1,
+				"honeyhum": 1,
+				"moonpuff": 1,
+				"pebblepaw": 47,
+				"primpip": 1,
+				"puddlewump": 1,
+				"puffmoss": 43
+			},
+			"clues": 26,
+			"cousins": {
+				"mossback_pebblepaw": 428400.0,
+				"twilight_puffmoss": 421200.0
+			},
+			"hearts": {
+				"bellkin": 0,
+				"buttonbud": 4,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 5,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 5
+			},
+			"mysteries": {
+				"bellkin": [
+					110000.0,
+					122150.87898004179
+				],
+				"capling": [
+					1000.0,
+					21200.261818856874
+				],
+				"dandelfluff": [
+					110000.0,
+					121996.28813336499
+				],
+				"fernwhisk": [
+					1000.0,
+					9242.864810627394
+				],
+				"glowmote": [
+					110000.0,
+					131146.37409807925
+				],
+				"honeyhum": [
+					1000.0,
+					8348.724826907506
+				],
+				"moonpuff": [
+					110000.0,
+					127896.90740823082
+				],
+				"mossback_pebblepaw": [
+					215000.0,
+					314063.7352003956
+				],
+				"primpip": [
+					110000.0,
+					117537.16619782078
+				],
+				"puddlewump": [
+					110000.0,
+					126680.15832131478
+				],
+				"twilight_puffmoss": [
+					210000.0,
+					318972.2483384932
+				]
+			},
+			"nests": {
+				"buttonbud": 81000.0,
+				"pebblepaw": 81000.0,
+				"puffmoss": 81000.0
+			},
+			"scene": {
+				"cast": [
+					"glowmote",
+					"puffmoss",
+					"pebblepaw"
+				],
+				"r": 12,
+				"scene": "lantern_party"
+			},
+			"signs": [],
+			"story_postcards": [
+				"buttonbud_h2",
+				"buttonbud_h4",
+				"pebblepaw_h2",
+				"pebblepaw_h4",
+				"pebblepaw_h5",
+				"puffmoss_h2",
+				"puffmoss_h4",
+				"puffmoss_h5"
+			],
+			"visit_aff_t": {
+				"bellkin": 200200.0,
+				"buttonbud": 150.0,
+				"capling": 200400.0,
+				"dandelfluff": 200100.0,
+				"fernwhisk": 200000.0,
+				"glowmote": 200600.0,
+				"honeyhum": 100000.0,
+				"moonpuff": 200700.0,
+				"pebblepaw": 428400.0,
+				"primpip": 200300.0,
+				"puddlewump": 200500.0,
+				"puffmoss": 421200.0
+			},
+			"waiting": []
+		},
+		{
+			"affection": {
+				"bellkin": 1,
+				"buttonbud": 31,
+				"capling": 1,
+				"dandelfluff": 1,
+				"fernwhisk": 1,
+				"glowmote": 1,
+				"honeyhum": 1,
+				"moonpuff": 1,
+				"pebblepaw": 47,
+				"primpip": 1,
+				"puddlewump": 1,
+				"puffmoss": 43
+			},
+			"clues": 26,
+			"cousins": {
+				"mossback_pebblepaw": 428400.0,
+				"twilight_puffmoss": 421200.0
+			},
+			"hearts": {
+				"bellkin": 0,
+				"buttonbud": 4,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 5,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 5
+			},
+			"mysteries": {
+				"bellkin": [
+					110000.0,
+					122150.87898004179
+				],
+				"capling": [
+					1000.0,
+					21200.261818856874
+				],
+				"dandelfluff": [
+					110000.0,
+					121996.28813336499
+				],
+				"fernwhisk": [
+					1000.0,
+					9242.864810627394
+				],
+				"glowmote": [
+					110000.0,
+					131146.37409807925
+				],
+				"honeyhum": [
+					1000.0,
+					8348.724826907506
+				],
+				"moonpuff": [
+					110000.0,
+					127896.90740823082
+				],
+				"mossback_pebblepaw": [
+					215000.0,
+					314063.7352003956
+				],
+				"primpip": [
+					110000.0,
+					117537.16619782078
+				],
+				"puddlewump": [
+					110000.0,
+					126680.15832131478
+				],
+				"twilight_puffmoss": [
+					210000.0,
+					318972.2483384932
+				]
+			},
+			"nests": {
+				"buttonbud": 81000.0,
+				"pebblepaw": 81000.0,
+				"puffmoss": 81000.0
+			},
+			"scene": {
+				"cast": [],
+				"r": 13,
+				"scene": null
+			},
+			"signs": [],
+			"story_postcards": [
+				"buttonbud_h2",
+				"buttonbud_h4",
+				"pebblepaw_h2",
+				"pebblepaw_h4",
+				"pebblepaw_h5",
+				"puffmoss_h2",
+				"puffmoss_h4",
+				"puffmoss_h5"
+			],
+			"visit_aff_t": {
+				"bellkin": 200200.0,
+				"buttonbud": 150.0,
+				"capling": 200400.0,
+				"dandelfluff": 200100.0,
+				"fernwhisk": 200000.0,
+				"glowmote": 200600.0,
+				"honeyhum": 100000.0,
+				"moonpuff": 200700.0,
+				"pebblepaw": 428400.0,
+				"primpip": 200300.0,
+				"puddlewump": 200500.0,
+				"puffmoss": 421200.0
+			},
+			"waiting": []
+		},
+		{
+			"affection": {
+				"bellkin": 1,
+				"buttonbud": 31,
+				"capling": 1,
+				"dandelfluff": 1,
+				"fernwhisk": 1,
+				"glowmote": 1,
+				"honeyhum": 1,
+				"moonpuff": 1,
+				"pebblepaw": 47,
+				"primpip": 1,
+				"puddlewump": 1,
+				"puffmoss": 43
+			},
+			"clues": 26,
+			"cousins": {
+				"mossback_pebblepaw": 428400.0,
+				"twilight_puffmoss": 421200.0
+			},
+			"hearts": {
+				"bellkin": 0,
+				"buttonbud": 4,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 5,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 5
+			},
+			"mysteries": {
+				"bellkin": [
+					110000.0,
+					122150.87898004179
+				],
+				"capling": [
+					1000.0,
+					21200.261818856874
+				],
+				"dandelfluff": [
+					110000.0,
+					121996.28813336499
+				],
+				"fernwhisk": [
+					1000.0,
+					9242.864810627394
+				],
+				"glowmote": [
+					110000.0,
+					131146.37409807925
+				],
+				"honeyhum": [
+					1000.0,
+					8348.724826907506
+				],
+				"moonpuff": [
+					110000.0,
+					127896.90740823082
+				],
+				"mossback_pebblepaw": [
+					215000.0,
+					314063.7352003956
+				],
+				"primpip": [
+					110000.0,
+					117537.16619782078
+				],
+				"puddlewump": [
+					110000.0,
+					126680.15832131478
+				],
+				"twilight_puffmoss": [
+					210000.0,
+					318972.2483384932
+				]
+			},
+			"nests": {
+				"buttonbud": 81000.0,
+				"pebblepaw": 81000.0,
+				"puffmoss": 81000.0
+			},
+			"scene": {
+				"cast": [
+					"puffmoss",
+					"moonpuff"
+				],
+				"r": 14,
+				"scene": "moon_watchers"
+			},
+			"signs": [],
+			"story_postcards": [
+				"buttonbud_h2",
+				"buttonbud_h4",
+				"pebblepaw_h2",
+				"pebblepaw_h4",
+				"pebblepaw_h5",
+				"puffmoss_h2",
+				"puffmoss_h4",
+				"puffmoss_h5"
+			],
+			"visit_aff_t": {
+				"bellkin": 200200.0,
+				"buttonbud": 150.0,
+				"capling": 200400.0,
+				"dandelfluff": 200100.0,
+				"fernwhisk": 200000.0,
+				"glowmote": 200600.0,
+				"honeyhum": 100000.0,
+				"moonpuff": 200700.0,
+				"pebblepaw": 428400.0,
+				"primpip": 200300.0,
+				"puddlewump": 200500.0,
+				"puffmoss": 421200.0
+			},
+			"waiting": []
+		},
+		{
+			"affection": {
+				"bellkin": 1,
+				"buttonbud": 31,
+				"capling": 1,
+				"dandelfluff": 1,
+				"fernwhisk": 1,
+				"glowmote": 1,
+				"honeyhum": 1,
+				"moonpuff": 1,
+				"pebblepaw": 47,
+				"primpip": 1,
+				"puddlewump": 1,
+				"puffmoss": 43
+			},
+			"clues": 26,
+			"cousins": {
+				"mossback_pebblepaw": 428400.0,
+				"twilight_puffmoss": 421200.0
+			},
+			"hearts": {
+				"bellkin": 0,
+				"buttonbud": 4,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 5,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 5
+			},
+			"mysteries": {
+				"bellkin": [
+					110000.0,
+					122150.87898004179
+				],
+				"capling": [
+					1000.0,
+					21200.261818856874
+				],
+				"dandelfluff": [
+					110000.0,
+					121996.28813336499
+				],
+				"fernwhisk": [
+					1000.0,
+					9242.864810627394
+				],
+				"glowmote": [
+					110000.0,
+					131146.37409807925
+				],
+				"honeyhum": [
+					1000.0,
+					8348.724826907506
+				],
+				"moonpuff": [
+					110000.0,
+					127896.90740823082
+				],
+				"mossback_pebblepaw": [
+					215000.0,
+					314063.7352003956
+				],
+				"primpip": [
+					110000.0,
+					117537.16619782078
+				],
+				"puddlewump": [
+					110000.0,
+					126680.15832131478
+				],
+				"twilight_puffmoss": [
+					210000.0,
+					318972.2483384932
+				]
+			},
+			"nests": {
+				"buttonbud": 81000.0,
+				"pebblepaw": 81000.0,
+				"puffmoss": 81000.0
+			},
+			"scene": {
+				"cast": [
+					"puffmoss",
+					"glowmote"
+				],
+				"r": 15,
+				"scene": "leaf_fort"
+			},
+			"signs": [],
+			"story_postcards": [
+				"buttonbud_h2",
+				"buttonbud_h4",
+				"pebblepaw_h2",
+				"pebblepaw_h4",
+				"pebblepaw_h5",
+				"puffmoss_h2",
+				"puffmoss_h4",
+				"puffmoss_h5"
+			],
+			"visit_aff_t": {
+				"bellkin": 200200.0,
+				"buttonbud": 150.0,
+				"capling": 200400.0,
+				"dandelfluff": 200100.0,
+				"fernwhisk": 200000.0,
+				"glowmote": 200600.0,
+				"honeyhum": 100000.0,
+				"moonpuff": 200700.0,
+				"pebblepaw": 428400.0,
+				"primpip": 200300.0,
+				"puddlewump": 200500.0,
+				"puffmoss": 421200.0
+			},
+			"waiting": []
+		},
+		{
+			"affection": {
+				"bellkin": 1,
+				"buttonbud": 31,
+				"capling": 1,
+				"dandelfluff": 1,
+				"fernwhisk": 1,
+				"glowmote": 1,
+				"honeyhum": 1,
+				"moonpuff": 1,
+				"pebblepaw": 47,
+				"primpip": 1,
+				"puddlewump": 1,
+				"puffmoss": 43
+			},
+			"clues": 26,
+			"cousins": {
+				"mossback_pebblepaw": 428400.0,
+				"twilight_puffmoss": 421200.0
+			},
+			"hearts": {
+				"bellkin": 0,
+				"buttonbud": 4,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 5,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 5
+			},
+			"mysteries": {
+				"bellkin": [
+					110000.0,
+					122150.87898004179
+				],
+				"capling": [
+					1000.0,
+					21200.261818856874
+				],
+				"dandelfluff": [
+					110000.0,
+					121996.28813336499
+				],
+				"fernwhisk": [
+					1000.0,
+					9242.864810627394
+				],
+				"glowmote": [
+					110000.0,
+					131146.37409807925
+				],
+				"honeyhum": [
+					1000.0,
+					8348.724826907506
+				],
+				"moonpuff": [
+					110000.0,
+					127896.90740823082
+				],
+				"mossback_pebblepaw": [
+					215000.0,
+					314063.7352003956
+				],
+				"primpip": [
+					110000.0,
+					117537.16619782078
+				],
+				"puddlewump": [
+					110000.0,
+					126680.15832131478
+				],
+				"twilight_puffmoss": [
+					210000.0,
+					318972.2483384932
+				]
+			},
+			"nests": {
+				"buttonbud": 81000.0,
+				"pebblepaw": 81000.0,
+				"puffmoss": 81000.0
+			},
+			"scene": {
+				"cast": [],
+				"r": 16,
+				"scene": null
+			},
+			"signs": [],
+			"story_postcards": [
+				"buttonbud_h2",
+				"buttonbud_h4",
+				"pebblepaw_h2",
+				"pebblepaw_h4",
+				"pebblepaw_h5",
+				"puffmoss_h2",
+				"puffmoss_h4",
+				"puffmoss_h5"
+			],
+			"visit_aff_t": {
+				"bellkin": 200200.0,
+				"buttonbud": 150.0,
+				"capling": 200400.0,
+				"dandelfluff": 200100.0,
+				"fernwhisk": 200000.0,
+				"glowmote": 200600.0,
+				"honeyhum": 100000.0,
+				"moonpuff": 200700.0,
+				"pebblepaw": 428400.0,
+				"primpip": 200300.0,
+				"puddlewump": 200500.0,
+				"puffmoss": 421200.0
+			},
+			"waiting": []
+		},
+		{
+			"affection": {
+				"bellkin": 1,
+				"buttonbud": 31,
+				"capling": 1,
+				"dandelfluff": 1,
+				"fernwhisk": 1,
+				"glowmote": 1,
+				"honeyhum": 1,
+				"moonpuff": 1,
+				"pebblepaw": 47,
+				"primpip": 1,
+				"puddlewump": 1,
+				"puffmoss": 43
+			},
+			"clues": 26,
+			"cousins": {
+				"mossback_pebblepaw": 428400.0,
+				"twilight_puffmoss": 421200.0
+			},
+			"hearts": {
+				"bellkin": 0,
+				"buttonbud": 4,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 5,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 5
+			},
+			"mysteries": {
+				"bellkin": [
+					110000.0,
+					122150.87898004179
+				],
+				"capling": [
+					1000.0,
+					21200.261818856874
+				],
+				"dandelfluff": [
+					110000.0,
+					121996.28813336499
+				],
+				"fernwhisk": [
+					1000.0,
+					9242.864810627394
+				],
+				"glowmote": [
+					110000.0,
+					131146.37409807925
+				],
+				"honeyhum": [
+					1000.0,
+					8348.724826907506
+				],
+				"moonpuff": [
+					110000.0,
+					127896.90740823082
+				],
+				"mossback_pebblepaw": [
+					215000.0,
+					314063.7352003956
+				],
+				"primpip": [
+					110000.0,
+					117537.16619782078
+				],
+				"puddlewump": [
+					110000.0,
+					126680.15832131478
+				],
+				"twilight_puffmoss": [
+					210000.0,
+					318972.2483384932
+				]
+			},
+			"nests": {
+				"buttonbud": 81000.0,
+				"pebblepaw": 81000.0,
+				"puffmoss": 81000.0
+			},
+			"scene": {
+				"cast": [
+					"primpip",
+					"puffmoss"
+				],
+				"r": 17,
+				"scene": "pebble_tower"
+			},
+			"signs": [],
+			"story_postcards": [
+				"buttonbud_h2",
+				"buttonbud_h4",
+				"pebblepaw_h2",
+				"pebblepaw_h4",
+				"pebblepaw_h5",
+				"puffmoss_h2",
+				"puffmoss_h4",
+				"puffmoss_h5"
+			],
+			"visit_aff_t": {
+				"bellkin": 200200.0,
+				"buttonbud": 150.0,
+				"capling": 200400.0,
+				"dandelfluff": 200100.0,
+				"fernwhisk": 200000.0,
+				"glowmote": 200600.0,
+				"honeyhum": 100000.0,
+				"moonpuff": 200700.0,
+				"pebblepaw": 428400.0,
+				"primpip": 200300.0,
+				"puddlewump": 200500.0,
+				"puffmoss": 421200.0
+			},
+			"waiting": []
+		},
+		{
+			"affection": {
+				"bellkin": 1,
+				"buttonbud": 31,
+				"capling": 1,
+				"dandelfluff": 1,
+				"fernwhisk": 1,
+				"glowmote": 1,
+				"honeyhum": 1,
+				"moonpuff": 1,
+				"pebblepaw": 47,
+				"primpip": 1,
+				"puddlewump": 1,
+				"puffmoss": 43
+			},
+			"clues": 26,
+			"cousins": {
+				"mossback_pebblepaw": 428400.0,
+				"twilight_puffmoss": 421200.0
+			},
+			"hearts": {
+				"bellkin": 0,
+				"buttonbud": 4,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 5,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 5
+			},
+			"mysteries": {
+				"bellkin": [
+					110000.0,
+					122150.87898004179
+				],
+				"capling": [
+					1000.0,
+					21200.261818856874
+				],
+				"dandelfluff": [
+					110000.0,
+					121996.28813336499
+				],
+				"fernwhisk": [
+					1000.0,
+					9242.864810627394
+				],
+				"glowmote": [
+					110000.0,
+					131146.37409807925
+				],
+				"honeyhum": [
+					1000.0,
+					8348.724826907506
+				],
+				"moonpuff": [
+					110000.0,
+					127896.90740823082
+				],
+				"mossback_pebblepaw": [
+					215000.0,
+					314063.7352003956
+				],
+				"primpip": [
+					110000.0,
+					117537.16619782078
+				],
+				"puddlewump": [
+					110000.0,
+					126680.15832131478
+				],
+				"twilight_puffmoss": [
+					210000.0,
+					318972.2483384932
+				]
+			},
+			"nests": {
+				"buttonbud": 81000.0,
+				"pebblepaw": 81000.0,
+				"puffmoss": 81000.0
+			},
+			"scene": {
+				"cast": [
+					"buttonbud",
+					"honeyhum",
+					"fernwhisk"
+				],
+				"r": 18,
+				"scene": "boat_regatta"
+			},
+			"signs": [],
+			"story_postcards": [
+				"buttonbud_h2",
+				"buttonbud_h4",
+				"pebblepaw_h2",
+				"pebblepaw_h4",
+				"pebblepaw_h5",
+				"puffmoss_h2",
+				"puffmoss_h4",
+				"puffmoss_h5"
+			],
+			"visit_aff_t": {
+				"bellkin": 200200.0,
+				"buttonbud": 150.0,
+				"capling": 200400.0,
+				"dandelfluff": 200100.0,
+				"fernwhisk": 200000.0,
+				"glowmote": 200600.0,
+				"honeyhum": 100000.0,
+				"moonpuff": 200700.0,
+				"pebblepaw": 428400.0,
+				"primpip": 200300.0,
+				"puddlewump": 200500.0,
+				"puffmoss": 421200.0
+			},
+			"waiting": []
+		},
+		{
+			"affection": {
+				"bellkin": 1,
+				"buttonbud": 31,
+				"capling": 1,
+				"dandelfluff": 1,
+				"fernwhisk": 1,
+				"glowmote": 1,
+				"honeyhum": 1,
+				"moonpuff": 1,
+				"pebblepaw": 47,
+				"primpip": 1,
+				"puddlewump": 1,
+				"puffmoss": 43
+			},
+			"clues": 26,
+			"cousins": {
+				"mossback_pebblepaw": 428400.0,
+				"twilight_puffmoss": 421200.0
+			},
+			"hearts": {
+				"bellkin": 0,
+				"buttonbud": 4,
+				"capling": 0,
+				"dandelfluff": 0,
+				"fernwhisk": 0,
+				"glowmote": 0,
+				"honeyhum": 0,
+				"moonpuff": 0,
+				"pebblepaw": 5,
+				"primpip": 0,
+				"puddlewump": 0,
+				"puffmoss": 5
+			},
+			"mysteries": {
+				"bellkin": [
+					110000.0,
+					122150.87898004179
+				],
+				"capling": [
+					1000.0,
+					21200.261818856874
+				],
+				"dandelfluff": [
+					110000.0,
+					121996.28813336499
+				],
+				"fernwhisk": [
+					1000.0,
+					9242.864810627394
+				],
+				"glowmote": [
+					110000.0,
+					131146.37409807925
+				],
+				"honeyhum": [
+					1000.0,
+					8348.724826907506
+				],
+				"moonpuff": [
+					110000.0,
+					127896.90740823082
+				],
+				"mossback_pebblepaw": [
+					215000.0,
+					314063.7352003956
+				],
+				"primpip": [
+					110000.0,
+					117537.16619782078
+				],
+				"puddlewump": [
+					110000.0,
+					126680.15832131478
+				],
+				"twilight_puffmoss": [
+					210000.0,
+					318972.2483384932
+				]
+			},
+			"nests": {
+				"buttonbud": 81000.0,
+				"pebblepaw": 81000.0,
+				"puffmoss": 81000.0
+			},
+			"scene": {
+				"cast": [
+					"primpip",
+					"glowmote"
+				],
+				"r": 19,
+				"scene": "pebble_tower"
+			},
+			"signs": [],
+			"story_postcards": [
+				"buttonbud_h2",
+				"buttonbud_h4",
+				"pebblepaw_h2",
+				"pebblepaw_h4",
+				"pebblepaw_h5",
+				"puffmoss_h2",
+				"puffmoss_h4",
+				"puffmoss_h5"
+			],
+			"visit_aff_t": {
+				"bellkin": 200200.0,
+				"buttonbud": 150.0,
+				"capling": 200400.0,
+				"dandelfluff": 200100.0,
+				"fernwhisk": 200000.0,
+				"glowmote": 200600.0,
+				"honeyhum": 100000.0,
+				"moonpuff": 200700.0,
+				"pebblepaw": 428400.0,
+				"primpip": 200300.0,
+				"puddlewump": 200500.0,
+				"puffmoss": 421200.0
+			},
+			"waiting": []
+		}
+	]
+}
