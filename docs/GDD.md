@@ -543,7 +543,7 @@ Five tabs (Retention v1, §13.5.1): **Friends**, **Clues**, **Memories** (away-s
 - Reference player: 7 best friends by day 30 and all 12 by about day 65 (median; §13.8).
 
 ### 7.5 Welcome-back recap
-Shown on resume when the gap ≥ `welcome_back_min_gap_s` (20 min) and at least one event happened. A frosted card over the living world, up to 3 lines chosen in priority order: new friend → away-scene teaser → cousin → postcard → hearts → clue → "{name} napped at the {spot}" (the longest nap of the absence) → nest → gifts waiting → new flowers opened → photos → it rained (Retention v1 lines: §13.5.3). Sound S10, MEDIUM haptic once. Auto-continues after 5 s; tap anywhere skips. Never lists what *didn't* happen.
+Shown on resume when the gap ≥ `welcome_back_min_gap_s` (20 min) and at least one event happened. A frosted card over the living world, up to 3 lines chosen in priority order: new friend → away-scene teaser → cousin → postcard → hearts → wish granted on arrival → clue → **"{name} napped at the {spot}"** (the longest nap of the absence; it takes the visitors slot, because it says what a friend *did* rather than only that somebody came) or else visitors → **"{name} is still hoping for {wish}"** (`RECAP_WISH_WAITING`, never together with the granted line) → nest → gifts waiting → new flowers opened → photos → it rained (Retention v1 lines: §13.5.3). The nap line stores nothing: `CreatureBrain.nap_during` replans the absence's bouts from the catch-up events, which is exact because every visit draws from its own seeded RNG (round 8; the line was written in the MVP and waited for the creature brain, ARCHITECTURE §12 (a)). Sound S10, MEDIUM haptic once. Auto-continues after 5 s; tap anywhere skips. Never lists what *didn't* happen.
 
 ### 7.6 Settings (X1) — one sheet, grouped
 | Group | Setting | Values (default **bold**) | Effect |
@@ -1130,7 +1130,8 @@ Up to 3 lines, in this priority order:
 4. postcard
 5. **hearts** (`RECAP_HEARTS`, the friend with the highest new heart)
 6. **clue** (`RECAP_CLUE`, if new signs came due)
-7. visitors
+7. "{name} napped at the {spot}" — the longest nap of the absence — else visitors (round 8: the creature brain exists now, so this slot carries the nap line whenever there was a nap)
+7b. "{name} is still hoping for {wish}" (`RECAP_WISH_WAITING`), only when no wish was granted on arrival
 8. **nest** (`RECAP_NEST`)
 9. gifts
 10. flowers
@@ -1734,7 +1735,7 @@ Onboarding trace (first 300 s): 25 s meets puffmoss; 106 s basket holds 18 dew; 
 | Team | Owns | Builds | Ids |
 |---|---|---|---|
 | **FE-W Wishes view** | `scripts/creature/wish_bubble.gd` (new), `scripts/creature/mossling.gd`, `scripts/creature/creature_layer.gd`, `scripts/ui/album_sheet.gd`, `scripts/ui/wish_list_card.gd` (new) | Bubble (44 dp felt cloud, 1 draw call, ≤ 2 on screen, follows the head anchor and the pan; napping 45 %; edit mode 45 %); name-tag caption "{name} · {wish}" 2.5 s; delight poses incl. `sip_tea` for FE-T (`Mossling.play_pose(id)`); `play_taps` hop; Album wishing row, stamps, the F2 "Tea" line in friend detail (data from `Game.tea_prefs_seen`); Wishes chip with unread dot (never a number) and the wish list card; toasts `WISH_GRANTED_*`, `WISH_TIP_*` | S26, S27; icons `wish_*`; keys `WISH_*`, `ALBUM_WISH*`, `A11Y_WISH_*`, `CAPTION_WISH*` |
-| **FE-T Tea UI and interaction** | `scripts/garden/tea_nook.gd` (new prop + world target), `scripts/garden/plots_layer.gd` (petal glints ≤ 3 per bed, +1 draw; petals branch of the bed release; bed card lines), `scripts/ui/tea_sheet.gd`, `scripts/ui/tea_pot.gd` (gesture control: petal drag, stir ring 28–150 dp, ≤ 45°/event, pour tilt), `scripts/ui/basket_sheet.gd` (Tea nook row), `scripts/ui/settings_sheet.gd` (Simple brewing), `shaders/ui/tea_liquid.gdshader` | Brew / Recipes / Teaware tabs at the large detent; tap alternatives everywhere; reveal card; offer row (64 dp chips, wish holders first); Reduce Motion cross-fades; night chrome; ≤ +8 draw calls with the sheet open | S28–S34, S05, S11; keys `TEA_*`, `TEAWARE_*`, `CAPTION_PETALS…STEAM`, `CAPTION_RECIPE` |
+| **FE-T Tea UI and interaction** | `scripts/garden/tea_nook.gd` (new prop + world target), `scripts/garden/plots_layer.gd` (petal glints ≤ 3 per bed, +1 draw; petals branch of the bed release; bed card lines), `scripts/ui/tea_sheet.gd`, `scripts/ui/tea_pot.gd` (gesture control: petal drag, stir ring 28–150 dp, ≤ 2,700 °/s with a 170° wrap guard, pour tilt), `scripts/ui/basket_sheet.gd` (Tea nook row), `scripts/ui/settings_sheet.gd` (Simple brewing), `shaders/ui/tea_liquid.gdshader` | Brew / Recipes / Teaware tabs at the large detent; tap alternatives everywhere; reveal card; offer row (64 dp chips, wish holders first); Reduce Motion cross-fades; night chrome; ≤ +8 draw calls with the sheet open | S28–S34, S05, S11; keys `TEA_*`, `TEAWARE_*`, `CAPTION_PETALS…STEAM`, `CAPTION_RECIPE` |
 | **FE-D Décor edit mode** | `scripts/garden/decor_edit.gd` + `scenes/garden/decor_edit.tscn` (new), `scripts/garden/decor_layer.gd`, `scripts/garden/decor_kit.gd`, `scripts/ui/decor_tray.gd` (new), `scripts/ui/top_bar.gd` and `scripts/ui/hud_controller.gd` (edit chrome), `scripts/ui/garden_sheet.gd` (Arrange row, tucked-away caption) | Long-press entry, lift/carry/lean/magnet, validity ring and hints, settle/nudge/float home, selection chip, tray, Undo/Done, positions from `decor_layout`, rot renders, still-piece wobble, banded stamp merge (décor ≤ 20 draws, chrome ≤ 6), QA `--qa-decor-edit=<enter / hold_valid / hold_invalid / tray / chip>` | S35–S38, S05, S07, S08; keys `DECOR_EDIT_*`, `DECOR_TRAY_*`, `DECOR_HINT_*`, `GARDEN_ARRANGE*`, `A11Y_DECOR_*`, `A11Y_TRAY_TILE`, `CAPTION_DECOR_*` |
 
 Also: **Sound Designer** owns `audio/manifest.json` S26–S38 (§14.8). **Art Director** maps the delight poses (D15), the teaware and tea nook art, the `wish_*` icons and the toadstool cap variant. **Env Artist** confirms `ground_top` and the wings (open Q5 of ACTIVE_DECOR). **QA** adds the three QA flags and the 30-day absence screenshot with open wishes and full jars.
@@ -1859,6 +1860,7 @@ Also: **Sound Designer** owns `audio/manifest.json` S26–S38 (§14.8). **Art Di
 | `RECAP_ONE_VISITED` | {name} dropped by | {name} đã ghé chơi |
 | `RECAP_FRIENDS_VISITED` | {name} and friends dropped by | {name} và các bạn đã ghé chơi |
 | `RECAP_NAPPED` | {name} napped at the {spot} | {name} đã ngủ một giấc ở {spot} |
+| `RECAP_WISH_WAITING` | {name} is still hoping for {wish} | {name} vẫn đang mong một {wish} |
 | `RECAP_BLOOMED` | New flowers opened | Hoa mới đã nở |
 | `RECAP_GIFTS` | Gifts are waiting in the basket | Quà đang chờ trong giỏ |
 | `RECAP_PHOTOS` | Friends left photos for you | Các bạn để lại ảnh tặng bạn |

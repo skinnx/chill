@@ -317,7 +317,13 @@ func on_tapped(m: Mossling) -> bool:
 
 
 func _on_granted(species: StringName, wish: StringName, affection: int, gift_flower: StringName,
-		_first_stamp: bool, on_arrival: bool) -> void:
+		_first_stamp: bool, on_arrival: bool, offline: bool = false) -> void:
+	if offline:
+		# It happened while the app was closed: the welcome-back card already says so. Replaying
+		# it as a live celebration - petal pop, the walk over, S27, a toast - would double-report
+		# hours-old news as if it had just happened (ACTIVE_WISHES §7.5).
+		sync()
+		return
 	var m := layer.mossling(species) if layer != null else null
 	var b: WishBubble = _shown.get(species)
 	_shown.erase(species)

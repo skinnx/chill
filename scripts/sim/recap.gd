@@ -7,10 +7,16 @@ extends RefCounted
 ##
 ## Line = {"key": StringName, "species": StringName (or &"")}.
 ## Priority (GDD §13.5.3, §14.11 a5): new friend -> away-scene teaser -> cousin -> postcard ->
-## hearts -> a wish granted on arrival (Active F1 RECAP_WISH) -> clue -> visitors (the GDD's
-## "{name} napped at the {spot}" line needs the creature brain's bout history and replaces this
-## slot once that exists) -> nest -> gifts waiting -> new flowers opened
-## -> photos -> it rained. The teaser names nobody and always gets a line when a scene is staged.
+## hearts -> a wish granted on arrival (Active F1 RECAP_WISH) -> clue -> the longest nap of the
+## absence ("{name} napped at the {spot}", GDD §7.5), which takes the visitors slot when there was
+## one, else visitors -> a friend still hoping for something (RECAP_WISH_WAITING) -> nest -> gifts
+## waiting -> new flowers opened -> photos -> it rained. The teaser names nobody and always gets a
+## line when a scene is staged.
+##
+## Round 8: the nap line was written in the MVP and waited for the creature brain. Nothing about a
+## past visit is stored - [method CreatureBrain.nap_during] replans the absence's bouts from the
+## catch-up events, which is exact because the brain is deterministic. [param nap] is its result
+## ({} when nobody napped); the caller passes it in so this stays a pure sim-side function.
 
 # Data boundary: values read from JSON / Dictionaries are Variants and each one is converted
 # explicitly (int(), float(), String() ...) where it is read; the analyzer still flags every
@@ -26,7 +32,8 @@ static func should_show(content: GameContent, gap_s: float, events: Array[Dictio
 	return gap_s >= float(content.economy["welcome_back_min_gap_s"]) and not events.is_empty()
 
 
-static func build(sim: WorldSim, events: Array[Dictionary], from_t: float, to_t: float) -> Array[Dictionary]:
+static func build(sim: WorldSim, events: Array[Dictionary], from_t: float, to_t: float,
+		nap: Dictionary = {}) -> Array[Dictionary]:
 	var met: Array[StringName] = []
 	var visitors: Array[StringName] = []
 	var postcard := false
@@ -93,10 +100,18 @@ static func build(sim: WorldSim, events: Array[Dictionary], from_t: float, to_t:
 		cands.append({"key": &"RECAP_WISH", "species": wish})
 	if clue:
 		cands.append({"key": &"RECAP_CLUE", "species": &""})
-	if visitors.size() == 1:
+	if not nap.is_empty():
+		# "{name} napped at the {spot}" is a better line than "{name} dropped by": it says what
+		# they did, not just that they came, so it takes the visitors slot (GDD §13.5.3).
+		cands.append({"key": &"RECAP_NAPPED", "species": StringName(nap.get("species", &"")),
+			"spot": StringName(nap.get("spot", &""))})
+	elif visitors.size() == 1:
 		cands.append({"key": &"RECAP_ONE_VISITED", "species": visitors[0]})
 	elif visitors.size() > 1:
 		cands.append({"key": &"RECAP_FRIENDS_VISITED", "species": visitors[0]})
+	var waiting := wish_waiting(sim)
+	if waiting != &"" and wish == &"":
+		cands.append({"key": &"RECAP_WISH_WAITING", "species": waiting})
 	if nest != &"":
 		cands.append({"key": &"RECAP_NEST", "species": nest})
 	if gifts and not sim.state.basket.is_empty():
@@ -107,7 +122,7 @@ static func build(sim: WorldSim, events: Array[Dictionary], from_t: float, to_t:
 		cands.append({"key": &"RECAP_PHOTOS", "species": &""})
 	var lines: Array[Dictionary] = []
 	for line: Dictionary in cands:
-		_add(lines, StringName(line["key"]), StringName(line["species"]))
+		_add(lines, StringName(line["key"]), StringName(line["species"]), StringName(line.get("spot", &"")))
 	if not teaser.is_empty() and not _has_key(lines, StringName(teaser["key"])):
 		lines[lines.size() - 1] = {"key": StringName(teaser["key"]), "species": &""}  # the teaser always shows
 	if lines.size() < MAX_LINES and _rained(sim, from_t, to_t):
@@ -122,9 +137,37 @@ static func _has_key(lines: Array[Dictionary], key: StringName) -> bool:
 	return false
 
 
-static func _add(lines: Array[Dictionary], key: StringName, species: StringName) -> void:
-	if lines.size() < MAX_LINES:
-		lines.append({"key": key, "species": species})
+static func _add(lines: Array[Dictionary], key: StringName, species: StringName,
+		spot: StringName = &"") -> void:
+	if lines.size() >= MAX_LINES:
+		return
+	var line := {"key": key, "species": species}
+	if spot != &"":
+		line["spot"] = spot  # only RECAP_NAPPED carries one; every other line keeps its shape
+	lines.append(line)
+
+
+## The friend to name in RECAP_WISH_WAITING: the oldest wish still waiting to be granted, a friend
+## who is here preferred. A wish never expires, so this line can never become a deadline - it is
+## only an offer, in the three seconds when the player is most receptive (GDD §14.0 AP3).
+static func wish_waiting(sim: WorldSim) -> StringName:
+	var best := &""
+	var best_t := INF
+	var present_best := false
+	for w: Dictionary in sim.state.wishes:
+		var state := String(w.get("state", ""))
+		if state != WorldState.WISH_OPEN and state != WorldState.WISH_HELD:
+			continue
+		var sp := StringName(String(w.get("species", "")))
+		if sp == &"":
+			continue
+		var here := sim.is_present(sp)
+		var t := float(w.get("opened_t", 0.0))
+		if (here and not present_best) or (here == present_best and t < best_t):
+			best = sp
+			best_t = t
+			present_best = here
+	return best
 
 
 static func _rained(sim: WorldSim, from_t: float, to_t: float) -> bool:

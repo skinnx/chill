@@ -10,6 +10,14 @@ extends Node
 ##  * Quality tier 0 (full) / 1 / 2: step down when > 5 % of frames in a 3 s window exceed 1.5x
 ##    the target interval; step back up after 30 s clean. Views read [member tier] and listen to
 ##    [signal tier_changed] (Art Bible §4.19 tier 1: no shafts, no L5, fewer clouds and grass).
+##    A tier change takes art off the screen, so it is held back while a finger is down or the map
+##    is still moving (round 8): panning is the heaviest render path in the game and so the most
+##    likely thing to trip the slow-frame test, which made the pop land exactly when the player was
+##    touching the glass and looking hardest. The frames are already slow; a few hundred ms of
+##    delay costs nothing and the startle is what breaks the calm.
+##  * A pointer resting on the glass counts as activity: a thumb that is down but still generates
+##    no events (accumulation merges nothing when nothing moves), so without this the session drops
+##    to 30 fps mid-gesture and the next drag frame applies two frames of travel at once.
 ##  * Counts hitches (> 2x target interval after warm-up) for QA (02 §4.3).
 
 signal tier_changed(tier: int)
@@ -26,6 +34,11 @@ const IDLE_P95_LIMIT_S := 0.040
 const HITCH_FACTOR := 2.0
 ## Ignore the first seconds after boot/resume (loading, catch-up, first-use compiles).
 const GRACE_S := 3.0
+## A pointer that has produced no event at all for this long is treated as gone. A resting thumb
+## really does generate nothing (accumulation merges nothing when nothing moves), so this is also
+## the guard against a release that never arrives - an OS gesture stealing the touch, a dropped
+## event - pinning the session at 60 fps for ever.
+const POINTER_STALE_S := 16.0
 
 var tier: int = 0
 var idle: bool = false
@@ -49,6 +62,10 @@ var _window_t: float = 0.0
 var _clean_s: float = 0.0
 var _grace_left: float = GRACE_S
 var _refresh_hz: float = 60.0
+## A pointer is on the glass (set from the press, cleared on release / focus loss).
+var _pointer_down: bool = false
+## A tier step decided while the player was busy, applied once they are not. MAX_TIER + 1 = none.
+var _pending_tier: int = -1
 
 
 func _ready() -> void:
@@ -70,6 +87,12 @@ func _ready() -> void:
 
 
 func _input(event: InputEvent) -> void:
+	var st := event as InputEventScreenTouch
+	if st != null and st.index == 0:
+		_pointer_down = st.pressed
+	var mb := event as InputEventMouseButton
+	if mb != null and mb.button_index == MOUSE_BUTTON_LEFT and mb.device != InputEvent.DEVICE_ID_EMULATION:
+		_pointer_down = mb.pressed
 	if event is InputEventScreenTouch or event is InputEventScreenDrag or event is InputEventMouseButton \
 			or event is InputEventKey or (event is InputEventMouseMotion and (event as InputEventMouseMotion).button_mask != 0):
 		poke()
@@ -80,19 +103,26 @@ func _notification(what: int) -> void:
 		_grace_left = GRACE_S
 		_deltas.clear()
 		poke()
+	elif what == NOTIFICATION_APPLICATION_PAUSED or what == NOTIFICATION_APPLICATION_FOCUS_OUT:
+		_pointer_down = false  # no release arrives when the app goes away under a finger
 
 
 func _process(delta: float) -> void:
 	if not enabled:
 		return
 	var now := Clock.ticks_s()
+	if _pointer_down and now - _last_activity_s > POINTER_STALE_S:
+		_pointer_down = false
 	var was_idle := idle
-	idle = ambient_mode or (idle_30_allowed and now - _last_activity_s >= _idle_after_s and now >= _busy_until_s)
+	idle = ambient_mode or (idle_30_allowed and not _pointer_down and now - _last_activity_s >= _idle_after_s \
+			and now >= _busy_until_s)
 	if idle != was_idle:
 		_update_rate()
 		idle_changed.emit(idle)
 		_deltas.clear()
 		_window_t = 0.0
+	if _pending_tier >= 0 and not is_busy_with_the_world():
+		_set_tier(_pending_tier)
 	if _grace_left > 0.0:
 		_grace_left -= delta
 		return
@@ -164,11 +194,26 @@ func _track(delta: float) -> void:
 	_window_t = 0.0
 
 
+## True while the player would see a tier pop land on top of their own gesture: a finger on the
+## glass, or the map still gliding or springing back from one.
+func is_busy_with_the_world() -> bool:
+	if _pointer_down:
+		return true
+	var pan := WorldPan.current
+	return pan != null and (pan.is_dragging() or pan.body.is_active())
+
+
 func _set_tier(t: int) -> void:
 	var clamped := clampi(t, 0, MAX_TIER)
-	if clamped != tier:
-		tier = clamped
-		tier_changed.emit(tier)
+	if clamped == tier:
+		_pending_tier = -1
+		return
+	if is_busy_with_the_world():
+		_pending_tier = clamped  # hold it: see the note in the header
+		return
+	_pending_tier = -1
+	tier = clamped
+	tier_changed.emit(tier)
 
 
 static func _p95(values: PackedFloat32Array) -> float:

@@ -194,6 +194,43 @@ func force_bout(species: StringName, behaviour: StringName, spot: StringName, t:
 
 
 ## Longest nap that overlaps (t0, t1]: {species, spot, seconds} or {} (the recap's "napped at").
+## The longest nap of an absence, for the welcome-back recap (GDD §7.5 "{name} napped at the
+## {spot}", ARCHITECTURE §12 open issue (a): the line was written in the MVP and has waited for
+## this class ever since).
+##
+## Nothing about a past visit is stored anywhere. The brain is deterministic - each visit draws
+## from its own RNG seeded by (install_seed, species, arrive_t) - so the bouts of the visits that
+## happened while the app was closed are simply REPLANNED here from the catch-up events, which
+## already carry each arrival's depart_t. [param events] is that catch-up list; the window is
+## [param from_t] .. [param to_t] in world seconds. Returns {} or {species, spot, seconds}.
+static func nap_during(content: GameContent, sim: WorldSim, events: Array[Dictionary], from_t: float,
+		to_t: float) -> Dictionary:
+	if sim == null or content == null or to_t <= from_t:
+		return {}
+	var brain := CreatureBrain.new(content, sim.state.install_seed)
+	brain.env = func(t: float) -> Dictionary:
+		return {"phase": sim.phase_at(t), "weather": sim.weather_at(t)}
+	brain.owned = func(item: StringName) -> int:
+		return sim.owned_count(item)
+	brain.bed_flowers = func(bed_id: StringName) -> Array:
+		var out: Array = []
+		for st: Dictionary in sim.state.stems:
+			if StringName(st["bed"]) == bed_id:
+				out.append(StringName(st["flower"]))
+		return out
+	for ev: Dictionary in events:
+		if StringName(ev.get("type", &"")) != WorldSim.EV_ARRIVED or bool(ev.get("peek", false)):
+			continue
+		var sp := StringName(ev["species"])
+		var arrive := float(ev.get("t", from_t))
+		var depart := float(ev.get("depart_t", arrive))
+		if depart <= from_t or arrive >= to_t or brain.has_visit(sp):
+			continue
+		brain.add_visit(sp, arrive, depart, bool(ev.get("from_greeter", false)))
+	brain.advance(to_t)
+	return brain.longest_nap(from_t, to_t)
+
+
 func longest_nap(t0: float, t1: float) -> Dictionary:
 	var best := {}
 	var best_s := 0.0

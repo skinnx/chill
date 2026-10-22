@@ -10,8 +10,14 @@ extends Control
 ##    floats back; tap a jar = one petal (the tap alternative); tap a petal or drop in the pot = it
 ##    goes back to its jar (a drop refunds its dew);
 ##  * stir: a circular drag around the pot's mouth; only motion 28-150 dp from the centre counts,
-##    at most 45 deg per event, either direction, any speed; lifting keeps the progress; the Stir
-##    pill adds 180 deg over 600 ms;
+##    either direction, any speed; lifting keeps the progress; the Stir pill adds 180 deg over
+##    600 ms. The stir is the one gesture here that integrates the PATH of the thumb rather than
+##    reading its latest position, so its rules are geometric and nothing about it depends on the
+##    frame rate (see [method stir_delta]): with Godot's default input accumulation a handler sees
+##    one motion event per rendered frame, so the flat 45-deg-per-EVENT ceiling this used to have
+##    quietly halved a fast stir at 30 fps. For the same reason the stir - and only the stir -
+##    holds [InputPrecision] while it runs, so the circle is sampled at the pointer's own rate
+##    instead of the frame rate;
 ##  * pour: once stirred, drag the pot toward the tray: it tilts with the thumb (0-55 deg) and past
 ##    30 deg the pour plays to its end by itself (1.2 s); released before, it springs back; the
 ##    Pour pill does the same;
@@ -51,6 +57,12 @@ const STEP_H := 20.0 * DP
 const DROP_JAR := 8
 const JARS := 9
 const JARS_ROW1 := 5
+## Stir sampling (ACTIVE_TEA §4 step 2, ARCHITECTURE §3.5). One sample may never carry more than
+## this many degrees: it sits under the +-180 deg shortest-arc wrap of [method stir_delta], so a
+## thumb that jumps half the pot in one sample can never be read as a turn the other way.
+const STIR_MAX_DEG := 170.0
+## Who holds [InputPrecision] while a stir drag runs.
+const STIR_PRECISION := &"tea_stir"
 ## Pot geometry in pot_body piece px (pivot = the foot): the mouth (stir centre), its radii, the
 ## body centre (drop zone) and the spout tip (pour stream).
 const MOUTH := Vector2(0.0, -182.0)
@@ -115,7 +127,9 @@ var _drag: Drag = Drag.NONE
 var _drag_index: int = -1
 var _press_at := Vector2.ZERO
 var _drag_at := Vector2.ZERO
-var _last_angle: float = 0.0
+## The previous stir sample as an offset from the pot's mouth in panel px, so the next sample can
+## check that both of its ends are in the ring.
+var _last_off := Vector2.ZERO
 var _stir_shown: float = 0.0
 var _stir_anim: float = 0.0
 var _swirl: float = 0.0
@@ -154,6 +168,12 @@ func _init() -> void:
 	for r: Variant in ordered:
 		jar_flowers.append(StringName(String((r as Dictionary).get("flower", ""))))
 	calm = Motion.reduce_motion
+
+
+## The sheet can close (or the app can be suspended) with a thumb still on the pot, and no
+## release ever arrives: the stir's claim on the raw pointer must not outlive the panel.
+func _exit_tree() -> void:
+	InputPrecision.release(STIR_PRECISION)
 
 
 func _ready() -> void:
@@ -319,6 +339,16 @@ func pot_foot() -> Vector2:
 
 func pot_xf() -> Transform2D:
 	return Transform2D(deg_to_rad(_tilt), pot_foot())
+
+
+## The stir annulus in ring-space px (tea.json `stir_ring_inner_dp` / `stir_ring_outer_dp`, read as
+## the horizontal radii they were authored as, so the data file and ACTIVE_TEA §4 stay true).
+func stir_inner_px() -> float:
+	return float(_cfg.get("stir_ring_inner_dp", 28.0)) * DP
+
+
+func stir_outer_px() -> float:
+	return float(_cfg.get("stir_ring_outer_dp", 150.0)) * DP
 
 
 ## The stir centre (the pot's mouth) in local px.
@@ -586,6 +616,7 @@ func press(p: Vector2) -> void:
 	_drag_at = p
 	_drag = Drag.NONE
 	_drag_index = -1
+	InputPrecision.release(STIR_PRECISION)  # a press that arrives without its release
 	if is_busy():
 		return
 	for i in _tray.size():
@@ -612,10 +643,14 @@ func press(p: Vector2) -> void:
 		AudioDirector.play_cue(CUE_TOUCH)
 		return
 	if not petals_in_pot().is_empty() and not stir_done() and not simple:
-		var d := p.distance_to(stir_centre())
-		if d <= float(_cfg.get("stir_ring_outer_dp", 150.0)) * DP:
+		var q := p - stir_centre()
+		if q.length() <= stir_outer_px():
 			_drag = Drag.STIR
-			_last_angle = (p - stir_centre()).angle()
+			# Seeded even when the press lands inside the dead middle (on the liquid, where the
+			# angle is noise): stir_delta credits nothing until BOTH ends of a sample are in the
+			# ring, so the stroke simply starts counting as the thumb reaches it.
+			_last_off = q
+			InputPrecision.acquire(STIR_PRECISION)
 
 
 func move(p: Vector2) -> void:
@@ -627,9 +662,10 @@ func move(p: Vector2) -> void:
 				_drag = Drag.PETAL
 				_press_key = ""
 		Drag.STIR:
-			var add := stir_delta(_last_angle, p, stir_centre(), float(_cfg.get("stir_ring_inner_dp", 28.0)) * DP,
-					float(_cfg.get("stir_ring_outer_dp", 150.0)) * DP, float(_cfg.get("stir_max_deg_per_event", 45.0)))
-			_last_angle = (p - stir_centre()).angle()
+			var q := p - stir_centre()
+			var add := stir_delta(_last_off, q, stir_inner_px(), stir_outer_px(),
+					float(_cfg.get("stir_max_deg_per_sample", 170.0)))
+			_last_off = q
 			if absf(add) > 0.0:
 				_stir_by(add)
 		Drag.POUR:
@@ -649,6 +685,7 @@ func release(p: Vector2) -> void:
 	var i := _drag_index
 	_drag = Drag.NONE
 	_press_key = ""
+	InputPrecision.release(STIR_PRECISION)
 	var tapped := p.distance_to(_press_at) <= float(_cfg.get("petal_drag_threshold_px", 24.0))
 	match kind:
 		Drag.JAR:
@@ -720,17 +757,64 @@ func _stir_by(deg: float) -> void:
 		changed.emit()
 
 
-## Degrees one motion event adds to the stir (signed, for the swirl): the angle swept around
-## [param centre] since [param last_angle], 0 outside the ring [inner, outer] px, clamped to
-## [param max_deg] so a scribble through the centre adds nothing strange (ACTIVE_TEA §4).
-static func stir_delta(last_angle: float, p: Vector2, centre: Vector2, inner: float, outer: float,
-		max_deg: float) -> float:
-	var d := p.distance_to(centre)
-	if d < inner or d > outer:
+## Degrees one stir sample adds (signed, for the swirl). [param last] and [param now] are
+## consecutive samples as offsets from the pot's mouth, in panel px.
+##
+## Nothing here depends on the frame rate. That is the point: Godot merges input once per rendered
+## frame by default (ARCHITECTURE §3.5), so a stir measured per EVENT - as this was, at a flat 45°
+## a motion event - quietly counts a brisk circle for half as much on a 30 fps phone as on a
+## 60 fps one. The three rules below are all geometric.
+##
+## 1. The annulus is deliberately two different shapes, because its two bounds do different jobs:
+## [br]- [param inner] (the dead middle) is measured in RING SPACE, so it is the same flat ellipse
+##   as the drawn progress ring and the liquid surface. A circular dead zone of the same radius
+##   would swallow the top and bottom of the ring the game invites the player to trace, and all of
+##   the tea with the spoon standing in it, so about a quarter of that stroke would count for
+##   nothing - and the shorter the phone, the flatter the pot and the worse it gets.
+## [br]- [param outer] stays a plain circle in panel px, because its job is only to ignore motion
+##   elsewhere in the panel; a player who stirs a wide round circle instead of following the flat
+##   ring must keep every degree of it.
+##
+## 2. BOTH ends of a sample must be in the annulus, and the straight line between them must stay
+## out of the dead middle. Checking only the new end would pay out for a pull from the middle of
+## the pot outwards and for a flick straight across it - neither is a stir, and ACTIVE_TEA §4
+## promises that "a scribble through the centre adds nothing strange". The chord test is what makes
+## that exactly true at any sampling rate, where a per-event ceiling only made it expensive.
+##
+## 3. What is left is clamped to [param max_deg] (170° by default), which sits under the ±180°
+## shortest-arc wrap below: a thumb that somehow jumps half the pot in one sample can never be
+## read as a sweep the other way. Every real sample is far smaller than this.
+##
+## The thumb may leave the ring and come back freely: the sample that re-enters counts 0 and
+## re-seeds, so there is never a jump.
+static func stir_delta(last: Vector2, now: Vector2, inner: float, outer: float,
+		max_deg: float = STIR_MAX_DEG) -> float:
+	if not in_stir_ring(last, inner, outer) or not in_stir_ring(now, inner, outer):
 		return 0.0
-	var a := (p - centre).angle()
-	var delta := rad_to_deg(wrapf(a - last_angle, -PI, PI))
+	if chord_clears_middle(last, now) < inner:
+		return 0.0
+	var delta := rad_to_deg(wrapf(ring_offset(now).angle() - ring_offset(last).angle(), -PI, PI))
 	return clampf(delta, -max_deg, max_deg)
+
+
+## True when an offset from the mouth lies in the stir annulus (elliptical inside, round outside).
+static func in_stir_ring(q: Vector2, inner: float, outer: float) -> bool:
+	return ring_offset(q).length() >= inner and q.length() <= outer
+
+
+## How close the straight line between two samples comes to the pot's mouth, in ring space. A real
+## circular stroke stays out at its radius; a line drawn across the pot passes through the middle.
+static func chord_clears_middle(last: Vector2, now: Vector2) -> float:
+	var a := ring_offset(last)
+	var b := ring_offset(now)
+	return Geometry2D.get_closest_point_to_segment(Vector2.ZERO, a, b).length()
+
+
+## An offset from the pot's mouth in ring space: the y axis stretched by the progress ring's
+## aspect ([constant RING_R]), so the flat ellipse the player traces becomes a circle and its
+## angle advances evenly all the way round.
+static func ring_offset(q: Vector2) -> Vector2:
+	return Vector2(q.x, q.y * RING_R.x / RING_R.y)
 
 
 ## The pot's tilt (deg) for a pour drag [param drag] (toward the tray: right and down): [param

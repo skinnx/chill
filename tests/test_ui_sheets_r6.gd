@@ -283,7 +283,7 @@ func test_tall_phone_sheet_opens_taller_and_drags_to_a_large_detent() -> void:
 	var sc_h := s.scroll_list().size.y
 	s.drag_begin(1000.0, 0.0)
 	s.drag_to(1000.0 - (large.size.y - med.size.y), 0.2)
-	s.drag_end()
+	s.drag_end(0.2)
 	await wait_seconds(1.2)
 	assert_true(s.expanded, "a drag up reaches the large detent")
 	assert_almost_eq(s.size.y, large.size.y, 2.0, "large height")
@@ -291,14 +291,51 @@ func test_tall_phone_sheet_opens_taller_and_drags_to_a_large_detent() -> void:
 	assert_almost_eq(s.scroll_list().size.y - sc_h, large.size.y - med.size.y, 2.0, "the scroll window follows")
 	s.drag_begin(500.0, 0.0)
 	s.drag_to(500.0 + (large.size.y - med.size.y), 0.2)
-	s.drag_end()
+	s.drag_end(0.2)
 	await wait_seconds(1.2)
 	assert_false(s.expanded, "back down to medium")
 	assert_true(host.is_open(), "still open at the medium detent")
 	s.drag_begin(500.0, 0.0)
 	s.drag_to(500.0 + med.size.y * 0.4, 0.2)
-	s.drag_end()
+	s.drag_end(0.2)
 	assert_false(host.is_open(), "below the medium detent the drag dismisses")
+
+
+## Round 8: the dismiss velocity is measured over a 100 ms window and is ZERO once the finger has
+## rested, so "pull the sheet down a little, hold it there to look at the world behind it, lift"
+## springs back instead of closing. It used to carry the speed of a pull that had finished a
+## second ago. The same change makes the threshold mean the same thing at 30 and at 60 fps,
+## because a per-event average's time constant is the frame interval (ARCHITECTURE §3.5).
+func test_swipe_velocity_is_windowed_and_goes_stale() -> void:
+	var host := _host("settings")
+	host.open(&"settings", true)
+	var s := host.current
+	await wait_process_frames(3)
+	# A real flick: 300 px over 100 ms = 3000 px/s, well past the 1000 px/s dismiss speed.
+	s.drag_begin(500.0, 0.0)
+	s.drag_to(600.0, 0.033)
+	s.drag_to(700.0, 0.066)
+	s.drag_to(800.0, 0.1)
+	assert_gt(s.drag_velocity(0.1), 1000.0, "the flick reads as a flick")
+	# The same samples, read a quarter of a second later: the finger has stopped.
+	assert_eq(s.drag_velocity(0.35), 0.0, "a finger that rested carries no speed")
+
+
+func test_the_same_flick_reads_the_same_at_30_and_60_fps() -> void:
+	var host := _host("settings")
+	host.open(&"settings", true)
+	var s := host.current
+	await wait_process_frames(3)
+	var speeds: Array[float] = []
+	for dt: float in [1.0 / 60.0, 1.0 / 30.0]:
+		# 1200 px/s for 100 ms, sampled once per rendered frame as accumulation delivers it.
+		var steps := int(roundf(0.1 / dt))
+		s.drag_begin(500.0, 0.0)
+		for i in range(1, steps + 1):
+			s.drag_to(500.0 + 1200.0 * dt * float(i), dt * float(i))
+		speeds.append(s.drag_velocity(dt * float(steps)))
+	assert_almost_eq(speeds[0], 1200.0, 1.0, "60 fps")
+	assert_almost_eq(speeds[1], 1200.0, 1.0, "30 fps agrees")
 
 
 func test_16_9_keeps_the_art_bible_sheet() -> void:

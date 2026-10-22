@@ -521,6 +521,7 @@ WISH_TIP_FIRST,"A thought bubble is a little wish. Help if you like, or let it f
 WISH_TIP_HELD,{name} keeps the wish for another visit.,{name} sẽ giữ điều ước này cho lần ghé sau.
 WISH_INVITE,{name} toddles over.,{name} lon ton chạy tới.
 RECAP_WISH,{name} found a lovely surprise.,{name} tìm thấy một bất ngờ dễ thương.
+RECAP_WISH_WAITING,{name} is still hoping for {wish},{name} vẫn đang mong một {wish}
 CAPTION_WISH,soft bubble pop,tiếng bong bóng khẽ nổ
 CAPTION_WISH_GRANTED,happy trill,tiếng reo vui
 A11Y_WISH_BUBBLE,{name} has a little wish: {wish},{name} có một điều ước nhỏ: {wish}

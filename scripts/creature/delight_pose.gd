@@ -19,7 +19,10 @@ const SNUGGLE := &"snuggle"
 const MOTION := {&"delight_hop": HOP, &"delight_splash": HOP, &"delight_paw_water": SNUGGLE,
 	&"delight_sway": SWAY, &"delight_gaze": SWAY, &"delight_sit_by": SWAY, &"delight_spin": SPIN,
 	&"delight_snuggle": SNUGGLE, &"delight_sip": SNUGGLE, &"sip_tea": SNUGGLE, &"delight_nap": SNUGGLE,
-	&"delight_nibble": SNUGGLE, &"ride_boat": SWAY}
+	&"delight_nibble": SNUGGLE, &"ride_boat": SWAY,
+	## Retention v1 ♥1 "waves hello on open" (GDD §13.2, friendship.json wave_on_open.pose): the
+	## friend turns to the camera and rocks - the same calm sway, no new motion to tune.
+	&"wave": SWAY}
 ## Shapes: hop height (body units), hops per pose, sway amplitude (deg) and rate (Hz), the spin's
 ## three looks (-1 left .. +1 right), the snuggle squash.
 const HOP_BU := 0.16

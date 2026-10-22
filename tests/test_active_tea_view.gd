@@ -17,6 +17,14 @@ const GARDEN := {&"sweet_clover": 2, &"button_daisy": 2, &"buttercup": 1, &"moon
 const CLOVER := &"sweet_clover"
 const FRIEND := &"puffmoss"
 const T0 := 1000.0
+## The stir annulus in ring-space px (tea.json 28 / 150 dp at 3 px per dp).
+const INNER := 84.0
+const OUTER := 450.0
+## The Brew panel at the sheet's large detent on a 1080x1920 frame (ui_sheet detents and
+## tea_sheet's tab offsets), which is what makes the drawn ring flatter than the dead radius.
+const REAL_PANEL := Vector2(936.0, 1092.0)
+## RING_R.x / RING_R.y: how flat the drawn progress ring is.
+const RING_ASPECT := 176.0 / 64.0
 const PLOTS := preload("res://scenes/garden/plots_layer.tscn")
 
 var c: GameContent
@@ -74,27 +82,96 @@ func _jar(p: TeaPot, flower: StringName) -> int:
 
 # ------------------------------------------------------------------ gesture maths
 
-func test_stir_counts_motion_around_the_mouth_in_either_direction() -> void:
-	var centre := Vector2(300, 300)
-	var r := 200.0
+## A point on the drawn (flat) ring at [param deg] of ring-space angle, [param rx] px wide.
+func _on_ring(deg: float, rx: float) -> Vector2:
+	var a := deg_to_rad(deg)
+	return Vector2(cos(a) * rx, sin(a) * rx / RING_ASPECT)
+
+
+## Walks a circle of [param radius] px around the mouth; returns the degrees the pot credited.
+func _walk_ring(radius: float, total_deg: float, steps: int) -> float:
 	var total := 0.0
-	var a := 0.0
-	for i in 18:
-		var b := a + deg_to_rad(10.0)
-		total += TeaPot.stir_delta(a, centre + Vector2.from_angle(b) * r, centre, 84.0, 450.0, 45.0)
-		a = b
-	assert_almost_eq(total, 180.0, 0.01, "half a turn clockwise = 180 deg")
-	var back := TeaPot.stir_delta(deg_to_rad(90.0), centre + Vector2.from_angle(deg_to_rad(60.0)) * r, centre, 84.0,
-			450.0, 45.0)
-	assert_almost_eq(absf(back), 30.0, 0.01, "the other way counts as much (the pot adds |deg|)")
+	var last := Vector2(radius, 0.0)
+	for i in range(1, steps + 1):
+		var q := Vector2.from_angle(deg_to_rad(total_deg * float(i) / float(steps))) * radius
+		total += TeaPot.stir_delta(last, q, INNER, OUTER)
+		last = q
+	return total
 
 
-func test_stir_ignores_the_centre_and_far_away_and_caps_each_event() -> void:
-	var centre := Vector2.ZERO
-	assert_eq(TeaPot.stir_delta(0.0, Vector2(20, 20), centre, 84.0, 450.0, 45.0), 0.0, "inside 28 dp: a scribble")
-	assert_eq(TeaPot.stir_delta(0.0, Vector2(600, 0).rotated(1.0), centre, 84.0, 450.0, 45.0), 0.0, "past 150 dp")
-	assert_almost_eq(TeaPot.stir_delta(0.0, Vector2(200, 0).rotated(PI * 0.9), centre, 84.0, 450.0, 45.0), 45.0, 0.01,
-			"a jump through the middle adds at most 45 deg")
+func test_stir_counts_motion_around_the_mouth_in_either_direction() -> void:
+	assert_almost_eq(_walk_ring(200.0, 180.0, 18), 180.0, 0.01, "half a turn clockwise = 180 deg")
+	var back := TeaPot.stir_delta(Vector2.from_angle(deg_to_rad(90.0)) * 200.0,
+			Vector2.from_angle(deg_to_rad(60.0)) * 200.0, INNER, OUTER)
+	assert_true(absf(back) > 0.0 and back < 0.0, "the other way counts too (the pot adds |deg|)")
+	assert_almost_eq(_walk_ring(200.0, -360.0, 36), -360.0, 0.01, "a full turn anticlockwise = -360 deg")
+
+
+func test_stir_ignores_the_centre_and_far_away_and_caps_a_wrap() -> void:
+	assert_eq(TeaPot.stir_delta(Vector2(200, 0), Vector2(20, 20), INNER, OUTER), 0.0,
+			"inside the dead middle: a scribble")
+	assert_eq(TeaPot.stir_delta(Vector2(200, 0), Vector2(600, 0).rotated(1.0), INNER, OUTER), 0.0, "past 150 dp")
+	assert_eq(TeaPot.stir_delta(Vector2.from_angle(deg_to_rad(5.0)) * 200.0,
+			Vector2.from_angle(deg_to_rad(183.0)) * 200.0, INNER, OUTER), 0.0,
+			"a near-diameter sample is a line across the pot, so the chord test already refuses it")
+	# With no dead middle the chord test cannot fire, and the wrap guard is what is left: wrapf
+	# keeps |delta| <= 180, so the cap has to bite below that or a thumb that jumps half the pot
+	# would read as a sweep the other way.
+	assert_almost_eq(TeaPot.stir_delta(Vector2.from_angle(deg_to_rad(5.0)) * 200.0,
+			Vector2.from_angle(deg_to_rad(183.0)) * 200.0, 0.0, OUTER), TeaPot.STIR_MAX_DEG, 0.5,
+			"one sample never carries a near-half turn")
+
+
+## Both ends of a sample must be in the ring, AND the line between them must miss the dead middle,
+## or press-on-the-liquid-and-flick-outwards (or straight across the pot) would finish the stir
+## with no circle at all. ACTIVE_TEA §4: "a scribble through the centre adds nothing strange".
+func test_a_pull_or_a_flick_through_the_middle_is_not_a_stir() -> void:
+	assert_eq(TeaPot.stir_delta(Vector2(10, 0), Vector2(0, 150), INNER, OUTER), 0.0,
+			"the previous end was in the dead middle: nothing is credited")
+	assert_eq(TeaPot.stir_delta(Vector2(0, 150), Vector2(10, 0), INNER, OUTER), 0.0, "and neither way round")
+	assert_eq(TeaPot.stir_delta(Vector2(-200, 0), Vector2(200, 0), INNER, OUTER), 0.0,
+			"straight across the pot: both ends in the ring, but the line goes through the middle")
+	assert_almost_eq(TeaPot.stir_delta(_on_ring(90.0, 180.0), _on_ring(110.0, 180.0), INNER, OUTER),
+			20.0, 0.01, "once the thumb is on the ring it counts again, with no jump")
+
+
+## Nothing about the stir may depend on the frame rate: with Godot's input accumulation on, a
+## handler sees one motion event per rendered frame, so the old flat 45°-per-EVENT ceiling counted
+## a brisk circle for half as much at 30 fps. The same stroke now reads the same at any sampling
+## rate - coarse chords and fine ones alike.
+func test_the_same_stroke_counts_the_same_at_any_sampling_rate() -> void:
+	# 1.5 turns, sampled as it would be at 30 fps (9 chords), at 60 fps (18) and raw (72).
+	assert_almost_eq(_walk_ring(200.0, 540.0, 9), 540.0, 0.01, "coarse chords: the whole stroke counts")
+	assert_almost_eq(_walk_ring(200.0, 540.0, 18), 540.0, 0.01, "60 fps")
+	assert_almost_eq(_walk_ring(200.0, 540.0, 72), 540.0, 0.01, "a raw 240 Hz pointer agrees exactly")
+
+
+## The outer bound stays a plain circle: a player who stirs a wide round circle rather than
+## following the flat drawn ring keeps every degree of it.
+func test_a_wide_round_stir_still_counts_in_full() -> void:
+	assert_almost_eq(_walk_ring(210.0, 540.0, 54), 540.0, 0.01, "a 70 dp circle: 1.5 turns")
+
+
+## The regression this ring-space work exists for: the progress ring is drawn as a flat ellipse
+## (RING_R 176 x 64), so a circular dead zone swallowed its top and bottom. Tracing the ring the
+## game drew has to credit a full turn, at the real panel size of the large detent.
+func test_tracing_the_drawn_progress_ring_credits_a_whole_turn() -> void:
+	var pot := TeaPot.new()
+	autofree(pot)
+	pot.size = REAL_PANEL
+	var s: float = pot.pot_scale()
+	var rx: float = TeaPot.RING_R.x * s
+	var ry: float = TeaPot.RING_R.y * s
+	assert_true(ry < pot.stir_inner_px(), "premise: the drawn ring's short radius is inside the dead radius")
+	var total := 0.0
+	var steps := 72
+	var last := Vector2(rx, 0.0)
+	for i in range(1, steps + 1):
+		var a := TAU * float(i) / float(steps)
+		var on_ring := Vector2(cos(a) * rx, sin(a) * ry)
+		total += TeaPot.stir_delta(last, on_ring, pot.stir_inner_px(), pot.stir_outer_px())
+		last = on_ring
+	assert_almost_eq(absf(total), 360.0, 0.5, "every part of the drawn ring counts")
 
 
 func test_pour_tilt_follows_the_thumb_toward_the_tray() -> void:

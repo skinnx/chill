@@ -429,6 +429,11 @@ func world_release(key: Variant, canvas_pos: Vector2, act: bool) -> void:
 		return
 	_finger = canvas_pos
 	if _mode == Mode.HELD:
+		# Settle from the release position, not from the previous frame's: the final motion event
+		# would otherwise be thrown away, so a flick-release commits up to a frame of travel short
+		# of where the player let go and a drop just inside the tray can read as a world drop.
+		# The tray drag-out path already does this; both go through one helper now.
+		_step_held(0.0)
 		_drop(true)
 	elif _mode == Mode.PRESSED:
 		_mode = Mode.NONE
@@ -511,6 +516,16 @@ func _begin_press(id: String, canvas_pos: Vector2) -> void:
 ## Past the slop: the piece follows the finger; sockets, halos and the ghost are built once.
 func _to_held() -> void:
 	_mode = Mode.HELD
+	# Re-anchor on the frame the carry starts, exactly as the map pan does (world_pan.gd). The
+	# grab offset was taken at the press, so without this the piece would catch up the whole slop
+	# - a visible 24 px sideways pop on every single pick-up - and the first velocity sample would
+	# divide that same slop by one frame delta (~480 dp/s), slamming the lean to its 6 deg cap and
+	# making a slow, careful lift start with a flinch (ACTIVE_DECOR §3.3: secondary motion, no
+	# shake). Anchoring to where the piece is drawn and where the finger actually is costs nothing
+	# and removes both.
+	_grab = _foot - _layer.to_design(_finger)
+	_press_canvas = _finger
+	_last_finger = _finger
 	if selected == _id:
 		selected = ""
 		selection_changed.emit("")

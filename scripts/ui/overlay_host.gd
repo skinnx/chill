@@ -371,6 +371,29 @@ static func _card_shell(sep: int = 24, frosted: bool = false) -> Array:
 
 # ------------------------------------------------------------------ recap (GDD §7.5)
 
+## The display name of a nap spot for RECAP_NAPPED; a nibble point reads as its bed.
+func _spot_name(spot: StringName) -> StringName:
+	if spot == &"" or Game.content == null:
+		return &""
+	var id := spot
+	if String(spot).contains(CreatureBrain.NIBBLE_SEP):
+		id = StringName(String(spot).get_slice(CreatureBrain.NIBBLE_SEP, 0))
+	var def: Dictionary = Game.content.spots_by_id.get(id, Game.content.beds_by_id.get(id, {}))
+	var key := String(def.get("name_key", ""))
+	return StringName(tr(key)) if key != "" else &""
+
+
+## The wish a friend is still hoping for, for RECAP_WISH_WAITING.
+func _waiting_wish(species: StringName) -> String:
+	if species == &"" or Game.sim == null:
+		return ""
+	var w: Dictionary = Game.wish_of(species)
+	if w.is_empty():
+		return ""
+	return WishText.title(Game.content, StringName(String(w.get("wish", ""))), species,
+			func(sp: StringName) -> String: return Game.display_name(sp))
+
+
 func sample_recap() -> Array:
 	return [{"key": &"RECAP_NEW_FRIEND", "species": &"buttonbud"}, {"key": &"RECAP_ONE_VISITED", "species": &"puffmoss"},
 		{"key": &"RECAP_GIFTS", "species": &""}]
@@ -395,7 +418,12 @@ func show_recap(lines: Array, hold: bool = false) -> void:
 		row.add_child(plate)
 		# round 5 (QA r4: "Pip dropped by" read as a truncated line): a complete, warm sentence
 		var text_key := RECAP_ONE_VISITED_HI if key == &"RECAP_ONE_VISITED" else key
-		var text := I18n.fmt(text_key, {"name": Game.display_name(sp) if sp != &"" and Game.sim != null else ""})
+		var args := {"name": Game.display_name(sp) if sp != &"" and Game.sim != null else ""}
+		if key == &"RECAP_NAPPED":
+			args["spot"] = _spot_name(StringName(String(d.get("spot", ""))))
+		elif key == &"RECAP_WISH_WAITING":
+			args["wish"] = _waiting_wish(sp)
+		var text := I18n.fmt(text_key, args)
 		var l := UiSheet.label(text, &"BodyLabel", true)
 		l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		row.add_child(l)

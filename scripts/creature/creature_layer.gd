@@ -121,6 +121,12 @@ var _sleepers: PackedStringArray = PackedStringArray()
 var _frame: Vector2 = Vector2(1080, 1920)
 var _obstacles: Array[Rect2] = []
 var _feed := PaletteFeed.new()
+## Retention v1 ♥1 "waves hello on open" (GDD §13.2): the plan Game handed us on world_ready,
+## still waiting for the hollow to be clear. Entries are {species, delay_s, pose}.
+var _waves: Array[Dictionary] = []
+## Seconds the hollow has been clear since the plan arrived (the welcome-back card counts as
+## covered: the friends say hello to the player, not to the back of a card).
+var _wave_t: float = 0.0
 
 
 func _ready() -> void:
@@ -215,6 +221,9 @@ func _on_world_ready(_recap: Array) -> void:
 	if _qa_count > 0 and _qa_t == 0.0:
 		_spawn_fixture()
 	wishes.sync()
+	# ♥1: the friends who know you look up and say hello once the card is out of the way.
+	_waves = Game.wave_plan()
+	_wave_t = 0.0
 
 
 func _on_suspended() -> void:
@@ -274,6 +283,28 @@ func _now() -> float:
 	return Game.world_now() if Game.is_ready else 0.0
 
 
+## Runs the ♥1 wave plan once the recap (or any card) is out of the way, each friend after its
+## own deterministic delay. A friend that has since left, fallen asleep or started leaving is
+## simply skipped: a hello is never owed, and nothing about it can be missed.
+func _wave_tick(delta: float) -> void:
+	if _waves.is_empty():
+		return
+	var pan := WorldPan.current
+	if pan != null and pan.is_blocked():
+		return
+	_wave_t += delta
+	var still: Array[Dictionary] = []
+	for w: Dictionary in _waves:
+		if _wave_t < float(w["delay_s"]):
+			still.append(w)
+			continue
+		var sp := StringName(w["species"])
+		var m: Mossling = _mosslings.get(sp)
+		if m != null and is_instance_valid(m) and not m.leaving and not m.asleep:
+			m.play_pose(StringName(w["pose"]))
+	_waves = still
+
+
 func _env_at(t: float) -> Dictionary:
 	if _pinned_env or Game.sim == null:
 		return {"phase": TimeOfDay.phase, "weather": TimeOfDay.weather}
@@ -312,6 +343,7 @@ func _process(delta: float) -> void:
 			m.set_rain(_rain, bout.shelter, bout.umbrella)
 	_update_depth_parents()
 	_report_sleepers()
+	_wave_tick(delta)
 	if _qa_count > 0 or _qa_pet != &"":
 		_qa_tick(delta)
 	if not _qa_touch.is_empty():

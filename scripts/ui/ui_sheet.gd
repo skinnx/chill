@@ -48,6 +48,8 @@ const OVERDRAG_PX := 48.0
 const OVERDRAG_K := 0.3
 ## Release speed (px/s) that picks the detent in the fling direction.
 const DETENT_FLING := 600.0
+## The swipe velocity window, the same number WorldPan uses (motion_tokens world.pan).
+const VELOCITY_WINDOW_S := 0.1
 const DETENT_SPRING := &"move"
 ## Scrolled content fades out over UiBatch.FADE_BOTTOM_PX at the bottom edge and FADE_TOP_PX at
 ## the top, each only while there is more to scroll that way (round 6).
@@ -103,8 +105,8 @@ var _drag_from: float = -1.0
 var _drag_h0: float = 0.0
 var _drag_base: float = 0.0
 var _drag_y: float = 0.0
-var _drag_v: float = 0.0
-var _drag_last_t: float = 0.0
+## (offset px, time s) samples of the swipe, pruned to VELOCITY_WINDOW_S.
+var _samples: Array[Vector2] = []
 var _built: bool = false
 ## The scroll list made by [method make_scroll] (its window drives the content fade).
 var _fade_scroll: ScrollContainer
@@ -385,11 +387,36 @@ func _on_swipe_input(event: InputEvent) -> void:
 		if mb.pressed:
 			drag_begin(mb.global_position.y, now)
 		elif _drag_from >= 0.0:
-			drag_end()
+			drag_end(now)
 		_swipe.accept_event()
 	elif event is InputEventMouseMotion and _drag_from >= 0.0:
 		drag_to((event as InputEventMouseMotion).global_position.y, now)
 		_swipe.accept_event()
+
+
+## The swipe's speed in px/s over the last [constant VELOCITY_WINDOW_S], and **0 when the finger
+## has rested** for longer than that (round 8). This replaced a per-EVENT exponential average
+## (alpha 0.5), which had two faults. Its time constant was the frame interval, because Godot
+## merges input once per rendered frame (ARCHITECTURE §3.5), so the same flick measured ~1,135 px/s
+## at 60 fps and ~920 px/s at 30 - one phone dismissed the sheet and another bounced it back. And
+## it never decayed: pull a sheet down a little, hold it there to look at the world behind it, lift
+## - and the sheet closed on the speed of a pull that had finished a second ago. This is the same
+## time-windowed estimate [WorldPan] uses, with the same staleness guard.
+func drag_velocity(now: float) -> float:
+	if _samples.size() < 2:
+		return 0.0
+	var first := _samples[0]
+	var last := _samples[_samples.size() - 1]
+	var dt := last.y - first.y
+	if dt <= 1e-3 or now - last.y > VELOCITY_WINDOW_S:
+		return 0.0
+	return (last.x - first.x) / dt
+
+
+func _sample(dy: float, now: float) -> void:
+	_samples.append(Vector2(dy, now))
+	while _samples.size() > 2 and now - _samples[0].y > VELOCITY_WINDOW_S:
+		_samples.remove_at(0)
 
 
 ## The header drag (public for tests): up toward the large detent, down to the medium one and,
@@ -399,16 +426,14 @@ func drag_begin(y: float, now: float) -> void:
 	_drag_h0 = sheet_h if rest_bottom > 0.0 else size.y
 	_drag_base = position.y - rise
 	_drag_y = 0.0
-	_drag_v = 0.0
-	_drag_last_t = now
+	_samples.clear()
+	_samples.append(Vector2(0.0, now))
 	Motion.stop_springs(self)
 
 
 func drag_to(y: float, now: float) -> void:
 	var dy := y - _drag_from
-	var dt := maxf(now - _drag_last_t, 1e-3)
-	_drag_v = lerpf(_drag_v, (dy - _drag_y) / dt, 0.5)
-	_drag_last_t = now
+	_sample(dy, now)
 	_drag_y = dy
 	if rest_bottom <= 0.0:
 		rise = maxf(dy, 0.0)
@@ -428,13 +453,14 @@ func drag_to(y: float, now: float) -> void:
 	FrameGovernor.hold_for(Motion.duration(&"short"))
 
 
-func drag_end() -> void:
+func drag_end(now: float = -1.0) -> void:
 	_drag_from = -1.0
+	var v := drag_velocity(now if now >= 0.0 else Time.get_ticks_msec() * UiTokens.MS)
 	var sw := UiTokens.ui_block("swipe_dismiss")
 	var dist := float(sw.get("distance_frac", 0.25)) * (h_medium if h_medium > 0.0 else size.y)
 	var fast := float(sw.get("velocity_px_s", 1000.0))
 	var at_medium := rest_bottom <= 0.0 or sheet_h <= h_medium + 1.0
-	if rise > dist or (at_medium and _drag_v > fast and rise > 0.0):
+	if rise > dist or (at_medium and v > fast and rise > 0.0):
 		close_requested.emit()
 		return
 	if rest_bottom <= 0.0:
@@ -442,8 +468,8 @@ func drag_end() -> void:
 		rise = 0.0
 		return
 	Motion.spring_to(self, "rise", 0.0, DETENT_SPRING)
-	var up := _drag_v < -DETENT_FLING
-	var down := _drag_v > DETENT_FLING
+	var up := v < -DETENT_FLING
+	var down := v > DETENT_FLING
 	var nearer_large := absf(sheet_h - h_large) < absf(sheet_h - h_medium)
 	expand(up or (nearer_large and not down))
 

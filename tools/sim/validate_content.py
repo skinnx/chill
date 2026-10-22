@@ -948,6 +948,63 @@ def check_active_strings(d: dict, rows: dict, rep: Report) -> None:
 
 
 # ---------------------------------------------------------------- strings
+# ---------------------------------------------------------------- audio cue coverage
+# Every cue id a data file names has to exist in audio/manifest.json, or the feature that fires it
+# is simply silent and nothing says so. Retention v1 (GDD S13.7) and Active Play v1 (S14.8) were
+# designed with S22-S38 and shipped without them: the sim, the save, the strings and the tests all
+# landed, the sounds never did, and no gate noticed for two rounds.
+#
+# UNVOICED is that debt, written down. Anything NOT on this list that goes missing fails the
+# build, so the hole cannot grow; the Sound Designer deletes ids from here as the cues land, and
+# an id that is both authored and still listed fails too, so the list cannot go stale.
+UNVOICED = {
+	# Retention v1 (GDD S13.7)
+	"S22": "rustle sign shakes", "S23": "sign tapped (clue found)", "S24": "heart-up",
+	"S25": "scene fades in / teaser",
+	# Active F1 Wishes (GDD S14.8)
+	"S26": "wish appears", "S27": "wish granted",
+	# Active F2 Tea & Treats
+	"S28": "petals gathered", "S29": "petal or drop into the pot", "S30": "stirring loop + bell",
+	"S31": "pour / simple brew", "S32": "cup clink and sip", "S33": "new recipe", "S34": "nook steam",
+	# Active F3 free decor placement
+	"S35": "decor lift", "S36": "snap into a socket", "S37": "turn", "S38": "tuck into the tray",
+}
+CUE_ID = re.compile(r"^S\d{2}$")
+
+
+def _cue_ids(node, out: set) -> None:
+	"""Every "S07"-shaped string anywhere in a data document."""
+	if isinstance(node, dict):
+		for k, v in node.items():
+			if isinstance(k, str) and CUE_ID.match(k):   # tea.json lists its cues as keys
+				out.add(k)
+			_cue_ids(v, out)
+	elif isinstance(node, list):
+		for v in node:
+			_cue_ids(v, out)
+	elif isinstance(node, str) and CUE_ID.match(node):
+		out.add(node)
+
+
+def check_audio_cues(d: dict, rep: Report) -> None:
+	manifest = json.loads((ROOT / "audio" / "manifest.json").read_text(encoding="utf-8"))
+	have = set(manifest.get("cues", {}))
+	want: set = set()
+	for name, doc in d.items():
+		ids: set = set()
+		_cue_ids(doc, ids)
+		for cue in ids:
+			want.add(cue)
+			if cue not in have and cue not in UNVOICED:
+				rep.err(f"{name}.json references audio cue {cue}, which audio/manifest.json does not define")
+	for cue, what in sorted(UNVOICED.items()):
+		if cue in have:
+			rep.err(f"audio cue {cue} ({what}) is authored now: drop it from UNVOICED in validate_content.py")
+	missing = sorted(c for c in UNVOICED if c in want)
+	if missing:
+		print(f"  audio: {len(missing)} cue(s) still unvoiced (GDD S13.7, S14.8): {', '.join(missing)}")
+
+
 def check_strings(needed: set, rep: Report) -> dict:
 	p = ROOT / "i18n" / "strings.csv"
 	raw = p.read_bytes()
@@ -1004,6 +1061,7 @@ def main() -> int:
 	rows = check_strings(needed, rep)
 	check_retention_strings(d, rows, rep)
 	check_active_strings(d, rows, rep)
+	check_audio_cues(d, rep)
 	if rep.errors:
 		print(f"{len(rep.errors)} problem(s):")
 		print("\n".join("  " + e for e in rep.errors))

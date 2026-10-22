@@ -302,6 +302,41 @@ func test_small_moves_stay_a_tap_that_fires_on_release() -> void:
 	assert_eq(stub.cancels, 0)
 
 
+## With input accumulated once per rendered frame, the first motion event of a flick reports a
+## bigger step at 30 fps than at 60, so any pan that began at the slop boundary snapped ahead of
+## the thumb by v * dt. The pan now begins where the finger is, so the first frame moves the map
+## by nothing at all whatever the step, and the rest of the gesture is 1:1 either way.
+func test_the_pan_never_jumps_at_the_start_whatever_the_first_step() -> void:
+	for first: float in [30.0, 60.0, 100.0]:
+		var p := _pan()
+		_stub()
+		_press(p, Vector2(540, 1200))
+		_move(p, Vector2(540 - first, 1200))
+		assert_true(p.is_dragging(), "a %d px first step starts the pan" % int(first))
+		assert_almost_eq(p.offset().x, 0.0, 0.01, "and moves the map by nothing on that frame")
+		_move(p, Vector2(540 - first - 50.0, 1200))
+		assert_almost_eq(p.offset().x, 50.0, 0.01, "from there it is 1:1")
+
+
+## Round 8: Android sends a cancelled touch as a release with canceled = true. Reading it as an
+## ordinary release let a system gesture - the notification shade, the back swipe, an incoming
+## call - fire a real world action as the finger was dragged off the screen.
+func test_a_touch_the_os_cancels_fires_nothing() -> void:
+	var p := _pan()
+	var stub := _stub()
+	_touch(p, Vector2(540, 1200), true)  # the touch path: a cancel only ever arrives there
+	assert_eq(stub.presses, 1, "the press was taken as usual")
+	var up := InputEventScreenTouch.new()
+	up.index = 0
+	up.pressed = false
+	up.canceled = true
+	up.position = Vector2(540, 1200)
+	p._input(up)
+	assert_eq(stub.acts, 0, "a cancelled touch is not a tap")
+	assert_eq(stub.cancels, 1, "the pending tap is dropped")
+	assert_false(p.is_dragging())
+
+
 func test_drag_past_threshold_pans_and_cancels_the_tap() -> void:
 	var p := _pan()
 	var stub := _stub()
@@ -311,9 +346,9 @@ func test_drag_past_threshold_pans_and_cancels_the_tap() -> void:
 	assert_true(p.is_dragging())
 	assert_signal_emitted(p, "drag_started")
 	assert_eq(stub.cancels, 1, "the pending tap is dropped once")
-	assert_almost_eq(p.offset().x, 40.0 - p.threshold_px, 0.01, "starts from the slop edge: no jump")
+	assert_almost_eq(p.offset().x, 0.0, 0.01, "the pan starts where the finger is: no jump")
 	_move(p, Vector2(540 - 140, 1200))
-	assert_almost_eq(p.offset().x, 140.0 - p.threshold_px, 0.01, "then follows the finger 1:1")
+	assert_almost_eq(p.offset().x, 100.0, 0.01, "then follows the finger 1:1")
 	_press(p, Vector2(540, 1200), false)
 	assert_false(p.is_dragging())
 	assert_eq(stub.acts, 0, "no action after a drag, even released back on the target")
@@ -424,12 +459,14 @@ func test_touch_drag_pans_and_ignores_the_emulated_motion_and_a_second_finger() 
 	assert_false(p.is_dragging(), "emulated mouse events are ignored")
 	_drag(p, Vector2(540, 1260))
 	assert_true(p.is_dragging(), "the touch drag pans")
-	assert_almost_eq(p.offset().y, -(60.0 - p.threshold_px), 0.01, "dragging down rises into the sky")
+	assert_almost_eq(p.offset().y, 0.0, 0.01, "the pan starts where the finger is: no jump")
+	_drag(p, Vector2(540, 1320))
+	assert_almost_eq(p.offset().y, -60.0, 0.01, "dragging down rises into the sky, 1:1")
 	var second := InputEventScreenDrag.new()
 	second.index = 1
 	second.position = Vector2(100, 100)
 	p._input(second)
-	assert_almost_eq(p.offset().y, -(60.0 - p.threshold_px), 0.01, "a second finger is ignored")
+	assert_almost_eq(p.offset().y, -60.0, 0.01, "a second finger is ignored")
 	_touch(p, Vector2(540, 1260), false)
 	assert_false(p.is_dragging())
 
