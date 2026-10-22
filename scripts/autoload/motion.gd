@@ -47,11 +47,13 @@ func _process(delta: float) -> void:
 	var i := 0
 	while i < _drives.size():
 		var d: Dictionary = _drives[i]
-		var obj: Object = d["object"]
-		var prop: NodePath = d["property"]
-		if not is_instance_valid(obj):
+		# a Variant first: a freed object cannot be assigned to a typed Object var
+		var raw: Variant = d["object"]
+		if not is_instance_valid(raw):
 			_drives.remove_at(i)
 			continue
+		var obj := raw as Object
+		var prop: NodePath = d["property"]
 		var done := false
 		if d["is_vec2"]:
 			var s2: Spring2D = d["spring"]

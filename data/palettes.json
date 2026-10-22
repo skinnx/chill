@@ -468,7 +468,14 @@
 		"night_ink": "#EDEAF2",
 		"night_capsule": "#484E76",
 		"night_track": "#454B6E",
-		"raised": "#FFFDF8"
+		"raised": "#FFFDF8",
+		"hud_glass": "#FBF6EC",
+		"hud_shadow": "#203A2E",
+		"bubble_leaf": "#D3EBC8",
+		"bubble_gold": "#FCE5AE",
+		"bubble_coral": "#FFD8C8",
+		"basket_glow": "#FFC94D",
+		"gold_deep": "#D9962E"
 	},
 	"ui_night": {
 		"doc": "round 5 (QA r4 #22/#25: near-white sheets at night): after dark (the HUD's night chrome switch) the sheets, cards and modal cards are built in this scheme: a dim warm-navy glass sheet (surface, under the live veil), raised cards (surface_hi), cream ink, darker recessed tracks. Overrides ui / ui_derived tokens by name (UiTokens.sc, ThemeBuilder night theme); pill fills, toggles' leaf track, thumbs and the gold ring keep their day values.",
@@ -529,6 +536,27 @@
 			"live_tint": 0.94,
 			"icon_secondary": 0.6
 		}
+	},
+	"dock_icon": {
+		"doc": "round 6 (owner: 'the bottom menu is still not friendly'): the dock's plush sticker icons (tools/ui/make_icons.py dock_*): soft full-colour fills with a warm cocoa outline instead of the ink duotone, so they read as toys, not productivity glyphs. outline_night replaces outline on the night-chrome HUD variant (a cream sticker edge on the dim glass).",
+		"outline": "#4B3A33",
+		"outline_night": "#FFF4E6",
+		"leaf": "#79C27C",
+		"leaf_hi": "#AEDF98",
+		"clay": "#F2A47C",
+		"clay_hi": "#F9C7A6",
+		"honey": "#F5C266",
+		"honey_hi": "#FCDE9C",
+		"weave": "#D39246",
+		"coral": "#FF9F86",
+		"coral_deep": "#EE8068",
+		"cream": "#FFF4E8",
+		"dew": "#8CCFEF",
+		"dew_hi": "#E2F5FD",
+		"bloom": "#FF9DB6",
+		"bloom_heart": "#FFD66B",
+		"zz": "#8C9DDF",
+		"blush": "#FF8F86"
 	},
 	"icon_accent": {
 		"garden": "leaf",

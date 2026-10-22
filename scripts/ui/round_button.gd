@@ -4,7 +4,8 @@ extends BaseButton
 ## text-size stepper, the friend-card pencil). The control's rect is the HIT area; the plate is
 ## drawn centred in it at [member plate_px] (so a 56 dp plate can carry a 76 dp hit). Plates are
 ## surface_hi on e1 (never glass on glass). Active (its sheet open): primary_tint plate, a 3 dp
-## primary ring and the icon accent at 100 %. Asleep (onboarding): plate and icon at 50 %.
+## primary ring and the icon accent at 100 %. Asleep (a stepper at its limit): plate and icon at
+## 50 %; the dock's onboarding "not yet" tabs set [member asleep_dims] false and stay in full colour.
 ## Optional label (Caption 36, ink) inside the plate under the icon.
 
 # Data boundary: values read from JSON / Dictionaries are Variants and each one is converted
@@ -50,6 +51,8 @@ var asleep: bool = false:
 		asleep = v
 		_refresh_alpha()
 		_changed()
+## false: asleep never dims (round 6 dock: "not yet" is a sleepy icon, never a greyed one).
+var asleep_dims: bool = true
 ## Plate centre inside the rect (default: the rect centre).
 var plate_center: Vector2 = Vector2(-1, -1):
 	set(v):
@@ -208,10 +211,15 @@ func _refresh_alpha() -> void:
 		label.modulate.a = ASLEEP_ALPHA if looks_asleep() else 1.0
 
 
-## Onboarding sleep never dims the control whose sheet is open (QA r5: the selected Garden tab
-## read as disabled under its own sheet).
+## Sleep never dims the control whose sheet is open (QA r5: the selected Garden tab read as
+## disabled under its own sheet), nor a control that opted out ([member asleep_dims]).
 func looks_asleep() -> bool:
-	return asleep and not active
+	return asleep and asleep_dims and not active
+
+
+## The icon node (the dock breathes a sleepy icon and pops a newly selected one).
+func icon_node() -> TextureRect:
+	return _icon
 
 
 func _refresh_label_color() -> void:

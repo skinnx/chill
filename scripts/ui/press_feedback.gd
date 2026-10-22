@@ -29,6 +29,9 @@ const META_SQUASH := &"_press_squash"
 const META_RIPPLE_RECT := &"ripple_rect"
 const META_RIPPLE_RADIUS := &"ripple_radius"
 const META_RIPPLE_ON_DARK := &"ripple_on_dark"
+## Optional light-fill ripple colour (round 6: each dock tab splashes in its own warm accent, a
+## primary ripple over a gold bubble read grey).
+const META_RIPPLE_COLOR := &"ripple_color"
 const CUE_TOUCH := &"S01"
 const RIPPLE_SHADER := "res://shaders/ui/ripple.gdshader"
 ## Light-fill ripple: primary at this share of ui.ring.alpha[0] (a white ripple on cream is
@@ -192,6 +195,8 @@ static func _ripple(c: Control, p: Vector2) -> ColorRect:
 	mat.set_shader_parameter(&"u_reach", reach)
 	var col := UiTokens.color(&"primary")
 	var alpha := a0 * LIGHT_RIPPLE_SHARE
+	if c.has_meta(META_RIPPLE_COLOR):
+		col = c.get_meta(META_RIPPLE_COLOR) as Color
 	if pill:
 		col = UiTokens.color(&"primary")
 		alpha = a0 * PILL_RIPPLE_SHARE

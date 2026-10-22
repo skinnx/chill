@@ -3,10 +3,12 @@ extends Control
 ## The HUD root (scenes/main.tscn HUD/HudRoot; Art Bible §9, GDD §3.4, §7.5, §8; ARCHITECTURE
 ## §3.3, §12): builds the top bar, the dock, the sheet host and the overlays inside the scene's
 ## named hosts, and owns the flows that join them:
-##  * dock buttons open / close / swap the sheets; the dock shows the open sheet as active;
+##  * dock buttons (Album, Garden, Basket) and the top bar's Settings gear open / close / swap the
+##    sheets; the dock (or the gear) shows the open sheet as active;
 ##  * ambient watch (the eye, or 60 s without input when "Hide buttons while I watch" is on):
 ##    HUD and dock fade out over 600 ms, the first tap only wakes them;
-##  * onboarding (GDD §3.4): Garden, Basket and Album sleep at 50 % until their moment;
+##  * onboarding (GDD §3.4): Garden, Basket and Album sleep (full colour, a sleepy icon) until
+##    their moment; Garden and Album get a tiny sparkle when something new waits there;
 ##  * welcome-back recap (world_ready), new-friend card (met), leave dialog (Back at Main),
 ##    sound captions (AudioDirector.cue_played), choose-a-bed mode, postcards from the mailbox;
 ##  * left-handed mirroring and safe areas.
@@ -21,11 +23,12 @@ extends Control
 ##   --qa-toast            show a sample toast (choose-a-bed copy)
 ##   --qa-newfriend=<id>   show the new-friend card for that species
 ##   --qa-friend=<id>      open the Album on that friend's detail card
-##   --qa-press=<target>   freeze a touch-down for the touch strip: a dock tab (settings, garden,
-##                         basket, album), eye, close (the open sheet's close), primary (the open
-##                         sheet's or modal's first enabled primary pill: Plant, Collect all, Say
-##                         hello), tab (the open sheet's second segment), card (the Album's first
-##                         friend card), toggle (Settings' first switch row)
+##   --qa-press=<target>   freeze a touch-down for the touch strip: a dock tab (garden, basket,
+##                         album), settings (= gear, the top bar's Settings button), eye, close
+##                         (the open sheet's close), primary (the open sheet's or modal's first
+##                         enabled primary pill: Plant, Collect all, Say hello), tab (the open
+##                         sheet's second segment), card (the Album's first friend card), toggle
+##                         (Settings' first switch row)
 ##   --qa-press-t=<ms>     time after touch-down to freeze at (default 60 = the press dip near its
 ##                         peak with the ripple a sixth grown; 0..380 shows the whole ripple)
 ##   --qa-drawcalls        print "qa-drawcalls: <n>" (RENDER_TOTAL_DRAW_CALLS_IN_FRAME) every 30 frames
@@ -117,6 +120,7 @@ func _ready() -> void:
 	overlays.hud = self
 	_overlays_host.add_child(overlays)
 	top_bar.watch_pressed.connect(func() -> void: set_ambient(true))
+	top_bar.settings_pressed.connect(func() -> void: open_sheet(&"settings"))
 	dock.button_pressed.connect(_on_dock)
 	sheets.sheet_changed.connect(_on_sheet_changed)
 	_safe_area.margins_changed.connect(func(m: Rect2) -> void:
@@ -261,8 +265,10 @@ func _apply_night(k: float) -> void:
 
 
 func _set_chrome_input(enabled: bool) -> void:
-	for c: Node in [top_bar.eye] + dock.buttons.values():
-		(c as Control).mouse_filter = Control.MOUSE_FILTER_STOP if enabled else Control.MOUSE_FILTER_IGNORE
+	var controls: Array[Control] = [top_bar.eye, top_bar.gear]
+	controls.append_array(dock.input_controls())
+	for c: Control in controls:
+		c.mouse_filter = Control.MOUSE_FILTER_STOP if enabled else Control.MOUSE_FILTER_IGNORE
 
 
 func open_sheet(id: StringName, instant: bool = false) -> void:
@@ -276,7 +282,7 @@ func _layout() -> void:
 	top_bar.layout(screen, _safe.position.y)
 	dock.layout(screen, _safe.size.y)
 	sheets.top_limit = top_bar.bottom()
-	sheets.layout(screen, dock.pill_rect().position.y)
+	sheets.layout(screen, dock.top())
 	overlays.layout(screen, _safe)
 
 
@@ -300,12 +306,13 @@ func _make_sheet(id: StringName) -> UiSheet:
 func _on_dock(id: StringName) -> void:
 	if id == &"garden":
 		_garden_seen = true
-		dock.set_new_dot(false)
+	dock.set_new(id, false)
 	open_sheet(id)
 
 
 func _on_sheet_changed(id: StringName) -> void:
 	dock.set_active(id)
+	top_bar.set_settings_open(id == &"settings")
 
 
 func _on_setting(key: StringName, value: Variant) -> void:
@@ -328,6 +335,8 @@ func _on_sim_event(ev: Dictionary) -> void:
 	if type == WorldSim.EV_MET and not bool(ev.get("catch_up", false)):
 		var sp := StringName(String(ev.get("species", "")))
 		_pending_friends.append(sp)
+		if sheets.current_id != &"album":
+			dock.set_new(&"album", true)
 		get_tree().create_timer(NEW_FRIEND_DELAY_S).timeout.connect(_show_next_friend)
 	if type in [WorldSim.EV_PLANTED, WorldSim.EV_PLACED, WorldSim.EV_COLLECTED, WorldSim.EV_STAGE,
 			WorldSim.EV_HEARTS, WorldSim.EV_POSTCARD, WorldSim.EV_MET, WorldSim.EV_PHOTO]:
@@ -342,8 +351,9 @@ func _show_next_friend() -> void:
 	overlays.show_new_friend(sp)
 
 
-## GDD §3.4: Garden, Basket and Album are asleep (50 %) until their onboarding moment; Settings is
-## always awake. Garden gets a small "new" dot when it wakes.
+## GDD §3.4: Garden, Basket and Album are asleep (sleepy full-colour icons, round 6) until their
+## onboarding moment; Settings (the top bar gear) is always awake. Garden gets a tiny "new"
+## sparkle when it wakes.
 func _refresh_onboarding() -> void:
 	if Game.sim == null or dock == null:
 		return
@@ -356,7 +366,7 @@ func _refresh_onboarding() -> void:
 	dock.set_asleep(&"album", Game.sim.met_count() == 0)
 	dock.set_glint(not st.basket.is_empty() and st.last_collect_t <= 0.0 and sheets.current_id != &"basket")
 	if was_asleep and garden_awake and not _garden_seen and Game.is_ready:
-		dock.set_new_dot(true)
+		dock.set_new(&"garden", true)
 
 
 # ------------------------------------------------------------------ world hooks
@@ -529,6 +539,8 @@ func _qa_press() -> void:
 	match target:
 		&"eye":
 			c = top_bar.eye
+		&"settings", &"gear":
+			c = top_bar.gear
 		&"close":
 			c = sheets.current.close_button if sheets.current != null else null
 		&"primary":

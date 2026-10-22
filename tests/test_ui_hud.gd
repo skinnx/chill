@@ -23,7 +23,9 @@ const AA_LARGE_ICON := 3.0
 const ICONS: Array[StringName] = [&"dew", &"watch", &"watch_closed", &"garden", &"album", &"basket", &"settings",
 	&"close", &"back", &"heart", &"heart_empty", &"sun", &"moon", &"dawn", &"golden", &"dusk", &"cloud", &"breeze",
 	&"rain", &"postcard", &"check", &"plus", &"minus", &"music", &"haptics", &"motion", &"transparency",
-	&"text_size", &"mono", &"hand", &"language", &"photo", &"pencil", &"sparkle"]
+	&"text_size", &"mono", &"hand", &"language", &"photo", &"pencil", &"sparkle",
+	&"gear", &"dock_garden", &"dock_garden_sleep", &"dock_basket", &"dock_basket_sleep", &"dock_basket_1",
+	&"dock_basket_2", &"dock_basket_3", &"dock_album", &"sleep_z"]
 
 var c: GameContent
 var _saved_sim: WorldSim
@@ -65,7 +67,9 @@ func test_top_bar_matches_wireframe() -> void:
 	var top := TopBarView.new()
 	add_child_autofree(top)
 	top.layout(SCREEN, SAFE_TOP)
-	assert_eq(top.dew_chip.position, Vector2(48, 144), "dew chip at x 48, y = T 120 + 24")
+	assert_eq(Rect2(top.gear.position, top.gear.size), Rect2(0, 144, 216, 216),
+			"Settings gear: chip 48..168, hit 0..216 x 144..360 (72 dp), round 6")
+	assert_eq(top.dew_chip.position, Vector2(192, 144), "dew chip beside the gear at x 192, y = T 120 + 24")
 	assert_eq(top.time_chip.position, Vector2(768, 144), "time chip x 768..888")
 	assert_eq(top.time_chip.size, Vector2(120, 120))
 	var eye := Rect2(top.eye.position, top.eye.size)
@@ -73,28 +77,59 @@ func test_top_bar_matches_wireframe() -> void:
 	top.left_handed = true
 	top.layout(SCREEN, SAFE_TOP)
 	assert_eq(top.eye.position.x + TopBarView.EYE_HIT_PAD_X, 48.0, "left-handed: eye at x 48")
-	assert_almost_eq(top.dew_chip.position.x + top.dew_chip.size.x, 1032.0, 0.5, "dew chip right-aligned to 1032")
+	assert_almost_eq(top.gear.position.x + TopBarView.EYE_HIT_PAD_X, 912.0, 0.5, "left-handed: gear at x 912")
+	assert_almost_eq(top.dew_chip.position.x + top.dew_chip.size.x, 888.0, 0.5, "dew chip right-aligned to 888")
+
+
+func test_time_peek_stops_short_of_the_dew_chip() -> void:
+	var top := TopBarView.new()
+	add_child_autofree(top)
+	top.dew_chip.visible = true
+	top.layout(SCREEN, SAFE_TOP)
+	top.call(&"_set_peek", 2000.0)
+	var dew_end := top.dew_chip.position.x + top.dew_chip.size.x
+	assert_true(top.time_chip.position.x >= dew_end + TopBarView.GAP - 0.5, "peek clamps before the dew chip")
+	assert_eq(top.time_chip.position.x + top.time_chip.size.x, 888.0, "the time chip keeps its right edge")
 
 
 func test_dock_matches_wireframe_and_mirrors() -> void:
 	var dock := DockView.new()
 	add_child_autofree(dock)
 	dock.layout(SCREEN, SAFE_BOTTOM)
-	assert_eq(dock.pill_rect(), Rect2(24, 1541, 1032, 240), "dock pill 24..1056 x 1541..1781")
-	# Four equal tabs (round 3): 252 x 216 each, inset 12 in the pill, centres 162 / 414 / 666 / 918.
-	var centres := {&"settings": 162.0, &"garden": 414.0, &"basket": 666.0, &"album": 918.0}
+	# Round 6: a floating pebble 132..948 x 1553..1757 (68 dp tall, 36 px above the 127 px inset).
+	assert_eq(dock.pill_rect(), Rect2(132, 1553, 816, 204), "dock pebble")
+	assert_eq(DockView.ORDER, [&"album", &"garden", &"basket"] as Array[StringName], "three destinations")
+	assert_null(dock.button(&"settings"), "Settings lives in the top bar now")
+	var centres := {&"album": 270.0, &"garden": 540.0, &"basket": 810.0}
 	for id: StringName in centres:
 		var b := dock.button(id)
 		assert_almost_eq(b.position.x + b.size.x * 0.5, float(centres[id]), 0.01, "centre of %s" % id)
-		assert_almost_eq(b.position.y + b.size.y * 0.5, 1661.0, 0.01)
-		assert_almost_eq(b.size.x, 252.0, 0.01, "equal tabs")
-		assert_true(b.size.x >= MIN_TARGET_PX and b.size.y >= MIN_TARGET_PX, "dock hit >= 48 dp")
+		assert_true(b.size.x >= 228.0 and b.size.y >= 228.0, "%s hit >= 76 dp" % id)
+		assert_true(b.position.y <= 1553.0 and b.position.y + b.size.y >= 1757.0, "%s hit covers the pebble" % id)
+	var hero := dock.button(&"garden")
+	assert_gt(hero.icon_px, dock.button(&"basket").icon_px, "Garden is the larger hero")
+	assert_true(dock.top() < dock.pill_rect().position.y, "the hero plate pokes above the pebble")
+	assert_true(hero.position.y <= dock.top(), "... and its hit covers the plate")
 	dock.left_handed = true
 	dock.layout(SCREEN, SAFE_BOTTOM)
+	var basket := dock.button(&"basket")
+	assert_almost_eq(basket.position.x + basket.size.x * 0.5, 270.0, 0.01, "left-handed order reversed")
 	var album := dock.button(&"album")
-	assert_almost_eq(album.position.x + album.size.x * 0.5, 162.0, 0.01, "left-handed order reversed")
-	var settings := dock.button(&"settings")
-	assert_almost_eq(settings.position.x + settings.size.x * 0.5, 918.0, 0.01)
+	assert_almost_eq(album.position.x + album.size.x * 0.5, 810.0, 0.01)
+
+
+func test_dock_tab_hits_do_not_overlap_and_the_pebble_takes_its_presses() -> void:
+	var dock := DockView.new()
+	add_child_autofree(dock)
+	dock.layout(SCREEN, SAFE_BOTTOM)
+	var rects: Array[Rect2] = []
+	for id: StringName in DockView.ORDER:
+		rects.append(Rect2(dock.button(id).position, dock.button(id).size))
+	for i in rects.size():
+		for j in range(i + 1, rects.size()):
+			assert_false(rects[i].intersection(rects[j]).has_area(), "tab hits do not overlap")
+	assert_eq(dock.pill.mouse_filter, Control.MOUSE_FILTER_STOP, "the pebble consumes its presses (WorldPan)")
+	assert_true(dock.input_controls().has(dock.pill), "ambient watch turns the pebble off too")
 
 
 func test_dock_labels_fit_their_tab() -> void:
@@ -107,20 +142,68 @@ func test_dock_labels_fit_their_tab() -> void:
 		var w := font.get_string_size(b.label.text, HORIZONTAL_ALIGNMENT_LEFT, -1,
 				b.label.get_theme_font_size(&"font_size")).x
 		assert_true(w <= b.size.x - DockView.LABEL_PAD * 2.0 + 0.5, "%s label fits its tab" % id)
+		assert_eq(b.label.theme_type_variation, &"DockLabel", "Baloo 2 dock label")
 
 
-func test_dock_capsule_follows_the_open_sheet() -> void:
+func test_dock_bubble_follows_the_open_sheet() -> void:
 	var dock := DockView.new()
 	add_child_autofree(dock)
 	dock.layout(SCREEN, SAFE_BOTTOM)
 	dock.set_active(&"basket")
 	dock.snap_active()
-	assert_almost_eq(dock.cap_x, dock.button(&"basket").position.x, 0.01, "capsule under Basket")
+	var b := dock.button(&"basket")
+	assert_almost_eq(dock.cap_x, b.position.x + b.icon_center().x, 0.01, "bubble behind the Basket icon")
+	assert_almost_eq(dock.cap_y, b.position.y + b.icon_center().y, 0.01)
 	assert_eq(dock.cap_a, 1.0)
-	assert_true(dock.button(&"basket").active)
+	assert_true(b.active)
+	dock.set_active(&"settings")
+	dock.snap_active()
+	assert_eq(dock.cap_a, 0.0, "Settings (top bar) selects no tab")
+	assert_false(b.active)
 	dock.set_active(&"")
 	dock.snap_active()
-	assert_eq(dock.cap_a, 0.0, "no sheet: no capsule")
+	assert_eq(dock.cap_a, 0.0, "no sheet: no bubble")
+
+
+func test_basket_shows_fill_without_a_count() -> void:
+	var dock := DockView.new()
+	add_child_autofree(dock)
+	dock.layout(SCREEN, SAFE_BOTTOM)
+	dock.set_basket_count(0)
+	assert_eq(dock.icon_for(&"basket"), &"dock_basket")
+	dock.set_basket_count(3)
+	assert_eq(dock.icon_for(&"basket"), &"dock_basket_1", "a dew drop peeks out")
+	dock.set_basket_count(9)
+	assert_eq(dock.icon_for(&"basket"), &"dock_basket_2", "+ a bloom")
+	dock.set_basket_count(24)
+	assert_eq(dock.icon_for(&"basket"), &"dock_basket_3", "brimming")
+	for n: Node in dock.find_children("*", "Label", true, false):
+		assert_false((n as Label).text.is_valid_int(), "no numeric badge anywhere in the dock")
+
+
+func test_asleep_tabs_stay_in_full_colour() -> void:
+	var dock := DockView.new()
+	add_child_autofree(dock)
+	dock.layout(SCREEN, SAFE_BOTTOM)
+	for id: StringName in DockView.ORDER:
+		dock.set_asleep(id, true)
+		var b := dock.button(id)
+		assert_eq(b.icon_node().modulate.a, 1.0, "%s icon not greyed" % id)
+		assert_eq(b.label.modulate.a, 1.0, "%s label not greyed" % id)
+		assert_eq(b.mouse_filter, Control.MOUSE_FILTER_STOP, "%s still tappable" % id)
+	assert_eq(dock.icon_for(&"garden"), &"dock_garden_sleep", "sleepy closed-eye pot")
+	dock.set_asleep(&"garden", false)
+	assert_eq(dock.icon_for(&"garden"), &"dock_garden")
+
+
+func test_new_marks_are_sparkles() -> void:
+	var dock := DockView.new()
+	add_child_autofree(dock)
+	dock.layout(SCREEN, SAFE_BOTTOM)
+	dock.set_new(&"album", true)
+	assert_true(dock.has_new(&"album"))
+	dock.set_active(&"album")
+	assert_false(dock.has_new(&"album"), "opening the Album clears its sparkle")
 
 
 func test_sheet_rect_sits_above_the_dock() -> void:
@@ -142,6 +225,10 @@ func test_every_ui_target_is_at_least_48_dp() -> void:
 	for b: Variant in dock.buttons.values():
 		var r := b as Control
 		assert_true(r.size.x >= MIN_TARGET_PX and r.size.y >= MIN_TARGET_PX, "dock target")
+	var top := TopBarView.new()
+	add_child_autofree(top)
+	top.layout(SCREEN, SAFE_TOP)
+	assert_true(top.gear.size.x >= 216.0 and top.gear.size.y >= 216.0, "Settings gear hit >= 72 dp")
 	assert_true(UiSheet.CLOSE_HIT >= MIN_TARGET_PX, "sheet close hit")
 	assert_true(UiSheet.CARD_BUTTON_H >= MIN_TARGET_PX, "card buttons")
 	assert_true(Segmented.HEIGHT + Segmented.HIT_GROW * 2.0 >= MIN_TARGET_PX, "segmented hit")
@@ -207,6 +294,28 @@ func test_icons_complete_duotone_and_recolourable() -> void:
 	assert_eq(big.get_size(), Vector2(168, 168), "icons re-rasterise per size (crisp at any scale)")
 	var active := Icons.texture(&"garden", 72.0, true) as DPITexture
 	assert_true(active.get_source().contains(Icons.ACCENT_ACTIVE), "active variant lifts the accent to 100 %")
+
+
+func test_dock_icons_and_labels_pass_contrast_over_the_worst_backdrops() -> void:
+	var di: Dictionary = ContentRegistry.palettes()["dock_icon"]
+	var outline := Color.html(String(di["outline"]))
+	var outline_night := Color.html(String(di["outline_night"]))
+	var fill := GlassPanel.HUD_FILL
+	var night_fill := float(GlassPanel.night_tokens().get("fill", 0.88))
+	for backdrop: Color in [Color.BLACK, Color.WHITE, Color("#1E3A2A"), Color("#7FB8E8")]:
+		var glass := backdrop.lerp(UiTokens.color(&"hud_glass"), fill)
+		assert_true(UiTokens.contrast(outline, glass) >= AA_LARGE_ICON, "dock icon outline on day glass over %s" % backdrop)
+		assert_true(UiTokens.contrast(UiTokens.color(&"ink"), glass) >= AA, "dock label on day glass over %s" % backdrop)
+		var ng := backdrop.lerp(UiTokens.color(&"night_glass"), night_fill)
+		assert_true(UiTokens.contrast(outline_night, ng) >= AA_LARGE_ICON, "night icon edge over %s" % backdrop)
+		assert_true(UiTokens.contrast(UiTokens.color(&"night_ink"), ng) >= AA, "night label over %s" % backdrop)
+	for token: StringName in [&"bubble_leaf", &"bubble_gold", &"bubble_coral"]:
+		assert_true(UiTokens.contrast(UiTokens.color(&"ink"), UiTokens.color(token)) >= AA, "label on %s" % token)
+		assert_true(UiTokens.contrast(outline, UiTokens.color(token)) >= AA_LARGE_ICON, "icon on %s" % token)
+	var src := FileAccess.get_file_as_string(Icons.DIR + "dock_garden.svg")
+	assert_true(src.contains(String(di["outline"])), "dock icons draw their outline in dock_icon.outline")
+	var night_src := Icons.variant_source(src, false, true)
+	assert_true(night_src.contains(String(di["outline_night"])), "night variant: cream sticker edge")
 
 
 # ------------------------------------------------------------------ touch (I1, Art Bible §10.3)

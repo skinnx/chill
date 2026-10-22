@@ -211,6 +211,156 @@ def icons(p: Pen, accent_of) -> dict[str, str]:
     return out
 
 
+# ---------------------------------------------------------------- round 6: plush dock icons
+# Owner feedback "the bottom menu is still not friendly": the dock's three destinations are soft,
+# full-colour sticker toys (palettes.json dock_icon) with a warm cocoa outline, a tiny face on
+# the pot and the basket, and a sleepy (closed-eye) variant for the onboarding "not yet" state.
+# The basket has four fill states (empty, a dew drop peeking, + a bloom, brimming): the dock shows
+# how full it is with what peeks out, never with a count. The outline is written as the literal
+# dock_icon.outline hex so the night-chrome variant can swap it (scripts/ui/icons.gd).
+DOCK_OUT = 4.5
+
+
+class Plush:
+    def __init__(self, c: dict) -> None:
+        self.c = c
+
+    def shape(self, d: str, fill: str, w: float = DOCK_OUT) -> str:
+        return (f'<path d="{d}" fill="{self.c[fill]}" stroke="{self.c["outline"]}" stroke-width="{w:g}" '
+                f'stroke-linejoin="round" stroke-linecap="round"/>')
+
+    def flat(self, d: str, fill: str, opacity: float = 1.0) -> str:
+        op = "" if opacity >= 1.0 else f' fill-opacity="{opacity:g}"'
+        return f'<path d="{d}" fill="{self.c[fill]}"{op}/>'
+
+    def line(self, d: str, colour: str = "outline", w: float = DOCK_OUT) -> str:
+        return (f'<path d="{d}" fill="none" stroke="{self.c[colour]}" stroke-width="{w:g}" '
+                f'stroke-linecap="round" stroke-linejoin="round"/>')
+
+    def dot(self, cx: float, cy: float, r: float, fill: str = "outline") -> str:
+        return f'<circle cx="{cx:g}" cy="{cy:g}" r="{r:g}" fill="{self.c[fill]}"/>'
+
+    def face(self, cx: float, cy: float, asleep: bool, gap: float = 6.0) -> str:
+        """Two dot eyes (or closed arcs), a small smile and blush."""
+        out = (f'<ellipse cx="{cx - gap - 3.5:g}" cy="{cy + 3.2:g}" rx="2.6" ry="1.7" fill="{self.c["blush"]}" '
+               f'fill-opacity="0.55"/>'
+               f'<ellipse cx="{cx + gap + 3.5:g}" cy="{cy + 3.2:g}" rx="2.6" ry="1.7" fill="{self.c["blush"]}" '
+               f'fill-opacity="0.55"/>')
+        if asleep:
+            out += self.line(f"M{cx - gap - 2.2:g} {cy - 0.6:g} Q{cx - gap:g} {cy + 1.8:g} {cx - gap + 2.2:g} {cy - 0.6:g}"
+                             f" M{cx + gap - 2.2:g} {cy - 0.6:g} Q{cx + gap:g} {cy + 1.8:g} {cx + gap + 2.2:g} {cy - 0.6:g}",
+                             w=2.2)
+        else:
+            out += self.dot(cx - gap, cy, 2.4) + self.dot(cx + gap, cy, 2.4)
+        out += self.line(f"M{cx - 2.2:g} {cy + 3.6:g} Q{cx:g} {cy + 5.6:g} {cx + 2.2:g} {cy + 3.6:g}", w=2.0)
+        return out
+
+
+def _drop(pl: Plush, cx: float, cy: float, s: float) -> str:
+    d = (f"M{cx:g} {cy - 9 * s:g} C{cx + 4 * s:g} {cy - 3.5 * s:g} {cx + 7 * s:g} {cy - 0.5 * s:g} {cx + 7 * s:g} "
+         f"{cy + 3 * s:g} A{7 * s:g} {7 * s:g} 0 0 1 {cx - 7 * s:g} {cy + 3 * s:g} C{cx - 7 * s:g} {cy - 0.5 * s:g} "
+         f"{cx - 4 * s:g} {cy - 3.5 * s:g} {cx:g} {cy - 9 * s:g} Z")
+    hi = f'<ellipse cx="{cx - 2.6 * s:g}" cy="{cy + 1.5 * s:g}" rx="{1.6 * s:g}" ry="{2.6 * s:g}" fill="{pl.c["dew_hi"]}"/>'
+    return pl.shape(d, "dew", 3.6) + hi
+
+
+def _bloom(pl: Plush, cx: float, cy: float, r: float) -> str:
+    import math
+    pts = [(cx + r * math.cos(math.radians(-90 + i * 72)), cy + r * math.sin(math.radians(-90 + i * 72)))
+           for i in range(5)]
+    pr = r * 0.82
+    out = "".join(f'<circle cx="{x:.2f}" cy="{y:.2f}" r="{pr:.2f}" fill="none" stroke="{pl.c["outline"]}" '
+                  f'stroke-width="6.6"/>' for x, y in pts)
+    out += "".join(f'<circle cx="{x:.2f}" cy="{y:.2f}" r="{pr:.2f}" fill="{pl.c["bloom"]}"/>' for x, y in pts)
+    out += f'<circle cx="{cx:g}" cy="{cy:g}" r="{r * 0.62:.2f}" fill="{pl.c["bloom_heart"]}"/>'
+    return out
+
+
+def _leaf(pl: Plush, d: str) -> str:
+    return pl.shape(d, "leaf", 3.6)
+
+
+def dock_icons(c: dict) -> dict[str, str]:
+    pl = Plush(c)
+    out: dict[str, str] = {}
+    # garden: a sprout in a little clay pot with a face
+    leaf_l = "M34 33 C22 34 12.5 26 13.5 13.5 C26 12.5 35 21 34 33 Z"
+    leaf_r = "M38 29.5 C37.5 17 47 9.5 59.5 10.5 C60.5 23 51 31 38 29.5 Z"
+    sprout = (pl.line("M36 41 V27", w=DOCK_OUT + 1.0) + pl.line("M36 41 V27", "leaf", 2.0)
+              + pl.shape(leaf_l, "leaf") + pl.shape(leaf_r, "leaf")
+              + pl.flat("M30.5 29 C24 28.5 18.5 23.5 18 17.5 C24.5 18.5 29.5 23 30.5 29 Z", "leaf_hi")
+              + pl.flat("M42 26 C42.5 19.5 47.5 15 54.5 15 C54 21 49 25.5 42 26 Z", "leaf_hi"))
+    body = "M19 43 H53 L49.6 60.5 Q48.7 65 44.2 65 H27.8 Q23.3 65 22.4 60.5 Z"
+    rim = "M14.5 37.5 Q14.5 34 18 34 H54 Q57.5 34 57.5 37.5 V40.5 Q57.5 44 54 44 H18 Q14.5 44 14.5 40.5 Z"
+    pot = pl.shape(body, "clay") + pl.shape(rim, "clay_hi")
+    shine = f'<ellipse cx="25" cy="38.6" rx="4.5" ry="1.6" fill="{c["cream"]}" fill-opacity="0.8"/>'
+    for asleep in (False, True):
+        out["dock_garden" + ("_sleep" if asleep else "")] = sprout + pot + shine + pl.face(36, 52, asleep, 5.6)
+    # basket: woven honey basket; contents peek over the rim by fill level
+    handle = pl.line("M20.5 33 C20.5 12 51.5 12 51.5 33", w=9.5) + pl.line("M20.5 33 C20.5 12 51.5 12 51.5 33",
+                                                                            "honey_hi", 4.0)
+    bbody = "M12.5 37 H59.5 L55.2 56.5 Q53.8 63.5 47 63.5 H25 Q18.2 63.5 16.8 56.5 Z"
+    weave = pl.line("M19.5 57.5 Q23.5 54.5 27.5 57.5 Q31.5 60.5 35.5 57.5 Q39.5 54.5 43.5 57.5 Q47.5 60.5 51.5 57.5",
+                    "weave", 2.8)
+    brim = "M9 33.5 Q9 30 12.5 30 H59.5 Q63 30 63 33.5 V36.5 Q63 40 59.5 40 H12.5 Q9 40 9 36.5 Z"
+    rim_shine = f'<ellipse cx="20" cy="33.6" rx="5" ry="1.5" fill="{c["cream"]}" fill-opacity="0.85"/>'
+    contents = [
+        "",
+        _drop(pl, 29, 23, 1.0),
+        _drop(pl, 27, 23, 1.0) + _bloom(pl, 45, 22.5, 5.6),
+        (_leaf(pl, "M22 29 C17 25 16.5 18.5 19.5 13.5 C25 16.5 26.5 23 22 29 Z") + _drop(pl, 31, 21.5, 1.05)
+         + _bloom(pl, 46.5, 20.5, 6.2)),
+    ]
+
+    def basket(level: int, asleep: bool) -> str:
+        return (handle + contents[level] + pl.shape(bbody, "honey") + weave + pl.shape(brim, "honey_hi")
+                + rim_shine + pl.face(36, 47.5, asleep, 5.6))
+
+    out["dock_basket"] = basket(0, False)
+    out["dock_basket_sleep"] = basket(0, True)
+    for lv in (1, 2, 3):
+        out[f"dock_basket_{lv}"] = basket(lv, False)
+    # album: a coral friend book with a cream paw print and a leaf bookmark
+    cover = "M20 8.5 H53 Q59.5 8.5 59.5 15 V56 Q59.5 62.5 53 62.5 H20 Q13.5 62.5 13.5 56 V15 Q13.5 8.5 20 8.5 Z"
+    spine = "M13.5 15 Q13.5 8.5 20 8.5 H23.5 V62.5 H20 Q13.5 62.5 13.5 56 Z"
+    ribbon = "M44.5 58 V68 L48.5 64.5 L52.5 68 V58 Z"
+    paw = (f'<ellipse cx="41.5" cy="42.5" rx="8.2" ry="7" fill="{c["cream"]}"/>'
+           + pl.dot(32, 33, 3.7, "cream") + pl.dot(37.8, 26.8, 3.9, "cream") + pl.dot(45.2, 26.8, 3.9, "cream")
+           + pl.dot(51, 33, 3.7, "cream"))
+    album = (pl.shape(ribbon, "leaf", 3.4) + pl.shape(cover, "coral") + pl.flat(spine, "coral_deep")
+             + pl.line("M23.5 10 V61", w=3.2) + pl.line(cover) + paw
+             + f'<ellipse cx="29" cy="14.5" rx="4" ry="1.4" fill="{c["cream"]}" fill-opacity="0.75"/>')
+    out["dock_album"] = album
+    # sleepy "z z" for an onboarding tab that is not awake yet (drawn at the icon's shoulder)
+    out["sleep_z"] = (pl.line("M33 12 H51 L33 32 H51", "outline", 9.0) + pl.line("M33 12 H51 L33 32 H51", "zz", 4.6)
+                      + pl.line("M14 38 H26 L14 52 H26", "outline", 8.0) + pl.line("M14 38 H26 L14 52 H26", "zz", 3.8))
+    return out
+
+
+def gear(p: Pen) -> str:
+    """Top-bar Settings (round 6): a soft flower-gear, eight round lobes (no sharp teeth)."""
+    import math
+    n, r_in, r_out = 8, 21.0, 30.5
+    pts = []
+    for i in range(n):
+        a = math.radians(i * 360.0 / n - 90.0)
+        b = math.radians((i + 0.5) * 360.0 / n - 90.0)
+        pts.append((a, b))
+    d = ""
+    for i, (a, b) in enumerate(pts):
+        va = math.radians((i - 0.5) * 360.0 / n - 90.0)
+        x0, y0 = 36 + r_in * math.cos(va), 36 + r_in * math.sin(va)
+        x1, y1 = 36 + r_in * math.cos(b), 36 + r_in * math.sin(b)
+        k = math.radians(15.0)
+        c1 = (36 + r_out * math.cos(a - k), 36 + r_out * math.sin(a - k))
+        c2 = (36 + r_out * math.cos(a + k), 36 + r_out * math.sin(a + k))
+        if i == 0:
+            d += f"M{x0:.2f} {y0:.2f} "
+        d += f"C{c1[0]:.2f} {c1[1]:.2f} {c2[0]:.2f} {c2[1]:.2f} {x1:.2f} {y1:.2f} "
+    d += "Z"
+    return p.acc(d) + p.line(d) + p.circle_line(36, 36, 7.5)
+
+
 def main() -> None:
     ui, accents, alpha = load_tokens()
     ink = ui["ink"]
@@ -222,6 +372,8 @@ def main() -> None:
     base = Pen(ink, ui["primary"], alpha)
     OUT.mkdir(parents=True, exist_ok=True)
     made = icons(base, pen_for)
+    made["gear"] = gear(pen_for("settings"))
+    made.update(dock_icons(json.loads((ROOT / "data" / "palettes.json").read_text(encoding="utf-8"))["dock_icon"]))
     for name, body in sorted(made.items()):
         (OUT / f"{name}.svg").write_text(svg(body), encoding="utf-8")
         imp = OUT / f"{name}.svg.import"

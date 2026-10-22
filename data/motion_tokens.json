@@ -649,7 +649,17 @@
 			"pop": "pop",
 			"scale": 1.08
 		},
-		"amplitude_max": 0.06
+		"amplitude_max": 0.06,
+		"dock": {
+			"doc": "round 6 dock (Art Bible 9.4): the selection bubble springs between tabs on move and pops in from select_pop_from on pop; a newly selected icon pops from icon_pop; onboarding not-yet tabs breathe (600/asleep_breathe_k s, +-asleep_breathe_amp) under a bobbing z z (600/zz_k s, zz_bob_dp); new-thing sparkles twinkle at 600/new_twinkle_k s. Reduce Motion: all of it static.",
+			"asleep_breathe_k": 110,
+			"asleep_breathe_amp": 0.03,
+			"zz_k": 124,
+			"zz_bob_dp": 3,
+			"new_twinkle_k": 76,
+			"select_pop_from": 0.82,
+			"icon_pop": 1.1
+		}
 	},
 	"reduce_motion": {
 		"g_motion": 0.3,

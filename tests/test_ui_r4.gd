@@ -125,5 +125,8 @@ func test_night_icon_variant_redraws_ink() -> void:
 	assert_false(src.contains(ink), "no day ink left")
 	assert_true(src.contains(night), "strokes in night ink")
 	var atlas := Icons.hud_atlas()
-	assert_true(atlas.has(Icons.atlas_key(&"garden", 84.0, true, true)), "night active tab icon in the HUD atlas")
+	assert_true(atlas.has(Icons.atlas_key(&"dock_garden", DockView.HERO_ICON_PX, false, true)),
+			"night hero tab icon in the HUD atlas")
+	assert_true(atlas.has(Icons.atlas_key(&"gear", TopBarView.ICON_PX, true, true)),
+			"night selected gear in the HUD atlas")
 	assert_true(atlas.has(Icons.atlas_key(&"dew", 72.0, false, true)), "night dew icon in the HUD atlas")

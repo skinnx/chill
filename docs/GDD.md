@@ -208,13 +208,13 @@ Rule zero: **no text walls**. The only words on screen in the first five minutes
 
 | Time | What the player sees and hears | Diegetic hint (only if the player is idle) |
 |---|---|---|
-| 0.0 s | Splash `#F0EEE9` fades into the hollow at the device's time of day while shaders warm up behind it (C8). Ambience bed fades in over 4 s, pad joins at 6 s. The camera settles from 103 % to 100 % over 2.5 s (`emphasized`; cross-fade under Reduce Motion). The dock is present but Garden, Album and Basket are "asleep" (50 % opacity, still tappable); Settings is awake. | — |
+| 0.0 s | Splash `#F0EEE9` fades into the hollow at the device's time of day while shaders warm up behind it (C8). Ambience bed fades in over 4 s, pad joins at 6 s. The camera settles from 103 % to 100 % over 2.5 s (`emphasized`; cross-fade under Reduce Motion). The dock is present but Garden, Album and Basket are "asleep": full colour (never greyed, nothing looks locked), a sleepy closed-eye icon that breathes softly under a little "z z" (static under Reduce Motion), still tappable (the sheet opens on its friendly empty state); the Settings gear is awake. | — |
 | 2.5 s | A single **glowing seed** rests on the Brookside bed (`bed_1`, nearest the thumb), pulsing on the 4.84 s ambient period. | From 6.5 s: a soft tap ring expands from the seed every 3 s |
 | tap (3–25 s typical) | Tap the seed: it sinks into the soil (S05, soil puff). Tutorial stages: sprout +10 s, bud +40 s, bloom-ready +90 s. | — |
 | 20–40 s | **First visitor Pip** (Puffmoss) at clamp(tap + 15 s, 20 s, 40 s); if the seed is not tapped by 25 s Pip comes at 30 s anyway. Fades in at the fern gap (400 ms), hops to sniff the sprout, then curls up on the sun stone (S12). When Pip settles, the **new-friend card** rises (S09, MEDIUM haptic): portrait, "A new friend!", "This is Pip", pencil to rename. Tap anywhere: the card shrinks into the Album button, which wakes. | 6 s after the card closes, if Pip has not been touched: a dotted ring fills around Pip in 450 ms (demonstrating "hold"), every 5 s, at most 3 times |
 | tap + 90 s | The bud glows: ready. Tap → unfurls in 600 ms (S04). Auto-opens after 20 s. | Tap ring on the bud after 3 s |
 | Pip + 80 s | Pip wakes, stretches, waves and leaves an **acorn cup of dew (18)** in the in-world basket; the Basket button wakes with a glint and a soft bounce. | Basket button glints every 6 s |
-| on collect | **Collect all**: "+18" flies to the HUD where the dew counter appears for the first time. Clover #2 costs 17, so the Garden button wakes with a small "new" dot. | — |
+| on collect | **Collect all**: "+18" flies to the HUD where the dew counter appears for the first time. Clover #2 costs 17, so the Garden button wakes with a tiny "new" sparkle. | — |
 | bloom + 15 s (≤ 150 s) | **Second visitor Dot** (Buttonbud), drawn by the new bloom, bounces over the hill crest straight to the clover (nibble). New-friend card. Stays 100 s, leaves a petal bundle (12 dew). | — |
 | 210 s | **Third visitor Cobble** (Pebblepaw) wanders up the stream bank to the stream bend. New-friend card. While Cobble sits there, a leaf drifts down the stream once and a ripple ghost appears on the water (invites the stream tap). Cobble is the first normal visit (40–80 min stay, normal gift). | — |
 | 240 s | The **mailbox flag** pops up with a paper rustle (S16): the welcome postcard. Opening it is optional. | Flag wiggles every 8 s |
@@ -569,15 +569,15 @@ Boot (splash + warm-up) ──▶ Main = World + HUD + Dock
                               │  ├─ Recap card (if eligible) ─ tap/5 s ─▶ Main
                               │  ├─ New-friend card ─ tap ─▶ Main (shrinks into Album)
                               │  └─ Postcard reader (from mailbox) ─ tap/Back ─▶ Main
-Dock:  [Settings] [Garden] [Basket] [Album]      (left-handed: [Album] [Basket] [Garden] [Settings])
+Dock:  [Album] [Garden] [Basket]      (left-handed: [Basket] [Garden] [Album]); Settings = the gear, top-left of the HUD
   Garden sheet  ─ tabs Flowers | Décor (+ Leaf boat row) ─ item card ─ Plant/Place ─(first copy: choose bed)─▶ Main
   Basket sheet  ─ 24-slot grid + dew cup + [Collect all]
   Album sheet   ─ tabs Friends | Clues | Memories | Keepsakes | Postcards ─ friend detail (rename, Pet, photos, unlocks, nest, best buddy, cousin)
   Settings sheet─ groups §7.6
 Back (Android) closes the top-most card/sheet; at Main it opens "Leave the hollow for now?" [Stay a while] [Leave for now]
 ```
-- **Dock**: 4 buttons, centres at x = 135 / 405 / 675 / 945 px, hit 76 dp (228 px) each, gaps ≥ 42 px. The frequent pair (Garden, Basket) sits in the centre with 72 dp visuals; Settings and Album 56 dp visuals. Faux glass (no screen read, C7). The Basket shows a small gift-count badge (≤ 24) and a brim sparkle when full.
-- **HUD (Z1, passive)**: dew chip (top-left, appears after the first collect), time/weather chip and the "just watch" eye (top-right, 72 dp hit). Mirrored when left-handed.
+- **Dock** (round 6, owner: "the bottom menu is still not friendly"): the three destinations only, on a floating warm-glass pebble: **Album · Garden · Basket**. Garden is the centre hero (larger icon on a raised round plate); the frequent Basket sits under the right thumb (mirrored for left-handed play). Hit ≥ 76 dp each. Plush full-colour icons with friendly Baloo labels; the open sheet's tab sits in a soft bubble of its own tint that springs between tabs. Settings is rare, so it lives in the HUD as a round gear (72 dp hit), not in a prime thumb slot. The Basket never shows a count and never a red badge: what peeks over its rim (a dew drop, a bloom, brimming) shows how full it is, with a soft warm glow while gifts wait and a brim sparkle when full. "Something new" (Garden after the first collect, the Album after a new friend) is a tiny twinkling sparkle, never a dot.
+- **HUD (Z1, passive)**: the Settings gear (top-left corner, 72 dp hit), the dew chip beside it (appears after the first collect), time/weather chip and the "just watch" eye (top-right, 72 dp hit). Mirrored when left-handed.
 - **Sheets**: bottom sheets rising from the dock, ≤ 60 % of the height, `standard` 320 ms in / `exit` ≈ 210 ms out (0.65 × 320); exactly one at a time; the open sheet is the one live-glass surface (C7). Close by tapping the scrim, swiping down (> 25 % of height or > 1000 px/s), Back, or tapping the same dock button. Tapping another dock button swaps sheets (200 ms cross-fade).
 - **Garden item card**: icon (live mini-render), name, price chip with drop icon, "{owned} of {max}", dew-yield drops (flowers), bloom time ("Blooms in about 40 min"), "Loved by {names}" for met friends or "A friend you haven't met yet loves these", primary button **Plant / Place** at the card's bottom. Unaffordable: button reads "A little more dew", price chip in `ink_2`; pressing it gives the soft S11 tok and a ±2 dp wiggle — never red, never a buzz.
 

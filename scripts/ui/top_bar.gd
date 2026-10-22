@@ -1,8 +1,10 @@
 class_name TopBarView
 extends Control
-## The passive HUD row (Art Bible §9.4-9.5, GDD §8.1, I2): the dew chip (top-left, appears after
-## the first collect), the time/weather chip and the "just watch" eye (top-right; mirrored when
-## left-handed). Chips are faux glass (C7); only the eye is a target (hit 216 x 216 = 72 dp).
+## The HUD row (Art Bible §9.4-9.5, GDD §8.1, I2): the Settings gear (top-left corner; round 6:
+## Settings left the dock, it is rare), the dew chip beside it (appears after the first collect),
+## the time/weather chip and the "just watch" eye (top-right; all mirrored when left-handed).
+## Chips are faux glass (C7); the gear and the eye are the targets (hit 216 x 216 = 72 dp each).
+## The time chip's label peek never runs into the dew chip (it stops GAP short and clips).
 ## Positions are px in screen space: chips at y = max(safe top, T 120) + 24, 48 px side margin.
 
 # Data boundary: values read from JSON / Dictionaries are Variants and each one is converted
@@ -11,6 +13,7 @@ extends Control
 @warning_ignore_start("unsafe_call_argument")
 
 signal watch_pressed
+signal settings_pressed
 
 ## Art Bible §2.6: chips are 120 tall at T + 24 (T = 120 px at H 1920), 48 px side margin.
 const CHIP_H := 120.0
@@ -50,6 +53,8 @@ var left_handed: bool = false
 var dew_chip: GlassPanel
 var time_chip: GlassPanel
 var eye: BaseButton
+## The Settings gear (round 6).
+var gear: BaseButton
 
 var _dew_icon: TextureRect
 var _dew_label: Label
@@ -66,6 +71,11 @@ var _peek_w: float = 0.0
 var _peek_tween: Tween
 var _eye_glass: GlassPanel
 var _eye_icon: TextureRect
+var _gear_glass: GlassPanel
+var _gear_icon: TextureRect
+var _settings_open: bool = false
+## The gear sits on a second row (large text with a wide dew chip).
+var _gear_row2: bool = false
 var _phase: StringName = &""
 var _weather: StringName = &""
 var _ambient_icon: bool = false
@@ -88,6 +98,7 @@ func _ready() -> void:
 	_build_dew()
 	_build_time()
 	_build_eye()
+	_build_gear()
 	TimeOfDay.phase_changed.connect(func(p: StringName) -> void: _set_time(p, _weather, true))
 	TimeOfDay.weather_changed.connect(func(w: StringName) -> void: _set_time(_phase, w, true))
 	Game.wallet_changed.connect(_on_wallet)
@@ -127,16 +138,31 @@ func layout(screen: Vector2, safe_top: float) -> void:
 	var dew_w := _dew_width()
 	var eye_x := SIDE if left_handed else w - SIDE - ch
 	var time_x := SIDE + ch + GAP if left_handed else eye_x - GAP - ch
-	var time_w := ch + _peek_w
-	dew_chip.position = Vector2(w - SIDE - dew_w if left_handed else SIDE, y)
+	var gear_x := w - SIDE - ch if left_handed else SIDE
+	var dew_x := gear_x - GAP - dew_w if left_handed else gear_x + ch + GAP
+	# Large text: when the dew chip beside the gear would run into the time chip, the gear steps
+	# down to a second row under the dew chip, which takes the corner.
+	var gear_y := y
+	var crowded := dew_x < time_x + ch + GAP if left_handed else dew_x + dew_w > time_x - GAP
+	_gear_row2 = dew_chip.visible and crowded
+	if _gear_row2:
+		dew_x = w - SIDE - dew_w if left_handed else SIDE
+		gear_y = y + ch + GAP
+	# the peek stops GAP short of the dew chip (its label clips with an ellipsis)
+	var peek := _peek_w
+	if dew_chip.visible:
+		var room := dew_x - GAP - (time_x + ch) if left_handed else time_x - GAP - (dew_x + dew_w)
+		peek = clampf(peek, 0.0, maxf(room, 0.0))
+	var time_w := ch + peek
+	dew_chip.position = Vector2(dew_x, y)
 	dew_chip.size = Vector2(dew_w, ch)
 	_dew_icon.size = Vector2(ic, ic)
 	_dew_icon.position = Vector2(DEW_ICON_X * k, (ch - ic) * 0.5)
 	_dew_label.position = Vector2(DEW_TEXT_X * k, 0.0)
 	_dew_label.size = Vector2(dew_w - DEW_TEXT_X * k - DEW_PAD_R * k * 0.5, ch)
-	time_chip.position = Vector2(time_x if left_handed else time_x - _peek_w, y)
+	time_chip.position = Vector2(time_x if left_handed else time_x - peek, y)
 	time_chip.size = Vector2(time_w, ch)
-	var icon_x := 0.0 if left_handed else _peek_w
+	var icon_x := 0.0 if left_handed else peek
 	_time_icon.size = Vector2(ic, ic)
 	_time_icon.position = Vector2(icon_x + (ch - ic) * 0.5, (ch - ic) * 0.5)
 	var bp := BADGE_PX * k
@@ -147,9 +173,9 @@ func layout(screen: Vector2, safe_top: float) -> void:
 	_badge_icon.position = Vector2(bp - bi, bp - bi) * 0.5
 	var lx := ch - PEEK_LABEL_PAD * 0.25 if left_handed else PEEK_LABEL_PAD
 	_time_label.position = Vector2(lx, 0.0)
-	_time_label.size = Vector2(maxf(_peek_w - PEEK_LABEL_PAD, 0.0), ch)
-	_time_label.visible = _peek_w > PEEK_LABEL_PAD
-	_time_label.modulate.a = clampf((_peek_w - PEEK_LABEL_PAD) / (PEEK_W * k - ch - PEEK_LABEL_PAD), 0.0, 1.0)
+	_time_label.size = Vector2(maxf(peek - PEEK_LABEL_PAD, 0.0), ch)
+	_time_label.visible = peek > PEEK_LABEL_PAD
+	_time_label.modulate.a = clampf((peek - PEEK_LABEL_PAD) / (PEEK_W * k - ch - PEEK_LABEL_PAD), 0.0, 1.0)
 	var pad := EYE_HIT_PAD_X
 	eye.position = Vector2(eye_x - pad, y)
 	eye.size = Vector2(ch + pad * 2.0, maxf(EYE_HIT.y, ch + pad * 2.0))
@@ -158,11 +184,35 @@ func layout(screen: Vector2, safe_top: float) -> void:
 	_eye_icon.size = Vector2(ic, ic)
 	_eye_icon.position = Vector2((ch - ic) * 0.5, (ch - ic) * 0.5)
 	eye.pivot_offset = Vector2(pad + ch * 0.5, ch * 0.5)
+	gear.position = Vector2(gear_x - pad, gear_y)
+	gear.size = eye.size
+	_gear_glass.position = Vector2(pad, 0.0)
+	_gear_glass.size = Vector2(ch, ch)
+	_gear_icon.size = Vector2(ic, ic)
+	_gear_icon.position = Vector2((ch - ic) * 0.5, (ch - ic) * 0.5)
+	gear.pivot_offset = eye.pivot_offset
+	gear.set_meta(PressFeedback.META_RIPPLE_RECT, Rect2(Vector2(pad, 0.0), Vector2(ch, ch)))
+	gear.set_meta(PressFeedback.META_RIPPLE_RADIUS, ch * 0.5)
 
 
 ## The chips' bottom edge in screen px (sheets and toasts keep clear of it).
 func bottom() -> float:
-	return maxf(_safe_top, T_MIN) + TOP_GAP + CHIP_H * _k
+	var rows := 2.0 if _gear_row2 else 1.0
+	return maxf(_safe_top, T_MIN) + TOP_GAP + CHIP_H * _k * rows + (GAP if _gear_row2 else 0.0)
+
+
+## The Settings sheet is open: the gear's accent lifts to 100 % (its "selected" look).
+func set_settings_open(on: bool) -> void:
+	_settings_open = on
+	if _gear_icon != null:
+		_gear_icon.texture = _gear_texture()
+
+
+func _gear_texture() -> Texture2D:
+	if _atlas.is_empty():
+		_atlas = Icons.hud_atlas(_k)
+	var t: Variant = _atlas.get(Icons.atlas_key(&"gear", ICON_PX * _k, _settings_open, _night_icons))
+	return t if t is Texture2D else Icons.texture(&"gear", ICON_PX * _k, _settings_open, _night_icons)
 
 
 ## Ambient watch: the eye shows its closed-lid variant (Art Bible §9.3).
@@ -328,6 +378,7 @@ func _refresh_icons() -> void:
 		_dew_icon.texture = _icon(&"dew", ICON_PX)
 		_set_time(_phase, _weather, false)
 		set_ambient_icon(_ambient_icon)
+		set_settings_open(_settings_open)
 
 
 ## Night chrome (palettes ui_alpha.night_chrome): the chips' glass follows GlassPanel.night_k;
@@ -346,6 +397,7 @@ func set_night(k: float) -> void:
 			_dew_icon.texture = _icon(&"dew", ICON_PX)
 			_set_time(_phase, _weather, false)
 			set_ambient_icon(_ambient_icon)
+			set_settings_open(_settings_open)
 	if _badge != null:
 		_badge.queue_redraw()
 
@@ -387,6 +439,7 @@ func _build_time() -> void:
 	_time_label.theme_type_variation = &"StrongLabel"
 	_time_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_time_label.clip_text = true
+	_time_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	_time_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_time_label.visible = false
 	time_chip.add_child(_time_label)
@@ -422,3 +475,20 @@ func _build_eye() -> void:
 	_eye_glass.add_child(_eye_icon)
 	PressFeedback.attach(eye)
 	eye.pressed.connect(func() -> void: watch_pressed.emit())
+
+
+func _build_gear() -> void:
+	var b := Button.new()
+	b.flat = true
+	b.focus_mode = Control.FOCUS_NONE
+	b.name = "Gear"
+	b.tooltip_text = tr("DOCK_SETTINGS")
+	gear = b
+	add_child(gear)
+	_gear_glass = GlassPanel.new()
+	_gear_glass.night_aware = true
+	gear.add_child(_gear_glass)
+	_gear_icon = _icon_rect(&"gear", ICON_PX)
+	_gear_glass.add_child(_gear_icon)
+	PressFeedback.attach(gear)
+	gear.pressed.connect(func() -> void: settings_pressed.emit())

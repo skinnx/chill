@@ -144,7 +144,7 @@ Main (Node2D, main.gd)                    layout, camera = home + map pan + drif
 └─ HUD (CanvasLayer 10)
    └─ HudRoot (Control, UiTheme.attach)
       ├─ SafeArea (SafeAreaContainer: max(OS safe area, 72 / 127 / 48 px floors))
-      │  └─ Layout (VBox) ─ TopBar (216 px) · Spacer · Dock (240 px)
+      │  └─ Layout (VBox) ─ TopBar (216 px, Settings gear · dew · time · eye) · Spacer · Dock (pebble 204 px: Album · Garden · Basket)
       ├─ Sheets · Overlays (full-rect, mouse-transparent hosts)
       ├─ DebugReadout (--debug-hud)
       └─ BootCover (ColorRect #F0EEE9, fades out once)
@@ -259,7 +259,7 @@ Between events, `advance` is O(1): it caches the next event time and only settle
 | `met` | species | album entry, new-friend card |
 | `gift` | species, gift_item, dew, slot | basket badge, basket tile |
 | `photo` | species, pose, new | album photo strip |
-| `basket_full` | — | brim sparkle on the dock button |
+| `basket_full` | — | brim sparkle on the dock button (the dock shows the basket's fill by what peeks out, never a count) |
 | `stage` | stem, flower, stage (3 = bloom) | grow step / ready bud glow (GDD §3.1) |
 | `hearts` | species, hearts | `celebrate` heart burst |
 | `postcard` | id, template, species | mailbox flag, S16 |
@@ -585,7 +585,7 @@ It runs the real boot → main hand-off with a throw-away user://, the frame clo
 - **UI:**
   - `ThemeBuilder` tables are the place to restyle; regenerate `base_theme.tres` with `tools/ui/build_theme.gd`.
   - Text size rebuilds the theme.
-  - Dock labels cap at 130 % (Art Bible §9.1).
+  - Dock labels take the full text size; the pebble widens and grows (Art Bible §9.4). Settings is the top bar's gear (`TopBarView.gear`, `settings_pressed`), not a dock tab.
   - Call `FrameGovernor.ambient_mode = true` in watch mode.
   - Audio hooks: `set_sheet_open()` on sheet rise/exit; `start_purr()` / `stop_purr()` on the long-press; captions from `cue_played`; the four sound settings and `Haptics.mode` through Settings.
 - **Technical Artist:**
