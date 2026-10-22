@@ -148,7 +148,7 @@ Main (Node2D, main.gd)                    layout, camera = home + map pan + drif
       ├─ Sheets · Overlays (full-rect, mouse-transparent hosts)
       ├─ DebugReadout (--debug-hud)
       └─ BootCover (ColorRect #F0EEE9, fades out once)
-└─ WorldPan (Node, world_pan.gd)           map-drag input arbiter (§3.4); LAST child on purpose
+└─ WorldPan (Node, world_pan.gd)           the one world input arbiter: target + map drag (§3.4-3.5); LAST child
 ```
 
 Coordinates are design px in the 1080×1920 frame: `px = (x·1080, y·1920)` from `spots.json` (`GardenRules.frame_to_px`).
@@ -158,13 +158,12 @@ Coordinates are design px in the 1080×1920 frame: `px = (x·1080, y·1920)` fro
 
 ### 3.4 Input: world taps and the map pan
 
-World input is a chain, in Godot's order:
-1. **GUI** (HUD, sheets, scrims, cards: `CanvasLayer` 10) consumes its own presses, so nothing below sees a touch on a sheet. `HudController._input` swallows the first press in ambient watch mode.
-2. **`WorldPan._unhandled_input`** (`scripts/main/world_pan.gd`): the last child of Main, so it is called *first* among the unhandled handlers. It arms a pan on every press but never consumes it. It does not arm while a sheet or modal card is open (`blocked`), within 24 dp of a side edge (`spots.json safe_x`, I2), or for a pointer a world object claimed.
-3. **World layers** (`_unhandled_input`, hit-tested in design px through `make_input_local` / the canvas transform): creatures (mouse path) › plots › décor › props › brook. They give touch-down feedback in the same frame (I1) and consume the presses they take. `CreatureLayer` calls `WorldPan.claim_pointer()` on a mossling hit: a stroke started on a mossling pets it and never pans.
-4. **`Main._unhandled_input`** (the root, so last): a press that reaches it hit nothing → `WorldPan.mark_empty_press()` (double tap on empty ground glides home; optional, never required, GDD §8.2).
+World input is a chain, in Godot's order (the full contract is §3.5):
+1. **GUI** (HUD, sheets, scrims, cards, toast, the top bar's band and the dock's gesture guard: `CanvasLayer` 10) consumes its own presses, so nothing below sees a touch on the HUD. `HudController._input` swallows the whole first gesture in ambient watch mode (`PointerGate`).
+2. **`WorldPan._unhandled_input`** (`scripts/main/world_pan.gd`): the last child of Main, so it is called *first* among the unhandled handlers, and it is the **only** world input handler. It asks every node in group `WorldPan.GROUP_HIT` (creatures, plots, décor, props, brook) for its best candidate, picks **one** target, calls its `world_press` (touch-down feedback in the same frame, I1) and arms a pan. Nothing happens while a sheet or modal card is open (`blocked`); no pan starts within 24 dp of a side edge (`spots.json safe_x`, I2), though taps there work; a mossling claims the drag (a stroke pets it and never pans).
+3. On **release** within the slop the target's `world_release(act = true)` fires its action; a move past the slop cancels it (`act = false`) and starts the pan. A press that found no target is an empty press: two within `double_tap_ms` glide home (optional, never required, GDD §8.2).
 
-Drag arbitration: motion and release are read in `WorldPan._input` (a drag across the dock keeps panning). Past `gui/common/drag_threshold` (24 px) the pan starts from the slop edge (no jump). Then every node in group `WorldPan.GROUP_PRESS` gets `cancel_world_press()` (plots and décor drop the pending tap or long-press), `drag_started` fires, and the drag's motion and release events are consumed. Props and the brook act on touch-down, so a drag that starts on them has already rung or rippled. One input path: touch index 0 on devices, the real mouse on desktop and web; emulated mouse events are ignored, as in the layers.
+Drag arbitration: motion and release are read in `WorldPan._input` (a drag across the dock keeps panning). Past `gui/common/drag_threshold` (24 px) the pending tap is cancelled and the pan starts from the slop edge (no jump); `drag_started` fires and the drag's motion and release events are consumed. One input path: touch index 0 on devices, the real mouse on desktop and web; emulated mouse events are ignored.
 
 Motion (`PanBody`, pure; maths in `PanMath`; tokens `motion_tokens.world.pan`):
 - **Bounds** per viewport: for each full-width layer with scroll s ≤ 1, the visible rect stays inside the authored x range (`TerrainMath.X_MIN/X_MAX`), so d ∈ [(x_min + ox)/s, (x_max + ox − W)/s] (±400 px on phones, ±220 at 1440 px wide, none past 1880). Vertically from `sky_up_px` (600) into the sky down to the home view (the frame bottom = the ground's bottom). The rest bounds sit `rubber_room_dp` (16 dp) inside, so the rubber band never shows past the geometry; no rubber band below the ground.
@@ -172,6 +171,45 @@ Motion (`PanBody`, pure; maths in `PanMath`; tokens `motion_tokens.world.pan`):
 - **Idle drift** pauses while the map is dragged or gliding (the current drift is folded into the pan, no jump) and resumes from zero over `drift_resume_s`, its amplitude capped by the distance to the rest bounds.
 - **Followers:** `TimeOfDay.set_camera_pan` → `g_cam_pan`. The sun and moon *positions* stay pinned to the world (lighting, shadows and lamp pools are camera-invariant: everything world-space works in design px); the sky draws the discs and stars on L1 (0.02 × pan), and the sun veil and light shafts add `celestial_shift()` to follow the disc. Nodes in group `world_pan_view` get `on_world_pan(pan, cam, reveal_px)`: `SkyQuad` and `SilhouetteLayer` extend their bottoms (a skirt in the body-bottom colour, hidden at rest) by the gap the faster layer in front opens; `ForegroundFrame` keeps the 1.3× pieces from sliding far enough to show their cut edges (exact up to `fg_knee` × room, which covers the drift). The value frame and the brook (mesh only) run to x_max. Glass sheets read the screen texture and need nothing. Caption anchors are canvas px; the overlay applies the camera.
 - **QA:** captures start centred (the pan is 0, so frames are unchanged); `--qa-pan=x,y` starts panned, clamped to the rest bounds (`--qa-pan=-9999,-9999` = left-top corner).
+
+### 3.5 Input & hit-testing contract (round 7: "I often mis-tap" on a 720×1600 phone)
+
+**One path per layer of the UI.** `input_devices/pointing/emulate_mouse_from_touch` stays on (GUI needs it). Input dispatches a touch's emulated mouse twin (device −1) *before* the `InputEventScreenTouch` itself.
+- **World:** only `WorldPan` reads input, on the touch path (index 0) or the real mouse; emulated events are ignored. No world layer has an `_unhandled_input` any more, so nothing in the world can act twice or on both paths.
+- **GUI:** `BaseButton` sees both twins and fires once (on the first release; the second finds no press attempt). Custom controls (`UiSlider`, the sheet swipe zone, the scrims, cards) read the mouse path only. `HudController._input` and `PointerGate` read both, and swallow both.
+
+**World targets** (`world_hit(canvas_pos, slop) -> {prio, inside, core?, d, key, drag?}`, `world_press`, `world_release(key, pos, act)`, `world_drag`; debug shapes via `world_hit_shapes()`):
+- **One target per press.** Candidates compare by tier, then priority, then distance. Tiers: core hit, then the rest of the hit area, then reachable only through the fat-finger slop (`SLOP_DP` 9 dp). Priority follows GDD §2.5: choose-a-bed bed with room 7, mossling 6, bed with a ready bud or the seed 5, prop 4, décor 3, bed 2, stream 1. Distance is to the target's centre. Only the winner gets the press.
+- **Aim and slop.** A touch aims `AIM_UP_DP` (3 dp) above the contact (contacts land low, 02 §1.1). Décor keeps its 64 dp hit for empty ground, but only its 20 dp-radius core outranks a bed it overlaps.
+- **Release-to-fire.** Feedback comes on touch-down; the action comes on release within the 24 px drag threshold. Moving further cancels it and pans: the tap slop and the pan threshold are one number, so there is no gap where neither or both happen. This covers props (basket, mailbox, chime), the brook, beds, décor and mossling taps.
+- **No action after a drag, a fling or a cancel.** A press on a gliding map only stops it. A sheet or card that opens mid-press takes the tap. A long-press that fired the bed card never also taps.
+
+**GUI consumption (no through-taps).** Every surface that looks like UI stops presses (`MOUSE_FILTER_STOP`):
+- **The sheet and its scrim.** The sheet's whole rect (padding, grabber, header) stops presses, and so does the full-screen scrim. While a sheet *closes*, it is input-dead (`mouse_behavior_recursive = DISABLED`, so a fast second tap on Plant or Collect never acts). Its rect and the scrim keep consuming until the sheet is freed. A scrim tap (press and release within 10 dp) closes the sheet and never reaches the world; a drag over it does nothing.
+- **Modal cards and their scrim.** They behave the same way, and dismissing one needs a tap, not a drag.
+- **The toast**, while shown and while it fades.
+- **The top bar's band.** It runs from the top of the screen to the bottom of the gear and eye hits, over the chips and the gaps between them. Under an open sheet it yields to the scrim, so a tap there still closes the sheet.
+- **The dock.** The pebble stops presses, the tabs tile it edge to edge, and the tabs reach down to the gesture guard. The guard is a full-width strip over the bottom inset (max(safe bottom, 127 px)); presses that start in the gesture-bar zone do nothing.
+
+**Buttons** (`TapGuard`, wired by `PressFeedback.attach`):
+- **Press slop.** A press that travels more than 10 dp (30 px) is cancelled (no action, the visual springs back). Sliding off cancels too.
+- **Scroll-through.** Buttons inside a `ScrollContainer` pass their presses on (`MOUSE_FILTER_PASS`), so a drag that starts on a button scrolls. The list's `scroll_deadzone` is 30 px (`gui/common/default_scroll_deadzone`), and its `NOTIFICATION_SCROLL_BEGIN` cancels the press.
+- **Fling catch.** A press while the list is still moving only stops it.
+- **Debounce.** A second press within 350 ms of an action on the same button is swallowed: one purchase, plant or collect per press, and no double-open of a dock tab.
+- **Selection on release.** Dock tabs and buttons fire on release. Tapping the active dock tab closes its sheet (GDD §8.1, kept).
+
+**Sliders.** `UiSlider` is `PASS`. A press stays pending until it moves. Horizontally past 24 px it becomes a slider drag, the only case that consumes the motion. Vertically past 10 dp it is the list's scroll and the value never changes. A tap jumps to the nearest detent.
+
+**Ambient watch.** The first gesture only wakes the HUD. `PointerGate` swallows the touch, its twin, their moves and both releases.
+
+**Sizes and gaps** (GDD §8.4):
+- Dock tabs ≥ 76 dp (88 × 88, the hero 96 × 93).
+- The gear and the eye 72 dp.
+- In-sheet buttons, sliders, segments and rows ≥ 48 dp; the sheet × is 60 dp and nothing sits next to it.
+- At least 8 dp between discrete targets: the tabs-to-list gap (`UiSheet.TABS_GAP`) and the padding of rows that hold their own steppers or sliders keep it. Full-width Settings list rows stack under a hairline (the Material list pattern), and contiguous dock tabs share edges by design.
+- Nothing in the app is irreversible ("Leave for now" saves first), so no primary action sits next to a destructive one.
+
+**QA.** `--debug-hits` (`HitDebug`, CanvasLayer 100) draws every live world hit area with its slop ring and core, and every UI target and consumer with its size in dp. It flags targets under 48 dp (red), overlaps (magenta) and gaps under 8 dp (orange), and prints a `debug-hits:` summary. World areas are hidden while the world is blocked. Renders: `qa/out/hits/`.
 
 ---
 
@@ -541,7 +579,8 @@ The contract is AUDIO_BIBLE §8; `tools/audio/mixsim.py` is its executable refer
 | `test_retention_parity.gd` | Bit-level parity with `economy_sim.py` on the exported scripted schedule (§5.3) |
 | `test_palette.gd` | **Palette interpolation:** keys exact, midpoints equal to the engine's OKLab Gradient; OKLab round trip; scalars; clock → `g_day` (crossfades, midnight, continuity over 24 h); rain transform; 30 s weather crossfade; celestial; every declared global has a writer |
 | `test_clock.gd` | **Frame clock** (QA captures): replays identically, ignores real time, `--now`/override mid-run and clear; the system-clock mode is unchanged |
-| `test_world_pan.gd` | Map pan (§3.4): bounds per aspect keep every layer inside its geometry (phones, tablets, wider than the geometry); rubber band is 1:1 inside and never passes the hard bounds; release past the bounds springs back inside; fling glides with friction, overshoots an edge and settles on it; home glide; Reduce Motion (no inertia, clamp, cut); soft limit and reveal; foreground room; threshold from the project setting; small moves stay taps; a drag cancels pending world presses once and tracks 1:1 from the slop edge; a stroke on a mossling never pans; touch path vs emulated mouse and a second finger; edge band and open sheets; double tap on empty ground only |
+| `test_world_pan.gd` | Map pan (§3.4): bounds per aspect keep every layer inside its geometry (phones, tablets, wider than the geometry); rubber band is 1:1 inside and never passes the hard bounds; release past the bounds springs back inside; fling glides with friction, overshoots an edge and settles on it; home glide; Reduce Motion (no inertia, clamp, cut); soft limit and reveal; foreground room. Arbiter (§3.5): threshold and slop from the settings; release-to-fire; a drag cancels the tap and tracks 1:1 from the slop edge; a drag-claiming target never pans; one target per press by priority then nearest; direct hit beats slop, slop catches near misses; touch aim offset; the emulated twin is ignored; second finger; edge band (taps still work); nothing through a sheet or a card that rose mid-press; a press on a gliding map only catches it; cancel; double tap on empty ground only |
+| `test_input_contract.gd` | §3.5 through real GUI dispatch (a SubViewport fed the phone's emulated-mouse + touch pairs): one world press per touch; release-to-fire with slop; props act on release; bed priority and choose mode; candidate order (tier, priority, distance); HUD band, chips, dock seams, pebble ends, under the pebble and the gesture inset consume; toast (shown and fading); sheet rect, grabber and padding consume, scrim drag vs tap, no world tap through the scrim; a closing sheet consumes and never acts; modal scrim; the ambient wake gesture swallowed whole; one fire per touch on a button; press slop; scroll-through and deadzone; fling catch; debounce; dock select on release, slide-off cancel, active tab closes; slider moves only on a horizontal drag; size floors |
 | `test_spring.gd` | **Spring helper converges** for all 5 tokens, with analytic overshoot and envelope settle times; frame-rate independence (30 vs 120 fps); stability through hitches; retarget keeps velocity; critically and over-damped never overshoot; Reduce Motion ζ ≥ 1; Spring2D; bézier tokens; duration tokens; the loop table meets V5 (integer k, breathing 3.5–4.5 / 5–6 s, ≤ 3 firefly glows/s); `Motion` springs take the token rest epsilon |
 | `test_core_helpers.gd` | NFC and name filtering; weather plan determinism and share; locale policy and loaded translations; settings validation; recap priority; harmony helpers versus theory.py (including JSON float sets); bus graph (limiter −1.5 dB, LPF resonance 0.5); frame-rate divisors; haptics modes, persistence and repeat |
 | `test_audio_director.gd` | AUDIO_BIBLE §8.10 without a device: manifest loaded; ladder climbs, caps at 7 and resets after 1.5 s; walk stays in range and set and always moves; variants never repeat and all are used; chord hold 6–10 bars; bed targets (rain replaces the stream, crickets only at night and never in rain); slider curve; `cue_played` captions; one DOUBLE per Collect burst; S10 MEDIUM once |
@@ -574,7 +613,7 @@ It runs the real boot → main hand-off with a throw-away user://, the frame clo
 | `shaders/dev/placeholder_band.gdshader`, `PlaceholderBand` nodes under Sky / FarHills / MidHills / Meadow / Stream | Technical Artist: Art Bible §4.3–4.8 shaders and builders | Delete the dev shader with the last band. Warm-up picks up new shaders automatically |
 | Empty `Celestial`, `Foreground`, `Play/*`, `Particles` | Technical Artist (layers, particles), Gameplay Engineer (beds, décor, creatures) | `Plots` children = beds from `spots.json` + `sim.state.stems`; `Decor` from `owned` × anchors; `Creatures` from `present` |
 | `HUD/…/TopBar`, `Dock`, `Sheets`, `Overlays` | UI Engineer | Back handlers, the leave dialog on `leave_requested`, the recap on `world_ready(recap)`, choose-a-bed mode (`sim.needs_bed_choice`, `GardenRules.beds_with_room`), `UiTheme.attach` on new CanvasLayers |
-| `LayoutDebug`, `DebugReadout` | stay (debug-only flags) | `--debug-layout`, `--debug-hud`, `--log-events` |
+| `LayoutDebug`, `HitDebug`, `DebugReadout` | stay (debug-only flags) | `--debug-layout`, `--debug-hits`, `--debug-hud`, `--log-events` |
 
 **For other roles.**
 - **Gameplay:**
@@ -632,6 +671,6 @@ User args (after `--`):
 - `--freeze-time`, `--g-time=<s>`
 - `--frame-clock` (wall time and ticks follow the frame delta; implied in Movie Maker mode)
 - `--no-governor`
-- `--debug-layout`, `--debug-hud`, `--log-events`
+- `--debug-layout`, `--debug-hits` (every world and UI hit area, §3.5), `--debug-hud`, `--log-events`
 - `--audio-seed=N`
 - `--fixture=retention_mid` (garden_mid + hearts 1–5, nests at all 3 stages, 2 open mysteries with 1 visible sign each, a cousin met, memories, a pending `pair_nap`) and `--qa-scene=<scene id>` (that scene pending; implies the retention_mid world): `RetentionFixture`, called from `GardenFixture.apply_from_args`

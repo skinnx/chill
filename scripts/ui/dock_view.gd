@@ -95,6 +95,9 @@ const GLINT_PERIOD_S := 6.0
 var left_handed: bool = false
 var buttons: Dictionary = {}
 var pill: GlassPanel
+## Full-width strip over the bottom inset (the Android gesture bar / home indicator, Z5): presses
+## that start there are taken by the HUD and do nothing (no tab, no world tap, no pan).
+var guard: Control
 ## Selection bubble: centre (screen px), size, pop scale and alpha; all spring.
 var cap_x: float = 0.0:
 	set(v):
@@ -157,6 +160,10 @@ func _ready() -> void:
 	# The pebble's own glass takes its presses too (between and around the tabs), so a touch on
 	# the dock never reaches the world (WorldPan arbitration).
 	pill.mouse_filter = Control.MOUSE_FILTER_STOP
+	guard = Control.new()
+	guard.name = "GestureGuard"
+	guard.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(guard)
 	# Draw-call budget (Art Bible §4.19): the plates, bubbles and glow are drawn by one layer, the
 	# icons and sprites come from one atlas at z 2, the labels draw together at z 3.
 	_plates = Control.new()
@@ -309,16 +316,22 @@ func layout(screen: Vector2, safe_bottom: float) -> void:
 	var bottom := screen.y - maxf(safe_bottom, BOTTOM_MIN) - BOTTOM_GAP
 	pill.position = Vector2(roundf((screen.x - pill_w) * 0.5), bottom - _pill_h)
 	pill.size = Vector2(pill_w, _pill_h)
-	var x := pill.position.x + PILL_INSET
+	var x := pill.position.x
 	var p := pill.position.y
 	var label_top := p + _pill_h - PILL_INSET - LABEL_BOTTOM - lh
+	# The tabs tile the whole pebble edge to edge (the outer two take its insets and round ends)
+	# and reach down to the gesture guard: no dead gap anywhere on the dock (ARCHITECTURE §3.5).
+	var guard_h := maxf(safe_bottom, BOTTOM_MIN)
+	guard.position = Vector2(0.0, screen.y - guard_h)
+	guard.size = Vector2(screen.x, guard_h)
 	for i in ORDER.size():
 		var id := _id_at(i)
 		var b := buttons[id] as RoundButton
-		var w := widths[i]
+		var w := widths[i] + (PILL_INSET if i == 0 or i == ORDER.size() - 1 else 0.0)
+		var inner := PILL_INSET if i == 0 else 0.0
 		var hero := id == HERO
 		var hit_top := p - (HERO_POKE + HIT_GROW * 0.5 if hero else HIT_GROW)
-		var hit_bottom := p + _pill_h + HIT_GROW
+		var hit_bottom := maxf(p + _pill_h + HIT_GROW, guard.position.y)
 		b.position = Vector2(x, hit_top)
 		b.size = Vector2(w, hit_bottom - hit_top)
 		var icon_px := b.icon_px
@@ -327,9 +340,10 @@ func layout(screen: Vector2, safe_bottom: float) -> void:
 		b.label_gap = label_top - (icon_top + icon_px)
 		var stack_h := label_top + lh - icon_top
 		b.inline = false
-		b.label_w = w - label_pad() * 2.0
-		b.plate_px = w
-		b.plate_center = Vector2(w * 0.5, icon_top - hit_top + stack_h * 0.5)
+		var vis_w := widths[i]
+		b.label_w = vis_w - label_pad() * 2.0
+		b.plate_px = vis_w
+		b.plate_center = Vector2(inner + vis_w * 0.5, icon_top - hit_top + stack_h * 0.5)
 		var br := _bubble_local(b)
 		b.set_meta(PressFeedback.META_RIPPLE_RECT, br)
 		b.set_meta(PressFeedback.META_RIPPLE_RADIUS, br.size.y * 0.5)

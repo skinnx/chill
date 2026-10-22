@@ -165,7 +165,7 @@ Props (⟲ `spots.json:props`):
 | `spring_rock` | 0.950 | 0.735 | 60 × 40 | — | — |
 | `willow` | 0.120 | 0.300 | 140 × 170 | — | — |
 
-**Hit priority** when targets overlap (world): mossling > bed with a ready bud > prop (basket, mailbox, chime) > décor piece with a `tap_fx` (pinwheel, lantern; optional delight, hit ≥ 60 dp, 64 dp in the look zone, nearest piece wins) > bed > stream > background. The validator checks every static target for size floors, 8 dp gaps and that its hit area lies fully inside the frame (§10).
+**Hit priority** when targets overlap (world): mossling > bed with a ready bud > prop (basket, mailbox, chime) > décor piece with a `tap_fx` (pinwheel, lantern; optional delight, hit ≥ 60 dp, 64 dp in the look zone, nearest piece wins) > bed > stream > background. In choose-a-bed mode the beds with room come first. Round 7 (ARCHITECTURE §3.5): every press goes to exactly **one** target, picked by one arbiter. A target that contains the touch beats one only reached through the fat-finger slop (9 dp, aim 3 dp above the contact). Then the priority above decides, then the nearest centre. A décor piece's generous 64 dp ring only wins over empty ground and the stream; its 20 dp-radius core outranks a plain bed. The validator checks every static target for size floors, 8 dp gaps and that its hit area lies fully inside the frame (§10).
 
 ---
 
@@ -582,7 +582,13 @@ Back (Android) closes the top-most card/sheet; at Main it opens "Leave the hollo
 - **Garden item card**: icon (live mini-render), name, price chip with drop icon, "{owned} of {max}", dew-yield drops (flowers), bloom time ("Blooms in about 40 min"), "Loved by {names}" for met friends or "A friend you haven't met yet loves these", primary button **Plant / Place** at the card's bottom. Unaffordable: button reads "A little more dew", price chip in `ink_2`; pressing it gives the soft S11 tok and a ±2 dp wiggle — never red, never a buzz.
 
 ### 8.2 Gestures (I3)
-- **Tap**: pressed state on touch-down in the same frame; action on touch-up inside the target; sliding off cancels.
+- **Tap**: pressed state on touch-down in the same frame; action on touch-up inside the target; sliding off cancels. This holds everywhere, world props and the stream included (round 7: the basket, the mailbox, the chime and the ripple no longer act on touch-down, so a pan that starts on them opens nothing).
+  - In the world a finger that moves past 24 px cancels the tap and pans.
+  - On UI buttons more than 10 dp of travel cancels the press, so a scroll never presses a button.
+  - A second press on the same button within 350 ms is ignored: one purchase, plant or collect per press.
+  - A press on a gliding map or a flinging list only stops it.
+  - The first touch in ambient watch only wakes the HUD.
+  - Presses starting in the gesture-bar inset at the bottom do nothing.
 - **Long-press**: 450 ms, radial fill from 150 ms, cancelled by > 24 px movement. Every long-press action has a tap alternative (Pet button, bed card via tap on the bed's info chip).
 - **Drag**: starts after 24 px (`gui/common/drag_threshold = 24`); used for stroking mosslings, scrolling sheets, swipe-to-dismiss and **panning the hollow**. No drag starts within 24 dp of a side edge.
 - **Map pan**: one finger on empty world (or a bed, décor, prop or the brook) and past 24 px moves the camera, 1:1 with the finger; on release it glides and eases to a stop, with a soft rubber band at the edges. It reaches ±400 px sideways (exactly as far as the art goes) and up to 600 px into the sky, never below the ground. Starting a pan cancels the pending tap or long-press under the finger; a stroke that starts on a mossling always pets it. No pan through an open sheet. Reduce Motion: no glide or bounce. The slow idle drift pauses while panning and fades back in afterwards. Calm: no sound or haptic.
@@ -617,7 +623,14 @@ Back (Android) closes the top-most card/sheet; at Main it opens "Leave the hollo
 Captions (setting) show `CAPTION_*` bubbles next to the source.
 
 ### 8.4 Targets (I2)
-Play zone ≥ 60 dp, look zone ≥ 64 dp, HUD ≥ 72 dp, dock ≥ 76 dp; gaps ≥ 8 dp; world hit areas extend 4 dp downward (02 §1.1). Mossling hit circle ≥ 60 dp whatever its visual size. No required target in Z0, Z1 or Z5. The validator enforces static targets (§10); dynamic mosslings use hit priority (§2.5).
+Play zone ≥ 60 dp, look zone ≥ 64 dp, HUD ≥ 72 dp, dock ≥ 76 dp, every UI target in a sheet ≥ 48 dp (the sheet × 60 dp); gaps ≥ 8 dp between discrete targets; world hit areas extend 4 dp downward (02 §1.1). Mossling hit circle ≥ 60 dp whatever its visual size. No required target in Z0, Z1 or Z5. The validator enforces static targets (§10); dynamic mosslings use hit priority (§2.5).
+
+Round 7 rules (ARCHITECTURE §3.5; `--debug-hits` draws them all):
+- World targets also take a 9 dp fat-finger slop when nothing contains the touch.
+- The dock's tabs tile the whole pebble edge to edge and reach down to the gesture-bar guard: no dead gap on the dock.
+- The HUD row, the dock, sheets (their whole rect), scrims, modal cards and the toast all consume their presses, also while they animate out. Nothing reaches the world through them.
+- Full-width Settings list rows stack under a hairline (a list, not separate buttons). Contiguous dock tabs share edges by design.
+- Sliders move only on a horizontal drag; a vertical drag over a slider scrolls the sheet.
 
 ### 8.5 Text rendering
 Nunito 500/700/800, Baloo 2 700 (D6); type scale Caption 36 / Label 42 / Body 48 / HUD numerals 66 / Title 84 px; Vietnamese lines +12 % line spacing; dark text on pastels, never white on pastel (X2). HUD strings have a 2-line or ellipsis fallback at 200 % text.

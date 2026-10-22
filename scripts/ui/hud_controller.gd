@@ -103,6 +103,8 @@ var _night_known: bool = false
 var _night_k: float = 0.0
 var _night_tween: Tween
 var _qa_frames: int = 0
+## Swallows the rest of the gesture whose first touch woke the HUD from ambient watch.
+var _wake_gate := PointerGate.new()
 
 @onready var _safe_area: SafeAreaContainer = $SafeArea
 @onready var _sheets_host: Control = $Sheets
@@ -189,14 +191,18 @@ func _process(delta: float) -> void:
 
 
 func _input(event: InputEvent) -> void:
-	var press := (event is InputEventMouseButton and (event as InputEventMouseButton).pressed) \
-			or (event is InputEventScreenTouch and (event as InputEventScreenTouch).pressed)
-	if not press:
+	if _wake_gate.swallow(event):
+		# GDD §1.5 / Art Bible §9.6: the touch that wakes the HUD only wakes it. Every event of that
+		# gesture (the touch and its emulated mouse twin, their moves and releases) stops here, so
+		# neither a dock tab nor the world behind it acts on it.
+		get_viewport().set_input_as_handled()
+		return
+	if not PointerGate.is_press(event):
 		return
 	_idle_s = 0.0
 	if ambient:
-		# GDD §1.5 / Art Bible §9.6: the first tap only wakes the HUD.
 		set_ambient(false)
+		_wake_gate.begin(event)
 		get_viewport().set_input_as_handled()
 
 
@@ -282,6 +288,14 @@ func _set_chrome_input(enabled: bool) -> void:
 	controls.append_array(dock.input_controls())
 	for c: Control in controls:
 		c.mouse_filter = Control.MOUSE_FILTER_STOP if enabled else Control.MOUSE_FILTER_IGNORE
+	_sync_band()
+
+
+## The top bar's band takes presses while the world is in view; under an open sheet the scrim does
+## (a tap there closes the sheet as before), and in ambient watch the wake gate does.
+func _sync_band() -> void:
+	var on := not ambient and not sheets.is_open()
+	top_bar.band.mouse_filter = Control.MOUSE_FILTER_STOP if on else Control.MOUSE_FILTER_IGNORE
 
 
 func open_sheet(id: StringName, instant: bool = false) -> void:
@@ -324,6 +338,7 @@ func _on_dock(id: StringName) -> void:
 
 
 func _on_sheet_changed(id: StringName) -> void:
+	_sync_band()
 	dock.set_active(id)
 	top_bar.set_settings_open(id == &"settings")
 

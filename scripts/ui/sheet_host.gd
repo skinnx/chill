@@ -67,6 +67,7 @@ var _back := Callable()
 var _screen: Vector2 = Vector2(1080, 1920)
 var _lift_to: float = 0.0
 var _kb_restore_expanded: bool = false
+var _scrim_press := Vector2(-INF, -INF)
 
 
 func _init() -> void:
@@ -232,10 +233,14 @@ func close() -> void:
 	Game.remove_back_handler(_back)
 	AudioDirector.play_cue(CUE_CLOSE)
 	AudioDirector.set_sheet_open(false)
+	# The closing sheet takes no more input (a fast second tap on Plant / Collect never acts
+	# twice); its rect and the fading scrim still consume presses until it is gone, so nothing
+	# reaches the world through a sheet that is still on screen (ARCHITECTURE §3.5).
+	s.mouse_behavior_recursive = Control.MOUSE_BEHAVIOR_DISABLED
+	s.closing = true
 	var t := Motion.tween(_scrim, "modulate:a", 0.0, &"short")
-	t.finished.connect(func() -> void:
-		if current == null:
-			_scrim.visible = false)
+	t.finished.connect(_hide_scrim_when_clear)
+	s.tree_exited.connect(_hide_scrim_when_clear)
 	var rise := float(UiTokens.ui_block("sheet_open").get("rise_px", 96.0))
 	if Motion.reduce_motion:
 		var f := s.create_tween()
@@ -291,6 +296,8 @@ func _swap(id: StringName, instant: bool, quiet: bool = false) -> void:
 			t.tween_property(s, "modulate:a", 1.0, dur)
 			FrameGovernor.hold_for(dur)
 		old.live = false
+		old.mouse_behavior_recursive = Control.MOUSE_BEHAVIOR_DISABLED
+		old.closing = true
 	_sync_copy()
 	sheet_changed.emit(id)
 
@@ -328,9 +335,33 @@ func _sync_copy() -> void:
 			Vector2(r.size.x, bottom - top + OVERSHOOT_PX)).grow(2.0)
 
 
+## The scrim stays up (consuming presses) until the closing sheet has left and its fade is done.
+func _hide_scrim_when_clear() -> void:
+	if current != null or not is_inside_tree():
+		return
+	for c: Node in get_children():
+		if c is UiSheet and not c.is_queued_for_deletion() and c.is_inside_tree():
+			return
+	_scrim.visible = false
+
+
+## A tap on the scrim closes the sheet: the press must start on the scrim and the release land
+## within the 10 dp slop (a drag over the dimmed world does nothing). Both twins of a touch stop
+## here (MOUSE_FILTER_STOP), so the world behind never sees the tap.
 func _on_scrim_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
 		var mb := event as InputEventMouseButton
-		if mb.button_index == MOUSE_BUTTON_LEFT and not mb.pressed:
-			close()
-		_scrim.accept_event()
+		if mb.button_index == MOUSE_BUTTON_LEFT:
+			if mb.pressed:
+				_scrim_press = mb.global_position
+			elif _scrim_press.x > -INF and mb.global_position.distance_to(_scrim_press) <= TapGuard.slop_px():
+				_scrim_press = Vector2(-INF, -INF)
+				close()
+			else:
+				_scrim_press = Vector2(-INF, -INF)
+	_scrim.accept_event()
+
+
+## The scrim (tests, QA overlay).
+func scrim() -> Control:
+	return _scrim

@@ -2,7 +2,8 @@
 ; Mossling Meadow - Godot 4.7.2-stable, Compatibility renderer.
 ; Base: docs/research/00-SYNTHESIS.md §3 (binding). Additions are marked and explained in
 ; docs/ARCHITECTURE.md §2: autoloads, locale fallback, the Art Bible §4.1 shader globals,
-; application/config/version and boot_splash/show_image=false (plain #F0EEE9 splash).
+; application/config/version and boot_splash/show_image=false (plain #F0EEE9 splash),
+; gui/common/default_scroll_deadzone=30 (the 10 dp tap slop, ARCHITECTURE §3.5).
 
 config_version=5
 
@@ -61,6 +62,7 @@ movie_writer/fps=30
 [gui]
 
 common/drag_threshold=24
+common/default_scroll_deadzone=30
 
 [internationalization]
 

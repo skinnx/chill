@@ -103,7 +103,7 @@ func test_dock_matches_wireframe_and_mirrors() -> void:
 	var centres := {&"album": 270.0, &"garden": 540.0, &"basket": 810.0}
 	for id: StringName in centres:
 		var b := dock.button(id)
-		assert_almost_eq(b.position.x + b.size.x * 0.5, float(centres[id]), 0.01, "centre of %s" % id)
+		assert_almost_eq(b.position.x + b.center().x, float(centres[id]), 0.01, "centre of %s" % id)
 		assert_true(b.size.x >= 228.0 and b.size.y >= 228.0, "%s hit >= 76 dp" % id)
 		assert_true(b.position.y <= 1553.0 and b.position.y + b.size.y >= 1757.0, "%s hit covers the pebble" % id)
 	var hero := dock.button(&"garden")
@@ -113,9 +113,9 @@ func test_dock_matches_wireframe_and_mirrors() -> void:
 	dock.left_handed = true
 	dock.layout(SCREEN, SAFE_BOTTOM)
 	var basket := dock.button(&"basket")
-	assert_almost_eq(basket.position.x + basket.size.x * 0.5, 270.0, 0.01, "left-handed order reversed")
+	assert_almost_eq(basket.position.x + basket.center().x, 270.0, 0.01, "left-handed order reversed")
 	var album := dock.button(&"album")
-	assert_almost_eq(album.position.x + album.size.x * 0.5, 810.0, 0.01)
+	assert_almost_eq(album.position.x + album.center().x, 810.0, 0.01)
 
 
 func test_dock_tab_hits_do_not_overlap_and_the_pebble_takes_its_presses() -> void:
@@ -130,6 +130,22 @@ func test_dock_tab_hits_do_not_overlap_and_the_pebble_takes_its_presses() -> voi
 			assert_false(rects[i].intersection(rects[j]).has_area(), "tab hits do not overlap")
 	assert_eq(dock.pill.mouse_filter, Control.MOUSE_FILTER_STOP, "the pebble consumes its presses (WorldPan)")
 	assert_true(dock.input_controls().has(dock.pill), "ambient watch turns the pebble off too")
+	# round 7 (owner: "I often mis-tap the dock"): the tabs tile the pebble edge to edge, no dead gap
+	var order: Array[Rect2] = []
+	for i in DockView.ORDER.size():
+		var b := dock.button(dock._id_at(i))
+		order.append(Rect2(b.position, b.size))
+	var pill := dock.pill_rect()
+	assert_almost_eq(order[0].position.x, pill.position.x, 0.01, "the first tab starts at the pebble's edge")
+	assert_almost_eq(order[2].end.x, pill.end.x, 0.01, "the last tab ends at the pebble's edge")
+	for i in 2:
+		assert_almost_eq(order[i].end.x, order[i + 1].position.x, 0.01, "tabs %d/%d are contiguous" % [i, i + 1])
+	for r: Rect2 in order:
+		assert_true(r.size.x >= 76.0 * 3.0 and r.size.y >= 76.0 * 3.0, "dock hit >= 76 dp (%s)" % r)
+		assert_almost_eq(r.end.y, dock.guard.position.y, 0.01, "tabs reach down to the gesture guard")
+	assert_eq(dock.guard.mouse_filter, Control.MOUSE_FILTER_STOP, "the gesture-bar inset eats its presses")
+	assert_almost_eq(dock.guard.size.y, maxf(SAFE_BOTTOM, DockView.BOTTOM_MIN), 0.01)
+	assert_almost_eq(dock.guard.position.y + dock.guard.size.y, SCREEN.y, 0.01)
 
 
 func test_dock_labels_fit_their_tab() -> void:
@@ -141,7 +157,7 @@ func test_dock_labels_fit_their_tab() -> void:
 		var font := b.label.get_theme_font(&"font")
 		var w := font.get_string_size(b.label.text, HORIZONTAL_ALIGNMENT_LEFT, -1,
 				b.label.get_theme_font_size(&"font_size")).x
-		assert_true(w <= b.size.x - DockView.LABEL_PAD * 2.0 + 0.5, "%s label fits its tab" % id)
+		assert_true(w <= b.plate_px - DockView.LABEL_PAD * 2.0 + 0.5, "%s label fits its tab" % id)
 		assert_eq(b.label.theme_type_variation, &"DockLabel", "Baloo 2 dock label")
 
 

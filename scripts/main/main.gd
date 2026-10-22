@@ -11,7 +11,8 @@ extends Node2D
 ## size; every frame the camera sits at home + pan + drift, TimeOfDay gets the pan (g_cam_pan) and
 ## nodes in GROUP_VIEW get on_world_pan(pan, cam, reveal_px) when the view moves.
 ##
-## Debug user args: --debug-layout (gameplay layout overlay), --debug-hud (live sim readout),
+## Debug user args: --debug-layout (gameplay layout overlay), --debug-hits (every world and UI hit
+## area, HitDebug), --debug-hud (live sim readout),
 ## --log-events (print every sim event), --qa-pan=x,y (start panned by x,y canvas px, clamped to
 ## the rest bounds: a QA still of a panned view).
 
@@ -76,6 +77,12 @@ func _ready() -> void:
 			if xy.size() == 2:
 				pan.body.snap(Vector2(xy[0].to_float(), xy[1].to_float()))
 				_was_active = true  # the drift restarts from zero, capped by the rest bounds
+	if HitDebug.wanted():
+		var hits := HitDebug.new()
+		hits.name = "HitDebug"
+		hits.hud = hud_root
+		hits.pan = pan
+		add_child(hits)
 	_apply_camera(0.0)
 	_intro()
 
@@ -217,16 +224,6 @@ func _setup_drift(px_per_dp: float) -> void:
 	var max_speed_px := float(w.get("camera_drift_max_dp_s", 0.0)) * px_per_dp
 	# Peak speed of A*sin(2*pi*t/P) is A*2*pi/P.
 	_drift_amp_px = max_speed_px * _drift_period_s / TAU
-
-
-## Double tap on empty ground: only presses that no world layer took reach Main (it is the root,
-## so its _unhandled_input runs after every layer's).
-func _unhandled_input(event: InputEvent) -> void:
-	var st := event as InputEventScreenTouch
-	var mb := event as InputEventMouseButton
-	if (st != null and st.pressed and st.index == 0) or (mb != null and mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT
-			and mb.device != InputEvent.DEVICE_ID_EMULATION):
-		pan.mark_empty_press()
 
 
 func _on_world_ready(recap: Array) -> void:

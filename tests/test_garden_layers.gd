@@ -17,6 +17,7 @@ var c: GameContent
 var _saved_sim: WorldSim
 var _saved_ready: bool
 var _saved_content: GameContent
+var _held: Dictionary = {}
 
 
 func before_all() -> void:
@@ -58,11 +59,20 @@ func _tick(node: Node, seconds: float) -> void:
 		t += FRAME_S
 
 
+## A tap through the world input arbiter (WorldPan.resolve on this one layer, ARCHITECTURE §3.5):
+## press = world_press on the winner, release = world_release(act = true).
 func _touch(node: Node2D, design: Vector2, pressed: bool) -> void:
-	var ev := InputEventScreenTouch.new()
-	ev.pressed = pressed
-	ev.position = node.get_global_transform_with_canvas() * design
-	node._unhandled_input(ev)
+	var canvas := node.get_global_transform_with_canvas() * design
+	if pressed:
+		var arb := WorldPan.new()
+		var hit := arb.resolve(canvas, [node])
+		arb.free()
+		_held = hit
+		if not hit.is_empty():
+			node.call(&"world_press", hit["key"], canvas)
+	elif not _held.is_empty():
+		node.call(&"world_release", _held["key"], canvas, true)
+		_held = {}
 
 
 func _vertex_count(p: PlotsLayer, bed: StringName) -> int:

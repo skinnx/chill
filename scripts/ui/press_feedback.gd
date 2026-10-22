@@ -9,7 +9,9 @@ extends RefCounted
 ##    control's own shape (pill, card, round plate), white on dark fills and primary on light ones;
 ##  * S01 plays (+ TICK haptic in Full).
 ## On release it springs back on `pop` (interruptible: the spring keeps its velocity). The action
-## fires on release inside the target (BaseButton action mode), so sliding off cancels.
+## fires on release inside the target (BaseButton action mode), so sliding off cancels; [TapGuard]
+## (wired by [method attach]) also cancels a press that travels > 10 dp, lets a drag that starts on
+## a button scroll its list, and swallows a second press within 350 ms of the last action.
 ##
 ## QA stills (--qa-press, --qa-press-t): [method pose] freezes a control at a given time after
 ## touch-down (deterministic, no tweens), so the touch strip can show the peak of every press.
@@ -59,6 +61,8 @@ static var _ripple_shader: Shader
 static func attach(button: BaseButton, cue: StringName = CUE_TOUCH, depth: float = 1.0, squash: bool = false) -> void:
 	button.set_meta(META_DEPTH, depth)
 	button.set_meta(META_SQUASH, squash)
+	# press slop, scroll-through, fling catch and debounce (ARCHITECTURE §3.5)
+	TapGuard.attach(button)
 	button.button_down.connect(_down.bind(button, cue))
 	button.button_up.connect(_up.bind(button))
 	button.resized.connect(func() -> void: button.pivot_offset = _pivot(button))

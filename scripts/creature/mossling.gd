@@ -486,12 +486,19 @@ func sparkle(count: int) -> void:
 ## Hit test in the creature layer's space (design px). Radius >= view.hit.radius_px x depth,
 ## never under 90 px (60 dp target, I2).
 func hit_test(point: Vector2) -> bool:
+	var c := hit_circle()
+	return c.z > 0.0 and point.distance_to(Vector2(c.x, c.y)) <= c.z
+
+
+## The hit circle (centre x, y and radius, the layer's px); radius 0 while it cannot be touched
+## (leaving, or still fading in).
+func hit_circle() -> Vector3:
 	if leaving or _alpha < 0.5:
-		return false
+		return Vector3.ZERO
 	var hit: Dictionary = rig.view().get("hit", {})
 	var c := _feet - Vector2(0.0, (float(hit.get("centre_bu", 0.5)) * _s_px + _hop_h) * depth)
 	var r := maxf(float(hit.get("radius_px", 96.0)) * maxf(depth, 1.0), 90.0)
-	return point.distance_to(c) <= r
+	return Vector3(c.x, c.y, r)
 
 
 func touch_down(point: Vector2) -> void:

@@ -55,6 +55,9 @@ var time_chip: GlassPanel
 var eye: BaseButton
 ## The Settings gear (round 6).
 var gear: BaseButton
+## The HUD row's own strip (screen top down to the gear / eye hits): presses on the chips and
+## between them stay in the HUD, never reaching the world (ARCHITECTURE §3.5).
+var band: Control
 
 var _dew_icon: TextureRect
 var _dew_label: Label
@@ -95,6 +98,10 @@ func _init() -> void:
 
 
 func _ready() -> void:
+	band = Control.new()
+	band.name = "HudBand"
+	band.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(band)
 	_build_dew()
 	_build_time()
 	_build_eye()
@@ -193,6 +200,8 @@ func layout(screen: Vector2, safe_top: float) -> void:
 	gear.pivot_offset = eye.pivot_offset
 	gear.set_meta(PressFeedback.META_RIPPLE_RECT, Rect2(Vector2(pad, 0.0), Vector2(ch, ch)))
 	gear.set_meta(PressFeedback.META_RIPPLE_RADIUS, ch * 0.5)
+	band.position = Vector2.ZERO
+	band.size = Vector2(w, maxf(eye.position.y + eye.size.y, gear.position.y + gear.size.y))
 
 
 ## The chips' bottom edge in screen px (sheets and toasts keep clear of it).

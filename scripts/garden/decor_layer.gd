@@ -110,9 +110,10 @@ const ARG_QA_GARDEN := "--qa-garden="
 const QA_KINDS: Array[String] = ["lantern", "pinwheel", "chime", "place"]
 const QA_TOUCH_AT_S := 1.2
 const QA_TAP_S := 0.08
-## Hit radii (GDD §8.4: >= 60 dp, 64 dp in the look zone) in dp.
+## Hit radii (GDD §8.4: >= 60 dp, 64 dp in the look zone) in dp. Round 7: only the CORE (the
+## piece itself, radius 20 dp) outranks a plain bed it overlaps (WorldPan.tier).
 const HIT_DP := 64.0
-const DRAG_CANCEL_PX := 24.0
+const CORE_DP := 20.0
 ## Placement (Art Bible §6.6): 300 ms fade + pop 0.6 -> 1 + 4 dust motes.
 const PLACE_FROM_SCALE := 0.6
 const PUFF_MOTES := 4
@@ -199,7 +200,7 @@ class Unit:
 
 func _ready() -> void:
 	current = self
-	add_to_group(WorldPan.GROUP_PRESS)
+	add_to_group(WorldPan.GROUP_HIT)
 	_content = ContentRegistry.content
 	kit = DecorKit.new(_content)
 	_dp = float(_content.spots_doc["frame"]["px_per_dp"])
@@ -771,43 +772,48 @@ func _canvas_of(design: Vector2) -> Vector2:
 
 # ================================================================= touch
 
-func _unhandled_input(event: InputEvent) -> void:
-	var pressed := false
-	var released := false
-	if event is InputEventScreenTouch:
-		pressed = (event as InputEventScreenTouch).pressed
-		released = not pressed
-	elif event is InputEventMouseButton:
-		var mb := event as InputEventMouseButton
-		if mb.button_index != MOUSE_BUTTON_LEFT or mb.device == InputEvent.DEVICE_ID_EMULATION:
-			return
-		pressed = mb.pressed
-		released = not mb.pressed
-	elif _press != null and (event is InputEventScreenDrag or event is InputEventMouseMotion):
-		var lm: Vector2 = make_input_local(event).get("position")
-		if lm.distance_to(_press_pos) > DRAG_CANCEL_PX:
-			_end_press(false)
-		return
-	else:
-		return
-	var pos: Vector2 = make_input_local(event).get("position")
-	if pressed:
-		if PlotsLayer.current != null and PlotsLayer.current.claims(pos):
-			return  # a bed with a ready bud outranks décor (GDD §2.5 hit priority)
-		var p := _piece_at(pos)
-		if p == null:
-			return
-		_touch_down(p, pos)
-		get_viewport().set_input_as_handled()
-	elif released and _press != null:
-		_end_press(pos.distance_to(_press_pos) <= DRAG_CANCEL_PX)
-		get_viewport().set_input_as_handled()
+## WorldPan (the world input arbiter, ARCHITECTURE §3.5): the nearest tappable piece (pinwheel,
+## lantern) within its 64 dp hit (+ slop). Beds with a ready bud and props outrank décor.
+func world_hit(canvas_pos: Vector2, slop: float) -> Dictionary:
+	var pos := get_global_transform_with_canvas().affine_inverse() * canvas_pos
+	var best := {}
+	var r := HIT_DP * _dp * 0.5
+	for id: StringName in [PINWHEEL, LANTERN]:
+		for p: Piece in _pieces.get(id, []):
+			var cand := WorldPan.circle_hit(pos, p.hit, r, slop, WorldPan.PRIO_DECOR, p)
+			if cand.is_empty():
+				continue
+			# the generous 64 dp ring is for empty ground; only the piece itself outranks a bed
+			cand["core"] = float(cand["d"]) <= CORE_DP * _dp
+			if best.is_empty() or WorldPan.better(cand, best):
+				best = cand
+	return best
 
 
-## WorldPan: a map drag started; the pending piece tap is dropped (no action).
-func cancel_world_press() -> void:
+func world_press(key: Variant, canvas_pos: Vector2) -> void:
+	var p := key as Piece
+	if p == null:
+		return
 	if _press != null:
 		_end_press(false)
+	_touch_down(p, get_global_transform_with_canvas().affine_inverse() * canvas_pos)
+
+
+func world_release(key: Variant, _canvas_pos: Vector2, act: bool) -> void:
+	if _press != null and _press == key:
+		_end_press(act)
+
+
+## Debug overlay (--debug-hits): the tappable pieces' hit circles in canvas px.
+func world_hit_shapes() -> Array:
+	var out: Array = []
+	var xf := get_global_transform_with_canvas()
+	var r := HIT_DP * _dp * 0.5 * xf.get_scale().x
+	for id: StringName in [PINWHEEL, LANTERN]:
+		for p: Piece in _pieces.get(id, []):
+			out.append({"kind": "circle", "c": xf * p.hit, "r": r, "core": CORE_DP * _dp * xf.get_scale().x,
+				"prio": WorldPan.PRIO_DECOR, "name": String(id)})
+	return out
 
 
 ## Touch-down on a tappable piece: squash 0.94 + tint + touch ring + S01 (with its haptic) at once.
@@ -832,19 +838,6 @@ func _ring(pos: Vector2, warm: bool = false) -> void:
 	_qa_ring.set_instance_shader_parameter(&"i_ring", v)
 	if warm:
 		_qa_ring.set_instance_shader_parameter(&"i_tint", RING_WARM)
-
-
-func _piece_at(pos: Vector2) -> Piece:
-	var best: Piece = null
-	var best_d := INF
-	var r := HIT_DP * _dp * 0.5
-	for id: StringName in [PINWHEEL, LANTERN]:
-		for p: Piece in _pieces.get(id, []):
-			var d := pos.distance_to(p.hit)
-			if d <= r and d < best_d:
-				best = p
-				best_d = d
-	return best
 
 
 func _end_press(act: bool) -> void:

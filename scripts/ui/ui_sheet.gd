@@ -41,6 +41,8 @@ const BOTTOM_PAD := 24.0
 ## Room under the last scrolled item, so it never sits on the rounded bottom edge.
 const LIST_END_PAD := 48.0
 const LIST_TOP_PAD := 12.0
+## Tabs -> scroll list: the segment hit's 24 px reach + 8 dp, less the list's own top pad.
+const TABS_GAP := 24.0 + 24.0 - LIST_TOP_PAD
 ## A drag past the large detent stretches a little (rubber band), at most this far.
 const OVERDRAG_PX := 48.0
 const OVERDRAG_K := 0.3
@@ -89,6 +91,8 @@ var rise: float = 0.0:
 	set(v):
 		rise = v
 		_apply_geometry()
+## Leaving (SheetHost close / swap): input is off, the rect still consumes presses via the scrim.
+var closing: bool = false
 ## Raise above the on-screen keyboard (SheetHost).
 var lift: float = 0.0:
 	set(v):
@@ -227,6 +231,8 @@ func make_scroll(top: float, separation: int = 24) -> VBoxContainer:
 	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	sc.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
 	sc.mouse_filter = Control.MOUSE_FILTER_PASS
+	# scroll deadzone = the 10 dp button slop; presses during a fling only catch it (TapGuard)
+	TapGuard.watch_scroll(sc)
 	# the list's clip is the scroll window: everything inside it moves and clips with it
 	sc.clip_contents = true
 	UiBatch.mark_scroll(sc)
@@ -261,8 +267,9 @@ func make_scroll(top: float, separation: int = 24) -> VBoxContainer:
 
 
 ## Keeps the scroll list's top [param gap] px below [param c] (tabs above the list grow with
-## large text or a wrapped option, so the list must follow them).
-func keep_scroll_below(c: Control, gap: float = 24.0, at_least: float = 0.0) -> void:
+## large text or a wrapped option, so the list must follow them). The default keeps the first
+## card >= 8 dp below the tabs' hit, which reaches Segmented.HIT_GROW under the track (round 7).
+func keep_scroll_below(c: Control, gap: float = TABS_GAP, at_least: float = 0.0) -> void:
 	var sc := _fade_scroll
 	var place := func() -> void:
 		if is_instance_valid(sc) and is_instance_valid(c):

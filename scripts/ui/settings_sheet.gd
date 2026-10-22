@@ -21,6 +21,8 @@ const ICON_PX := 60.0
 ## Stepper plates 36 dp in a 50 dp hit (the row itself is not the hit here).
 const STEP_PLATE := 108.0
 const STEP_HIT := 150.0
+## Stepper hit to the row edge: the 8 dp gap to the rows above and below (I2).
+const STEP_GAP_Y := 24.0
 const GROUP_GAP := 12
 ## A tapped row ripples inside the row (corner radius) and the switch dips half a press.
 const ROW_RIPPLE_RADIUS := 36.0
@@ -134,6 +136,7 @@ func _row(icon: StringName, key: String, desc_key: String, hit: bool) -> Array:
 		b.flat = true
 		b.focus_mode = Control.FOCUS_NONE
 		b.mouse_filter = Control.MOUSE_FILTER_PASS
+		TapGuard.attach(b)
 		row.add_child(b)
 	var m := MarginContainer.new()
 	for side: StringName in [&"margin_left", &"margin_right"]:
@@ -252,6 +255,7 @@ func _slider_row(key: String, setting: StringName) -> Control:
 	s.value_changed.connect(func(n: int) -> void:
 		v.text = str(n)
 		Settings.set_value(setting, n))
+	_keep_clear(parts[0] as Control)
 	return parts[0]
 
 
@@ -280,7 +284,17 @@ func _text_size_row() -> Control:
 	plus.disabled = cur >= scales[scales.size() - 1]
 	minus.asleep = minus.disabled
 	plus.asleep = plus.disabled
+	_keep_clear(parts[0] as Control)
 	return parts[0]
+
+
+## Round 7: a row holding its own targets (steppers, a slider) keeps them >= 8 dp from the
+## neighbouring rows' full-row hits (I2).
+static func _keep_clear(row: Control) -> void:
+	var m := row.get_child(0) as MarginContainer
+	var pad_y := roundi(STEP_GAP_Y)
+	m.add_theme_constant_override(&"margin_top", pad_y)
+	m.add_theme_constant_override(&"margin_bottom", pad_y)
 
 
 func _step_button(icon: StringName) -> RoundButton:

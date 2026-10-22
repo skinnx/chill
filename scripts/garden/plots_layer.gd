@@ -51,9 +51,8 @@ const CUE_RUSTLE := &"S18"
 const DEPTH := Vector3(0.62, 760.0, 740.0)
 ## GDD §8.4: world hit areas extend 4 dp downward.
 const HIT_EXTEND_DP := 4.0
-## GDD §8.2: long-press 450 ms; a move beyond the drag threshold cancels.
+## GDD §8.2: long-press 450 ms; a move beyond the drag threshold cancels (WorldPan).
 const LONG_PRESS_S := 0.45
-const DRAG_CANCEL_PX := 24.0
 ## Slow in-stage growth refresh: stages last minutes to hours, so a static rebuild of each growing
 ## bed every 30 s shows the growth without a per-frame cost.
 const GROWTH_REFRESH_S := 30.0
@@ -221,7 +220,7 @@ class SeedHint:
 
 func _ready() -> void:
 	current = self
-	add_to_group(WorldPan.GROUP_PRESS)
+	add_to_group(WorldPan.GROUP_HIT)
 	_content = ContentRegistry.content
 	GardenFixture.apply_from_args(_content)
 	var frame: Dictionary = _content.spots_doc["frame"]
@@ -779,50 +778,56 @@ func _update_seed_hint() -> void:
 
 # ================================================================= touch
 
-func _unhandled_input(event: InputEvent) -> void:
-	var pressed := false
-	var released := false
-	var moved := false
-	if event is InputEventScreenTouch:
-		var st := event as InputEventScreenTouch
-		pressed = st.pressed
-		released = not st.pressed
-	elif event is InputEventMouseButton:
-		var mb := event as InputEventMouseButton
-		if mb.button_index != MOUSE_BUTTON_LEFT or mb.device == InputEvent.DEVICE_ID_EMULATION:
-			return
-		pressed = mb.pressed
-		released = not mb.pressed
-	elif event is InputEventScreenDrag or event is InputEventMouseMotion:
-		moved = true
-	else:
+## WorldPan (the world input arbiter, ARCHITECTURE §3.5): the bed under the point (+ slop). A bed
+## with a ready bud or the tutorial seed outranks props and décor; a plain bed ranks below them;
+## in choose-a-bed mode the beds with room outrank everything (that is the mode's one question).
+func world_hit(canvas_pos: Vector2, slop: float) -> Dictionary:
+	var pos := _local(canvas_pos)
+	var best := {}
+	for bv: BedView in _beds.values():
+		var cand := WorldPan.rect_hit(pos, bv.hit, slop, _prio(bv), bv.id)
+		if not cand.is_empty() and (best.is_empty() or WorldPan.better(cand, best)):
+			best = cand
+	return best
+
+
+func world_press(key: Variant, canvas_pos: Vector2) -> void:
+	var bv: BedView = _beds.get(key)
+	if bv == null:
 		return
-	var local := make_input_local(event)
-	var pos: Vector2 = local.get("position")
-	if pressed:
-		var bed := _bed_at(pos)
-		if bed == &"":
-			return
-		_press_bed = bed
-		_press_pos = pos
-		_press_t = 0.0
-		_press_long_sent = false
-		_touch_down(_beds[bed], pos)
-		get_viewport().set_input_as_handled()
-	elif moved and _press_bed != &"":
-		if pos.distance_to(_press_pos) > DRAG_CANCEL_PX:
-			_release_press(false)
-	elif released and _press_bed != &"":
-		var bv: BedView = _beds[_press_bed]
-		var inside := bv.hit.has_point(pos) and pos.distance_to(_press_pos) <= DRAG_CANCEL_PX
-		_release_press(inside and not _press_long_sent)
-		get_viewport().set_input_as_handled()
+	var pos := _local(canvas_pos)
+	_press_bed = bv.id
+	_press_pos = pos
+	_press_t = 0.0
+	_press_long_sent = false
+	_touch_down(bv, pos)
 
 
-## WorldPan: a map drag started; the pending bed tap / long-press is dropped (no action).
-func cancel_world_press() -> void:
-	if _press_bed != &"":
-		_release_press(false)
+## [param act]: a tap (the finger stayed put); never after the long-press opened the bed card.
+func world_release(key: Variant, _canvas_pos: Vector2, act: bool) -> void:
+	if _press_bed == &"" or _press_bed != key:
+		return
+	_release_press(act and not _press_long_sent)
+
+
+## Debug overlay (--debug-hits): bed hit rects in canvas px.
+func world_hit_shapes() -> Array:
+	var out: Array = []
+	var xf := get_global_transform_with_canvas()
+	for bv: BedView in _beds.values():
+		out.append({"kind": "rect", "rect": Rect2(xf * bv.hit.position, bv.hit.size * xf.get_scale()),
+			"prio": _prio(bv), "name": String(bv.id)})
+	return out
+
+
+func _prio(bv: BedView) -> int:
+	if choose_mode and Game.sim != null and GardenRules.has_room(_content, Game.sim.state.stems, bv.id):
+		return WorldPan.PRIO_CHOOSE_BED
+	return WorldPan.PRIO_READY_BED if claims(bv.centre) else WorldPan.PRIO_BED
+
+
+func _local(canvas_pos: Vector2) -> Vector2:
+	return get_global_transform_with_canvas().affine_inverse() * canvas_pos
 
 
 func _bed_at(pos: Vector2) -> StringName:

@@ -80,7 +80,7 @@ func build_body() -> void:
 	_tabs.selected.connect(func(i: int) -> void: select_tab(i))
 	_back = _make_back()
 	_list = make_scroll(Segmented.HEIGHT + 24.0)
-	keep_scroll_below(_tabs, 24.0, BACK_H)
+	keep_scroll_below(_tabs, TABS_GAP, BACK_H)
 	_scroll = _list.get_parent().get_parent() as ScrollContainer
 	_fill()
 

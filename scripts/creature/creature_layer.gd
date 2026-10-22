@@ -6,7 +6,8 @@ extends Node2D
 ##    place when the world loads with it already here), and walks it out on departure.
 ##  * Plans behaviour bouts with the pure CreatureBrain (seeded per visit) and commands each
 ##    mossling: walk (hop / waddle) to the bout's spot, then nap / nibble / play / wander / sit.
-##  * Touch: hit-tests mosslings first (hit priority, GDD §2.5), squash on touch-down, chirp (S13)
+##  * Touch (through WorldPan, the one world input arbiter: mosslings top the GDD §2.5 priority and
+##    claim the drag): squash on touch-down, chirp (S13)
 ##    or snore (S14), name tag on tap, a second tap within 2 s emits [signal card_requested];
 ##    long-press 450 ms or a 24 px stroke pets (purr S03 while held, Game.pet on release).
 ##  * Creatures with their feet above the meadow crest draw from BehindCrest (added under
@@ -111,6 +112,7 @@ var _feed := PaletteFeed.new()
 
 
 func _ready() -> void:
+	add_to_group(WorldPan.GROUP_HIT)
 	_content = ContentRegistry.content
 	rig = MosslingRig.new(_content)
 	_fur = rig.make_fur_material()
@@ -549,40 +551,64 @@ func _report_sleepers() -> void:
 
 # ================================================================= touch
 
-func _unhandled_input(event: InputEvent) -> void:
-	var mb := event as InputEventMouseButton
-	if mb != null and mb.button_index == MOUSE_BUTTON_LEFT:
-		var p := _local(mb.position)
-		if mb.pressed:
-			var m := _hit(p)
-			if m != null:
-				_touch = m
-				m.touch_down(p)
-				# a stroke that starts on a mossling pets it; it never pans the map
-				WorldPan.claim_pointer()
-				get_viewport().set_input_as_handled()
-		elif _touch != null:
-			_touch.touch_up(p)
-			_touch = null
-			get_viewport().set_input_as_handled()
+## WorldPan (the world input arbiter, ARCHITECTURE §3.5): the mossling nearest the point whose hit circle
+## (+ the fat-finger slop) holds the point. A mossling claims the drag: a stroke on it pets it and
+## never pans the map.
+func world_hit(canvas_pos: Vector2, slop: float) -> Dictionary:
+	var p := _local(canvas_pos)
+	var best := {}
+	for m: Mossling in _all():
+		var c := m.hit_circle()
+		if c.z <= 0.0:
+			continue
+		# inside beats slop; then the nearer body centre (two friends side by side split the overlap)
+		var cand := WorldPan.circle_hit(p, Vector2(c.x, c.y), c.z, slop, WorldPan.PRIO_MOSSLING, m)
+		if not cand.is_empty() and (best.is_empty() or WorldPan.better(cand, best)):
+			best = cand
+	if not best.is_empty():
+		best["drag"] = true
+	return best
+
+
+func world_press(key: Variant, canvas_pos: Vector2) -> void:
+	var m := key as Mossling
+	if m == null or not is_instance_valid(m):
 		return
-	var mm := event as InputEventMouseMotion
-	if mm != null and _touch != null:
-		_touch.touch_move(_local(mm.position))
-		get_viewport().set_input_as_handled()
+	_touch = m
+	m.touch_down(_local(canvas_pos))
+
+
+func world_drag(key: Variant, canvas_pos: Vector2) -> void:
+	var m := key as Mossling
+	if m != null and is_instance_valid(m) and m == _touch:
+		m.touch_move(_local(canvas_pos))
+
+
+func world_release(key: Variant, canvas_pos: Vector2, act: bool) -> void:
+	var m := key as Mossling
+	_touch = null
+	if m == null or not is_instance_valid(m):
+		return
+	if act:
+		m.touch_up(_local(canvas_pos))
+	else:
+		m.cancel_touch()
+
+
+## Debug overlay (--debug-hits): every touchable mossling's hit circle, in canvas px.
+func world_hit_shapes() -> Array:
+	var out: Array = []
+	var xf := get_global_transform_with_canvas()
+	for m: Mossling in _all():
+		var c := m.hit_circle()
+		if c.z > 0.0:
+			out.append({"kind": "circle", "c": xf * Vector2(c.x, c.y), "r": c.z * xf.get_scale().x,
+				"prio": WorldPan.PRIO_MOSSLING, "name": String(m.species_id)})
+	return out
 
 
 func _local(screen: Vector2) -> Vector2:
 	return get_global_transform_with_canvas().affine_inverse() * screen
-
-
-## Front-most mossling under the point (largest feet y draws on top).
-func _hit(p: Vector2) -> Mossling:
-	var best: Mossling = null
-	for m: Mossling in _all():
-		if m.hit_test(p) and (best == null or m.feet().y > best.feet().y):
-			best = m
-	return best
 
 
 func _on_touched(m: Mossling) -> void:

@@ -64,6 +64,7 @@ var _recap_timer: SceneTreeTimer
 ## Night chrome blend (HudController): toasts and captions are HUD chrome (night-aware glass) and
 ## their labels lerp ink -> night_ink.
 var _night_k: float = 0.0
+var _scrim_press := Vector2(-INF, -INF)
 
 
 func _init() -> void:
@@ -85,6 +86,8 @@ func _ready() -> void:
 	_toast.name = "Toast"
 	_toast.night_aware = true
 	_toast.visible = false
+	# a toast (also while it fades) takes the presses on it: nothing reaches the world beneath
+	_toast.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(_toast)
 	_toast_label = Label.new()
 	_toast_label.theme_type_variation = &"StrongLabel"
@@ -251,6 +254,8 @@ func close_modal(instant: bool = false) -> void:
 	Game.remove_back_handler(_modal_back)
 	if _recap_timer != null:
 		_recap_timer = null
+	# the leaving card takes no more input; the fading scrim still consumes presses
+	wrap.mouse_behavior_recursive = Control.MOUSE_BEHAVIOR_DISABLED
 	if instant:
 		wrap.queue_free()
 		_scrim.visible = false
@@ -278,11 +283,42 @@ func _place_modal() -> void:
 	_modal.resized.connect(func() -> void: _modal.pivot_offset = _modal.size * 0.5)
 
 
+## The modal scrim consumes every press (both twins of a touch, also while it fades out); a tap on
+## it (press and release within the 10 dp slop) dismisses the cards that allow it.
 func _on_scrim_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and not (event as InputEventMouseButton).pressed:
-		if _modal_kind in [&"recap", &"new_friend", &"postcard"]:
-			close_modal()
-		_scrim.accept_event()
+	var mb := event as InputEventMouseButton
+	if mb != null and mb.button_index == MOUSE_BUTTON_LEFT:
+		if mb.pressed:
+			_scrim_press = mb.global_position
+		else:
+			var tap := _scrim_press.x > -INF and mb.global_position.distance_to(_scrim_press) <= TapGuard.slop_px()
+			_scrim_press = Vector2(-INF, -INF)
+			if tap and _modal_kind in [&"recap", &"new_friend", &"postcard"]:
+				close_modal()
+	_scrim.accept_event()
+
+
+## A tap on [param card] (press and release within the 10 dp slop) closes it; a drag does not.
+func _tap_closes(card: Control) -> void:
+	var from: Array[Vector2] = [Vector2(-INF, -INF)]
+	card.gui_input.connect(func(e: InputEvent) -> void:
+		var mb := e as InputEventMouseButton
+		if mb == null or mb.button_index != MOUSE_BUTTON_LEFT:
+			return
+		if mb.pressed:
+			from[0] = mb.global_position
+		elif from[0].x > -INF and mb.global_position.distance_to(from[0]) <= TapGuard.slop_px():
+			from[0] = Vector2(-INF, -INF)
+			close_modal())
+
+
+## The modal scrim and the toast (tests, QA overlay).
+func scrim() -> Control:
+	return _scrim
+
+
+func toast() -> Control:
+	return _toast
 
 
 ## [param frosted] (the welcome-back recap, round 5 QA r4: an opaque #FAF8F2 slab read as a dated
@@ -326,9 +362,7 @@ func show_recap(lines: Array, hold: bool = false) -> void:
 	var shell := _card_shell(30, true)
 	var card: PanelContainer = shell[0]
 	var v: VBoxContainer = shell[1]
-	card.gui_input.connect(func(e: InputEvent) -> void:
-		if e is InputEventMouseButton and not (e as InputEventMouseButton).pressed:
-			close_modal())
+	_tap_closes(card)
 	var title := UiSheet.label(tr("RECAP_TITLE"), &"TitleLabel", true)
 	v.add_child(title)
 	for line: Variant in lines:
@@ -471,9 +505,7 @@ func show_new_friend(species: StringName, instant: bool = false) -> void:
 	var hi := UiSheet.pill_button(tr("NEWFRIEND_SAY_HI"), true, ThemeBuilder.BUTTON_H)
 	hi.pressed.connect(func() -> void: close_modal())
 	v.add_child(hi)
-	card.gui_input.connect(func(e: InputEvent) -> void:
-		if e is InputEventMouseButton and not (e as InputEventMouseButton).pressed:
-			close_modal())
+	_tap_closes(card)
 	_open_modal(card, &"new_friend", instant)
 	AudioDirector.play_cue(CUE_NEW_FRIEND)
 
