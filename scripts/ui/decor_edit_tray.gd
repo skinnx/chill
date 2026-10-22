@@ -2,8 +2,9 @@ class_name DecorEditTray
 extends Control
 ## Active F3 storage tray (docs/gdd/ACTIVE_DECOR.md §8; Art Bible §9.2; decor_placement.json storage):
 ## it replaces the dock while editing. HUD faux glass (r-xl 96, e2) 936 x 252 px at H 1920, its
-## bottom 36 px above max(safe bottom, 127) like the dock; the caption "Tucked away" above its left
-## shoulder. One 216 x 216 tile (72 dp, surface_hi, r-m 48) per set with pieces stored, 24 px gaps,
+## bottom 36 px above max(safe bottom, 127) like the dock; the caption "Tucked away" on a frosted
+## pill (the hint's faux glass) above its left shoulder. One 216 x 216 tile (72 dp, surface_hi,
+## r-m 48) per set with pieces stored, 24 px gaps,
 ## each with a live mini-render (ItemPreview) and a "×3" count pill (Caption on leaf_tint; never a
 ## badge, never red). More tiles than fit scroll sideways (a partly visible tile shows there is more).
 ## Empty: one dashed well (2 dp ink @ 0.10) with "Pieces you put away rest here."
@@ -45,6 +46,8 @@ const HOVER_LIFT := 6.0
 const GLOW_SPREAD := 30.0
 const EDGE_FADE := 48.0
 const CAPTION_GAP := 12.0
+## The caption's frosted pill (the edit hint's HUD faux glass): it sat bare on the grass (QA).
+const CAPTION_PAD := Vector2(30.0, 9.0)
 const DASH := 18.0
 ## Text size >= 150 %: tiles grow to 84 dp (§10).
 const TILE_LARGE := 252.0
@@ -59,6 +62,7 @@ var _glass: GlassPanel
 var _clip: Control
 var _row: Control
 var _caption: Label
+var _caption_glass: GlassPanel
 var _empty: Label
 var _tiles: Dictionary = {}   # set id -> Control
 var _counts: Dictionary = {}
@@ -86,6 +90,12 @@ func _ready() -> void:
 	_glass.radius = RADIUS
 	_glass.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_glass)
+	_caption_glass = GlassPanel.new()
+	_caption_glass.name = "CaptionGlass"
+	_caption_glass.night_aware = true
+	_caption_glass.radius = GlassPanel.PILL
+	_caption_glass.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_caption_glass)
 	_caption = UiSheet.label(tr("DECOR_TRAY_TITLE"), &"CaptionLabel")
 	_caption.z_index = Z_LABEL
 	add_child(_caption)
@@ -116,7 +126,10 @@ func layout(screen: Vector2, safe_bottom: float) -> void:
 	position = Vector2((screen.x - w) * 0.5, _base_y - (HOVER_LIFT if hovering else 0.0))
 	_glass.position = Vector2.ZERO
 	_glass.size = size
-	_caption.position = Vector2(RADIUS * 0.5, -_caption.get_combined_minimum_size().y - CAPTION_GAP)
+	var cap := _caption.get_combined_minimum_size()
+	_caption_glass.size = cap + CAPTION_PAD * 2.0
+	_caption_glass.position = Vector2(RADIUS * 0.5 - CAPTION_PAD.x, -_caption_glass.size.y - CAPTION_GAP)
+	_caption.position = _caption_glass.position + CAPTION_PAD
 	_tile_px = TILE_LARGE if Settings.get_int(Settings.TEXT_SCALE) >= LARGE_TEXT else TILE
 	var pad := (H - _tile_px) * 0.5
 	_clip.position = Vector2(TILE_PAD, 0.0)

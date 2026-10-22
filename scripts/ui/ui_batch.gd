@@ -191,9 +191,12 @@ static func _place_one(n: Node, root: Control) -> void:
 		var f := c.get_theme_font(&"normal_font" if rich else &"font")
 		var fs := c.get_theme_font_size(&"normal_font_size" if rich else &"font_size")
 		var key := "%d|%d" % [f.get_rid().get_id() if f != null else 0, fs]
-		want = band + TEXT + _slot(root, "font", key, TEXT_SLOTS)
 		if n is Label:
-			_content_leaf(ci, scroll)
+			# polish (draw calls): the label's content-material variant (its per-leaf alpha) is part
+			# of its slot, as for textures, so dimmed and plain labels of one font no longer
+			# alternate materials inside one z layer (8 Garden labels cost 5 calls)
+			key += _content_leaf(ci, scroll)
+		want = band + TEXT + _slot(root, "font", key, TEXT_SLOTS)
 	if want < 0:
 		# non-drawing containers: keep their parent's absolute z
 		ci.z_as_relative = true

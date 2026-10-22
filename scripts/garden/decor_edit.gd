@@ -16,7 +16,8 @@ extends Node2D
 ## x1.25, S35 + TICK); past the 24 px slop it is HELD: its foot eases to 24 dp above the finger over
 ## 120 ms, it leans up to 6 deg into its motion on `follow`, the magnet pulls it (<= 70 %) toward a
 ## snap socket within 14 dp (S36 + TICK on entering one, <= 1 per 150 ms), the foot ring is `leaf`
-## 3 dp on valid ground and a dashed ink_2 ring with the piece at alpha 0.7 on invalid ground, and
+## 3 dp on valid ground and a dashed ink_2 ring with the piece at alpha 0.8 on invalid ground (a soft
+## lift shadow and a cream glow keep it readable over flowers), and
 ## after 150 ms one soft hint names the reason. Never red, never a buzz. Beds, spots and built
 ## nests show soft keep-clear halos; a held stone lights the water line. Near a side edge the map
 ## pans (after 250 ms, up to 220 dp/s, eased in, half under Reduce Motion).
@@ -29,7 +30,7 @@ extends Node2D
 ## QA (tools/qa/capture.sh still --fixture=active_mid --qa-decor-edit=<state>):
 ##   enter         edit mode just opened from the Garden sheet (hint, tray, Undo greyed)
 ##   hold_valid    a pinwheel carried over valid ground near a socket (magnet, sparkles, leaf ring)
-##   hold_invalid  a toadstool carried over a flower bed (dashed ring, alpha 0.7, the hint)
+##   hold_invalid  a toadstool carried over a flower bed (dashed ring, alpha 0.8, glow, the hint)
 ##   tray          a piece dragged over the tray (put-away glow and hint)
 ##   chip          a lantern selected (the selection chip, Undo live after a turn)
 ##   long_press    the long-press ring fill mid-way in play (the edit chrome has not risen yet)
@@ -92,8 +93,18 @@ const FOOT_RING_K := 2.2
 const FOOT_RING_MIN_DP := 10.0
 const FOOT_RING_SQUASH := 0.4
 const DASHES := 14
-## A held piece over invalid ground (§3.3).
-const INVALID_ALPHA := 0.7
+## A held piece over invalid ground (§3.3). Polish: 0.8 (0.7 hid a toadstool among flowers), with
+## the lift glow below carrying the rest of the contrast.
+const INVALID_ALPHA := 0.8
+## The lift shadow (x the foot ring): solid core, feathered spread, ink alpha at full lift.
+const LIFT_SHADOW_CORE := 0.55
+const LIFT_SHADOW_SPREAD := 1.25
+const LIFT_SHADOW_ALPHA := 0.34
+## The outline glow behind the lifted piece (surface_hi): alpha on a valid / invalid spot, and
+## how far it feathers out past the piece's ellipse.
+const GLOW_ALPHA_VALID := 0.32
+const GLOW_ALPHA_INVALID := 0.6
+const GLOW_SPREAD := 1.7
 const INVALID_LEAN_DEG := -3.0
 ## The glide home / to a tapped spot: the `move` spring's settle time (ACTIVE_DECOR §4.4, 332 ms)
 ## on the standard curve; a put-away shrinks to this scale.
@@ -1119,6 +1130,8 @@ func _draw_top() -> void:
 		if sp != null:
 			t.line(_ellipse_points(sp.foot, _ring_half(sp.decor, sp.depth) * 1.15), RING_SELECT_DP * _dp,
 					Color(UiTokens.color(&"primary"), RING_SELECT_ALPHA))
+	if _mode == Mode.HELD or _mode == Mode.PRESSED:
+		_draw_lift(t)
 	if _mode == Mode.HELD:
 		_draw_sockets(t)
 	if _mode == Mode.HELD or _mode == Mode.PRESSED:
@@ -1134,6 +1147,26 @@ func _draw_top() -> void:
 					seg.append(_foot + Vector2(cos(a) * size.x, sin(a) * size.y))
 				t.line(seg, RING_INVALID_DP * _dp, UiTokens.color(&"ink_2"))
 	t.flush(_top)
+
+
+## The carried piece reads over anything (QA: a toadstool over a bed vanished into the flowers):
+## a soft ink lift shadow on the ground that deepens with the lift, and a warm cream glow behind
+## the lifted piece, stronger over an invalid spot where the piece itself is faded. Calm: no red,
+## no pulse; drawn in the top overlay under the lifted piece, inside its one draw call.
+func _draw_lift(t: Tris) -> void:
+	var lift := clampf(_lift.value, 0.0, 1.0)
+	if lift <= 0.01:
+		return
+	var depth := DecorLayer.depth_scale(_foot.y)
+	var ring := _ring_half(_set, depth)
+	var ink := UiTokens.color(&"ink")
+	t.soft(_foot, ring * LIFT_SHADOW_CORE, ring * LIFT_SHADOW_SPREAD, Color(ink, LIFT_SHADOW_ALPHA * lift))
+	var dy := float(_content.placement_set(_set).get("visual_centre_dy_dp", 0.0)) * _dp * depth
+	var rise := lift * _rise_dp() * _dp
+	var centre := _foot + Vector2(0.0, dy * 1.1 - rise)
+	var half := Vector2(ring.x * 0.95, maxf(ring.x * 0.85, absf(dy) * 1.35))
+	var a := (GLOW_ALPHA_VALID if _valid else GLOW_ALPHA_INVALID) * lift
+	t.soft(centre, half, half * GLOW_SPREAD, Color(UiTokens.color(&"surface_hi"), a))
 
 
 ## The foot ring's half size (design px) for a set at [param depth].
@@ -1213,6 +1246,25 @@ class Tris:
 			cols.append(col)
 		for k in ring.size():
 			idx.append_array([base, base + 1 + k, base + 1 + (k + 1) % ring.size()])
+
+	## A soft ellipse: [param col] inside [param inner], fading to transparent at [param outer]
+	## (vertex colours: one fan + one feathered band, no texture, same draw call).
+	func soft(c: Vector2, inner: Vector2, outer: Vector2, col: Color, n: int = 32) -> void:
+		var base := pts.size()
+		pts.append(c + offset)
+		cols.append(col)
+		var clear := Color(col, 0.0)
+		for k in n:
+			var a := TAU * float(k) / float(n)
+			var u := Vector2(cos(a), sin(a))
+			pts.append(c + u * inner + offset)
+			cols.append(col)
+			pts.append(c + u * outer + offset)
+			cols.append(clear)
+		for k in n:
+			var i0 := base + 1 + 2 * k
+			var i1 := base + 1 + 2 * ((k + 1) % n)
+			idx.append_array([base, i0, i1, i0, i0 + 1, i1 + 1, i0, i1 + 1, i1])
 
 	func _quad(a: Vector2, b: Vector2, c: Vector2, d: Vector2, col: Color) -> void:
 		var base := pts.size()

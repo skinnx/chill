@@ -180,6 +180,9 @@ var tea_flags: Dictionary = {}
 ## Active F3: one entry per owned movable décor copy {id "set#n", set, x, y, rot, stored, stack, level}.
 ## x/y are frame-normalised foot positions (x may leave [0, 1] into the pan wings).
 var decor_layout: Array[Dictionary] = []
+## Save schema 4: one-time tips already shown, tip id -> true (Game.TIP_*). Additive; never cleared
+## by the sim (only a "show tips again" reset would).
+var tips_seen: Dictionary = {}
 
 
 func to_dict() -> Dictionary:
@@ -259,6 +262,7 @@ func to_dict() -> Dictionary:
 		"cups_offered": cups_offered,
 		"tea_flags": tea_flags.duplicate(),
 		"decor_layout": _copy_records(decor_layout),
+		"tips_seen": tips_seen.duplicate(),
 	}
 
 
@@ -388,6 +392,12 @@ static func _active_from_dict(s: WorldState, d: Dictionary) -> void:
 		for k: Variant in flags:
 			s.tea_flags[String(k)] = bool(flags[k])
 	s.decor_layout = _records(d.get("decor_layout", []), DECOR_PIECE_TEMPLATE)
+	var tips: Variant = d.get("tips_seen", {})
+	if tips is Dictionary:
+		for k: Variant in tips:
+			var on: Variant = tips[k]
+			if (on is bool and on) or ((on is int or on is float) and on != 0):
+				s.tips_seen[String(k)] = true
 
 
 func duplicate_state() -> WorldState:

@@ -6,7 +6,8 @@ extends RefCounted
 ##  * [method chip]: the Friends tab's WISH_LIST_BUTTON chip (48 dp) with an unread dot when a wish
 ##    opened since the list was last seen (Game.wish_list_unread: never a number).
 ##  * [method detail_section]: the friend detail's ALBUM_WISHING row (icon, title, hint; a 48 dp
-##    "Say hello" when the friend is here, the held note when away), the Active F2 "Tea" line
+##    "Say hello" and, once the tea nook is awake, a 48 dp "Offer tea" (TeaSheet.open_for_friend)
+##    when the friend is here; the held note when away), the Active F2 "Tea" line
 ##    (Game.tea_prefs_seen) and the ALBUM_WISH_STAMPS row (48 dp felt stamps, tap shows the title;
 ##    ALBUM_WISH_STAMPS_EMPTY when none yet).
 ##  * [method build_list]: the WISH_LIST_TITLE card pushed like a friend page: up to 4 rows
@@ -35,6 +36,11 @@ const STAMP_GAP := 24
 const MAX_ROWS := 4
 ## Album › friend: stamps per row before the flow wraps is the layout's; the caption under them.
 const STAMP_CAPTION_H := 54.0
+## Gap between the wishing row's "Say hello" and "Offer tea" pills (UI px).
+const ACTION_GAP := 18
+
+## Friends whose held-wish note showed this run (the one-time WISH_TIP_HELD keeps its place).
+static var _kept_shown: Dictionary = {}
 
 
 static func _names() -> Callable:
@@ -116,11 +122,28 @@ static func _wishing_row(sp: StringName, w: Dictionary, sheet: Control) -> Contr
 	col.add_child(UiSheet.label(c.title(content, wish, sp, _names()), &"StrongLabel", true))
 	col.add_child(UiSheet.label(c.hint(content, wish, sp, _names()), &"BodyLabel", true))
 	if bool(w["present"]):
-		col.add_child(_visit_button(sp, sheet))
+		var acts := HFlowContainer.new()
+		acts.name = "WishActions"
+		acts.add_theme_constant_override(&"h_separation", ACTION_GAP)
+		acts.add_theme_constant_override(&"v_separation", ACTION_GAP)
+		acts.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		acts.add_child(_visit_button(sp, sheet))
+		if offer_tea_available(sp):
+			acts.add_child(_offer_tea_button(sp, sheet))
+		col.add_child(acts)
 	else:
-		col.add_child(UiSheet.label(I18n.fmt(&"WISH_TIP_HELD", WishText.args(content, sp, _names())),
-			&"SecondaryLabel", true))
+		col.add_child(UiSheet.label(held_note(sp, WishText.args(content, sp, _names())), &"SecondaryLabel", true))
 	return box
+
+
+## The away line of a held wish: WISH_TIP_HELD ("{name} keeps the wish for another visit") the first
+## time only (ACTIVE_WISHES §7.2; tips_seen, save schema 4; it stays for that friend this run so a
+## refresh does not swap it under the reader), then the plain WISH_LIST_AWAY.
+static func held_note(sp: StringName, args: Dictionary) -> String:
+	if _kept_shown.has(sp) or Game.mark_tip_seen(Game.TIP_WISH_KEPT):
+		_kept_shown[sp] = true
+		return I18n.fmt(&"WISH_TIP_HELD", args)
+	return TranslationServer.translate("WISH_LIST_AWAY")
 
 
 static func _tea_line(sp: StringName) -> Control:
@@ -153,7 +176,7 @@ static func _recipe_names(ids: Array) -> String:
 	for r: Variant in ids:
 		var def: Dictionary = ContentRegistry.content.recipes_by_id.get(StringName(String(r)), {})
 		var key := String(def.get("name_key", "TEA_R_%s_NAME" % String(r).to_upper()))
-		out.append(TranslationServer.translate(key))
+		out.append(TeaArt.mid_sentence(TranslationServer.translate(key)))
 	return ", ".join(out)
 
 
@@ -216,6 +239,36 @@ static func _visit_button(sp: StringName, sheet: Control) -> Button:
 	b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	b.pressed.connect(func() -> void: visit(sp, sheet))
 	return b
+
+
+## True when the wishing row offers "Offer tea": the nook is awake and [param sp] is here.
+static func offer_tea_available(sp: StringName) -> bool:
+	if Game.sim == null or not Game.feature_on(&"tea") or not Game.tea_unlocked():
+		return false
+	return bool(Game.wish_of(sp).get("present", false))
+
+
+## ALBUM_OFFER_TEA (48 dp secondary pill, TapGuard via PressFeedback): opens the Tea sheet aimed
+## at [param sp] (TeaSheet.open_for_friend). Deferred one frame so the releasing touch finishes in
+## the Album before the sheets swap, and a second tap inside the debounce is swallowed.
+static func _offer_tea_button(sp: StringName, sheet: Control) -> Button:
+	var b := UiSheet.pill_button(TranslationServer.translate("ALBUM_OFFER_TEA"), false, UiSheet.MIN_TARGET, true)
+	b.name = "OfferTea"
+	b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	b.tooltip_text = I18n.fmt(&"A11Y_ALBUM_OFFER_TEA", {"name": Game.display_name(sp)})
+	b.pressed.connect(func() -> void: offer_tea.call_deferred(sp, sheet))
+	return b
+
+
+## Swaps the Album for the Tea sheet aimed at [param sp].
+static func offer_tea(sp: StringName, sheet: Control) -> void:
+	if not is_instance_valid(sheet):
+		return
+	var n: Node = sheet
+	while n != null and not (n is HudController):
+		n = n.get_parent()
+	if n != null:
+		TeaSheet.open_for_friend(n as HudController, sp)
 
 
 ## Closes the Album and glides the camera to [param sp] (map pan glide, ARCHITECTURE §3.4).

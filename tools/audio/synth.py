@@ -33,6 +33,7 @@ REPO = os.path.abspath(os.path.join(HERE, "..", ".."))
 
 import numpy as np  # noqa: E402
 
+import active_sfx  # noqa: E402
 import ambience  # noqa: E402
 import cues as cue_table  # noqa: E402
 import instruments  # noqa: E402
@@ -101,6 +102,11 @@ PITCHED_SFX = {   # bank -> (renderer, file target, bus, class, web twin, cue)
 	"dew": (instruments.dew, -21.0, "SFX", "tonal", True, "S02"),
 	"tok": (instruments.tok, -23.0, "UI", "tonal", False, "S08"),
 	"coo": (instruments.coo, -25.0, "SFX", "tonal", True, "S13"),
+	# Active Play v1 (GDD §14.8)
+	"blup": (active_sfx.blup, -27.0, "SFX", "tonal", True, "S26"),
+	"drip": (active_sfx.drip, -24.0, "SFX", "tonal", True, "S29"),
+	"bell": (active_sfx.bell, -25.0, "SFX", "tonal", True, "S30"),
+	"tink": (active_sfx.tink, -25.0, "SFX", "tonal", True, "S36"),
 }
 VARIANT_SFX = {   # bank -> (renderer, count, file target, bus, class, web twin, cue)
 	"bubbles": (sfx.bubbles, 4, -24.0, "SFX", "water", True, "S06"),
@@ -110,12 +116,24 @@ VARIANT_SFX = {   # bank -> (renderer, count, file target, bus, class, web twin,
 	"swish": (sfx.swish, 2, -27.0, "SFX", "foley", True, "S19"),
 	"boat": (sfx.boat, 2, -24.0, "SFX", "water", True, "S17"),
 	"snore": (instruments.snore, 2, -30.0, "SFX", "foley", True, "S14"),
+	# Active Play v1 (GDD §14.8)
+	"petals": (active_sfx.petals, 3, -25.0, "SFX", "foley", True, "S28"),
+	"spoon": (active_sfx.spoon, 3, -30.0, "SFX", "foley", True, "S30"),
+	"clink": (active_sfx.clink, 3, -24.0, "SFX", "tonal", True, "S32"),
+	"steam": (active_sfx.steam, 2, -30.0, "Ambience", "air", False, "S34"),
+	"lift": (active_sfx.lift, 3, -27.0, "SFX", "foley", True, "S35"),
+	"turn": (active_sfx.turn, 3, -27.0, "SFX", "foley", True, "S37"),
+	"tuck": (active_sfx.tuck, 3, -26.0, "SFX", "foley", True, "S38"),
 }
 CHORD_SFX = {     # bank -> (renderer, file target, cue)
 	"unfurl": (sfx.unfurl, -21.0, "S04"),
 	"friend": (sfx.fanfare, -18.0, "S09"),
 	"welcome": (sfx.welcome, -19.0, "S10"),
 	"postcard": (sfx.postcard, -24.0, "S16"),
+	# Active Play v1 (GDD §14.8)
+	"sparkle": (active_sfx.sparkle, -24.0, "S27"),
+	"pour": (active_sfx.pour, -24.0, "S31"),
+	"recipe": (active_sfx.recipe, -23.0, "S33"),
 }
 BIRDS = [("warbler", 1), ("warbler", 2), ("feebee", 1), ("feebee", 2), ("trill", 1), ("trill", 2),
 	("robin", 1), ("robin", 2)]

@@ -19,15 +19,16 @@ extends RefCounted
 
 const FORMAT := "mossling-meadow-save"
 ## Bump when WorldState.to_dict() changes shape; add a migration from the previous schema.
-## 1: MVP. 2: Retention v1 (GDD §13.6). 3: Active Play v1 (GDD §14.9). Additive fields only.
-const SCHEMA := 3
+## 1: MVP. 2: Retention v1 (GDD §13.6). 3: Active Play v1 (GDD §14.9). 4: tips_seen (Active Play
+## polish: one-time tips survive reloads). Additive fields only.
+const SCHEMA := 4
 const SOURCE_MAIN := &"main"
 const SOURCE_TMP := &"tmp"
 const SOURCE_BACKUP := &"backup"
 const SOURCE_NONE := &"none"
 
 ## Schemas that have a forward migration to N + 1 ([method migrate]).
-const MIGRATABLE: Array[int] = [1, 2]
+const MIGRATABLE: Array[int] = [1, 2, 3]
 ## Retention v1 fields a schema-1 world gains, all empty (GDD §13.6). Kept literal here, not read
 ## from WorldState, so this migration keeps meaning "1 -> 2" after later schemas change the state.
 const RETENTION_V1_DEFAULTS := {
@@ -46,6 +47,9 @@ const ACTIVE_V1_DEFAULTS := {
 	"pot": {"petals": [], "drops": 0, "stir_deg": 0.0}, "tray": [], "recipes_found": {}, "tea_prefs_seen": {},
 	"tea_aff_t": {}, "teaware_owned": [], "teaware_set": {}, "cups_offered": 0, "tea_flags": {}, "decor_layout": [],
 }
+## Schema 4: the one-time tips already shown (tip id -> true), empty for a schema-3 world. Literal
+## for the same reason as above.
+const TIPS_DEFAULTS := {"tips_seen": {}}
 
 var path: String
 ## Optional Callable(world: Dictionary) -> Dictionary: re-normalises parsed data (e.g.
@@ -169,6 +173,10 @@ static func migrate(from_schema: int, world: Dictionary) -> Dictionary:
 			# Active Play v1 (GDD §14.9): every new field empty and active_v 0; the content-aware
 			# step (décor anchors -> decor_layout, tea_unlocked) runs in WorldSim at load.
 			_add_defaults(w, ACTIVE_V1_DEFAULTS)
+		3:
+			# Active Play polish: tips_seen starts empty, so a returning player sees each one-time
+			# tip once (the checksum of a schema-3 file is over the state without the field).
+			_add_defaults(w, TIPS_DEFAULTS)
 	return w
 
 

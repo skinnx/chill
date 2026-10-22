@@ -431,8 +431,7 @@ func _cup_name(i: int) -> String:
 	var tray := Game.tray()
 	if i < 0 or i >= tray.size():
 		return ""
-	var r: Dictionary = ContentRegistry.content.recipes_by_id.get(StringName(String(tray[i]["recipe"])), {})
-	return tr(String(r.get("name_key", "")))
+	return TeaArt.recipe_name_mid(StringName(String(tray[i]["recipe"])))
 
 
 ## Offers tray cup [param i] to [param sp]: the sheet closes, the cup arcs to the friend, then the
@@ -479,7 +478,7 @@ static func present_offer(p_hud: HudController, sp: StringName, cup: Dictionary,
 	if TeaNook.current != null:
 		TeaNook.current.send_cup(sp, color, treat)
 	var name := Game.display_name(sp)
-	var recipe_name := TeaArt.recipe_name(StringName(String(res.get("recipe", ""))))
+	var recipe_name := TeaArt.recipe_name_mid(StringName(String(res.get("recipe", ""))))
 	var text := reaction_text(res, name, recipe_name)
 	var asleep := Game.is_napping(sp)
 	if asleep:
@@ -490,11 +489,22 @@ static func present_offer(p_hud: HudController, sp: StringName, cup: Dictionary,
 	tree.create_timer(arc).timeout.connect(func() -> void: TeaArt.cue(CUE_CLINK, {}, {}))
 	tree.create_timer(0.0 if asleep else arc + sip).timeout.connect(func() -> void:
 		if is_instance_valid(p_hud):
-			p_hud.overlays.show_toast(text))
+			p_hud.overlays.show_toast(merged_toast(text, res, sp, name, recipe_name)))
+
+
+## One warm toast for a cup that also granted a wish: the reaction, then the wish's thanks
+## (WishView leaves it for this toast instead of showing its own), the pantry line only without one.
+static func merged_toast(text: String, res: Dictionary, sp: StringName, name: String, recipe_name: String) -> String:
+	if String(res.get("wish_granted", "")) == "":
+		return text
+	var thanks := WishView.take_tea_line(sp)
+	if thanks == "":
+		return text
+	return reaction_text(res, name, recipe_name, false) + " " + thanks
 
 
 ## The reaction line (+ the petals line when some fit in the pantry).
-static func reaction_text(res: Dictionary, name: String, recipe_name: String) -> String:
+static func reaction_text(res: Dictionary, name: String, recipe_name: String, petals_line: bool = true) -> String:
 	var react := StringName(String(res.get("reaction", "content")))
 	var key := &"TEA_REACT_CONTENT"
 	if react == TeaRules.REACT_LOVED:
@@ -502,7 +512,7 @@ static func reaction_text(res: Dictionary, name: String, recipe_name: String) ->
 	elif react == TeaRules.REACT_LIKED:
 		key = &"TEA_REACT_LIKED"
 	var text := I18n.fmt(key, {"name": name, "recipe": recipe_name})
-	if int(res.get("petals_back", 0)) > 0:
+	if petals_line and int(res.get("petals_back", 0)) > 0:
 		var f: Dictionary = ContentRegistry.content.flowers_by_id.get(StringName(String(res.get("flower", ""))), {})
 		text += " " + I18n.fmt(&"TEA_REACT_PETALS", {"name": name,
 			"flower": TranslationServer.translate(String(f.get("name_key", ""))).to_lower()})

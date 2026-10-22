@@ -444,3 +444,53 @@ func test_done_leaves_edit_mode_once_and_the_world_is_plain_again() -> void:
 	_touch(at, true)
 	_touch(at, false)
 	assert_true(lantern.boost_t >= 0.0, "a lantern tap brightens it as before")
+
+
+# ------------------------------------------------------------------ polish (integration QA)
+
+func test_toadstool_turns_step_through_four_distinct_views() -> void:
+	var toad := _piece(DecorLayer.TOADSTOOL)
+	assert_not_null(toad)
+	assert_true(_layer.kit.parts.has("toadstool_cap_b"), "the atlas has the cap's other side")
+	var seen := {}
+	for step in 4:
+		var key := "%d|%d|%.3f" % [toad.variant, int(toad.flip), toad.cap_tilt]
+		assert_false(seen.has(key), "step %d looks new (%s), not only a flip" % [step, key])
+		seen[key] = true
+		assert_eq(DecorLayer.toadstool_cap_part(_layer.kit.layout, toad.variant),
+			"toadstool_cap" if toad.variant == 0 else "toadstool_cap_b")
+		Game.turn_decor(toad.id)
+	assert_eq(toad.variant, 0, "four steps come back round")
+	assert_eq(toad.flip, 1.0)
+	# consecutive steps always change the cap pattern (a turn is never a bare mirror)
+	var steps: Array = c.placement_set(DecorLayer.TOADSTOOL)["rot_render"]
+	for i in steps.size():
+		var a: Dictionary = steps[i]
+		var b: Dictionary = steps[(i + 1) % steps.size()]
+		assert_ne(int(a["variant"]), int(b["variant"]), "step %d -> %d swaps the cap's face" % [i, i + 1])
+
+
+func test_a_carried_piece_stays_readable_over_an_invalid_spot() -> void:
+	assert_gte(DecorEdit.INVALID_ALPHA, 0.8, "the piece is barely faded")
+	assert_gt(DecorEdit.GLOW_ALPHA_INVALID, DecorEdit.GLOW_ALPHA_VALID, "a stronger glow where it cannot stand")
+	var t := DecorEdit.Tris.new(Vector2.ZERO)
+	t.soft(Vector2(100, 100), Vector2(10, 5), Vector2(20, 10), Color(1, 1, 1, 0.5), 16)
+	assert_eq(t.pts.size(), 1 + 2 * 16)
+	assert_eq(t.cols[0].a, 0.5)
+	assert_eq(t.cols[2].a, 0.0, "the glow feathers out to nothing (no hard edge)")
+	var ink := UiTokens.color(&"ink")
+	assert_true(ink.r < 0.5 and ink.b >= ink.r * 0.5, "the lift shadow is ink, never red")
+
+
+func test_tray_caption_sits_on_a_frosted_pill() -> void:
+	var tray := DecorEditTray.new()
+	tray.theme = UiTheme.theme
+	add_child_autofree(tray)
+	tray.layout(SCREEN, 127.0)
+	var glass := tray.get_node(^"CaptionGlass") as GlassPanel
+	assert_not_null(glass, "the Tucked away caption has a backing")
+	var cap: Label = tray._caption
+	var cap_rect := Rect2(cap.position, cap.get_combined_minimum_size())
+	assert_true(Rect2(glass.position, glass.size).encloses(cap_rect), "the pill wraps the label")
+	assert_lt(glass.position.y + glass.size.y, 0.0, "above the tray's shoulder")
+	assert_eq(glass.mouse_filter, Control.MOUSE_FILTER_IGNORE)

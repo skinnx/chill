@@ -631,8 +631,17 @@ func _qa_ui_audit() -> void:
 		var without: float = await avg.call()
 		for n: CanvasItem in items:
 			n.visible = true
-		print("qa-ui-audit: z %3d  %3d leaves  %5.1f calls  (%s %s)" % [z, items.size(), total - without,
-				(items[0] as Node).get_class(), (items[0] as Node).name])
+		var texs := {}
+		for n: CanvasItem in items:
+			var tr_ := n as TextureRect
+			if tr_ != null and tr_.texture != null:
+				var tex := tr_.texture
+				var at := tex as AtlasTexture
+				var src := at.atlas if at != null else tex
+				texs["%s#%d" % [src.resource_path.get_file() if src.resource_path != "" else src.get_class(),
+						src.get_rid().get_id() % 100000]] = true
+		print("qa-ui-audit: z %3d  %3d leaves  %5.1f calls  (%s %s) %s" % [z, items.size(), total - without,
+				(items[0] as Node).get_class(), (items[0] as Node).name, ",".join(PackedStringArray(texs.keys()))])
 
 
 ## --qa-press: freeze the named target mid touch-down (see the header).

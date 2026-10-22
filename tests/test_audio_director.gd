@@ -13,6 +13,13 @@ const CUE_COLLECT := "S02"
 const CUE_TAP := "S01"
 const CUE_WATER := "S06"
 const CUE_WELCOME := "S10"
+const ACTIVE_CUES: Array[String] = ["S26", "S27", "S28", "S29", "S30", "S31", "S32", "S33", "S34", "S35", "S36",
+	"S37", "S38"]
+## GDD §14.8 captions per cue id.
+const ACTIVE_CAPTIONS := {"S26": "CAPTION_WISH", "S27": "CAPTION_WISH_GRANTED", "S28": "CAPTION_PETALS",
+	"S29": "CAPTION_PLIP", "S30": "CAPTION_STIR", "S31": "CAPTION_POUR", "S32": "CAPTION_CLINK",
+	"S33": "CAPTION_RECIPE", "S34": "CAPTION_STEAM", "S35": "CAPTION_DECOR_LIFT", "S36": "CAPTION_DECOR_SNAP",
+	"S37": "CAPTION_DECOR_TURN", "S38": "CAPTION_DECOR_TUCK"}
 
 var _captions: Array[Dictionary] = []
 var _haptics_was: StringName
@@ -196,3 +203,56 @@ func test_welcome_haptic_plays_once() -> void:
 ## wall time while the engine catches up after a slow frame, so tests reset the gap instead.
 func _clear_min_gap() -> void:
 	Haptics._last_ms = -Haptics._min_gap_ms - 1
+
+
+# ------------------------------------------------------------------ Active Play cues (polish)
+
+func _bank_files(bank: Dictionary, web: bool) -> Array:
+	var out: Array = []
+	for key: String in (["web_notes", "web_clips", "web_variants"] if web else ["notes", "clips", "variants"]):
+		out.append_array((bank.get(key, {}) as Dictionary).values())
+	return out
+
+
+func test_active_play_cues_are_authored_with_files_and_web_twins() -> void:
+	var cues: Dictionary = AudioDirector.manifest["cues"]
+	var banks: Dictionary = AudioDirector.manifest["banks"]
+	for id: String in ACTIVE_CUES:
+		assert_true(cues.has(id), "%s is in audio/manifest.json (no haptic-only fallback)" % id)
+		if not cues.has(id):
+			continue
+		assert_eq(String(_cue(id)["caption"]), String(ACTIVE_CAPTIONS[id]), "%s caption" % id)
+		for layer: Dictionary in _cue(id)["layers"]:
+			var bank: Dictionary = banks.get(String(layer["bank"]), {})
+			assert_false(bank.is_empty(), "%s bank %s" % [id, layer["bank"]])
+			var files := _bank_files(bank, false)
+			assert_gt(files.size(), 0, "%s has rendered files" % id)
+			for p: Variant in files:
+				assert_true(ResourceLoader.exists(String(p)), String(p))
+			if StringName(String(bank["bus"])) == &"SFX":
+				assert_eq(_bank_files(bank, true).size(), files.size(), "%s: every SFX-bus file has a Web twin" % id)
+
+
+func test_active_play_cues_play_with_their_caption_and_haptic() -> void:
+	AudioDirector.cue_played.connect(_on_cue_played)
+	Haptics.mode = Haptics.FULL
+	for id: String in ACTIVE_CUES:
+		AudioDirector.play_cue(StringName(id), {"voice_step": 1, "haptic": false})
+	assert_eq(_captions.size(), ACTIVE_CUES.size(), "every Active Play cue plays (none is ignored)")
+	_clear_min_gap()
+	AudioDirector.play_cue(&"S27", {"voice_step": 0})
+	assert_eq(Haptics.last_kind, Haptics.DOUBLE, "a granted wish gives DOUBLE on Full (GDD §14.8)")
+	_clear_min_gap()
+	AudioDirector.play_cue(&"S36")
+	assert_eq(Haptics.last_kind, Haptics.TICK, "a socket snap gives TICK")
+
+
+func test_active_pitched_cues_stay_in_key() -> void:
+	for id: String in ["S26", "S29", "S30", "S36"]:
+		var layer := _layer(id)
+		var bank := _bank_of(id)
+		var r := _range_of(bank)
+		for _i in SAMPLES / 5:
+			var note := AudioDirector._pick_note(id, layer, bank, {"voice_step": 2})
+			assert_true(_in_set(note), "%s note %d is in the chord's set" % [id, note])
+			assert_between(note, r.x, r.y, "%s note %d has a rendered file" % [id, note])

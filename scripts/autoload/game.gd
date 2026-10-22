@@ -85,6 +85,10 @@ const QUIT_SETTLE_MS := 150
 const ARG_WORLD_SPEED := "--world-speed="
 ## decor.json fx flag of the wind chime: each owned one adds a shell note (AUDIO_BIBLE §5, S21).
 const FX_CHIME_NOTE := "adds_chime_note"
+## One-time tips (save field tips_seen, schema 4): the décor press-and-hold toast after the first
+## movable décor purchase, and the Album's "keeps the wish for another visit" note.
+const TIP_DECOR_LONG_PRESS := &"decor_long_press"
+const TIP_WISH_KEPT := &"wish_kept"
 
 var content: GameContent
 var sim: WorldSim
@@ -476,6 +480,19 @@ func wish_list_unread() -> bool:
 		if float(w["opened_t"]) > sim.state.wish_list_seen_t:
 			return true
 	return false
+
+
+func tip_seen(tip: StringName) -> bool:
+	return sim != null and bool(sim.state.tips_seen.get(String(tip), false))
+
+
+## Marks [param tip] shown; returns true the first time only (show the tip then).
+func mark_tip_seen(tip: StringName) -> bool:
+	if sim == null or tip_seen(tip):
+		return false
+	sim.state.tips_seen[String(tip)] = true
+	SaveService.request_save()
+	return true
 
 
 func mark_wish_list_seen() -> void:

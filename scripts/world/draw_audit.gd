@@ -8,6 +8,7 @@ extends Node
 ## Output lines start with "qa-draw-audit:". Added by ValueFrame only when the arg is present.
 
 const ARG := "--qa-draw-audit"
+const ARG_LEAVES := "--qa-draw-audit-leaves"
 const SETTLE_FRAMES := 30
 const STEP_FRAMES := 4
 ## Layers measured (paths under the main scene root), world first, then the HUD.
@@ -56,3 +57,32 @@ func _run() -> void:
 		sum += total - without
 		print("qa-draw-audit: %-28s %3d" % [path, total - without])
 	print("qa-draw-audit: layers sum %d of %d (rest: viewport / blit)" % [sum, total])
+	if OS.get_cmdline_user_args().has(ARG_LEAVES):
+		await _run_leaves(root)
+
+
+## --qa-draw-audit-leaves: every drawing node under World on its own (hidden alone for a few
+## frames); prints the ones whose absence changes the frame's draw calls, so batch breakers show.
+func _run_leaves(root: Node) -> void:
+	var world := root.get_node_or_null(^"World")
+	if world == null:
+		return
+	var stack: Array[Node] = [world]
+	var leaves: Array[CanvasItem] = []
+	while not stack.is_empty():
+		var n: Node = stack.pop_back()
+		for c: Node in n.get_children():
+			stack.append(c)
+		if n is CanvasItem and n != world and (n as CanvasItem).is_visible_in_tree():
+			var ci := n as CanvasItem
+			if ci.get_child_count() == 0 or n is MultiMeshInstance2D or n is MeshInstance2D or n is GPUParticles2D:
+				leaves.append(ci)
+	for ci: CanvasItem in leaves:
+		var base := _calls()
+		ci.visible = false
+		await _wait(2)
+		var without := _calls()
+		ci.visible = true
+		await _wait(2)
+		if base != without:
+			print("qa-draw-audit-leaf: %3d  %s (%s)" % [base - without, world.get_path_to(ci), ci.get_class()])

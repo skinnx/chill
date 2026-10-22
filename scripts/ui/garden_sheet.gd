@@ -24,6 +24,8 @@ const WELL_BANNER_H := 216.0
 const DONE_CHIP_H := 96.0
 const DONE_ICON := 36.0
 const CUE_NOT_YET := &"S11"
+## The press-and-hold tip waits for the bought piece to settle (S05, 500 ms) and the sheet to exit.
+const TIP_DELAY_S := 0.9
 const LEAF_BOAT := &"leaf_boat"
 ## Number of yield drops for the flowers' dew_per_hour terciles (Art Bible §9.4: 1-3 drops).
 const MAX_DROPS := 3
@@ -358,8 +360,20 @@ func _on_buy(id: StringName, flower: bool, b: Button, chip: Control) -> void:
 	close_requested.emit()
 	if flower:
 		Game.plant(id)
-	else:
-		Game.place(id)
+	elif Game.place(id):
+		show_long_press_tip(hud, id)
+
+
+## ACTIVE_DECOR §3.1 first-time tip: after the first movable décor purchase, DECOR_TIP_LONG_PRESS
+## shows once (tips_seen, save schema 4), after the piece has settled.
+static func show_long_press_tip(p_hud: HudController, decor_id: StringName) -> bool:
+	if p_hud == null or not Game.feature_on(&"free_decor") \
+			or not ContentRegistry.content.is_movable_decor(decor_id) or not Game.mark_tip_seen(Game.TIP_DECOR_LONG_PRESS):
+		return false
+	p_hud.get_tree().create_timer(TIP_DELAY_S).timeout.connect(func() -> void:
+		if is_instance_valid(p_hud):
+			p_hud.overlays.show_toast(TranslationServer.translate("DECOR_TIP_LONG_PRESS")))
+	return true
 
 
 func _on_boat(b: Button, chip: Control) -> void:

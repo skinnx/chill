@@ -1564,6 +1564,7 @@ Reused: S05 (décor settle, teaware placed), S07/S08 (edit chrome in/out), S11 (
 | `cups_offered` | int | 0 | F2 (event postcard `first_tea`) |
 | `tea_flags` | Dictionary[String → bool] | {} | F2 tips and ghost counts |
 | `decor_layout` | Array[{id: "set#n", set, x, y, rot: int, stored: bool, stack: String, level: int}] | [] | F3 (one entry per owned movable copy) |
+| `tips_seen` | Dictionary[String → true] | {} | one-time tips shown (`decor_long_press`, `wish_kept`); save schema 4, migrated from 3 as empty |
 
 **Content-aware step** `ActiveRules.migrate_v1(sim)` runs once from `WorldSim._init` when `active_v < 1`, after `RetentionRules.migrate_v1`, at the saved world time:
 1. **Décor: fixed anchors → free positions.** Copy n of each movable set takes `spots.json decor_anchors[set].positions[n]` verbatim (rot 0, placed); the lantern jitter (`LANTERN_JITTER_PX`, seeded by `hash(["firefly_lantern", n])`) is baked into x; all cairn copies form one stack at `anchors[0]` in copy order; the wind chime is not in the layout. Then the hard exclusions (hard props; the tea nook when tea is on) nudge a piece by the §4.4 ring search (today `leaf_pinwheel` 4 and 8). Nothing else moves (test: ≤ 0.5 px). Owned copies missing from the layout later are auto-placed on load.

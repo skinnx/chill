@@ -1,7 +1,8 @@
 class_name SilhouetteLayer
 extends Node2D
 ## L2 far hills or L3 mid tree line (Art Bible §2.3, §4.4): fBm crest from TerrainMath, an opaque
-## interior (silhouette_core.gdshader) and a soft feather strip (silhouette.gdshader). Built once.
+## interior and a soft feather strip, one mesh drawn with silhouette.gdshader (one draw call; the
+## skirt keeps the opaque silhouette_core.gdshader). Built once.
 
 enum Kind { FAR, MID }
 
@@ -33,16 +34,12 @@ func _ready() -> void:
 	crest = TerrainMath.sample_far(STEP_PX[k]) if kind == Kind.FAR else TerrainMath.sample_mid(STEP_PX[k])
 	var core_mat := _material(CORE_SHADER, k)
 	var feather_mat := _material(FEATHER_SHADER, k)
-	var core := MeshInstance2D.new()
-	core.name = "Core"
-	core.mesh = SilhouetteMesh.core(crest, BOTTOM_Y[k])
-	core.material = core_mat
-	add_child(core)
-	var edge := MeshInstance2D.new()
-	edge.name = "Feather"
-	edge.mesh = SilhouetteMesh.feather(crest, FEATHER_PX[k])
-	edge.material = feather_mat
-	add_child(edge)
+	# interior + feather in one mesh and one draw call (the feather's blend_mix shader)
+	var body := MeshInstance2D.new()
+	body.name = "Body"
+	body.mesh = SilhouetteMesh.body(crest, BOTTOM_Y[k], FEATHER_PX[k])
+	body.material = feather_mat
+	add_child(body)
 	_skirt = MeshInstance2D.new()
 	_skirt.name = "Skirt"
 	_skirt.material = core_mat
