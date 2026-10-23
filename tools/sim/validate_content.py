@@ -961,13 +961,7 @@ UNVOICED = {
 	# Retention v1 (GDD S13.7)
 	"S22": "rustle sign shakes", "S23": "sign tapped (clue found)", "S24": "heart-up",
 	"S25": "scene fades in / teaser",
-	# Active F1 Wishes (GDD S14.8)
-	"S26": "wish appears", "S27": "wish granted",
-	# Active F2 Tea & Treats
-	"S28": "petals gathered", "S29": "petal or drop into the pot", "S30": "stirring loop + bell",
-	"S31": "pour / simple brew", "S32": "cup clink and sip", "S33": "new recipe", "S34": "nook steam",
-	# Active F3 free decor placement
-	"S35": "decor lift", "S36": "snap into a socket", "S37": "turn", "S38": "tuck into the tray",
+	# Active Play S26-S38 were synthesised in e5462e7 (tools/audio/active_sfx.py) and left the list.
 }
 CUE_ID = re.compile(r"^S\d{2}$")
 
