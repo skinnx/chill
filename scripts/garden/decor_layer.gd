@@ -173,9 +173,6 @@ var edit: DecorEdit
 var _content: GameContent
 var _pieces: Dictionary = {}           # decor id -> Array of Piece (copy order; cairn: one per stack)
 var _by_id: Dictionary = {}            # unit id ("set#n", a cairn stack's base) -> Piece
-## movable_pieces() is asked for on every frame of edit mode (the overlay draws a ring per piece)
-## and it used to build and lambda-sort a fresh Array each time. The set only changes when a
-## piece enters or leaves _by_id, so it is cached and rebuilt on demand (round 9).
 var _movable: Array[Piece] = []
 var _movable_dirty: bool = true
 var _shadows: Node2D
@@ -1147,14 +1144,11 @@ func piece(id: String) -> Piece:
 	return null
 
 
-## Every movable unit drawn now (edit targets): Array of Piece.
+## Every movable unit drawn now (edit targets). Asked every frame: cached until _by_id changes.
 func movable_pieces() -> Array[Piece]:
 	if _movable_dirty:
 		_movable_dirty = false
-		_movable.clear()
-		for p: Piece in _by_id.values():
-			if not p.temp:
-				_movable.append(p)
+		_movable.assign(_by_id.values().filter(func(p: Piece) -> bool: return not p.temp))
 		_movable.sort_custom(func(a: Piece, b: Piece) -> bool: return a.id < b.id)
 	return _movable
 
