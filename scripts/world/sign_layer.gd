@@ -36,8 +36,6 @@ const SHAKE_DP := 3.0
 ## Press feedback: the sign dips by this much of its size.
 const PRESS_SQUASH := 0.92
 const PRESS_S := 0.12
-## Segments of a round blob. These are 8-22 dp wide, so twelve is already finer than a pixel.
-const BLOB_SEGS := 12
 
 static var current: SignLayer = null
 
@@ -227,13 +225,13 @@ static func phase_of(key: String) -> float:
 func _draw() -> void:
 	if _live.is_empty():
 		return
-	var tris := SignTris.new()
+	var tris := WorldTris.new()
 	for key: String in _live:
 		_draw_sign(tris, key, _live[key])
 	tris.flush(self)
 
 
-func _draw_sign(tris: SignTris, key: String, e: Dictionary) -> void:
+func _draw_sign(tris: WorldTris, key: String, e: Dictionary) -> void:
 	var sign: Dictionary = e["sign"]
 	var t := float(e["t"])
 	var lift := float(e["lift"])
@@ -265,7 +263,7 @@ func _draw_sign(tris: SignTris, key: String, e: Dictionary) -> void:
 
 ## A short trail of prints walking into the hollow. The style only changes the rhythm: how many
 ## prints, how far apart, how they stagger (GDD §13.3.1 per species).
-func _draw_footprints(tris: SignTris, c: Vector2, size: float, col: Color, style: String) -> void:
+func _draw_footprints(tris: WorldTris, c: Vector2, size: float, col: Color, style: String) -> void:
 	var n := 4
 	var stagger := 0.35
 	var step := size * 0.3
@@ -298,7 +296,7 @@ func _draw_footprints(tris: SignTris, c: Vector2, size: float, col: Color, style
 
 
 ## A small something left behind: a petal, a frond, a pebble, a feather.
-func _draw_dropped(tris: SignTris, c: Vector2, size: float, col: Color) -> void:
+func _draw_dropped(tris: WorldTris, c: Vector2, size: float, col: Color) -> void:
 	var r := size * 0.42
 	tris.blob(c, Vector2(r, r * 0.62), col)
 	var hi := col
@@ -310,7 +308,7 @@ func _draw_dropped(tris: SignTris, c: Vector2, size: float, col: Color) -> void:
 
 ## A low bush that shakes on its own every 6-14 s. The shake is the whole tell, so it is the one
 ## thing here that moves; its phase comes from the sign's key so three bushes never shake together.
-func _draw_rustle(tris: SignTris, c: Vector2, size: float, col: Color, key: String) -> void:
+func _draw_rustle(tris: WorldTris, c: Vector2, size: float, col: Color, key: String) -> void:
 	var t: Dictionary = _types.get(&"rustle", {})
 	var lo := float(t.get("rustle_every_min_s", 6.0))
 	var hi := float(t.get("rustle_every_max_s", 14.0))
@@ -331,7 +329,7 @@ func _draw_rustle(tris: SignTris, c: Vector2, size: float, col: Color, key: Stri
 
 
 ## A folded leaf with the riddle on it.
-func _draw_note(tris: SignTris, c: Vector2, size: float, col: Color) -> void:
+func _draw_note(tris: WorldTris, c: Vector2, size: float, col: Color) -> void:
 	var w := size * 0.46
 	var h := size * 0.36
 	var pale := Color(0.97, 0.95, 0.89, col.a)
@@ -339,36 +337,3 @@ func _draw_note(tris: SignTris, c: Vector2, size: float, col: Color) -> void:
 	var fold := col
 	fold.a *= 0.8
 	tris.quad(c + Vector2(-w, h * 0.1), c + Vector2(w, h * 0.3), c + Vector2(w, h), c + Vector2(-w, h * 0.7), fold)
-
-
-## One triangle array for the whole layer: a single draw call however many signs are up.
-class SignTris:
-	extends RefCounted
-	var pts := PackedVector2Array()
-	var cols := PackedColorArray()
-
-	func _tri(a: Vector2, b: Vector2, c: Vector2, col: Color) -> void:
-		pts.append(a)
-		pts.append(b)
-		pts.append(c)
-		cols.append(col)
-		cols.append(col)
-		cols.append(col)
-
-	## A soft round blob with [param half] radii.
-	func blob(centre: Vector2, half: Vector2, col: Color) -> void:
-		var prev := centre + Vector2(half.x, 0.0)
-		for k in range(1, SignLayer.BLOB_SEGS + 1):
-			var ang := TAU * float(k) / float(SignLayer.BLOB_SEGS)
-			var p := centre + Vector2(cos(ang) * half.x, sin(ang) * half.y)
-			_tri(centre, prev, p, col)
-			prev = p
-
-	func quad(a: Vector2, b: Vector2, c: Vector2, d: Vector2, col: Color) -> void:
-		_tri(a, b, c, col)
-		_tri(a, c, d, col)
-
-	func flush(on: CanvasItem) -> void:
-		if pts.is_empty():
-			return
-		on.draw_polygon(pts, cols)

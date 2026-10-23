@@ -63,6 +63,9 @@ const PRIO_MOSSLING := 7
 ## Retention v1 F2: a clue in the hollow outranks everything a tap could do to the ground under
 ## it, because it is there to be found and it goes away once it is.
 const PRIO_SIGN := 6
+## Retention v1 F3: a staged scene's prop ranks with a sign (the scene's participants are
+## mosslings and rank as such); the two never share an anchor, so the tie never decides.
+const PRIO_SCENE := 6
 const PRIO_READY_BED := 5
 const PRIO_PROP := 4
 const PRIO_DECOR := 3

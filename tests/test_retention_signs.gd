@@ -183,11 +183,12 @@ func test_the_album_reads_the_clues_back() -> void:
 		assert_between(int(card["found"]), 0, int(card["total"]))
 
 
-func test_the_clues_tab_sits_between_friends_and_photos() -> void:
+func test_the_clues_tab_sits_after_friends() -> void:
 	assert_eq(AlbumSheet.TAB_FRIENDS, 0)
 	assert_eq(AlbumSheet.TAB_CLUES, 1)
-	assert_eq(AlbumSheet.TAB_PHOTOS, 2)
-	assert_eq(AlbumSheet.TAB_POSTCARDS, 3)
+	assert_eq(AlbumSheet.TAB_MEMORIES, 2)
+	assert_eq(AlbumSheet.TAB_KEEPSAKES, 3)
+	assert_eq(AlbumSheet.TAB_POSTCARDS, 4)
 	for k: String in ["ALBUM_TAB_CLUES", "CLUES_EMPTY", "CLUES_SOMEONE", "CLUES_SOLVED", "CLUES_COUSIN",
 			"CLUES_COUNT", "CLUE_FOUND_TITLE", "CLUE_ADDED"]:
 		assert_ne(tr(k), k, "%s is translated" % k)

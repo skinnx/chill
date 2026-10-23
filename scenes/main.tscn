@@ -1,4 +1,4 @@
-[gd_scene load_steps=18 format=3]
+[gd_scene load_steps=20 format=3]
 
 [ext_resource type="Script" path="res://scripts/main/main.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/main/layout_debug.gd" id="3_dbg"]
@@ -17,6 +17,8 @@
 [ext_resource type="PackedScene" path="res://scenes/world/foreground.tscn" id="w7_fg"]
 [ext_resource type="PackedScene" path="res://scenes/world/air.tscn" id="w8_air"]
 [ext_resource type="PackedScene" path="res://scenes/world/signs.tscn" id="w9_signs"]
+[ext_resource type="PackedScene" path="res://scenes/world/nests.tscn" id="w11_nests"]
+[ext_resource type="PackedScene" path="res://scenes/world/scene_props.tscn" id="w11_scene"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_main")
@@ -67,6 +69,11 @@ y_sort_enabled = true
 
 [node name="PlotsLayer" parent="World/Ground/Play/Plots" instance=ExtResource("5_plots")]
 
+[node name="Nests" type="Node2D" parent="World/Ground/Play"]
+y_sort_enabled = true
+
+[node name="NestLayer" parent="World/Ground/Play/Nests" instance=ExtResource("w11_nests")]
+
 [node name="Signs" type="Node2D" parent="World/Ground/Play"]
 y_sort_enabled = true
 
@@ -76,6 +83,11 @@ y_sort_enabled = true
 y_sort_enabled = true
 
 [node name="DecorLayer" parent="World/Ground/Play/Decor" instance=ExtResource("6_decor")]
+
+[node name="SceneProps" type="Node2D" parent="World/Ground/Play"]
+y_sort_enabled = true
+
+[node name="SceneLayer" parent="World/Ground/Play/SceneProps" instance=ExtResource("w11_scene")]
 
 [node name="Creatures" type="Node2D" parent="World/Ground/Play"]
 y_sort_enabled = true

@@ -23,8 +23,8 @@ const MIN_TARGET_PX := 144.0
 const SCALES: Array[int] = [100, 150]
 ## Extra _sheet() kinds: the album opened straight onto one of its other tabs, so the layout
 ## sweeps below cover all four and not just Friends.
-const ALBUM_TABS := {"clues": AlbumSheet.TAB_CLUES, "photos": AlbumSheet.TAB_PHOTOS,
-	"postcards": AlbumSheet.TAB_POSTCARDS}
+const ALBUM_TABS := {"clues": AlbumSheet.TAB_CLUES, "memories": AlbumSheet.TAB_MEMORIES,
+	"keepsakes": AlbumSheet.TAB_KEEPSAKES, "postcards": AlbumSheet.TAB_POSTCARDS}
 const LOCALES: Array[String] = ["vi", "en"]
 
 var c: GameContent
@@ -177,7 +177,7 @@ func test_every_label_lies_inside_its_parent_control() -> void:
 
 
 func _check_labels_in_parents() -> void:
-	for kind: String in ["settings", "garden", "basket", "album", "clues", "photos", "postcards"]:
+	for kind: String in ["settings", "garden", "basket", "album", "clues", "memories", "keepsakes", "postcards"]:
 		var s := _sheet(kind)
 		await wait_process_frames(4)
 		var count := 0
@@ -204,7 +204,7 @@ func _check_labels_in_parents() -> void:
 
 func test_nothing_draws_outside_the_sheet_clip() -> void:
 	TranslationServer.set_locale("vi")
-	for kind: String in ["settings", "garden", "basket", "album", "clues", "photos", "postcards"]:
+	for kind: String in ["settings", "garden", "basket", "album", "clues", "memories", "keepsakes", "postcards"]:
 		var s := _sheet(kind)
 		await wait_process_frames(4)
 		_check_clip(s, kind)
@@ -569,9 +569,9 @@ func _mysteries_open() -> void:
 
 func test_the_clues_tab_is_reachable_and_reads_empty_before_anyone_is_on_the_way() -> void:
 	var s := _sheet("album") as AlbumSheet
-	for tab: int in [AlbumSheet.TAB_CLUES, AlbumSheet.TAB_PHOTOS, AlbumSheet.TAB_POSTCARDS]:
+	for tab: int in [AlbumSheet.TAB_CLUES, AlbumSheet.TAB_MEMORIES, AlbumSheet.TAB_KEEPSAKES, AlbumSheet.TAB_POSTCARDS]:
 		s.select_tab(tab, false)
-		assert_eq(s.current_tab(), tab, "tab %d is reachable (the clamp covers all four)" % tab)
+		assert_eq(s.current_tab(), tab, "tab %d is reachable (the clamp covers all five)" % tab)
 	s.select_tab(AlbumSheet.TAB_CLUES, false)
 	await wait_process_frames(4)
 	var texts: Array[String] = []
@@ -620,3 +620,120 @@ func test_a_clue_card_counts_in_dots_and_names_the_state_it_is_in() -> void:
 				want = I18n.fmt(&"CLUES_COUSIN", {"name": Game.display_name(sp)})
 			assert_true(texts.has(want), "%s: the card is titled '%s'" % [LOCALES[combo % 2], want])
 		s.free()
+
+
+# ------------------------------------------------------------------ album > memories / keepsakes (round 11)
+
+func _labels(s: Control) -> Array[String]:
+	var texts: Array[String] = []
+	for n: Node in s.find_children("*", "Label", true, false):
+		texts.append((n as Label).text)
+	return texts
+
+
+func test_memories_lists_the_moments_newest_first_with_names_and_keeps_the_photos() -> void:
+	var s := _sheet("memories")
+	await wait_process_frames(4)
+	var texts := _labels(s)
+	assert_true(texts.has(tr("MEMORIES_SECTION_MOMENTS")), "the moments section")
+	assert_true(texts.has(tr("MEMORIES_EMPTY")), "a fresh world: moments will gather here")
+	assert_true(texts.has(tr("ALBUM_TAB_PHOTOS")), "the photos moved in as the second section")
+	s.free()
+	_mysteries_open()  # retention_mid: two memories (nap_pile, boat_regatta) and a pending scene
+	var moments := Game.memories()
+	assert_eq(moments.size(), 2, "premise")
+	s = _sheet("memories")
+	await wait_process_frames(4)
+	texts = _labels(s)
+	assert_false(texts.has(tr("MEMORIES_EMPTY")))
+	var newest: Dictionary = moments[1]
+	var oldest: Dictionary = moments[0]
+	var sc_new: Dictionary = c.scenes_by_id[StringName(String(newest["scene"]))]
+	var sc_old: Dictionary = c.scenes_by_id[StringName(String(oldest["scene"]))]
+	var i_new := texts.find(tr(String(sc_new["title_key"])))
+	var i_old := texts.find(tr(String(sc_old["title_key"])))
+	assert_true(i_new >= 0 and i_old >= 0, "both moments are titled: %s" % [texts])
+	assert_lt(i_new, i_old, "newest first")
+	var cast: Array = newest["cast"]
+	var want := I18n.fmt(StringName(String(sc_new["caption_key"])), {
+		"name": Game.display_name(StringName(String(cast[0]))),
+		"friend": Game.display_name(StringName(String(cast[1]))) if cast.size() > 1 else ""})
+	assert_true(texts.has(want), "the caption names the cast: '%s'" % want)
+	for t: String in texts:
+		assert_false(t.begins_with("SCENE_"), "no raw key on a card: %s" % t)
+	assert_eq(AlbumSheet.memory_pose(&"nap_pile"), &"asleep")
+	assert_eq(AlbumSheet.memory_pose(&"pair_nap"), &"asleep")
+	assert_eq(AlbumSheet.memory_pose(&"boat_regatta"), &"happy")
+	s.free()
+
+
+func test_keepsakes_shows_portraits_gifts_and_cousins_or_the_empty_line() -> void:
+	var s := _sheet("keepsakes")
+	await wait_process_frames(4)
+	assert_true(_labels(s).has(tr("KEEPSAKES_EMPTY")), "a fresh world: five hearts leave a keepsake here")
+	s.free()
+	_mysteries_open()
+	var k := Game.keepsakes()
+	assert_false((k["portraits"] as Array).is_empty(), "premise: a ♥5 friend")
+	assert_false((k["signature_gifts"] as Array).is_empty(), "premise: signature gifts")
+	assert_eq((k["cousins"] as Array).size(), 1, "premise: one cousin met")
+	s = _sheet("keepsakes")
+	await wait_process_frames(4)
+	var texts := _labels(s)
+	assert_false(texts.has(tr("KEEPSAKES_EMPTY")))
+	for p: Dictionary in k["portraits"]:
+		var name := Game.display_name(StringName(String(p["species"])))
+		assert_true(texts.has(I18n.fmt(&"KEEPSAKE_TITLE", {"name": name})), "%s's keepsake portrait" % name)
+	var g: Dictionary = (k["signature_gifts"] as Array)[0]
+	assert_true(texts.has(I18n.fmt(&"KEEPSAKE_GIFT", {"name": Game.display_name(StringName(String(g["species"]))),
+			"gift": tr(String(g["name_key"]))})), "the gift is named, not keyed")
+	var cv: Dictionary = (k["cousins"] as Array)[0]
+	assert_true(texts.has(tr(String(cv["name_key"]))), "the cousin met is here by name")
+	for t: String in texts:
+		assert_false(t.begins_with("KEEPSAKE_") or t.begins_with("VARIANT_"), "no raw key: %s" % t)
+	s.free()
+
+
+## GDD §13.5.1: five unlock lines, reached ones in ink, the rest "Comes with more hearts" - never
+## a countdown or points; the nest line and the best-buddy tag only once they are real.
+func test_the_friend_card_lists_its_unlocks_nest_and_buddy() -> void:
+	_mysteries_open()
+	var sp := &"puffmoss"  # ♥5, a canopy nest, best buddy active
+	var hearts := Game.sim.hearts_of(sp)
+	assert_eq(hearts, 5, "premise")
+	var s := _sheet("album") as AlbumSheet
+	s.show_friend(sp)
+	await wait_process_frames(4)
+	var texts := _labels(s)
+	for u: Dictionary in Game.unlocks(sp):
+		assert_true(texts.has(tr(String(u["album_key"]))), "unlock line ♥%d" % int(u["heart"]))
+	var nest := Game.nest_state(sp)
+	assert_true(texts.has(I18n.fmt(&"ALBUM_NEST", {"name": Game.display_name(sp),
+			"nest": "%s · %s" % [tr(String(nest["style_key"])), tr(String(nest["stage_key"]))]})), "the nest line")
+	var buddy := Game.best_buddy(sp)
+	assert_true(bool(buddy["active"]), "premise: the pair is active")
+	assert_true(texts.has(I18n.fmt(&"ALBUM_PAIR", {"friend": Game.display_name(StringName(String(buddy["friend"])))})))
+	assert_true(texts.has(tr(String(Game.cousin_of(sp)["name_key"]))), "the cousin met shows on the card")
+	s.free()
+	# A ♥1 friend: four lines still to come, no nest, no pair, no cousin.
+	var low := &"bellkin"
+	assert_eq(Game.sim.hearts_of(low), 1, "premise")
+	s = _sheet("album") as AlbumSheet
+	s.show_friend(low)
+	await wait_process_frames(4)
+	texts = _labels(s)
+	var later := 0
+	for t: String in texts:
+		if t.ends_with(tr("ALBUM_UNLOCK_LATER")):
+			later += 1
+	assert_eq(later, 4, "four of the five lines are still to come")
+	assert_true(texts.has(tr("UNLOCK_HEART_1")), "the reached line stands alone")
+	var low_buddy := Game.best_buddy(low)
+	assert_false(bool(low_buddy["active"]), "premise: no active pair at ♥1")
+	var low_friend := Game.display_name(StringName(String(low_buddy["friend"])))
+	assert_false(texts.has(I18n.fmt(&"ALBUM_PAIR", {"friend": low_friend})), "no pair tag yet")
+	assert_true(Game.nest_state(low).is_empty(), "premise: no nest at ♥1")
+	for t: String in texts:
+		assert_false(t.begins_with(I18n.fmt(&"ALBUM_NEST", {"name": Game.display_name(low), "nest": ""}).left(8)),
+				"no nest line yet: %s" % t)
+	s.free()

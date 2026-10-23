@@ -375,6 +375,9 @@ static func _card_shell(sep: int = 24, frosted: bool = false) -> Array:
 func _spot_name(spot: StringName) -> StringName:
 	if spot == &"" or Game.content == null:
 		return &""
+	if CreatureBrain.is_nest_spot(spot):  # round 11: "napped at the Moss bowl"
+		var nest := Game.nest_state(CreatureBrain.nest_species(spot))
+		return StringName(tr(String(nest.get("style_key", "")))) if not nest.is_empty() else &""
 	var id := spot
 	if String(spot).contains(CreatureBrain.NIBBLE_SEP):
 		id = StringName(String(spot).get_slice(CreatureBrain.NIBBLE_SEP, 0))

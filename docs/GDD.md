@@ -166,7 +166,7 @@ Props (⟲ `spots.json:props`):
 | `willow` | 0.120 | 0.300 | 140 × 170 | — | — |
 | `tea_nook` (Active F2, ⟲ `tea.json:nook`; sits on the stump once tea unlocks) | 0.900 | 0.400 | 56 × 44 | open_tea | 64 |
 
-**Hit priority** when targets overlap (world): mossling > bed with a ready bud **or ready petals** (Active F2) > prop (basket, mailbox, chime, tea nook) > décor piece with a `tap_fx` (pinwheel, lantern; optional delight, hit ≥ 60 dp, 64 dp in the look zone, nearest piece wins) > bed > stream = still décor piece (cairn, toadstool, stone: a small wobble, Active F3; a stone beats the brook only through its 20 dp core) > background. In Active F3 edit mode only décor pieces are targets (priority 9, the selected one 10). A visible mystery sign (§13.3.2) sits between the mossling and the ready bud. In choose-a-bed mode the beds with room come first. Round 7 (ARCHITECTURE §3.5): every press goes to exactly **one** target, picked by one arbiter. A target that contains the touch beats one only reached through the fat-finger slop (9 dp, aim 3 dp above the contact). Then the priority above decides, then the nearest centre. A décor piece's generous 64 dp ring only wins over empty ground and the stream; its 20 dp-radius core outranks a plain bed. The validator checks every static target for size floors, 8 dp gaps and that its hit area lies fully inside the frame (§10).
+**Hit priority** when targets overlap (world): mossling > bed with a ready bud **or ready petals** (Active F2) > prop (basket, mailbox, chime, tea nook) > décor piece with a `tap_fx` (pinwheel, lantern; optional delight, hit ≥ 60 dp, 64 dp in the look zone, nearest piece wins) > bed > stream = still décor piece (cairn, toadstool, stone: a small wobble, Active F3; a stone beats the brook only through its 20 dp core) > background. In Active F3 edit mode only décor pieces are targets (priority 9, the selected one 10). A visible mystery sign (§13.3.2) and an away scene's prop (§13.4) sit between the mossling and the ready bud; a scene's participants are mosslings. In choose-a-bed mode the beds with room come first. Round 7 (ARCHITECTURE §3.5): every press goes to exactly **one** target, picked by one arbiter. A target that contains the touch beats one only reached through the fat-finger slop (9 dp, aim 3 dp above the contact). Then the priority above decides, then the nearest centre. A décor piece's generous 64 dp ring only wins over empty ground and the stream; its 20 dp-radius core outranks a plain bed. The validator checks every static target for size floors, 8 dp gaps and that its hit area lies fully inside the frame (§10).
 
 ---
 
@@ -900,6 +900,7 @@ Anchors and casts are chosen by fixed rules, with no randomness.
 - **Look and hit:** the visual is 48 × 24 dp. The nest is not a tap target; the mossling in it is.
 - **Validation:** nests sit ≥ 30 dp apart and ≥ 8 dp clear of the basket, mailbox and chime hit areas.
 - **Album line:** `ALBUM_NEST`, with `{nest}` = style name + stage name. The recap line `RECAP_NEST` appears when a stage was reached while away.
+- **Built (round 11):** `NestLayer` draws every nest (one draw call, procedural: the four styles × three stages, 48 × 24 dp at the anchor); a stage reached while watching pops, offline growth just shows grown. `CreatureBrain.nests` naps the friend in it with `nap_preference`; the recap's nap line then names the nest by its style.
 
 | Style | Species |
 |---|---|
@@ -1082,6 +1083,7 @@ Tokens are `cr_*`.
    - The recap card gains the teaser line (§13.5.3) and S25 plays as the scene fades in.
    - The scene stays until the player taps a participant or prop (a long-press still pets), or until **600 s of foreground time** have passed (`pending_scene.shown_s`). It survives app closes.
    - It is then archived to `memories` as {scene, cast, phase, weather, world_t, unix} and rendered live like photos. `SCENE_SAVED` toasts, and everyone returns to normal bouts.
+   - **Built (round 11):** `CreatureLayer._stage_scene` + `SceneLayer` (props: tower, fort, crown, boat line, procedural). The `scene_*` / `pair_nap_*` pose ids are not in the rig yet: the nap scenes sleep, the moon watchers sit by the brook, everyone else stands at the slot, looks at the thing (the proud one at you) and beams. S25 is still unvoiced.
 
 At most 1 scene and 3 signs are on screen at a time.
 
@@ -1105,7 +1107,7 @@ At most 1 scene and 3 signs are on screen at a time.
 #### 13.5.1 Album
 
 **Tabs:** **Friends · Clues · Memories · Keepsakes · Postcards** (`ALBUM_TAB_*`).
-- **Built so far (round 10):** Friends · **Clues** · Photos · Postcards. Clues ships with the signs in the hollow; Memories and Keepsakes wait on the away-scene front end, so Photos keeps its own tab until it has a Memories tab to move into.
+- **Built (round 11):** all five. Memories = `MEMORIES_SECTION_MOMENTS` (newest first; the cast as live portraits, asleep for the nap scenes) then Photos. Keepsakes = ♥5 portraits, signature gifts (live item preview), cousins met. The friend card has the five unlock lines, `ALBUM_NEST`, `ALBUM_PAIR` and the cousin row. Still to do: the tab-bar icons and the unread dots (they need a per-tab seen marker in the save).
 - **Photos** move into **Memories**, which has two sections: `MEMORIES_SECTION_MOMENTS` (scenes, newest first) and Photos (the 60 poses). The per-friend photo strip stays on the friend card.
 - **Tab bar:** icons plus labels. At 200 % text, labels wrap to 2 lines and the bar scrolls horizontally rather than shrinking text.
 - **Dots:** an unread dot (never a number) marks a tab with something new.

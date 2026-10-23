@@ -36,6 +36,8 @@ const OPEN_FIELD := &"open_field"
 const CLOVER_BANK := &"clover_bank"
 ## Nibble at a bed: spot id is "<bed_id>#<nibble point index>".
 const NIBBLE_SEP := "#"
+## Retention v1 nests (GDD §13.2.3): the nap spot "nest:<species>", only ever that friend's.
+const NEST_PREFIX := "nest:"
 const MAX_DRAWS := 8
 ## Liked / required flowers make a bed this much more likely for nibbling.
 const LIKED_BED_MULT := 3.0
@@ -84,11 +86,16 @@ var env: Callable = Callable()
 var owned: Callable = Callable()
 ## Callable(bed_id: StringName) -> Array of flower ids with a stem in that bed.
 var bed_flowers: Callable = Callable()
+## Callable(species: StringName) -> Dictionary: the friend's nest (Game.nest_state view: x, y in
+## frame units) or {} when it has none. With one, a nap chooses the nest with p nap_preference
+## (friendship.json nest, 0.7) before the normal spot rule; capacity 1, nobody else's.
+var nests: Callable = Callable()
 
 var _visits: Array[Visit] = []
 var _b: Dictionary = {}
 var _slots: Dictionary = {}
 var _frame: Vector2 = Vector2(1080, 1920)
+var _nest_p: float = 0.7
 
 
 func _init(p_content: GameContent, p_install_seed: int) -> void:
@@ -99,6 +106,7 @@ func _init(p_content: GameContent, p_install_seed: int) -> void:
 	_slots = view.get("spot_slots_px", {})
 	var frame: Dictionary = content.spots_doc.get("frame", {})
 	_frame = Vector2(float(frame.get("width_px", 1080)), float(frame.get("height_px", 1920)))
+	_nest_p = float((content.friendship.get("nest", {}) as Dictionary).get("nap_preference", 0.7))
 
 
 ## Seed of one visit (ARCHITECTURE §5.4: hash([install_seed, species, arrive_t])).
@@ -218,6 +226,8 @@ static func nap_during(content: GameContent, sim: WorldSim, events: Array[Dictio
 			if StringName(st["bed"]) == bed_id:
 				out.append(StringName(st["flower"]))
 		return out
+	brain.nests = func(sp: StringName) -> Dictionary:
+		return sim.retention.nest_view(sim, sp)
 	for ev: Dictionary in events:
 		if StringName(ev.get("type", &"")) != WorldSim.EV_ARRIVED or bool(ev.get("peek", false)):
 			continue
@@ -270,6 +280,15 @@ func _plan_bout(v: Visit, t: float) -> Bout:
 		var beh := _draw(v.rng, weights)
 		if beh == &"":
 			break
+		if beh == NAP and not _nest_of(v.species).is_empty():
+			# GDD §13.2.3: a nap takes the friend's own nest with p nap_preference (one extra draw,
+			# only for a friend with a nest, so every other visit plans exactly as before).
+			var ns := nest_spot(v.species)
+			if "%s@%s" % [NAP, ns] != prev_key and v.rng.randf() < _nest_p:
+				bout = Bout.new()
+				bout.behaviour = NAP
+				bout.spot = ns
+				break
 		var cand := _candidates(beh, t, v, rain and not likes_rain)
 		# never repeat the previous (behaviour, spot) pair
 		cand = cand.filter(func(c: Dictionary) -> bool: return "%s@%s" % [beh, c["spot"]] != prev_key)
@@ -381,6 +400,9 @@ static func _draw(rng: RandomNumberGenerator, weights: Dictionary) -> StringName
 ## picks a seeded point in the tend zone.
 func spot_position(spot: StringName, slot: int, v: Visit = null) -> Vector2:
 	var s := String(spot)
+	if is_nest_spot(spot):
+		var n := _nest_of(nest_species(spot))
+		return Vector2(float(n.get("x", 0.5)) * _frame.x, float(n.get("y", 0.5)) * _frame.y)
 	if s.contains(NIBBLE_SEP):
 		var bed: Dictionary = content.beds_by_id.get(StringName(s.get_slice(NIBBLE_SEP, 0)), {})
 		var pts: Array = bed.get("nibble_points", [])
@@ -407,6 +429,26 @@ func spot_position(spot: StringName, slot: int, v: Visit = null) -> Vector2:
 func is_shelter(spot: StringName) -> bool:
 	var sp: Dictionary = content.spots_by_id.get(spot, {})
 	return bool(sp.get("shelter", false))
+
+
+## The nap spot of a friend's nest, and back.
+static func nest_spot(species: StringName) -> StringName:
+	return StringName(NEST_PREFIX + String(species))
+
+
+static func is_nest_spot(spot: StringName) -> bool:
+	return String(spot).begins_with(NEST_PREFIX)
+
+
+static func nest_species(spot: StringName) -> StringName:
+	return StringName(String(spot).trim_prefix(NEST_PREFIX))
+
+
+func _nest_of(species: StringName) -> Dictionary:
+	if not nests.is_valid():
+		return {}
+	var n: Variant = nests.call(species)
+	return n if n is Dictionary else {}
 
 
 ## Spot id of a nibble point's bed (or &"" for a spot).
