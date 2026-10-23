@@ -121,6 +121,18 @@ var _sleepers: PackedStringArray = PackedStringArray()
 var _frame: Vector2 = Vector2(1080, 1920)
 var _obstacles: Array[Rect2] = []
 var _feed := PaletteFeed.new()
+## Retention v1 ♥1 "waves hello on open" (GDD §13.2): the plan Game handed us on world_ready,
+## still waiting for the hollow to be clear. Entries are {species, delay_s, pose}.
+var _waves: Array[Dictionary] = []
+## Retention v1 F3 away scenes (GDD §13.4): the staged scene's id and its cast. Present friends
+## walk to their slots under an override; absent ones are summoned as extras and leave when the
+## scene is archived. Nothing here changes state: a tap goes through Game.tap_scene.
+var _scene_id: StringName = &""
+var _scene_cast: Array[Mossling] = []
+var _scene_extras: Array[Mossling] = []
+## Seconds the hollow has been clear since the plan arrived (the welcome-back card counts as
+## covered: the friends say hello to the player, not to the back of a card).
+var _wave_t: float = 0.0
 
 
 func _ready() -> void:
@@ -172,6 +184,8 @@ func _ready() -> void:
 	Game.sim_event.connect(_on_sim_event)
 	Game.world_ready.connect(_on_world_ready)
 	Game.suspended.connect(_on_suspended)
+	Game.scene_ready.connect(_stage_scene)
+	Game.scene_archived.connect(func(_m: Dictionary) -> void: _end_scene())
 	if Game.is_ready:
 		# deferred: BehindCrest is added to Ground, which is still setting up its children now
 		_on_world_ready.call_deferred([])
@@ -199,6 +213,7 @@ func _on_world_ready(_recap: Array) -> void:
 		brain.env = _env_at
 		brain.owned = func(item: StringName) -> int: return Game.sim.owned_count(item)
 		brain.bed_flowers = _bed_flowers
+		brain.nests = func(sp: StringName) -> Dictionary: return Game.nest_state(sp)
 	_ensure_behind()
 	# everyone already in the hollow appears where their bout puts them (fade in place)
 	var here := {}
@@ -215,6 +230,13 @@ func _on_world_ready(_recap: Array) -> void:
 	if _qa_count > 0 and _qa_t == 0.0:
 		_spawn_fixture()
 	wishes.sync()
+	# ♥1: the friends who know you look up and say hello once the card is out of the way.
+	_waves = Game.wave_plan()
+	_wave_t = 0.0
+	# F3: a scene pending from before the close (or staged by this return) is on stage already.
+	var pending := Game.pending_scene()
+	if not pending.is_empty():
+		_stage_scene(pending)
 
 
 func _on_suspended() -> void:
@@ -274,6 +296,28 @@ func _now() -> float:
 	return Game.world_now() if Game.is_ready else 0.0
 
 
+## Runs the ♥1 wave plan once the recap (or any card) is out of the way, each friend after its
+## own deterministic delay. A friend that has since left, fallen asleep or started leaving is
+## simply skipped: a hello is never owed, and nothing about it can be missed.
+func _wave_tick(delta: float) -> void:
+	if _waves.is_empty():
+		return
+	var pan := WorldPan.current
+	if pan != null and pan.is_blocked():
+		return
+	_wave_t += delta
+	var still: Array[Dictionary] = []
+	for w: Dictionary in _waves:
+		if _wave_t < float(w["delay_s"]):
+			still.append(w)
+			continue
+		var sp := StringName(w["species"])
+		var m: Mossling = _mosslings.get(sp)
+		if m != null and is_instance_valid(m) and not m.leaving and not m.asleep:
+			m.play_pose(StringName(w["pose"]))
+	_waves = still
+
+
 func _env_at(t: float) -> Dictionary:
 	if _pinned_env or Game.sim == null:
 		return {"phase": TimeOfDay.phase, "weather": TimeOfDay.weather}
@@ -312,6 +356,7 @@ func _process(delta: float) -> void:
 			m.set_rain(_rain, bout.shelter, bout.umbrella)
 	_update_depth_parents()
 	_report_sleepers()
+	_wave_tick(delta)
 	if _qa_count > 0 or _qa_pet != &"":
 		_qa_tick(delta)
 	if not _qa_touch.is_empty():
@@ -419,6 +464,8 @@ func _spawn(sp: StringName, walk_in: bool) -> Mossling:
 
 func _send_away(sp: StringName) -> void:
 	var m: Mossling = _mosslings.get(sp)
+	if m != null:
+		_scene_cast.erase(m)
 	brain.remove_visit(sp)
 	_commanded.erase(sp)
 	_override_until.erase(sp)
@@ -687,6 +734,8 @@ func _on_touched(m: Mossling) -> void:
 
 
 func _on_tapped(m: Mossling) -> void:
+	if _scene_cast.has(m) and Game.is_ready:
+		Game.tap_scene()  # GDD §13.4 step 6: the player looked - it goes to Memories (and the name tag still shows)
 	var tap: Dictionary = (_content.motion.get("creature", {}) as Dictionary).get("tap", {})
 	var window_s := float(tap.get("second_tap_opens_card_ms", 2000.0)) * MS
 	var now := Clock.ticks_s()
@@ -705,6 +754,74 @@ func _on_petted(m: Mossling) -> void:
 	if Game.is_ready and not _is_qa(m.species_id):
 		Game.pet(m.species_id)
 	mossling_petted.emit(m.species_id)
+
+
+# ================================================================= away scenes (Retention v1 F3)
+
+## Stages [param sc] (a Game.pending_scene / scene_ready record): each role's friend goes to its
+## slot and holds the scene's pose (SceneLayer.scene_pose). A friend already in the hollow walks
+## there under an override; one who is not fades in at the slot as an extra, like a greeter: no
+## gift, no affection, and it walks off when the scene ends.
+func _stage_scene(sc: Dictionary) -> void:
+	var id := StringName(String(sc.get("scene", "")))
+	if id == &"" or id == _scene_id:
+		return
+	if _scene_id != &"":
+		_end_scene()
+	var cast: Array = sc.get("cast", [])
+	var def: Dictionary = _content.scenes_by_id.get(id, {})
+	var roles: Array = def.get("roles", [])
+	var anchor := SceneLayer.anchor_px(_content, id, cast)
+	_scene_id = id
+	for i in cast.size():
+		var sp := StringName(String(cast[i]))
+		var slot := SceneLayer.slot_px(_content, id, i, cast)
+		var pose_id := StringName(String((roles[i] as Dictionary).get("pose", ""))) if i < roles.size() else &""
+		var pose := SceneLayer.scene_pose(pose_id, slot, anchor)
+		var m: Mossling = _mosslings.get(sp)
+		if m != null and not m.leaving:
+			_override_until[sp] = INF
+			m.set_sort_bias(0.0)
+			var hold := func() -> void:
+				m.perform(StringName(String(pose["behaviour"])), SceneLayer.SCENE_SPOT, pose["params"])
+			if m.feet().distance_to(slot) < 6.0:
+				hold.call()
+			else:
+				m.walk(_path(m.feet(), slot, m.seed01), hold)
+		else:
+			m = _make(sp, fposmod(float(hash([String(sp), String(id)]) & 0xFFFF) / 65536.0, 1.0))
+			_extras.append(m)
+			_scene_extras.append(m)
+			m.enter_from(slot, PackedVector2Array(), Callable())
+			m.perform(StringName(String(pose["behaviour"])), SceneLayer.SCENE_SPOT, pose["params"])
+		_scene_cast.append(m)
+	AudioDirector.play_cue(SceneLayer.CUE_STAGED, {"haptic": false})
+
+
+## The scene was archived (tapped, or 600 s of foreground time): the visitors go back to their
+## bouts and the summoned friends walk off.
+func _end_scene() -> void:
+	for m: Mossling in _scene_cast:
+		if not is_instance_valid(m):
+			continue
+		if _scene_extras.has(m):
+			if not m.leaving:
+				m.leave_to(_path(m.feet(), _entry_px(m.species_id), m.seed01))
+		else:
+			_override_until.erase(m.species_id)
+			_commanded.erase(m.species_id)  # the brain re-commands on the next frame
+	_scene_cast.clear()
+	_scene_extras.clear()
+	_scene_id = &""
+
+
+## Tests and the debug readout: the staged scene and who is in it.
+func staged_scene() -> StringName:
+	return _scene_id
+
+
+func is_in_scene(m: Mossling) -> bool:
+	return _scene_cast.has(m)
 
 
 # ================================================================= QA fixture

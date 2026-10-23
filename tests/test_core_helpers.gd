@@ -84,6 +84,67 @@ func test_recap_orders_lines_by_priority() -> void:
 	assert_true(Recap.should_show(c, 3600.0, events))
 
 
+## Round 8 (GDD §7.5, §13.5.3): "{name} napped at the {spot}" takes the visitors slot when the
+## absence had a nap in it - it says what a friend did, not just that somebody came.
+func test_the_nap_line_takes_the_visitors_slot() -> void:
+	var sim := WorldSim.new_game(c, 5, 1792454400.0, 0.0)
+	var events: Array[Dictionary] = [
+		{"type": WorldSim.EV_STAGE, "stage": WorldSim.STAGE_BLOOM, "t": 2.0},
+		{"type": WorldSim.EV_ARRIVED, "species": &"buttonbud", "debut": false, "t": 3.0},
+	]
+	var without := Recap.build(sim, events, 0.0, 0.0)
+	assert_eq(without[0]["key"], &"RECAP_ONE_VISITED", "no nap: the visitors line as before")
+	var nap := {"species": &"buttonbud", "spot": &"sun_stone", "seconds": 900.0}
+	var with_nap := Recap.build(sim, events, 0.0, 0.0, nap)
+	assert_eq(with_nap[0]["key"], &"RECAP_NAPPED")
+	assert_eq(StringName(with_nap[0]["species"]), &"buttonbud")
+	assert_eq(StringName(with_nap[0]["spot"]), &"sun_stone", "the spot rides along for the UI to name")
+	assert_false(_has_key(with_nap, &"RECAP_ONE_VISITED"), "it replaces the visitors line, never doubles it")
+
+
+## A friend who kept a wish is the warmest no-FOMO reason to come back the game has, and until
+## now the welcome-back card never mentioned it. A wish never expires, so this is an offer and
+## can never become a deadline (GDD §14.0 AP3).
+func test_a_waiting_wish_is_offered_on_the_welcome_back_card() -> void:
+	var sim := WorldSim.new_game(c, 5, 1792454400.0, 0.0)
+	var events: Array[Dictionary] = [{"type": WorldSim.EV_STAGE, "stage": WorldSim.STAGE_BLOOM, "t": 2.0}]
+	assert_eq(Recap.wish_waiting(sim), &"", "nothing pending: no line")
+	sim.state.wishes.append({"species": &"puffmoss", "wish": &"cuddle", "opened_t": 50.0,
+		"state": WorldState.WISH_HELD, "taps": 0, "placed": false})
+	sim.state.wishes.append({"species": &"bellkin", "wish": &"cuddle", "opened_t": 10.0,
+		"state": WorldState.WISH_OPEN, "taps": 0, "placed": false})
+	assert_eq(Recap.wish_waiting(sim), &"bellkin", "the oldest wish still waiting")
+	var lines := Recap.build(sim, events, 0.0, 0.0)
+	assert_true(_has_key(lines, &"RECAP_WISH_WAITING"))
+	assert_eq(StringName(_line(lines, &"RECAP_WISH_WAITING")["species"]), &"bellkin")
+
+
+## The grant line and the waiting line are two halves of the same thought: never both.
+func test_a_granted_wish_suppresses_the_waiting_line() -> void:
+	var sim := WorldSim.new_game(c, 5, 1792454400.0, 0.0)
+	sim.state.wishes.append({"species": &"bellkin", "wish": &"cuddle", "opened_t": 10.0,
+		"state": WorldState.WISH_OPEN, "taps": 0, "placed": false})
+	var events: Array[Dictionary] = [
+		{"type": WorldSim.EV_WISH_GRANTED, "species": &"puffmoss", "wish": &"cuddle", "on_arrival": true, "t": 5.0}]
+	var lines := Recap.build(sim, events, 0.0, 0.0)
+	assert_true(_has_key(lines, &"RECAP_WISH"))
+	assert_false(_has_key(lines, &"RECAP_WISH_WAITING"))
+
+
+func _has_key(lines: Array[Dictionary], key: StringName) -> bool:
+	for l: Dictionary in lines:
+		if StringName(l["key"]) == key:
+			return true
+	return false
+
+
+func _line(lines: Array[Dictionary], key: StringName) -> Dictionary:
+	for l: Dictionary in lines:
+		if StringName(l["key"]) == key:
+			return l
+	return {}
+
+
 func test_harmony_helpers_match_theory_py() -> void:
 	var fmaj9 := [5, 7, 9, 0, 2]
 	assert_eq(Harmony.snap(64, fmaj9), 65, "E snaps up to F (ties prefer +1 before -1)")

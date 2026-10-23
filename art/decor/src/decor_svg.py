@@ -149,20 +149,28 @@ def stream_stone(svg: Svg) -> Part:
 # Toadstool seat (toadstool_cap + toadstool_stem)
 # --------------------------------------------------------------------------------------------- #
 
-def toadstool_cap(svg: Svg) -> Part:
-    """Domed cap 48 x 28: cream spots (detail), gills tucked under the rim (shade)."""
+# Cap spot patterns: variant 0 is the original; variant 1 is the cap seen from its other side (a
+# big spot low on the left, a cluster up right), so a turn reads as a turn, not just a mirror.
+CAP_SPOTS = (
+    ((15, 10, 3.6), (27, 6.4, 3.0), (36, 12, 3.4), (22, 15.6, 2.4), (9, 17, 2.0), (41, 18, 1.8), (31, 18.4, 2.0)),
+    ((11, 14, 4.2), (24, 8.4, 2.2), (33, 6.6, 3.2), (39, 13.6, 2.6), (19, 18.6, 1.8), (29, 15, 2.8), (44, 19, 1.6),
+     (6, 19.4, 1.4)),
+)
+
+
+def toadstool_cap(svg: Svg, variant: int = 0) -> Part:
+    """Domed cap 48 x 28: cream spots (detail, pattern by [variant]), gills under the rim (shade)."""
     p = Part(svg, 50, 30, (0.5, 0.9))
-    rng = random.Random(221)
+    rng = random.Random(221 + variant)
     dome = smooth_path([(2.4, 22), (4.4, 13), (12, 5), (25, 1.6), (38, 5), (45.6, 13), (47.6, 22), (40, 25.2),
                         (25, 26.4), (10, 25.2)])
     clip = svg.clip(dome)
     p.path(dome, svg.rad(20, 6, 30, [(0, LIT), (0.6, LIT), (1, SHADE)]))
     p.path(smooth_path([(2.4, 21), (12, 24.4), (25, 25.6), (38, 24.4), (47.6, 21), (40, 28), (10, 28)]), SHADE, 0.9,
            svg.blur(0.9), clip=clip)
-    for cx, cy, r in ((15, 10, 3.6), (27, 6.4, 3.0), (36, 12, 3.4), (22, 15.6, 2.4), (9, 17, 2.0), (41, 18, 1.8),
-                      (31, 18.4, 2.0)):
+    for cx, cy, r in CAP_SPOTS[variant]:
         p.path(blob(cx, cy, r, r * 0.8, 9, 0.12, rng), DETAIL, 0.95, clip=clip)
-    p.ellipse(18, 7, 8, 2.6, LIT, 0.55, svg.blur(1.2), clip)
+    p.ellipse(18 if variant == 0 else 30, 7, 8, 2.6, LIT, 0.55, svg.blur(1.2), clip)
     # Plush toy seam (round 5): cream running stitch where the cap's felt meets its underside.
     p.stitch([(5.2, 19.6), (12, 22.4), (25, 23.4), (38, 22.4), (44.8, 19.6)], 1.6, 3.0, 2.3, clip, opacity=0.95,
              groove=0.45)
@@ -411,6 +419,7 @@ PARTS = [
     ("pebble_5", lambda s: pebble_flat(s, 246, 34, 15, False), "pebble_alt", 0.0, 0),
     ("stream_stone", stream_stone, "stone_cool", 0.0, 1),
     ("toadstool_cap", toadstool_cap, "toadstool_cap", 0.0, 1),
+    ("toadstool_cap_b", lambda s: toadstool_cap(s, 1), "toadstool_cap", 0.0, 1),
     ("toadstool_stem", toadstool_stem, "toadstool_stem", 0.0, 0),
     ("lantern_crook", lantern_crook, "wood_bark", 0.0, 0),
     ("lantern_core", lantern_core, "lantern_light", 0.85, 0),
@@ -442,6 +451,8 @@ LAYOUT = {
     "set_scale": {"leaf_pinwheel": 1.3, "pebble_cairn": 1.0, "toadstool_seat": 1.25, "stream_stones": 0.82,
                   "firefly_lantern": 1.0, "wind_chime": 1.35},
     "toadstool_cap_dy": -20.0,
+    # Turn steps (decor_placement.json rot_render "variant"): the cap pattern per variant.
+    "toadstool_caps": ["toadstool_cap", "toadstool_cap_b"],
     "jar_centre_dy": 28.0,
     "toadstool_ring": {"centre": [345.6, 825.6], "radii": [72.0, 34.0], "motes": 6},
     "chime_sort_y": 806.0,

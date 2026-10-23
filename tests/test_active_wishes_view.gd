@@ -333,3 +333,81 @@ func test_wish_list_empty_state() -> void:
 	add_child_autofree(list)
 	WishAlbum.build_list(list, list)
 	assert_null(_find(list, "WishRow_puffmoss"), "no rows, the empty line instead")
+
+
+# ------------------------------------------------------------------ polish (integration QA)
+
+func test_album_wish_card_offers_tea_to_a_present_friend() -> void:
+	_active_world()
+	var v := VBoxContainer.new()
+	add_child_autofree(v)
+	WishAlbum.detail_section(v, &"puffmoss", v)
+	var b := _find(v, "OfferTea") as Button
+	assert_not_null(b, "the tea nook is awake and puffmoss is here: Offer tea")
+	if b == null:
+		return
+	assert_eq(b.text, tr("ALBUM_OFFER_TEA"))
+	assert_gte(b.custom_minimum_size.y, UiSheet.MIN_TARGET, ">= 48 dp target")
+	assert_true(b.has_meta(TapGuard.META_WIRED), "TapGuard: slop, scroll-through and debounce")
+	assert_ne(b.mouse_filter, Control.MOUSE_FILTER_IGNORE)
+	assert_not_null(_find(v, "Visit"), "Say hello stays beside it")
+	var away := VBoxContainer.new()
+	add_child_autofree(away)
+	WishAlbum.detail_section(away, &"dandelfluff", away)
+	assert_null(_find(away, "OfferTea"), "no Offer tea for a friend who is away")
+	Game.sim.state.tea_unlocked = false
+	assert_false(WishAlbum.offer_tea_available(&"puffmoss"), "no Offer tea before the nook wakes")
+
+
+func test_offer_tea_without_a_hud_does_nothing() -> void:
+	_active_world()
+	var v := VBoxContainer.new()
+	add_child_autofree(v)
+	WishAlbum.offer_tea(&"puffmoss", v)  # no HudController above: no sheet, no error
+	assert_true(Game.wish_of(&"puffmoss").size() > 0, "nothing was offered")
+
+
+func test_the_kept_note_shows_once() -> void:
+	var sim := _active_world()
+	sim.state.tips_seen.clear()
+	WishAlbum._kept_shown.clear()
+	var args := {"name": "Bơ"}
+	var first := WishAlbum.held_note(&"dandelfluff", args)
+	assert_eq(first, I18n.fmt(&"WISH_TIP_HELD", args), "the first time: the keeps-the-wish note")
+	assert_true(Game.tip_seen(Game.TIP_WISH_KEPT), "remembered in tips_seen (saved)")
+	assert_eq(WishAlbum.held_note(&"dandelfluff", args), first, "it keeps its place this run")
+	WishAlbum._kept_shown.clear()  # a later session
+	assert_eq(WishAlbum.held_note(&"dandelfluff", args), tr("WISH_LIST_AWAY"), "then the plain away line")
+	WishAlbum._kept_shown.clear()
+
+
+func test_a_tea_that_grants_a_wish_makes_one_toast() -> void:
+	_active_world()
+	var l := _layer()
+	await wait_process_frames(3)
+	WishView._tea_lines.clear()
+	var got := l.wishes.qa_fulfil(&"puffmoss")
+	assert_eq(got, [&"puffmoss"] as Array[StringName])
+	await wait_process_frames(2)
+	assert_true(WishView._tea_lines.has(&"puffmoss"), "the wish left its line for the tea toast (no toast of its own)")
+	var res := {"reaction": TeaRules.REACT_LOVED, "wish_granted": "clover_tea", "petals_back": 0}
+	var text := TeaSheet.merged_toast("ignored", res, &"puffmoss", "Bơ", "trà cỏ ba lá")
+	assert_string_starts_with(text, I18n.fmt(&"TEA_REACT_LOVED", {"name": "Bơ", "recipe": "trà cỏ ba lá"}))
+	assert_gt(text.length(), I18n.fmt(&"TEA_REACT_LOVED", {"name": "Bơ", "recipe": "trà cỏ ba lá"}).length() + 4,
+		"the wish's thanks follows in the same toast")
+	assert_false(WishView._tea_lines.has(&"puffmoss"), "taken once")
+	assert_eq(TeaSheet.merged_toast("plain", {"wish_granted": ""}, &"puffmoss", "Bơ", "x"), "plain")
+
+
+func test_recipe_names_read_naturally_mid_sentence() -> void:
+	for loc: String in LOCALES:
+		TranslationServer.set_locale(loc)
+		for r: Dictionary in c.recipes:
+			var id := StringName(String(r["id"]))
+			var title := TeaArt.recipe_name(id)
+			var mid := TeaArt.recipe_name_mid(id)
+			assert_eq(mid.substr(1), title.substr(1), "only the first letter changes")
+			assert_eq(mid.left(1), title.left(1).to_lower(), "%s %s: lower-case inside a sentence" % [loc, id])
+	TranslationServer.set_locale("vi")
+	var line := I18n.fmt(&"TEA_REACT_LOVED", {"name": "Bơ", "recipe": TeaArt.recipe_name_mid(&"sleepy_tea")})
+	assert_false(line.contains("Trà"), "no capital T inside the sentence: %s" % line)

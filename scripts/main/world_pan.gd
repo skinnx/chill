@@ -21,6 +21,8 @@ extends Node
 ##   within [member threshold_px] (the pan threshold: one number, no gap where neither or both
 ##   happen). Moving further cancels the tap (act = false) and starts the pan. A target that
 ##   claims the drag (a mossling: stroke = pet) gets world_drag() instead and never pans.
+## - A touch the OS cancels (a system gesture, a notification shade) is NOT a release: it drops
+##   the pending tap and ends any drag without inertia, so nothing fires on the way out.
 ## - A press that lands while the map glides only catches it (no tap after a fling). A press while
 ##   a sheet or modal card is open ([member blocked]) does nothing (the GUI consumed it anyway).
 ## - No pan STARTS within 24 dp of a side edge (spots.json safe_x, I2); taps there still work.
@@ -46,16 +48,24 @@ signal target_pressed(layer: Node, key: Variant)
 ## A tap on empty ground (released within the slop), in viewport px (Active F3 destinations).
 signal empty_tapped(canvas_pos: Vector2)
 
-enum Kind { NONE, PRESS, MOVE, RELEASE }
+enum Kind { NONE, PRESS, MOVE, RELEASE, CANCEL }
 
 ## Nodes that offer world targets implement world_hit / world_press / world_release (and
 ## world_drag when their candidate sets "drag": true).
 const GROUP_HIT := &"world_hit"
 ## Active F3: while edit mode is on, only these nodes offer targets (the DecorEdit controller).
 const GROUP_HIT_EDIT := &"world_hit_edit"
-## GDD §2.5 hit priority, highest first (choose-a-bed mode lifts beds with room above all).
-const PRIO_CHOOSE_BED := 7
-const PRIO_MOSSLING := 6
+## GDD §2.5 hit priority, highest first (choose-a-bed mode lifts beds with room above all), as
+## extended by §13.3.2: mossling > sign > ready bud > prop > décor tap_fx > bed > stream.
+## Round 10 opened a slot for the mystery signs, so everything above a ready bed moved up one.
+const PRIO_CHOOSE_BED := 8
+const PRIO_MOSSLING := 7
+## Retention v1 F2: a clue in the hollow outranks everything a tap could do to the ground under
+## it, because it is there to be found and it goes away once it is.
+const PRIO_SIGN := 6
+## Retention v1 F3: a staged scene's prop ranks with a sign (the scene's participants are
+## mosslings and rank as such); the two never share an anchor, so the tie never decides.
+const PRIO_SCENE := 6
 const PRIO_READY_BED := 5
 const PRIO_PROP := 4
 const PRIO_DECOR := 3
@@ -67,8 +77,8 @@ const PRIO_STREAM := 1
 const PRIO_PETAL_BED := 5
 const PRIO_TEA_NOOK := 4
 const PRIO_STILL := 1
-const PRIO_EDIT := 8
-const PRIO_EDIT_SELECTED := 9
+const PRIO_EDIT := 9
+const PRIO_EDIT_SELECTED := 10
 ## Fat-finger slop around every world hit area and the upward aim offset of a touch (dp).
 const SLOP_DP := 9.0
 const AIM_UP_DP := 3.0
@@ -211,6 +221,9 @@ func claim_drag() -> bool:
 func nudge(delta_px: Vector2) -> void:
 	if delta_px == Vector2.ZERO:
 		return
+	# The same contract as a drag or a home glide (§3.4): the camera's idle drift is folded into
+	# the pan first, so the ground does not slide under a décor piece the player is still aiming.
+	motion_started.emit()
 	body.snap(body.offset() + delta_px / maxf(zoom, 0.01))
 	FrameGovernor.poke()
 
@@ -318,6 +331,8 @@ func _input(event: InputEvent) -> void:
 		return
 	if kind == Kind.RELEASE:
 		_on_release()
+	elif kind == Kind.CANCEL:
+		cancel()
 	elif kind == Kind.MOVE:
 		_on_move()
 
@@ -326,6 +341,7 @@ func _on_move() -> void:
 	if _target != null:
 		if _target_drag:
 			_target.call(&"world_drag", _target_key, _ev_pos)
+			FrameGovernor.poke()  # a long stroke (petting) is interaction, not idleness
 			get_viewport().set_input_as_handled()
 			return
 		if _ev_pos.distance_to(_press) > threshold_px:
@@ -338,8 +354,14 @@ func _on_move() -> void:
 		if _is_blocked() or _ev_pos.distance_to(_press) < threshold_px:
 			return
 		_dragging = true
-		# start from the slop boundary so the map does not jump by the threshold
-		_origin = _press + (_ev_pos - _press).normalized() * threshold_px
+		# The map starts tracking from wherever the finger IS on the frame the threshold is
+		# crossed, so the pan begins with no jump at all. Starting from the slop boundary instead
+		# left the travel PAST the threshold to be applied in that one frame, and with input
+		# accumulated once per rendered frame (ARCHITECTURE §3.5) that overshoot is v * dt: about
+		# 2 dp for a 1800 px/s flick at 60 fps, but 12 dp at 30 fps, so the map snapped ahead of
+		# the thumb exactly on the slower phones. The slop is simply swallowed; the content then
+		# trails the finger by a constant the player has no reference to notice.
+		_origin = _ev_pos
 		motion_started.emit()
 		body.begin_drag()
 		_raw0 = body.raw
@@ -428,7 +450,12 @@ func _kind(event: InputEvent) -> Kind:
 			return Kind.NONE
 		_ev_pos = st.position
 		_ev_touch = true
-		return Kind.PRESS if st.pressed else Kind.RELEASE
+		if st.pressed:
+			return Kind.PRESS
+		# The OS took the touch away (a system gesture, a notification shade, a call). Android
+		# sends the same release with canceled = true, so without reading it the finger that was
+		# dragged off the screen by the system fires a real world action on the way out.
+		return Kind.CANCEL if st.canceled else Kind.RELEASE
 	var sd := event as InputEventScreenDrag
 	if sd != null:
 		if sd.index != 0:

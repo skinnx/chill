@@ -92,9 +92,9 @@ func after_each() -> void:
 
 
 func _bump(a0: Variant = null, a1: Variant = null, a2: Variant = null, a3: Variant = null,
-		a4: Variant = null, a5: Variant = null, name: String = "") -> void:
-	# signals carry 0-6 args; the bound name is always the last one passed
-	var args := [a0, a1, a2, a3, a4, a5, name]
+		a4: Variant = null, a5: Variant = null, a6: Variant = null, name: String = "") -> void:
+	# signals carry 0-7 args; the bound name is always the last one passed
+	var args := [a0, a1, a2, a3, a4, a5, a6, name]
 	var key := ""
 	for i in range(args.size() - 1, -1, -1):
 		if args[i] is String and String(args[i]) != "":

@@ -41,7 +41,7 @@
 		"resume_in_edit_mode": false
 	},
 	"hit": {
-		"prio_edit_piece": 8,
+		"prio_edit_piece": 9,
 		"prio_edit_selected_bonus": 1,
 		"edit_piece_hit_dp": 60,
 		"edit_piece_hit_dp_look_zone": 64,
@@ -190,12 +190,12 @@
 			"ring": {"forms_at": 3, "socket_radius_dp": 16, "socket_count": 10, "glow_motes": 6},
 			"rot_steps": 4,
 			"rot_render": [
-				{"flip": false, "variant": 0},
-				{"flip": true, "variant": 0},
-				{"flip": false, "variant": 1},
-				{"flip": true, "variant": 1}
+				{"flip": false, "variant": 0, "cap_tilt_deg": 0},
+				{"flip": false, "variant": 1, "cap_tilt_deg": 5},
+				{"flip": true, "variant": 0, "cap_tilt_deg": 0},
+				{"flip": true, "variant": 1, "cap_tilt_deg": 5}
 			],
-			"rot_note": "variant = cap spot pattern",
+			"rot_note": "a quarter turn per step, like the pinwheel: variant = the cap's spot pattern (toadstool_cap / toadstool_cap_b, the cap's other side), flip = the far side, cap_tilt_deg leans the cap on the side steps (mirrored with the flip); every step reads differently",
 			"affinity": ["ring_around_cluster", "same_set_ring", "legacy_anchor"]
 		},
 		"stream_stones": {

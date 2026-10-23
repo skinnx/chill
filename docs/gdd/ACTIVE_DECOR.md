@@ -105,7 +105,7 @@ EDIT ─┬─ press a piece ──▶ PRESSED (lifts in the same frame; the dra
 - **Carry offset.** Over the first 120 ms of the drag, the piece's foot eases to **24 dp above the contact point**, so the thumb never hides the foot ring or the snap marker.
 - **Lean.** The piece leans up to 6° into its motion on `follow` (secondary motion, V5: no shake).
 - **Magnet.** Within 14 dp of a snap socket, the piece is pulled toward it (smoothstep, at most 70 % of the way, so the finger always stays in charge). The socket shows a sparkle dot, and entering a socket gives S36 with a TICK, at most once per 150 ms.
-- **Validity, live.** The foot ring is `leaf` at 3 dp when the spot is valid. When it is not, the ring becomes a dashed `ink_2` ring and the piece fades to α 0.7 with a slight lean back. After 150 ms of being invalid (no flicker), one hint bubble names the reason (§4.3). Never red, never a buzz, never a screen shake.
+- **Validity, live.** The foot ring is `leaf` at 3 dp when the spot is valid. When it is not, the ring becomes a dashed `ink_2` ring and the piece fades to α 0.8 with a slight lean back; a soft ink lift shadow and a cream glow behind the lifted piece (stronger here) keep it readable over flowers (polish, 2026-10-22). After 150 ms of being invalid (no flicker), one hint bubble names the reason (§4.3). Never red, never a buzz, never a screen shake.
 - **Keep-clear halos.** Only while a piece is held, the beds' soil ellipses, the always-on spots and the built nests show soft `ink` @ 0.10 halos, and when a stone is held the water line glows faintly.
 - **Edge pan.** After 250 ms within 40 dp of a side edge, the map pans toward that side, up to 220 dp/s and easing in with depth (half that under Reduce Motion), and stops at the rest bounds. The pan wings (x −0.30 … 1.30) are placeable, so a garden can spread beyond the home view.
 
@@ -186,9 +186,9 @@ A socket is only offered if it is valid for the held piece. Ties go to the famil
 
 `rot` is a step `0 … rot_steps − 1`, stored per piece. Rendering is by stamp flip, x-squash or variant (`sets.*.rot_render`), because the art is 2D tone-mask stamps (Art Bible §6.6):
 - **pinwheel:** front, ¾ right (squash 0.72), back (blade colours swapped), ¾ left.
+- **toadstool:** front (cap A), quarter turn (cap B, the other side's spots, cap leaning 5°), back (cap A mirrored), three-quarter (cap B mirrored, leaning the other way): every step changes the cap's face.
 - **lantern:** crook left or right.
 - **stone:** flip.
-- **toadstool:** flip × two cap-spot patterns (Art: one extra region).
 - **cairn:** each turn re-seeds the pebble offsets and tilts (±4 px, ±5°), so the stack is "rebalanced".
 
 Signals carry `rot_deg = step × 360 / rot_steps` (for F1).
@@ -338,7 +338,7 @@ Migration never removes or overwrites keys and never changes `owned`. An old `.b
 | Long-press → edit | ring fill, then chrome rises and the piece lifts | S35, S07 | — / TICK |
 | Lift in edit | scale 1.08, rise 6 dp, shadow grows | S35 | — / TICK |
 | Enter a socket | sparkle dot brightens, magnet pull | S36 | — / TICK |
-| Invalid spot | dashed `ink_2` ring, α 0.7, hint after 150 ms | none (S11 only on a disabled button) | — |
+| Invalid spot | dashed `ink_2` ring, α 0.8 + cream lift glow, hint after 150 ms | none (S11 only on a disabled button) | — |
 | Settle | `move` settle + 4-mote dust puff | S05 | TICK / TICK |
 | Turn | `pop` turn + 2 dp hop | S37 | — / TICK |
 | Put away / take out | shrink into the tile / pop out | S38 / S35 | — / TICK |

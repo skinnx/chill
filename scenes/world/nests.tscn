@@ -1,0 +1,7 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/world/nest_layer.gd" id="1_nests"]
+
+[node name="NestLayer" type="Node2D"]
+y_sort_enabled = true
+script = ExtResource("1_nests")

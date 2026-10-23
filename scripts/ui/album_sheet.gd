@@ -25,6 +25,19 @@ const HEART_PX := 36.0
 const DETAIL_HEART_PX := 54.0
 const HEARTS := 5
 const EMPTY_HEART_ALPHA := 0.35
+## Tab order (GDD §13.5.1; round 10 added Clues, round 11 Memories and Keepsakes: Photos moved
+## into Memories as its second section).
+const TAB_FRIENDS := 0
+const TAB_CLUES := 1
+const TAB_MEMORIES := 2
+const TAB_KEEPSAKES := 3
+const TAB_POSTCARDS := 4
+## A memory card's cast wells are this tall; a keepsake row's gift thumbnail this wide.
+const MEMORY_WELL_H := 168.0
+const GIFT_PX := 96.0
+## Unlock list rows (friend card): the little heart in front of each line.
+const UNLOCK_HEART_PX := 30.0
+
 const COLUMNS := 3
 const COLUMNS_LARGE_TEXT := 2
 const LARGE_TEXT := 150
@@ -114,7 +127,7 @@ func current_tab() -> int:
 
 
 func select_tab(i: int, animate: bool = true) -> void:
-	_tab = clampi(i, 0, 2)
+	_tab = clampi(i, TAB_FRIENDS, TAB_POSTCARDS)
 	_friend = &""
 	_tabs.select(_tab, animate)
 	_fill()
@@ -126,8 +139,8 @@ func select_tab(i: int, animate: bool = true) -> void:
 
 ## Friend detail (pushed with `standard`; Back / the back chevron returns to the grid).
 func show_friend(species: StringName) -> void:
-	_tab = 0
-	_tabs.select(0, false)
+	_tab = TAB_FRIENDS
+	_tabs.select(TAB_FRIENDS, false)
 	_friend = species
 	_fill()
 	_scroll.scroll_vertical = 0
@@ -185,7 +198,8 @@ func _style_name_field(e: LineEdit) -> void:
 
 
 func _tab_texts() -> PackedStringArray:
-	return PackedStringArray([tr("ALBUM_TAB_FRIENDS"), tr("ALBUM_TAB_PHOTOS"), tr("ALBUM_TAB_POSTCARDS")])
+	return PackedStringArray([tr("ALBUM_TAB_FRIENDS"), tr("ALBUM_TAB_CLUES"), tr("ALBUM_TAB_MEMORIES"),
+		tr("ALBUM_TAB_KEEPSAKES"), tr("ALBUM_TAB_POSTCARDS")])
 
 
 func _fill() -> void:
@@ -198,7 +212,7 @@ func _fill() -> void:
 	if Game.sim == null:
 		return
 	_count.text = "%d / %d" % [Game.sim.met_count(), ContentRegistry.content.species.size()]
-	if _qa_wish_list and _friend == &"" and _tab == 0:
+	if _qa_wish_list and _friend == &"" and _tab == TAB_FRIENDS:
 		_qa_wish_list = false
 		_friend = WishAlbum.PAGE
 		_tabs.visible = false
@@ -210,11 +224,15 @@ func _fill() -> void:
 		_build_detail(_friend)
 		return
 	match _tab:
-		0:
+		TAB_FRIENDS:
 			_build_friends()
-		1:
-			_build_photos()
-		2:
+		TAB_CLUES:
+			_build_clues()
+		TAB_MEMORIES:
+			_build_memories()
+		TAB_KEEPSAKES:
+			_build_keepsakes()
+		TAB_POSTCARDS:
 			_build_postcards()
 
 
@@ -294,6 +312,73 @@ func _friend_card(sp: StringName, s: Dictionary, w: float) -> Control:
 	c.resized.connect(sync)
 	b.custom_minimum_size = Vector2(w, c.get_combined_minimum_size().y)
 	return b
+
+
+## Album › Clues (Retention v1 F2, GDD §13.3.3). One card per OPENED mystery, in the order the
+## sim gives: species in album order, then cousins in opening order. A mystery that has not opened
+## is not here - the Friends tab's silhouette and hint already cover it.
+##
+## Round 10: the read-back half of the signs in the hollow. Nothing on this tab is a task; it is
+## where what you found goes, and what is still missing shows as an empty dot, never a count-down.
+func _build_clues() -> void:
+	var cards := Game.clue_cards()
+	if cards.is_empty():
+		var empty := label(tr("CLUES_EMPTY"), &"SecondaryLabel", true)
+		empty.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_list.add_child(empty)
+		return
+	for c: Dictionary in cards:
+		_list.add_child(_clue_card(c))
+
+
+func _clue_card(c: Dictionary) -> Control:
+	var sp := StringName(String(c.get("species", "")))
+	var solved := bool(c.get("solved", false))
+	var variant := StringName(String(c.get("variant", "")))
+	var box := card(CARD_PAD, ThemeBuilder.R_L, UiTokens.E1)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override(&"separation", 10)
+	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(v)
+	# Solved shows the friend as they are; still open shows the soft silhouette, no face.
+	v.add_child(_portrait_well(sp, solved, WELL_H, &"awake"))
+	var title := ""
+	if solved:
+		title = I18n.fmt(&"CLUES_SOLVED", {"name": Game.display_name(sp)})
+	elif variant != &"":
+		title = I18n.fmt(&"CLUES_COUSIN", {"name": Game.display_name(sp)})
+	else:
+		title = tr("CLUES_SOMEONE")
+	var t := label(title, &"StrongLabel", true)
+	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(t)
+	var found := int(c.get("found", 0))
+	var total := int(c.get("total", 0))
+	if total > 0:
+		var dots := _clue_dots(found, total)
+		dots.tooltip_text = I18n.fmt(&"CLUES_COUNT", {"count": found, "total": total})
+		v.add_child(dots)
+	# The riddle is the reward for finding the note, so it only appears once that one is in.
+	var riddle := String(c.get("riddle_key", ""))
+	if riddle != "" and (bool(c.get("riddle_found", false)) or solved):
+		var r := label(tr(riddle), &"BodyLabel", true)
+		r.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		v.add_child(r)
+	return box
+
+
+## ● found, ○ still out there. Dots, never a number: the tab says what you have, not what you owe.
+func _clue_dots(found: int, total: int) -> Control:
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override(&"separation", 12)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for i in total:
+		var d := label("\u25CF" if i < found else "\u25CB", &"StrongLabel")
+		d.modulate.a = 1.0 if i < found else EMPTY_HEART_ALPHA
+		d.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row.add_child(d)
+	return row
 
 
 ## A friend's well: the studio-lit portrait (or the soft silhouette of a friend not met yet),
@@ -412,6 +497,7 @@ func _build_detail(sp: StringName) -> void:
 	if best:
 		v.add_child(_pill_tag(tr("ALBUM_BEST_FRIEND"), &"gold_tint"))
 	v.add_child(_hearts(sim.hearts_of(sp), false, DETAIL_HEART_PX))
+	v.add_child(_unlock_list(sp))
 	if sim.is_present(sp):
 		var pet := pill_button(tr("ALBUM_PET"), true, ThemeBuilder.BUTTON_H)
 		pet.pressed.connect(func() -> void:
@@ -422,6 +508,18 @@ func _build_detail(sp: StringName) -> void:
 	if Game.feature_on(&"wishes"):  # Active F1 wish section: wishing row, tea line, stamps
 		WishAlbum.detail_section(v, sp, self)
 	v.add_child(_fact(tr("ALBUM_FAVOURITE_SPOT"), _spot_text(sp, s)))
+	# Retention v1 (GDD §13.5.1): the nest, the best buddy and the cousin, each only once it is real.
+	var nest := Game.nest_state(sp)
+	if not nest.is_empty():
+		v.add_child(label(I18n.fmt(&"ALBUM_NEST", {"name": Game.display_name(sp),
+			"nest": "%s · %s" % [tr(String(nest["style_key"])), tr(String(nest["stage_key"]))]}), &"BodyLabel", true))
+	var buddy := Game.best_buddy(sp)
+	if bool(buddy.get("active", false)):
+		v.add_child(_pill_tag(I18n.fmt(&"ALBUM_PAIR", {"friend": Game.display_name(StringName(String(buddy["friend"])))}),
+			&"primary_tint"))
+	var cousin := Game.cousin_of(sp)
+	if bool(cousin.get("met", false)):
+		v.add_child(_cousin_row(cousin))
 	var met_unix := float(sim.state.met.get(String(sp), 0.0))
 	if met_unix > 0.0:
 		var date := Time.get_date_string_from_unix_time(int(met_unix + sim.state.tz_offset_s))
@@ -498,6 +596,175 @@ func _rename(sp: StringName, t: String) -> void:
 	var clean := Game.rename(sp, t)
 	if _name_edit != null and not _name_edit.has_focus():
 		_name_edit.text = clean if clean != "" else Game.display_name(sp)
+
+
+# ------------------------------------------------------------------ photos
+
+# ------------------------------------------------------------------ memories (round 11, GDD §13.4, §13.5.1)
+
+## Little moments (away scenes, newest first) and then the photos (the poses taken).
+func _build_memories() -> void:
+	_list.add_child(_section(tr("MEMORIES_SECTION_MOMENTS")))
+	var moments := Game.memories()
+	if moments.is_empty():
+		_list.add_child(_empty_note(&"sparkle", tr("MEMORIES_EMPTY")))
+	for i in range(moments.size() - 1, -1, -1):
+		_list.add_child(_memory_card(moments[i]))
+	_list.add_child(_section(tr("ALBUM_TAB_PHOTOS")))
+	_build_photos()
+
+
+func _section(text: String) -> Control:
+	var l := label(text, &"StrongLabel")
+	l.add_theme_constant_override(&"margin_top", 12)
+	return l
+
+
+## One archived scene: its title, the cast as they were (sleeping or beaming), the caption with
+## their names, and the day it happened.
+func _memory_card(m: Dictionary) -> Control:
+	var id := String(m.get("scene", ""))
+	var sc: Dictionary = ContentRegistry.content.scenes_by_id.get(StringName(id), {})
+	var cast: Array = m.get("cast", [])
+	var box := card(CARD_PAD, ThemeBuilder.R_L, UiTokens.E1)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override(&"separation", 10)
+	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(v)
+	var t := label(tr(String(sc.get("title_key", "SCENE_%s_TITLE" % id.to_upper()))), &"StrongLabel", true)
+	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(t)
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override(&"separation", 12)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var pose := memory_pose(StringName(id))
+	for sp_s: Variant in cast:
+		var sp := StringName(String(sp_s))
+		var well := _portrait_well(sp, true, MEMORY_WELL_H, pose)
+		well.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(well)
+	v.add_child(row)
+	var args := {"name": Game.display_name(StringName(String(cast[0]))) if cast.size() > 0 else "",
+		"friend": Game.display_name(StringName(String(cast[1]))) if cast.size() > 1 else ""}
+	var cap := label(I18n.fmt(StringName(String(sc.get("caption_key", "SCENE_%s_CAPTION" % id.to_upper()))), args),
+			&"BodyLabel", true)
+	cap.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(cap)
+	var unix := float(m.get("unix", 0.0))
+	if unix > 0.0:
+		var date := Time.get_date_string_from_unix_time(int(unix + Game.sim.state.tz_offset_s))
+		var when := label(date, &"SecondaryLabel")
+		when.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		v.add_child(when)
+	return box
+
+
+## The portrait pose a scene's cast is remembered in: the sleeping scenes asleep, the rest beaming.
+## (The scene poses themselves are rig work still to come; the Album never shows a key.)
+static func memory_pose(scene: StringName) -> StringName:
+	return &"asleep" if scene in [&"nap_pile", &"pair_nap"] else &"happy"
+
+
+# ------------------------------------------------------------------ keepsakes (round 11, GDD §13.5.1)
+
+## ♥5 portraits, signature gifts and cousins met, each newest last (RetentionRules.keepsake_view).
+func _build_keepsakes() -> void:
+	var k := Game.keepsakes()
+	var portraits: Array = k.get("portraits", [])
+	var gifts: Array = k.get("signature_gifts", [])
+	var cousins: Array = k.get("cousins", [])
+	if portraits.is_empty() and gifts.is_empty() and cousins.is_empty():
+		_list.add_child(_empty_note(&"heart", tr("KEEPSAKES_EMPTY")))
+		return
+	for p: Dictionary in portraits:
+		_list.add_child(_keepsake_portrait(StringName(String(p["species"]))))
+	for g: Dictionary in gifts:
+		_list.add_child(_keepsake_gift(g))
+	for cv: Dictionary in cousins:
+		_list.add_child(_cousin_row(cv))
+
+
+func _keepsake_portrait(sp: StringName) -> Control:
+	var box := card(CARD_PAD, ThemeBuilder.R_L, UiTokens.E1)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override(&"separation", 10)
+	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(v)
+	v.add_child(_portrait_well(sp, true, WELL_H, &"happy"))
+	var t := label(I18n.fmt(&"KEEPSAKE_TITLE", {"name": Game.display_name(sp)}), &"StrongLabel", true)
+	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(t)
+	var sub := label(tr("KEEPSAKE_PORTRAIT"), &"SecondaryLabel", true)
+	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(sub)
+	return box
+
+
+func _keepsake_gift(g: Dictionary) -> Control:
+	var sp := StringName(String(g["species"]))
+	var box := card(CARD_PAD, ThemeBuilder.R_L, UiTokens.E1)
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override(&"separation", 18)
+	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(h)
+	# the gift itself, live from the décor atlas (the Basket's own stamp cell)
+	var plate := UiSurface.make(UiTokens.sc(&"gold_tint"), ThemeBuilder.R_M)
+	plate.custom_minimum_size = Vector2(GIFT_PX, GIFT_PX)
+	plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var prev := ItemPreview.new()
+	prev.show_item(StringName(String(g.get("item", ""))))
+	plate.add_child(prev)
+	plate.resized.connect(func() -> void:
+		prev.size = plate.size * 0.8
+		prev.position = plate.size * 0.1)
+	h.add_child(plate)
+	var l := label(I18n.fmt(&"KEEPSAKE_GIFT", {"name": Game.display_name(sp),
+		"gift": tr(String(g.get("name_key", "")))}), &"BodyLabel", true)
+	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	h.add_child(l)
+	return box
+
+
+## A cousin met (Keepsakes, and the friend card's cousin row): its name and its description.
+func _cousin_row(cv: Dictionary) -> Control:
+	var base := StringName(String(cv.get("species", "")))
+	var box := card(CARD_PAD, ThemeBuilder.R_L, UiTokens.E1)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override(&"separation", 6)
+	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(v)
+	v.add_child(_pill_tag(tr(String(cv.get("name_key", ""))), &"gold_tint"))
+	v.add_child(label(I18n.fmt(StringName(String(cv.get("desc_key", ""))), {"name": Game.display_name(base)}),
+			&"BodyLabel", true))
+	return box
+
+
+## The friend card's five unlock lines (GDD §13.5.1): reached lines in ink, the rest in ink_2 with
+## "Comes with more hearts" - never a countdown, never points.
+func _unlock_list(sp: StringName) -> Control:
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override(&"separation", 6)
+	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for u: Dictionary in Game.unlocks(sp):
+		var reached := bool(u["reached"])
+		var h := HBoxContainer.new()
+		h.add_theme_constant_override(&"separation", 10)
+		h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var ic := Icons.rect(&"heart" if reached else &"heart_empty", UNLOCK_HEART_PX)
+		ic.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+		if not reached:
+			UiBatch.set_alpha(ic, EMPTY_HEART_ALPHA)
+		h.add_child(ic)
+		var text := tr(String(u["album_key"]))
+		if not reached:
+			text += " · " + tr("ALBUM_UNLOCK_LATER")
+		var l := label(text, &"BodyLabel" if reached else &"SecondaryLabel", true)
+		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		h.add_child(l)
+		v.add_child(h)
+	return v
 
 
 # ------------------------------------------------------------------ photos

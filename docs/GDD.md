@@ -166,7 +166,7 @@ Props (⟲ `spots.json:props`):
 | `willow` | 0.120 | 0.300 | 140 × 170 | — | — |
 | `tea_nook` (Active F2, ⟲ `tea.json:nook`; sits on the stump once tea unlocks) | 0.900 | 0.400 | 56 × 44 | open_tea | 64 |
 
-**Hit priority** when targets overlap (world): mossling > bed with a ready bud **or ready petals** (Active F2) > prop (basket, mailbox, chime, tea nook) > décor piece with a `tap_fx` (pinwheel, lantern; optional delight, hit ≥ 60 dp, 64 dp in the look zone, nearest piece wins) > bed > stream = still décor piece (cairn, toadstool, stone: a small wobble, Active F3; a stone beats the brook only through its 20 dp core) > background. In Active F3 edit mode only décor pieces are targets (priority 8, the selected one 9). In choose-a-bed mode the beds with room come first. Round 7 (ARCHITECTURE §3.5): every press goes to exactly **one** target, picked by one arbiter. A target that contains the touch beats one only reached through the fat-finger slop (9 dp, aim 3 dp above the contact). Then the priority above decides, then the nearest centre. A décor piece's generous 64 dp ring only wins over empty ground and the stream; its 20 dp-radius core outranks a plain bed. The validator checks every static target for size floors, 8 dp gaps and that its hit area lies fully inside the frame (§10).
+**Hit priority** when targets overlap (world): mossling > bed with a ready bud **or ready petals** (Active F2) > prop (basket, mailbox, chime, tea nook) > décor piece with a `tap_fx` (pinwheel, lantern; optional delight, hit ≥ 60 dp, 64 dp in the look zone, nearest piece wins) > bed > stream = still décor piece (cairn, toadstool, stone: a small wobble, Active F3; a stone beats the brook only through its 20 dp core) > background. In Active F3 edit mode only décor pieces are targets (priority 9, the selected one 10). A visible mystery sign (§13.3.2) and an away scene's prop (§13.4) sit between the mossling and the ready bud; a scene's participants are mosslings. In choose-a-bed mode the beds with room come first. Round 7 (ARCHITECTURE §3.5): every press goes to exactly **one** target, picked by one arbiter. A target that contains the touch beats one only reached through the fat-finger slop (9 dp, aim 3 dp above the contact). Then the priority above decides, then the nearest centre. A décor piece's generous 64 dp ring only wins over empty ground and the stream; its 20 dp-radius core outranks a plain bed. The validator checks every static target for size floors, 8 dp gaps and that its hit area lies fully inside the frame (§10).
 
 ---
 
@@ -543,7 +543,7 @@ Five tabs (Retention v1, §13.5.1): **Friends**, **Clues**, **Memories** (away-s
 - Reference player: 7 best friends by day 30 and all 12 by about day 65 (median; §13.8).
 
 ### 7.5 Welcome-back recap
-Shown on resume when the gap ≥ `welcome_back_min_gap_s` (20 min) and at least one event happened. A frosted card over the living world, up to 3 lines chosen in priority order: new friend → away-scene teaser → cousin → postcard → hearts → clue → "{name} napped at the {spot}" (the longest nap of the absence) → nest → gifts waiting → new flowers opened → photos → it rained (Retention v1 lines: §13.5.3). Sound S10, MEDIUM haptic once. Auto-continues after 5 s; tap anywhere skips. Never lists what *didn't* happen.
+Shown on resume when the gap ≥ `welcome_back_min_gap_s` (20 min) and at least one event happened. A frosted card over the living world, up to 3 lines chosen in priority order: new friend → away-scene teaser → cousin → postcard → hearts → wish granted on arrival → clue → **"{name} napped at the {spot}"** (the longest nap of the absence; it takes the visitors slot, because it says what a friend *did* rather than only that somebody came) or else visitors → **"{name} is still hoping for {wish}"** (`RECAP_WISH_WAITING`, never together with the granted line) → nest → gifts waiting → new flowers opened → photos → it rained (Retention v1 lines: §13.5.3). The nap line stores nothing: `CreatureBrain.nap_during` replans the absence's bouts from the catch-up events, which is exact because every visit draws from its own seeded RNG (round 8; the line was written in the MVP and waited for the creature brain, ARCHITECTURE §12 (a)). Sound S10, MEDIUM haptic once. Auto-continues after 5 s; tap anywhere skips. Never lists what *didn't* happen.
 
 ### 7.6 Settings (X1) — one sheet, grouped
 | Group | Setting | Values (default **bold**) | Effect |
@@ -900,6 +900,7 @@ Anchors and casts are chosen by fixed rules, with no randomness.
 - **Look and hit:** the visual is 48 × 24 dp. The nest is not a tap target; the mossling in it is.
 - **Validation:** nests sit ≥ 30 dp apart and ≥ 8 dp clear of the basket, mailbox and chime hit areas.
 - **Album line:** `ALBUM_NEST`, with `{nest}` = style name + stage name. The recap line `RECAP_NEST` appears when a stage was reached while away.
+- **Built (round 11):** `NestLayer` draws every nest (one draw call, procedural: the four styles × three stages, 48 × 24 dp at the anchor); a stage reached while watching pops, offline growth just shows grown. `CreatureBrain.nests` naps the friend in it with `nap_preference`; the recap's nap line then names the nest by its style.
 
 | Style | Species |
 |---|---|
@@ -1082,6 +1083,7 @@ Tokens are `cr_*`.
    - The recap card gains the teaser line (§13.5.3) and S25 plays as the scene fades in.
    - The scene stays until the player taps a participant or prop (a long-press still pets), or until **600 s of foreground time** have passed (`pending_scene.shown_s`). It survives app closes.
    - It is then archived to `memories` as {scene, cast, phase, weather, world_t, unix} and rendered live like photos. `SCENE_SAVED` toasts, and everyone returns to normal bouts.
+   - **Built (round 11):** `CreatureLayer._stage_scene` + `SceneLayer` (props: tower, fort, crown, boat line, procedural). The `scene_*` / `pair_nap_*` pose ids are not in the rig yet: the nap scenes sleep, the moon watchers sit by the brook, everyone else stands at the slot, looks at the thing (the proud one at you) and beams. S25 is still unvoiced.
 
 At most 1 scene and 3 signs are on screen at a time.
 
@@ -1105,6 +1107,7 @@ At most 1 scene and 3 signs are on screen at a time.
 #### 13.5.1 Album
 
 **Tabs:** **Friends · Clues · Memories · Keepsakes · Postcards** (`ALBUM_TAB_*`).
+- **Built (round 11):** all five. Memories = `MEMORIES_SECTION_MOMENTS` (newest first; the cast as live portraits, asleep for the nap scenes) then Photos. Keepsakes = ♥5 portraits, signature gifts (live item preview), cousins met. The friend card has the five unlock lines, `ALBUM_NEST`, `ALBUM_PAIR` and the cousin row. Still to do: the tab-bar icons and the unread dots (they need a per-tab seen marker in the save).
 - **Photos** move into **Memories**, which has two sections: `MEMORIES_SECTION_MOMENTS` (scenes, newest first) and Photos (the 60 poses). The per-friend photo strip stays on the friend card.
 - **Tab bar:** icons plus labels. At 200 % text, labels wrap to 2 lines and the bar scrolls horizontally rather than shrinking text.
 - **Dots:** an unread dot (never a number) marks a tab with something new.
@@ -1130,7 +1133,8 @@ Up to 3 lines, in this priority order:
 4. postcard
 5. **hearts** (`RECAP_HEARTS`, the friend with the highest new heart)
 6. **clue** (`RECAP_CLUE`, if new signs came due)
-7. visitors
+7. "{name} napped at the {spot}" — the longest nap of the absence — else visitors (round 8: the creature brain exists now, so this slot carries the nap line whenever there was a nap)
+7b. "{name} is still hoping for {wish}" (`RECAP_WISH_WAITING`), only when no wish was granted on arrival
 8. **nest** (`RECAP_NEST`)
 9. gifts
 10. flowers
@@ -1564,6 +1568,7 @@ Reused: S05 (décor settle, teaware placed), S07/S08 (edit chrome in/out), S11 (
 | `cups_offered` | int | 0 | F2 (event postcard `first_tea`) |
 | `tea_flags` | Dictionary[String → bool] | {} | F2 tips and ghost counts |
 | `decor_layout` | Array[{id: "set#n", set, x, y, rot: int, stored: bool, stack: String, level: int}] | [] | F3 (one entry per owned movable copy) |
+| `tips_seen` | Dictionary[String → true] | {} | one-time tips shown (`decor_long_press`, `wish_kept`); save schema 4, migrated from 3 as empty |
 
 **Content-aware step** `ActiveRules.migrate_v1(sim)` runs once from `WorldSim._init` when `active_v < 1`, after `RetentionRules.migrate_v1`, at the saved world time:
 1. **Décor: fixed anchors → free positions.** Copy n of each movable set takes `spots.json decor_anchors[set].positions[n]` verbatim (rot 0, placed); the lantern jitter (`LANTERN_JITTER_PX`, seeded by `hash(["firefly_lantern", n])`) is baked into x; all cairn copies form one stack at `anchors[0]` in copy order; the wind chime is not in the layout. Then the hard exclusions (hard props; the tea nook when tea is on) nudge a piece by the §4.4 ring search (today `leaf_pinwheel` 4 and 8). Nothing else moves (test: ≤ 0.5 px). Owned copies missing from the layout later are auto-placed on load.
@@ -1734,7 +1739,7 @@ Onboarding trace (first 300 s): 25 s meets puffmoss; 106 s basket holds 18 dew; 
 | Team | Owns | Builds | Ids |
 |---|---|---|---|
 | **FE-W Wishes view** | `scripts/creature/wish_bubble.gd` (new), `scripts/creature/mossling.gd`, `scripts/creature/creature_layer.gd`, `scripts/ui/album_sheet.gd`, `scripts/ui/wish_list_card.gd` (new) | Bubble (44 dp felt cloud, 1 draw call, ≤ 2 on screen, follows the head anchor and the pan; napping 45 %; edit mode 45 %); name-tag caption "{name} · {wish}" 2.5 s; delight poses incl. `sip_tea` for FE-T (`Mossling.play_pose(id)`); `play_taps` hop; Album wishing row, stamps, the F2 "Tea" line in friend detail (data from `Game.tea_prefs_seen`); Wishes chip with unread dot (never a number) and the wish list card; toasts `WISH_GRANTED_*`, `WISH_TIP_*` | S26, S27; icons `wish_*`; keys `WISH_*`, `ALBUM_WISH*`, `A11Y_WISH_*`, `CAPTION_WISH*` |
-| **FE-T Tea UI and interaction** | `scripts/garden/tea_nook.gd` (new prop + world target), `scripts/garden/plots_layer.gd` (petal glints ≤ 3 per bed, +1 draw; petals branch of the bed release; bed card lines), `scripts/ui/tea_sheet.gd`, `scripts/ui/tea_pot.gd` (gesture control: petal drag, stir ring 28–150 dp, ≤ 45°/event, pour tilt), `scripts/ui/basket_sheet.gd` (Tea nook row), `scripts/ui/settings_sheet.gd` (Simple brewing), `shaders/ui/tea_liquid.gdshader` | Brew / Recipes / Teaware tabs at the large detent; tap alternatives everywhere; reveal card; offer row (64 dp chips, wish holders first); Reduce Motion cross-fades; night chrome; ≤ +8 draw calls with the sheet open | S28–S34, S05, S11; keys `TEA_*`, `TEAWARE_*`, `CAPTION_PETALS…STEAM`, `CAPTION_RECIPE` |
+| **FE-T Tea UI and interaction** | `scripts/garden/tea_nook.gd` (new prop + world target), `scripts/garden/plots_layer.gd` (petal glints ≤ 3 per bed, +1 draw; petals branch of the bed release; bed card lines), `scripts/ui/tea_sheet.gd`, `scripts/ui/tea_pot.gd` (gesture control: petal drag, stir ring 28–150 dp, ≤ 2,700 °/s with a 170° wrap guard, pour tilt), `scripts/ui/basket_sheet.gd` (Tea nook row), `scripts/ui/settings_sheet.gd` (Simple brewing), `shaders/ui/tea_liquid.gdshader` | Brew / Recipes / Teaware tabs at the large detent; tap alternatives everywhere; reveal card; offer row (64 dp chips, wish holders first); Reduce Motion cross-fades; night chrome; ≤ +8 draw calls with the sheet open | S28–S34, S05, S11; keys `TEA_*`, `TEAWARE_*`, `CAPTION_PETALS…STEAM`, `CAPTION_RECIPE` |
 | **FE-D Décor edit mode** | `scripts/garden/decor_edit.gd` + `scenes/garden/decor_edit.tscn` (new), `scripts/garden/decor_layer.gd`, `scripts/garden/decor_kit.gd`, `scripts/ui/decor_tray.gd` (new), `scripts/ui/top_bar.gd` and `scripts/ui/hud_controller.gd` (edit chrome), `scripts/ui/garden_sheet.gd` (Arrange row, tucked-away caption) | Long-press entry, lift/carry/lean/magnet, validity ring and hints, settle/nudge/float home, selection chip, tray, Undo/Done, positions from `decor_layout`, rot renders, still-piece wobble, banded stamp merge (décor ≤ 20 draws, chrome ≤ 6), QA `--qa-decor-edit=<enter / hold_valid / hold_invalid / tray / chip>` | S35–S38, S05, S07, S08; keys `DECOR_EDIT_*`, `DECOR_TRAY_*`, `DECOR_HINT_*`, `GARDEN_ARRANGE*`, `A11Y_DECOR_*`, `A11Y_TRAY_TILE`, `CAPTION_DECOR_*` |
 
 Also: **Sound Designer** owns `audio/manifest.json` S26–S38 (§14.8). **Art Director** maps the delight poses (D15), the teaware and tea nook art, the `wish_*` icons and the toadstool cap variant. **Env Artist** confirms `ground_top` and the wings (open Q5 of ACTIVE_DECOR). **QA** adds the three QA flags and the 30-day absence screenshot with open wishes and full jars.
@@ -1859,6 +1864,7 @@ Also: **Sound Designer** owns `audio/manifest.json` S26–S38 (§14.8). **Art Di
 | `RECAP_ONE_VISITED` | {name} dropped by | {name} đã ghé chơi |
 | `RECAP_FRIENDS_VISITED` | {name} and friends dropped by | {name} và các bạn đã ghé chơi |
 | `RECAP_NAPPED` | {name} napped at the {spot} | {name} đã ngủ một giấc ở {spot} |
+| `RECAP_WISH_WAITING` | {name} is still hoping for {wish} | {name} vẫn đang mong một {wish} |
 | `RECAP_BLOOMED` | New flowers opened | Hoa mới đã nở |
 | `RECAP_GIFTS` | Gifts are waiting in the basket | Quà đang chờ trong giỏ |
 | `RECAP_PHOTOS` | Friends left photos for you | Các bạn để lại ảnh tặng bạn |

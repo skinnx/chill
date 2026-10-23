@@ -173,6 +173,11 @@ var edit: DecorEdit
 var _content: GameContent
 var _pieces: Dictionary = {}           # decor id -> Array of Piece (copy order; cairn: one per stack)
 var _by_id: Dictionary = {}            # unit id ("set#n", a cairn stack's base) -> Piece
+## movable_pieces() is asked for on every frame of edit mode (the overlay draws a ring per piece)
+## and it used to build and lambda-sort a fresh Array each time. The set only changes when a
+## piece enters or leaves _by_id, so it is cached and rebuilt on demand (round 9).
+var _movable: Array[Piece] = []
+var _movable_dirty: bool = true
 var _shadows: Node2D
 var _chime_set: Node2D
 var _motes: Node2D
@@ -217,6 +222,8 @@ class Piece:
 	var squash_x: float = 1.0
 	var variant: int = 0
 	var seed: int = 0
+	## Toadstool turn steps: the cap's lean (radians, already mirrored by the flip).
+	var cap_tilt: float = 0.0
 	## Cairn: pebbles in the stack (ids bottom first).
 	var pebbles: PackedStringArray = PackedStringArray()
 	## The piece's own node (standalone pieces; a unit piece while pressed, popping in or held).
@@ -521,6 +528,7 @@ func _add_piece(id: StringName, i: int, foot: Vector2, rot: int, pebbles: Packed
 	_pieces[id] = list
 	if id != CHIME:
 		_by_id[uid] = p
+		_movable_dirty = true
 	if id == CHIME:
 		p.unit = "chimes"
 	elif _is_static(id):
@@ -560,6 +568,7 @@ func _place(p: Piece, foot: Vector2, rot: int, pebbles: PackedStringArray) -> vo
 	p.squash_x = float(r.get("squash_x", 1.0))
 	p.variant = int(r.get("variant", 0))
 	p.seed = int(r.get("jitter_seed", 0))
+	p.cap_tilt = deg_to_rad(float(r.get("cap_tilt_deg", 0.0))) * p.flip
 	match p.decor:
 		PINWHEEL:
 			p.head_pivot = Vector2(0.0, float(kit.layout.get("pinwheel_head_dy", -86.0)) * p.depth)
@@ -621,6 +630,7 @@ func _remove_piece(p: Piece) -> void:
 		_press = null
 		_hide_fill()
 	_by_id.erase(p.id)
+	_movable_dirty = true
 	var list: Array = _pieces.get(p.decor, [])
 	list.erase(p)
 
@@ -733,10 +743,18 @@ func _piece_quads(p: Piece, q: DecorKit.Quads, origin: Vector2) -> void:
 				kit.add_quad(q, part, off, d * shrink, tilt * f, "", -1.0, DecorKit.GROUP_STATIC, f)
 		TOADSTOOL:
 			kit.add_quad(q, "toadstool_stem", o, d, 0.0, "", -1.0, DecorKit.GROUP_STATIC, f)
-			kit.add_quad(q, "toadstool_cap", o + Vector2(0.0, float(kit.layout.get("toadstool_cap_dy", -20.0)) * d), d,
-					0.0, "", -1.0, DecorKit.GROUP_STATIC, f)
+			kit.add_quad(q, toadstool_cap_part(kit.layout, p.variant),
+					o + Vector2(0.0, float(kit.layout.get("toadstool_cap_dy", -20.0)) * d), d,
+					p.cap_tilt, "", -1.0, DecorKit.GROUP_STATIC, f)
 		STONES:
 			kit.add_quad(q, "stream_stone", o, d, 0.0, "", -1.0, DecorKit.GROUP_STATIC, f)
+
+
+## The atlas part of a toadstool cap for turn [param variant] (layout toadstool_caps; the original
+## cap when the atlas has no variant).
+static func toadstool_cap_part(layout: Dictionary, variant: int) -> String:
+	var caps: Array = layout.get("toadstool_caps", ["toadstool_cap"])
+	return String(caps[clampi(variant, 0, caps.size() - 1)]) if not caps.is_empty() else "toadstool_cap"
 
 
 ## The piece's visual centre (design px): its foot moved up by visual_centre_dy_dp (a cairn by
@@ -1131,12 +1149,14 @@ func piece(id: String) -> Piece:
 
 ## Every movable unit drawn now (edit targets): Array of Piece.
 func movable_pieces() -> Array[Piece]:
-	var out: Array[Piece] = []
-	for p: Piece in _by_id.values():
-		if not p.temp:
-			out.append(p)
-	out.sort_custom(func(a: Piece, b: Piece) -> bool: return a.id < b.id)
-	return out
+	if _movable_dirty:
+		_movable_dirty = false
+		_movable.clear()
+		for p: Piece in _by_id.values():
+			if not p.temp:
+				_movable.append(p)
+		_movable.sort_custom(func(a: Piece, b: Piece) -> bool: return a.id < b.id)
+	return _movable
 
 
 ## Lifts unit [param id] out of its band onto its own stamp (z 1, above the friends) so the edit
@@ -1174,8 +1194,10 @@ func pose(id: String, foot: Vector2, rise_px: float, scale_k: float, alpha: floa
 	p.node.modulate.a = alpha
 	if p.shadow != null:
 		p.shadow.position = foot
-		p.shadow.scale = Vector2.ONE * (1.0 + 0.25 * lift) * depth_k
-		p.shadow.modulate.a = 1.0 - 0.3 * lift
+		# the contact shadow spreads with the lift but keeps its full strength (polish: it used to
+		# fade, and a lifted piece lost its anchor on the ground); DecorEdit adds the soft lift shadow
+		p.shadow.scale = Vector2.ONE * (1.0 + 0.35 * lift) * depth_k
+		p.shadow.modulate.a = 1.0
 	if p.decor == LANTERN:
 		var jar := p.node.position + (p.head_pivot + Vector2(0.0, float(kit.layout.get("jar_centre_dy", 28.0)) * p.depth)) \
 				* scale_k * depth_k

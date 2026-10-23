@@ -139,7 +139,7 @@ Main (Node2D, main.gd)                    layout, camera = home + map pan + drif
 │  ├─ Ground     Parallax2D 1.0            L4  play layer
 │  │  ├─ Meadow                                └─ Placeholder (GROUND gradient)
 │  │  ├─ Stream                                └─ Placeholder (stream polyline from spots.json)
-│  │  ├─ Play (y_sort)                         ├─ Props · Plots (beds) · Decor · Creatures (each y_sort)
+│  │  ├─ Play (y_sort)                         ├─ Props · Plots (beds) · Nests · Signs · Decor · SceneProps · Creatures (each y_sort)
 │  │  ├─ Particles                             Air: light shafts + ≤ 3 GPUParticles2D (D9)
 │  │  └─ LayoutDebug                           --debug-layout overlay of the spots.json contract
 │  └─ Foreground Parallax2D 1.3            L5  (empty)
@@ -180,19 +180,31 @@ Motion (`PanBody`, pure; maths in `PanMath`; tokens `motion_tokens.world.pan`):
 - **World:** only `WorldPan` reads input, on the touch path (index 0) or the real mouse; emulated events are ignored. No world layer has an `_unhandled_input` any more, so nothing in the world can act twice or on both paths.
 - **GUI:** `BaseButton` sees both twins and fires once (on the first release; the second finds no press attempt). Custom controls (`UiSlider`, the sheet swipe zone, the scrims, cards) read the mouse path only. `HudController._input` and `PointerGate` read both, and swallow both.
 
+**Sampling rate (round 8).** Godot accumulates input by default: every event generated during a frame is merged and emitted once the frame is rendered, so a handler sees at most **one motion event per rendered frame** (checked on 4.7.2: `Input.is_using_accumulated_input()` is `true` at boot, and `input_devices/buffering/agile_event_flushing` is `false` — it only adds a flush before each *physics* step, which runs at 30 Hz here, and it is implemented for Android only, so it is left off deliberately). Two rules follow:
+- **No gesture may be measured per event.** A per-event ceiling or step is really a frame-rate cap, so it makes the same hand movement count for less on a slower phone. Where a gesture accumulates something, its rules are geometric rather than per-sample: the tea stir takes any chord whose two ends are both in the ring and whose line misses the dead middle, so a coarse 30 fps stroke and a raw 240 Hz one credit the same total (`TeaPot.stir_delta`; `stir_max_deg_per_sample` 170° is only a guard under the ±180° shortest-arc wrap). Springs are already frame-rate independent by construction (`Spring` is analytic, Art Bible §10.2).
+- **Hit shapes follow drawn shapes.** A tolerance measured as a circle around art drawn as an ellipse is dead where the art is flattest. The stir's dead middle is measured in *ring space* (the y axis stretched by the drawn progress ring's aspect) so the ellipse the player traces is live all the way round, while its outer bound stays a circle because that one only has to ignore the rest of the panel.
+- **Only a path-integrating gesture turns accumulation off.** `InputPrecision` (`scripts/core/input_precision.gd`) is a counted hold on raw-pointer mode: `acquire(name)` / `release(name)` / `release_all()`. A gesture that only needs the *latest* position — the map pan, a carried décor piece, a slider, a petal under the thumb — gains nothing from it, because those are redrawn once per frame anyway; a gesture whose meaning is the path itself does. The tea stir is the only such gesture in the game and so the only holder; it releases on release, on a press that arrives without one, and in `_exit_tree` (a sheet that closes with a thumb down).
+
 **World targets** (`world_hit(canvas_pos, slop) -> {prio, inside, core?, d, key, drag?}`, `world_press`, `world_release(key, pos, act)`, `world_drag`; debug shapes via `world_hit_shapes()`):
-- **One target per press.** Candidates compare by tier, then priority, then distance. Tiers: core hit, then the rest of the hit area, then reachable only through the fat-finger slop (`SLOP_DP` 9 dp). Priority follows GDD §2.5 (as amended by §14.4 D5): choose-a-bed bed with room 7, mossling 6, bed with a ready bud, the seed or ready petals 5 (`PRIO_PETAL_BED`), prop and the tea nook 4 (`PRIO_TEA_NOOK`), pinwheel and lantern 3, bed 2, stream and the still décor pieces (cairn stack, toadstool, stone: `PRIO_STILL`) 1; in edit mode pieces 8, the selected one 9 (`PRIO_EDIT`, `PRIO_EDIT_SELECTED`). Distance is to the target's centre. Only the winner gets the press.
+- **One target per press.** Candidates compare by tier, then priority, then distance. Tiers: core hit, then the rest of the hit area, then reachable only through the fat-finger slop (`SLOP_DP` 9 dp). Priority follows GDD §2.5 (as amended by §13.3.2 and §14.4 D5): choose-a-bed bed with room 8, mossling 7, mystery sign and away-scene prop 6 (`PRIO_SIGN`, `PRIO_SCENE`; round 10/11: a clue is there to be found and a scene to be looked at, so both outrank whatever a tap would do to the ground under them; a scene's participants are mosslings and rank as such), bed with a ready bud, the seed or ready petals 5 (`PRIO_PETAL_BED`), prop and the tea nook 4 (`PRIO_TEA_NOOK`), pinwheel and lantern 3, bed 2, stream and the still décor pieces (cairn stack, toadstool, stone: `PRIO_STILL`) 1; in edit mode pieces 9, the selected one 10 (`PRIO_EDIT`, `PRIO_EDIT_SELECTED`, pinned by `decor_placement.json hit`). Distance is to the target's centre. Only the winner gets the press.
 - **Aim and slop.** A touch aims `AIM_UP_DP` (3 dp) above the contact (contacts land low, 02 §1.1). Décor keeps its 64 dp hit for empty ground, but only its 20 dp-radius core outranks a bed it overlaps.
 - **Release-to-fire.** Feedback comes on touch-down; the action comes on release within the 24 px drag threshold. Moving further cancels it and pans: the tap slop and the pan threshold are one number, so there is no gap where neither or both happen. This covers props (basket, mailbox, chime), the brook, beds, décor and mossling taps.
+- **One slop, on every target, including the mosslings (round 8).** A mossling claims the drag (a stroke pets it), so it runs its own tap-versus-stroke split — and that split used to use its own numbers: an 18 dp tap, a separate 24 px stroke gate, and a 60 ms minimum hold before a pet could begin. Two gestures therefore did nothing at all on the single most-tapped thing in the game: a thumb that slid 19–24 px (neither a tap nor a pet), and a quick flick across a friend that crossed 24 px inside the first frame (past the tap slop, but under the hold). Both now resolve: travel up to `creature_rig.json pet.stroke_drag_px` (24 px, the same number as `threshold_px`) is a tap, past it is a pet, and the hold is gone — the distance alone already rejects touch-down jitter.
+- **A cancelled touch is not a release (round 8).** Android delivers a touch the OS takes away — the notification shade, the back-swipe, an incoming call — as an ordinary release with `InputEventScreenTouch.canceled` set. `WorldPan` reads that flag and treats it as a cancel: the pending tap is dropped and any drag ends without inertia, so a finger dragged off the screen by the system never fires a world action on the way out.
+- **A claimed drag is interaction.** The `world_drag` branch pokes the `FrameGovernor` like every other branch, so a long stroke — petting a mossling — cannot be mistaken for idleness and halve the frame rate under the thumb.
 - **No action after a drag, a fling or a cancel.** A press on a gliding map only stops it. A sheet or card that opens mid-press takes the tap. A long-press that fired the bed card never also taps.
 
 **Active Play v1 additions (GDD §14.11 a6; `tests/test_active_input.gd`).**
 - **`claim_drag()`.** The pressed target may take the drag while the finger is still within the slop and no pan has started (DecorLayer calls it when its 450 ms long-press fires, so one gesture enters edit mode and carries the piece). The pan is disarmed; later motion arrives as `world_drag(key, pos)` and the release as `world_release(key, pos, true)`. A drag past the slop *before* the long-press still pans, exactly as on a bed.
 - **`empty_tapped(canvas_pos)`.** Every empty tap within the slop emits it (the double-tap glide is unchanged). DecorEdit uses it as "tap a destination".
-- **Edit filter.** `WorldPan.edit_mode` follows `Game.decor_edit_entered / decor_edit_exited`. While on, `resolve()` asks only `GROUP_HIT_EDIT` (the DecorEdit controller: pieces at prio 8, +1 selected, 60 dp hit or 64 dp in the look zone around the visual centre, clipped above the dock); mosslings, beds, props and the brook are ground. `--debug-hits` draws that group in edit mode.
+- **Edit filter.** `WorldPan.edit_mode` follows `Game.decor_edit_entered / decor_edit_exited`. While on, `resolve()` asks only `GROUP_HIT_EDIT` (the DecorEdit controller: pieces at prio 9, +1 selected, 60 dp hit or 64 dp in the look zone around the visual centre, clipped above the dock); mosslings, beds, props and the brook are ground. `--debug-hits` draws that group in edit mode.
 - **`nudge(delta_px)`** pans inside the rest bounds (no rubber band, no glide) for the edge pan while a piece is carried, and pokes the FrameGovernor.
 - **`is_blocked()`** is public: Game pauses the wish clock while a sheet or card is open.
 - **Wish fulfilment rides on release-to-fire.** Views report the actions the player already has through `Game.world_action(kind, args)` from `world_release(act = true)` only (`tap_creature`, `ring_chime`, `bed_tap` on every bed release whichever branch ran, `decor_tap`, `stream_tap`; pets and boats report themselves), so a pan or a cancelled press never grants a wish. The wish bubble is not a hit target.
+
+**Sheets follow the finger everywhere (round 9).** The header swipe zone is only `HEADER_TOP + HEADER_H` = 228 px (76 dp) tall, which at the medium detent on a 1080×2400 phone puts every way to resize or dismiss a sheet in the top quarter of the screen — while the ~77 % of the sheet actually under the thumb did nothing at all. `UiSheet` now bridges the list to the sheet the way a nested scroll does: while the list is at `scroll_vertical == 0` and the finger pulls **down** past `LIST_HANDOFF_PX` (24 px, `gui/common/drag_threshold` — under both the 10 dp button slop and the list's 10 dp scroll deadzone, so the sheet claims first), the gesture becomes the sheet's and the list does not scroll. Any other direction, and any list with content above the window, scrolls as before; pulling *up* to expand from the medium detent is deliberately not taken, so a long list still scrolls without first growing the sheet. The handoff re-anchors (`drag_begin` at the live finger), so it costs no jump, and `TapGuard.cancel_in` drops the row press underneath it. A sheet grabbed mid-animation carries its live `rise` into the drag (`_drag_rise0`) instead of snapping up by what was left of the open.
+
+**A rebuild never lands under a thumb (round 9).** A gift arriving, a bloom, a heart or a postcard fires a sim event, and the open sheet's `refresh()` rebuilds its rows — freeing the control a press belongs to, so the tap simply never happens. `SheetHost.refresh` holds the rebuild while `UiSheet.is_touched()` (a header or list drag, or a list still gliding) and applies it on the first frame after the finger leaves.
 
 **GUI consumption (no through-taps).** Every surface that looks like UI stops presses (`MOUSE_FILTER_STOP`):
 - **The sheet and its scrim.** The sheet's whole rect (padding, grabber, header) stops presses, and so does the full-screen scrim. While a sheet *closes*, it is input-dead (`mouse_behavior_recursive = DISABLED`, so a fast second tap on Plant or Collect never acts). Its rect and the scrim keep consuming until the sheet is freed. A scrim tap (press and release within 10 dp) closes the sheet and never reaches the world; a drag over it does nothing.
@@ -260,6 +272,7 @@ Plain typed fields (GDD §5.8 persistence list), serialised by `to_dict()` and r
 | Flags | `seed_planted`, `seed_tap_t`, `basket_full_seen`, `first_bloom_postcard_sent` |
 | Retention v1 (schema 2, GDD §13.6) | `retention_v` (content-aware migration done), `visit_aff_t`, `hearts_seen`, `nests{style, built_t, stage}`, `postcards_waiting`, `mysteries{kind, target, open_t, ok_t, solved_unix}`, `signs[{mystery, index, type, appear_t, anchor}]`, `clues{mystery: bitmask}`, `variants_met`, `cousin_visits`, `scene_returns`, `scenes_seen`, `scene_cast`, `pending_scene{scene, cast, phase, weather, world_t, shown_s}`, `memories[{scene, cast, phase, weather, world_t, unix}]`, `keepsakes`, `signature_gifts`, `last_bg_t`, `open_count`; `basket[].signature`, `present[].cousin` |
 | Active Play v1 (schema 3, GDD §14.9) | `active_v` (content-aware migration done); **F1** `wishes[{species, wish, opened_t, state open/held, taps, placed}]`, `wish_checks` (hash index), `wish_fg_s`, `wish_last_t`, `wish_friend_t`, `wish_visit_count{species: {arrive_t, n}}`, `wish_last_id`, `wish_aff_t`, `wish_stamps{species: bitmask over wishes.json order}`, `wishes_granted`, `wish_tutorial_done`, `wish_list_seen_t`; **F2** `tea_unlocked`, `petal_from_t{"bed:slot": t}`, `pantry`, `pot{petals, drops, stir_deg}`, `tray[{recipe, made_unix, drops, petals}]`, `recipes_found`, `tea_prefs_seen`, `tea_aff_t`, `teaware_owned`, `teaware_set`, `cups_offered`, `tea_flags`; **F3** `decor_layout[{id "set#n", set, x, y, rot, stored, stack, level}]` |
+| Active Play polish (schema 4) | `tips_seen{tip id: true}`: one-time tips already shown (`Game.TIP_DECOR_LONG_PRESS` after the first movable décor purchase, `Game.TIP_WISH_KEPT` the Album's held-wish note); `Game.tip_seen` / `Game.mark_tip_seen` |
 
 ### 5.2 `WorldSim` — the world step
 
@@ -317,6 +330,10 @@ Between events, `advance` is O(1): it caches the next event time and only settle
 | `boat` | count, watchers | boat at the spring rock, watchers gather |
 | `petted` | species, credited | hearts on release (the credit is never shown) |
 | `mystery_opened` | mystery, kind (species/variant), target, signs | Album › Clues card |
+| `sign_appeared` / `clue_found` | the sign record / the clue taken | `SignLayer` draws it in the hollow (round 10); tapping it toasts `CLUE_FOUND_*`, or opens the riddle card for the note |
+| `nest_grew` | species, stage, offline | `NestLayer` draws every nest (round 11); a stage reached while watching pops; the brain naps the friend in it (`CreatureBrain.nests`) and the recap's nap line names the nest |
+| `scene_ready` / `scene_archived` | the pending scene / the memory | `CreatureLayer._stage_scene` walks present cast to their slots and summons absent cast as extras; `SceneLayer` draws the props and is their tap target; a tap on either calls `Game.tap_scene`; archived → `SCENE_SAVED` toast, the Album refreshes, everyone resumes (round 11) |
+| `keepsake_added` | species | Album › Keepsakes (round 11) |
 | `sign_due` / `sign_visible` | key, mystery, index, sign (type), species, variant, anchor, appear_t, footprint, dropped, tint | a visible sign fades in at its anchor (600 ms); `due` alone = queued (≤ 3 visible) |
 | `clue` | sign fields + riddle_key, found, total, solved | `clue_lift` + S23, toast; a note opens the riddle |
 | `nest_stage` | species, style, stage, stage_id, built | nest built (stage 0) / grew |
@@ -372,6 +389,8 @@ Behaviour bouts, spots, walking paths, hops, look-at and every other position ar
 - The brain reads `sim.state.present` and `arrived/departed/greeter_*` events.
 - It plans bouts by the GDD §4.1.3 rules: 120–360 s, never repeating the previous (behaviour, spot) pair, ×3 nap at night, shelter in rain, favourite spot 60 %, spot capacity.
 - It must be seeded per visit, as `hash([install_seed, species, arrive_t])`, so the same visit always looks the same after a reload.
+- **Nests (round 11, GDD §13.2.3).** With `brain.nests` set (a `Callable(species) -> nest view`), a nap draws the friend's own nest spot `nest:<species>` with p `nap_preference` (0.7) before the normal spot rule, never twice in a row; capacity 1, nobody else's. The draw happens only for a friend WITH a nest, so every other visit plans exactly as before. `nap_during` wires the sim's nests, so an absence's longest nap can be in one and the recap says so.
+- **Away scenes (round 11, GDD §13.4).** A staged scene is not a bout: present cast members are held under `_override_until = INF` and walk to `SceneLayer.slot_px`; absent ones are summoned as extras (no visit, no gift, no affection) and leave on archive. The scene poses (`scene_*`, `pair_nap_*`) are rig work still to come; `SceneLayer.scene_pose` maps them to nap / sit-by-stream / stand-look-and-beam.
 - **Nothing in a bout can change state.** Pet, boat and tap all go through `Game`.
 - The recap's "{name} napped at the {spot}" line needs the brain to report the longest nap per absence. Until then the recap uses the "dropped by" lines.
 
@@ -381,7 +400,7 @@ Behaviour bouts, spots, walking paths, hops, look-at and every other position ar
 
 **File** `user://save.json`. It is one JSON object, written by `JSON.stringify(doc, "\t", sort_keys, full_precision)`:
 ```json
-{ "format": "mossling-meadow-save", "schema": 3, "app_version": "0.1.0",
+{ "format": "mossling-meadow-save", "schema": 4, "app_version": "0.1.0",
   "saved_at_unix": 1792700000.25, "sha256": "<hex>", "world": { …WorldState.to_dict()… } }
 ```
 
@@ -406,6 +425,7 @@ A crash at any step leaves at least one complete file. Saving is synchronous and
 - Newer files are refused (`unsupported schema`) and never misread.
 - **Schema 1 → 2 (Retention v1, GDD §13.6).** `SaveStore.migrate(1, w)` adds every new field empty (`RETENTION_V1_DEFAULTS`, with `retention_v = 0`); `WorldState.from_dict` adds `basket[].signature = false` and `present[].cousin = ""`. The content-aware steps need the data, so `WorldSim._init` runs `RetentionRules.migrate_v1` once when `retention_v < RETENTION_VERSION`, at the saved world time: `hearts_seen` = hearts; nests (twigs) for ♥3+; ♥4/♥5 stories not yet delivered by template (♥4 waits for an unmet buddy; if an MVP `<species>_h4` card with the old shared template holds the id, the new story gets `<species>_h4_story`); keepsakes for ♥5; then `check_mysteries`. Affection is untouched and the 20 h rest starts empty. Tested from a real schema-1 save written by the MVP code (`tests/fixtures/save_schema1.json`).
 - **Schema 2 → 3 (Active Play v1, GDD §14.9).** `SaveStore.migrate(2, w)` adds every new field with its default (`ACTIVE_V1_DEFAULTS`, `active_v = 0`; literal, so the step keeps meaning "2 → 3") and never overwrites a key; a schema-1 file runs 1 → 2 → 3. `WorldSim._init` then runs `ActiveRules.migrate_v1` once when `active_v < ACTIVE_VERSION`, after the retention step, at the saved world time: copy n of each movable set takes `spots.json decor_anchors[set].positions[n]` verbatim (rot 0, placed), the lantern jitter (`DecorPlacementRules.legacy_lantern_jitter_px`, the old `DecorLayer` hash-seeded RNG) baked into x, every cairn pebble one stack at `anchors[0]` in copy order, the chime not in the layout; only the hard exclusions (hard props, the tea nook) nudge a piece by the ring search (on today's data pinwheels `anchors[4]` by 8 dp and `anchors[8]` by 16 dp; nothing else moves, ≤ 0.5 px); `tea_unlocked` if onboarding is done and a stem blooms; no wish open, the teaching wish still to come; petal anchors absent (full stems). Affection, hearts, `owned`, `rng_state` and every Retention field are untouched. Every load also runs `ActiveRules.on_load`: owned movable copies missing from the layout are auto placed (a fixture or a later purchase) and the derived spots are computed. Tested from a real schema-2 save written by the pre-Active code (`tests/fixtures/save_schema2.json`), through boot as well.
+- **Schema 3 → 4 (Active Play polish).** `SaveStore.migrate(3, w)` adds `tips_seen = {}` (`TIPS_DEFAULTS`, literal); nothing else changes, so a returning player sees each one-time tip once. Needed because the checksum of a current-schema file is over the normalised `to_dict()`, which now has the field. Tested in `test_active_save.gd` with a schema-3 file built exactly as the Active Play v1 code wrote it.
 
 **Policy (who saves when).**
 
@@ -534,6 +554,26 @@ The contract is AUDIO_BIBLE §8; `tools/audio/mixsim.py` is its executable refer
   - **Variations:** TitleLabel, BodyLabel, StrongLabel, CaptionLabel, SecondaryLabel, HudNumeral, PriceLabel; the primary Button pill and SecondaryButton; panels Card, Sheet, Chip and ModalCard; LineEdit; thin scrollbars.
   - **CanvasLayer root Controls must call `UiTheme.attach(control)`**, because theme propagation stops at a CanvasLayer.
   - **Fonts** (`fonts/`) are subset WOFF2 files. They are imported with hinting None and no system fallback; `Baloo2-Bold-Numerals` is imported as MSDF.
+
+---
+
+### 8.4a Motion: when a spring stops (round 9)
+
+`Spring` is analytic, so its cost is one step per frame; what was expensive was how *long* it ran.
+The `rest_epsilon` in `motion_tokens.json` is absolute (0.0005), but half of these springs drive
+properties measured in **pixels**: settling a 300 px panel to within 1/2000 of a pixel takes the
+`move` spring 1.10 s, against 0.63 s to reach 0.15 px. That half-second is invisible and not free —
+`Motion._process` calls `FrameGovernor.hold_for` for as long as any drive is alive, so every sheet
+open, dock move, tray slide and drag release pinned the whole app at 60 fps for an extra half
+second before the idle timer could even start.
+
+A **driven** spring (`Motion.spring_to`) therefore rests within `REST_REL` (0.05 %) of the distance
+it set out to travel, never tighter than the token floor, and a drive that finishes writes the
+**exact** target so stopping early leaves no residue (a `rise` left 0.3 px short is invisible, but
+`rise > 0.0` is not). The relative form is right for a pixel property and an alpha alike without
+Motion knowing units, and 0.05 % keeps the final snap under a pixel even for the longest travel in
+the game (a full-height sheet, 1,709 px → 0.85 px). `Spring`'s own default is unchanged for the
+many places that step a spring themselves.
 
 ---
 

@@ -96,7 +96,7 @@ static func _on_input(event: InputEvent, button: BaseButton) -> void:
 			button.accept_event()  # a double tap: one action per press
 			return
 		if not button.has_meta(META_FROM):
-			button.set_meta(META_FROM, _global(event, button))
+			button.set_meta(META_FROM, global_of(event, button))
 		if is_moving(scroll_of(button)):
 			# the list is still gliding: this press only catches it (after both twins of the touch)
 			cancel.call_deferred(button)
@@ -110,12 +110,22 @@ static func _on_input(event: InputEvent, button: BaseButton) -> void:
 		return
 	var moving := event is InputEventScreenDrag or (event is InputEventMouseMotion
 			and (event as InputEventMouseMotion).button_mask & MOUSE_BUTTON_MASK_LEFT)
-	if moving and _global(event, button).distance_to(button.get_meta(META_FROM) as Vector2) > slop_px():
+	if moving and global_of(event, button).distance_to(button.get_meta(META_FROM) as Vector2) > slop_px():
 		cancel(button)
 
 
+## Cancels every pending button press inside [param root]. Round 9: a list that hands its drag to
+## the sheet must do this, or a pull-down that started on a row would also fire that row - the
+## row's own 10 dp slop has not been crossed yet when the sheet claims the gesture at 8 dp.
+static func cancel_in(root: Node) -> void:
+	for n: Node in root.find_children("*", "BaseButton", true, false):
+		var b := n as BaseButton
+		if b != null and b.has_meta(META_FROM):
+			cancel(b)
+
+
 ## The event's point in viewport px (mouse events carry it; touch events are local to the control).
-static func _global(event: InputEvent, c: Control) -> Vector2:
+static func global_of(event: InputEvent, c: Control) -> Vector2:
 	var me := event as InputEventMouse
 	if me != null:
 		return me.global_position

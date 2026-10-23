@@ -155,6 +155,10 @@ func _ready() -> void:
 		_refresh_onboarding()
 		sheets.refresh())
 	Game.leave_requested.connect(func() -> void: overlays.show_leave())
+	Game.clue_found.connect(_on_clue_found)
+	Game.scene_archived.connect(func(_m: Dictionary) -> void:  # Retention v1 F3 (GDD §13.4 step 6)
+		overlays.show_toast(tr("SCENE_SAVED"))
+		sheets.refresh())
 	Game.decor_edit_entered.connect(_on_decor_edit.bind(true))
 	Game.decor_edit_exited.connect(_on_decor_edit.bind(false))
 	TimeOfDay.globals_updated.connect(_on_globals)
@@ -408,6 +412,38 @@ func _on_sim_event(ev: Dictionary) -> void:
 	_refresh_onboarding()
 
 
+## A sign was tapped and its clue taken (Retention v1 F2, GDD §13.3.2). A note opens the riddle
+## reader; every other sign toasts what was found. The "added to your album" line shows once per
+## install, on the very first clue, so the player learns where clues go and is never told again.
+func _on_clue_found(clue: Dictionary) -> void:
+	var line := clue_line(clue, _clues_found_total())
+	if line == "":
+		overlays.show_riddle(clue)  # the note is the one clue worth stopping for
+		return
+	overlays.show_toast(line)
+
+
+## The toast a found clue shows, or "" when it is the note and the riddle card takes over
+## (GDD §13.3.3). [param found_total] is clues found across every mystery: the line that explains
+## where the clue went is only worth showing the first time.
+static func clue_line(clue: Dictionary, found_total: int) -> String:
+	var kind := String(clue.get("sign", ""))
+	if kind == "note":
+		return ""
+	var line := I18n.fmt(StringName("CLUE_FOUND_%s" % kind.to_upper()))
+	if found_total <= 1:
+		line += "\n" + I18n.fmt(&"CLUE_ADDED")
+	return "%s %s" % [I18n.fmt(&"CLUE_FOUND_TITLE"), line]
+
+
+## Clues found across every mystery (for the once-per-install line above).
+func _clues_found_total() -> int:
+	var n := 0
+	for c: Dictionary in Game.clue_cards():
+		n += int(c.get("found", 0))
+	return n
+
+
 func _show_next_friend() -> void:
 	if _pending_friends.is_empty():
 		return
@@ -631,8 +667,17 @@ func _qa_ui_audit() -> void:
 		var without: float = await avg.call()
 		for n: CanvasItem in items:
 			n.visible = true
-		print("qa-ui-audit: z %3d  %3d leaves  %5.1f calls  (%s %s)" % [z, items.size(), total - without,
-				(items[0] as Node).get_class(), (items[0] as Node).name])
+		var texs := {}
+		for n: CanvasItem in items:
+			var tr_ := n as TextureRect
+			if tr_ != null and tr_.texture != null:
+				var tex := tr_.texture
+				var at := tex as AtlasTexture
+				var src := at.atlas if at != null else tex
+				texs["%s#%d" % [src.resource_path.get_file() if src.resource_path != "" else src.get_class(),
+						src.get_rid().get_id() % 100000]] = true
+		print("qa-ui-audit: z %3d  %3d leaves  %5.1f calls  (%s %s) %s" % [z, items.size(), total - without,
+				(items[0] as Node).get_class(), (items[0] as Node).name, ",".join(PackedStringArray(texs.keys()))])
 
 
 ## --qa-press: freeze the named target mid touch-down (see the header).

@@ -90,5 +90,9 @@ BANK_RANGES = {
 	"purr": (53, 64),    # S03 purr root F3-E4
 	"tok": (50, 64),     # S08/S11 wood tok D3-E4
 	"coo": (62, 81),     # S13 mossling chirp D4-A5
+	"blup": (67, 91),    # S26 wish bubble: species G4-C6 (cue range) plus the third above
+	"drip": (72, 89),    # S29 pot plip ladder C5-F6 (+6 steps from D5)
+	"bell": (72, 86),    # S30 stir bell walk C5-D6
+	"tink": (79, 91),    # S36 socket tink walk G5-G6
 }
 SHELL_NOTES = [65, 67, 69, 72, 74, 77, 79, 81, 84, 86]  # GDD §4.3: F4 G4 A4 C5 D5 F5 G5 A5 C6 D6

@@ -198,3 +198,16 @@ static func in_use(slot: String) -> StringName:
 static func recipe_name(recipe: StringName) -> String:
 	var r: Dictionary = ContentRegistry.content.recipes_by_id.get(recipe, {})
 	return TranslationServer.translate(String(r.get("name_key", "")))
+
+
+## A recipe's name for use inside a sentence ("Bơ mê trà giấc êm lắm!", "Bơ loves clover tea!"):
+## names are authored in sentence case for titles and cards, so only the first letter is lowered.
+static func recipe_name_mid(recipe: StringName) -> String:
+	return mid_sentence(recipe_name(recipe))
+
+
+## [param text] with its first letter lowered (sentence-case names used mid-sentence, en and vi).
+static func mid_sentence(text: String) -> String:
+	if text.is_empty():
+		return text
+	return text.left(1).to_lower() + text.substr(1)

@@ -68,6 +68,8 @@ var _screen: Vector2 = Vector2(1080, 1920)
 var _lift_to: float = 0.0
 var _kb_restore_expanded: bool = false
 var _scrim_press := Vector2(-INF, -INF)
+## A refresh that arrived while the player had a finger on the sheet (see [method refresh]).
+var _refresh_pending: bool = false
 
 
 func _init() -> void:
@@ -149,6 +151,8 @@ func keyboard_height() -> float:
 
 
 func _process(_delta: float) -> void:
+	if _refresh_pending and current != null and not current.is_touched():
+		refresh()
 	if current == null or current.rest_bottom <= 0.0:
 		return
 	var focus := get_viewport().gui_get_focus_owner()
@@ -269,9 +273,21 @@ func rebuild(instant: bool = false) -> void:
 
 
 ## Re-reads the world into the open sheet (sim events, wallet changes).
+## Reflects the latest world state in the open sheet - unless the player is touching it.
+##
+## A gift landing in the basket, a bloom, a heart, a postcard: each fires a sim event, and the
+## sheet's own refresh() rebuilds its rows. Doing that under a thumb frees the row the press
+## belongs to, so the tap never happens and the sheet appears to swallow it (round 9). The news
+## is not urgent - it waits for the finger to leave.
 func refresh() -> void:
-	if current != null:
-		current.refresh()
+	if current == null:
+		return
+	if current.is_touched():
+		_refresh_pending = true
+		set_process(true)
+		return
+	_refresh_pending = false
+	current.refresh()
 
 
 func _swap(id: StringName, instant: bool, quiet: bool = false) -> void:

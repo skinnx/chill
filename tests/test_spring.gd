@@ -118,6 +118,53 @@ func test_spring_2d_matches_scalar() -> void:
 	assert_almost_eq(s2.value.y, -2.0 * s.value, 1e-6)
 
 
+## Round 9: a DRIVEN spring (Motion.spring_to) rests within a fraction of the distance it set out
+## to travel, not within an absolute 0.0005. Half of these springs move properties measured in
+## PIXELS, and settling a 300 px panel to within 1/2000 of a pixel takes the `move` spring 1.10 s
+## against 0.63 s for 0.15 px - half a second of travel nobody can see, during which Motion holds
+## the whole app at 60 fps. The spring class's own default is unchanged for standalone users.
+func test_a_driven_spring_rests_in_scale_with_its_travel() -> void:
+	var node := Node2D.new()
+	add_child_autofree(node)
+	node.position = Vector2.ZERO
+	Motion.spring_to(node, "position:x", 300.0, &"move")
+	var eps: float = -1.0
+	for d: Dictionary in Motion._drives:
+		if d["object"] == node:
+			eps = float((d["spring"] as Spring).rest_epsilon_x)
+	assert_almost_eq(eps, 300.0 * Motion.REST_REL, 1e-6, "0.05 % of the travel")
+	assert_gt(eps, 0.0005, "which is looser than the absolute token floor for a travel this long")
+
+
+func test_a_driven_spring_lands_exactly_on_its_target() -> void:
+	# Resting early must leave no residue: `rise` stopped 0.3 px short is invisible, but code that
+	# asks `rise > 0.0` is not blind to it.
+	var node := Node2D.new()
+	add_child_autofree(node)
+	node.position = Vector2.ZERO
+	Motion.spring_to(node, "position:x", 300.0, &"move")
+	for i in 240:
+		Motion._process(1.0 / 60.0)
+		if Motion._drives.is_empty():
+			break
+	assert_true(Motion._drives.is_empty(), "the drive finished")
+	assert_eq(node.position.x, 300.0, "and wrote the exact target, not 299.9")
+
+
+## A tiny motion keeps the absolute floor: the relative rest is a MAXimum against it, never a
+## licence to stop a 1-unit alpha fade 0.0005 short of its end.
+func test_a_small_travel_keeps_the_absolute_floor() -> void:
+	var node := Node2D.new()
+	add_child_autofree(node)
+	node.modulate.a = 0.0
+	Motion.spring_to(node, "modulate:a", 1.0, &"move")
+	for d: Dictionary in Motion._drives:
+		if d["object"] == node:
+			assert_almost_eq(float((d["spring"] as Spring).rest_epsilon_x), 0.0005, 1e-9,
+					"an alpha 0->1 stays on the token floor")
+	Motion.stop_springs(node)
+
+
 func test_cubic_bezier_tokens() -> void:
 	var std := CubicBezier.from_array(tokens["curves"]["standard"]["bezier"])
 	assert_eq(std.progress(0.0), 0.0)

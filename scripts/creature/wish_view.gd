@@ -61,6 +61,9 @@ const TOAST_S := 3.0
 
 ## The first-ever wish tip shows once per run (and only while nothing was granted yet).
 static var _tip_shown: bool = false
+## species -> the thanks line of a wish a cup of tea granted. The tea reaction toast (shown after
+## the sip, TeaSheet.present_offer) carries it, so a tea that grants a wish shows ONE toast.
+static var _tea_lines: Dictionary = {}
 
 ## The CreatureLayer this view serves (mossling lookup, walks, the frame).
 var layer: CreatureLayer
@@ -69,6 +72,7 @@ var _shown: Dictionary = {}            # species -> WishBubble
 var _busy: PackedStringArray = PackedStringArray()
 var _edit: bool = false
 var _hearts_now: Dictionary = {}       # species -> process frame of its last live heart-up
+var _tea_grant: Dictionary = {}        # species -> process frame a cup of tea granted its wish
 var _caption_s: float = 2.5
 var _qa: PackedStringArray = PackedStringArray()
 var _qa_ms: float = QA_FREEZE_MS
@@ -288,6 +292,8 @@ func _on_sim_event(ev: Dictionary) -> void:
 		var m := layer.mossling(StringName(ev["species"])) if layer != null else null
 		if m != null and not m.asleep:
 			layer.hop_aside(m, TAG_HOP_DP * PX_PER_DP)
+	elif StringName(ev["type"]) == WorldSim.EV_TEA_OFFERED and String(ev.get("wish_granted", "")) != "":
+		_tea_grant[StringName(ev["species"])] = Engine.get_process_frames()
 	elif StringName(ev["type"]) == WorldSim.EV_TEA_OFFERED and String(ev.get("wish_granted", "")) == "":
 		# integration: a cup that grants no wish still gets its sip once the cup lands (FE-T's arc)
 		var sp := StringName(ev["species"])
@@ -317,7 +323,13 @@ func on_tapped(m: Mossling) -> bool:
 
 
 func _on_granted(species: StringName, wish: StringName, affection: int, gift_flower: StringName,
-		_first_stamp: bool, on_arrival: bool) -> void:
+		_first_stamp: bool, on_arrival: bool, offline: bool = false) -> void:
+	if offline:
+		# It happened while the app was closed: the welcome-back card already says so. Replaying
+		# it as a live celebration - petal pop, the walk over, S27, a toast - would double-report
+		# hours-old news as if it had just happened (ACTIVE_WISHES §7.5).
+		sync()
+		return
 	var m := layer.mossling(species) if layer != null else null
 	var b: WishBubble = _shown.get(species)
 	_shown.erase(species)
@@ -341,8 +353,31 @@ func _on_granted(species: StringName, wish: StringName, affection: int, gift_flo
 func _toast_grant(species: StringName, affection: int, gift_flower: StringName, on_arrival: bool,
 		args: Dictionary, frame: int) -> void:
 	if affection > 0 and int(_hearts_now.get(species, -1)) >= frame:
+		_tea_grant.erase(species)
+		return
+	if int(_tea_grant.get(species, -1)) >= frame:
+		# a cup granted it: the reaction toast after the sip says both (one warm toast)
+		_tea_grant.erase(species)
+		_tea_lines[species] = tea_thanks_text(gift_flower)
 		return
 	_toast(grant_toast_text(species, gift_flower, on_arrival, args))
+
+
+## The wish half of the merged tea toast: "As thanks, a {flower} petal for your teapot." or
+## "A wish come true." (the reaction half already names the friend).
+static func tea_thanks_text(gift_flower: StringName) -> String:
+	if gift_flower == &"":
+		return TranslationServer.translate("TEA_WISH_THANKS")
+	var f: Dictionary = ContentRegistry.content.flowers_by_id.get(gift_flower, {})
+	return I18n.fmt(&"TEA_WISH_THANKS_PETAL",
+		{"flower": TranslationServer.translate(String(f.get("name_key", ""))).to_lower()})
+
+
+## Takes (and forgets) the thanks line a tea-granted wish left for [param species], or "".
+static func take_tea_line(species: StringName) -> String:
+	var line := String(_tea_lines.get(species, ""))
+	_tea_lines.erase(species)
+	return line
 
 
 ## The granted toast (the one-line HUD toast pill): "{name} is delighted.", or the gift line when a
@@ -586,5 +621,7 @@ func qa_fulfil(species: StringName) -> Array[StringName]:
 				if Game.sim.active.tea.satisfies(Game.sim, StringName(w["wish"]), species,
 						StringName(String(cup.get("recipe", ""))), cup.get("petals", [])):
 					var r := Game.offer_cup(i, species)
+					if not r.is_empty() and _hud() != null:
+						TeaSheet.present_offer(_hud(), species, cup, r)  # the arc, the sip, ONE toast
 					return me if String(r.get("wish_granted", "")) != "" else none
 	return none

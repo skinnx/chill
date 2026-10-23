@@ -235,6 +235,36 @@ func test_longest_nap_for_the_recap() -> void:
 	assert_almost_eq(float(r["seconds"]), 300.0, 1e-6)
 
 
+## Round 8 (GDD §7.5, ARCHITECTURE §12 (a)): the welcome-back recap can name what a friend did
+## while the app was closed, without storing a thing - the bouts of the absence are replanned from
+## the catch-up events, which is exact because every visit draws from its own seeded RNG.
+func test_nap_during_replans_an_absence_from_the_catch_up_events() -> void:
+	var now := 1776500000.0
+	var sim := WorldSim.new_game(content, SEED, now, 0.0)
+	sim.tap_tutorial_seed()
+	sim.advance(60.0)
+	sim.drain_events()
+	var from_t := sim.state.t
+	sim.advance(20.0 * 3600.0)  # a long absence: plenty of visits
+	var events := sim.drain_events()
+	var nap := CreatureBrain.nap_during(content, sim, events, from_t, sim.state.t)
+	assert_false(nap.is_empty(), "somebody napped over 20 h away")
+	assert_gt(float(nap["seconds"]), 0.0)
+	assert_true(content.species_by_id.has(StringName(nap["species"])), "a real friend")
+	# Replanning is deterministic: the same save and the same events give the same story.
+	var again := CreatureBrain.nap_during(content, sim, events, from_t, sim.state.t)
+	assert_eq(StringName(again["species"]), StringName(nap["species"]))
+	assert_eq(StringName(again["spot"]), StringName(nap["spot"]))
+	assert_almost_eq(float(again["seconds"]), float(nap["seconds"]), 1e-6)
+
+
+func test_nap_during_is_empty_when_nothing_happened() -> void:
+	var sim := WorldSim.new_game(content, SEED, 1776500000.0, 0.0)
+	var empty: Array[Dictionary] = []
+	assert_true(CreatureBrain.nap_during(content, sim, empty, 0.0, 100.0).is_empty())
+	assert_true(CreatureBrain.nap_during(content, sim, empty, 100.0, 100.0).is_empty(), "an empty window")
+
+
 func test_brain_follows_a_real_sim_across_a_save_reload() -> void:
 	var now := 1776500000.0
 	var sim := WorldSim.new_game(content, SEED, now, 0.0)

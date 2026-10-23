@@ -510,6 +510,8 @@ WISH_LIST_EMPTY,No wishes right now. Everyone is content.,Lúc này chưa ai ư�
 WISH_LIST_HERE,In the hollow,Đang ở thung lũng
 WISH_LIST_AWAY,Wandering elsewhere for now,Đang dạo chơi nơi khác
 WISH_LIST_VISIT,Say hello,Ghé chào
+ALBUM_OFFER_TEA,Offer tea,Mời trà
+A11Y_ALBUM_OFFER_TEA,Offer {name} a cup of tea,Mời {name} một tách trà
 ALBUM_WISHING,Wishing for,Đang ước
 ALBUM_WISH_STAMPS,Wishes granted together,Những điều ước đã thành
 ALBUM_WISH_STAMPS_EMPTY,"Now and then, friends have a little wish.",Thỉnh thoảng các bạn sẽ có một điều ước nhỏ.
@@ -521,6 +523,7 @@ WISH_TIP_FIRST,"A thought bubble is a little wish. Help if you like, or let it f
 WISH_TIP_HELD,{name} keeps the wish for another visit.,{name} sẽ giữ điều ước này cho lần ghé sau.
 WISH_INVITE,{name} toddles over.,{name} lon ton chạy tới.
 RECAP_WISH,{name} found a lovely surprise.,{name} tìm thấy một bất ngờ dễ thương.
+RECAP_WISH_WAITING,{name} is still hoping for {wish},{name} vẫn đang mong một {wish}
 CAPTION_WISH,soft bubble pop,tiếng bong bóng khẽ nổ
 CAPTION_WISH_GRANTED,happy trill,tiếng reo vui
 A11Y_WISH_BUBBLE,{name} has a little wish: {wish},{name} có một điều ước nhỏ: {wish}
@@ -565,6 +568,8 @@ TEA_REACT_CONTENT,{name} sips happily.,{name} nhấp từng ngụm vui vẻ.
 TEA_REACT_LIKED,{name} likes {recipe}.,{name} thích {recipe}.
 TEA_REACT_LOVED,{name} loves {recipe}!,{name} mê {recipe} lắm!
 TEA_REACT_PETALS,{name} tucks some {flower} petals into your pantry.,{name} nhét vài cánh {flower} vào hũ của bạn.
+TEA_WISH_THANKS,Their wish came true.,Điều ước đã thành rồi.
+TEA_WISH_THANKS_PETAL,"As thanks, a {flower} petal for your teapot.",Quà cảm ơn là một cánh {flower} để pha trà.
 TEA_REACT_AGAIN,{name} already had tea this visit and sips this one slowly.,"{name} đã uống trà lượt này rồi, giờ nhâm nhi thêm tách nữa."
 TEA_BOOK_COUNT,{count} of {total} recipes,{count} trên {total} công thức
 TEA_BOOK_SECRET,Still a secret,Vẫn còn bí mật

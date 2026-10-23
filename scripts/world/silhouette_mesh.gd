@@ -60,6 +60,25 @@ static func feather(crest: PackedVector2Array, width: float) -> ArrayMesh:
 	return _mesh(verts, uvs, cols, idx)
 
 
+## Interior + feather strip as ONE mesh (polish, draw calls: one call per silhouette instead of
+## two). Drawn with the blend_mix feather shader; the interior's vertex alpha is 1, so it looks the
+## same as the opaque core (only the tile-GPU hidden-surface skip of blend_disabled is given up).
+static func body(crest: PackedVector2Array, bottom_y: float, width: float) -> ArrayMesh:
+	var a := core(crest, bottom_y).surface_get_arrays(0)
+	var b := feather(crest, width).surface_get_arrays(0)
+	var verts: PackedVector2Array = a[Mesh.ARRAY_VERTEX]
+	var uvs: PackedVector2Array = a[Mesh.ARRAY_TEX_UV]
+	var cols: PackedColorArray = a[Mesh.ARRAY_COLOR]
+	var idx: PackedInt32Array = a[Mesh.ARRAY_INDEX]
+	var base := verts.size()
+	verts.append_array(b[Mesh.ARRAY_VERTEX] as PackedVector2Array)
+	uvs.append_array(b[Mesh.ARRAY_TEX_UV] as PackedVector2Array)
+	cols.append_array(b[Mesh.ARRAY_COLOR] as PackedColorArray)
+	for i: int in b[Mesh.ARRAY_INDEX] as PackedInt32Array:
+		idx.append(base + i)
+	return _mesh(verts, uvs, cols, idx)
+
+
 ## Skirt below a flat body bottom (map pan, ARCHITECTURE §3.4): a rect from [param top_y] to
 ## [param bottom_y] over [x0, x1] shaded as the body bottom (UV.x 1, far below the crest).
 static func skirt(x0: float, x1: float, top_y: float, bottom_y: float) -> ArrayMesh:

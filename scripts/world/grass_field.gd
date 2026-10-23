@@ -23,7 +23,7 @@ const MOSS_TEX := "res://art/fx/moss_tile.png"
 const SEED := 4243
 ## Band edges (design y): 105 px bands from above the crest to the brook, then the near bank.
 const BAND_TOP := 700.0
-const BAND_STEP := 105.0
+const BAND_STEP := 140.0
 const BAND_SPLIT := 1540.0
 const BAND_BOTTOM := 1980.0
 ## Quad (local px at depth 1, root at the origin): x +-QUAD_HW, y -QUAD_TOP..QUAD_BOTTOM.

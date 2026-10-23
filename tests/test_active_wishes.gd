@@ -258,6 +258,41 @@ func test_greeter_brings_a_held_wish_and_never_spawns_one() -> void:
 		assert_ne(String(w["species"]), "fernwhisk", "a greeter never spawns a wish")
 
 
+## Round 8: only a wish the player can SEE may be granted by a décor placement, the same guard
+## on_action has. A held wish has no bubble - its slot belongs to another friend - so granting it
+## hands out the pose, the stamp, the gift petal and the once-per-20 h affection for a goal that
+## was never shown. A wish never expires, so waiting for its bubble costs nothing.
+func test_a_placement_never_grants_a_wish_the_player_has_not_seen() -> void:
+	var sim := _sim()
+	ActiveTestUtil.arrive(sim, &"dandelfluff", T0)
+	ActiveTestUtil.give_wish(sim, &"dandelfluff", &"pinwheel_nearby")
+	var held: Dictionary = sim.state.wishes[0]
+	held["state"] = WorldState.WISH_HELD
+	sim.drain_events()
+	var fav := sim.active.favourite_spot_pos(sim, &"dandelfluff")
+	sim.active.wishes.on_decor_placed(sim, &"leaf_pinwheel", fav, sim.state.t)
+	assert_eq(_grants(sim).size(), 0, "a held wish waits for its bubble")
+	assert_eq(sim.state.wishes.size(), 1, "and is still there")
+	# The same placement, once the bubble is up, grants as before.
+	held["state"] = WorldState.WISH_OPEN
+	sim.active.wishes.on_decor_placed(sim, &"leaf_pinwheel", fav, sim.state.t)
+	assert_eq(_grants(sim).size(), 1, "an open wish is granted")
+
+
+## HELD means two different things, and only one of them is the bug above: a friend who LEFT keeps
+## its wish and is meant to find the piece waiting on its next visit (ACTIVE_WISHES §5).
+func test_a_piece_set_while_a_friend_is_away_still_waits_for_it() -> void:
+	var sim := _sim()
+	ActiveTestUtil.arrive(sim, &"dandelfluff", T0)
+	ActiveTestUtil.give_wish(sim, &"dandelfluff", &"pinwheel_nearby")
+	var fav := sim.active.favourite_spot_pos(sim, &"dandelfluff")
+	ActiveTestUtil.depart(sim, &"dandelfluff", T0 + 10.0)
+	sim.drain_events()
+	sim.active.wishes.on_decor_placed(sim, &"leaf_pinwheel", fav, sim.state.t)
+	var w := sim.active.wishes.wish_of(sim, &"dandelfluff")
+	assert_true(bool(w.get("placed", false)), "the piece is remembered for when it comes back")
+
+
 func test_a_wish_never_disappears_except_by_grant() -> void:
 	var sim := _sim(777)
 	sim.state.tea_unlocked = true

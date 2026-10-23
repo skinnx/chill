@@ -45,6 +45,9 @@ const UI_ATLAS: Array = [
 	[&"language", 60.0], [&"minus", 42.0], [&"plus", 42.0],
 	[&"heart", 72.0], [&"paw", 72.0], [&"moon", 72.0], [&"garden", 72.0], [&"basket", 72.0],
 	[&"photo", 72.0], [&"rain", 72.0],
+	# polish (draw calls): the friend page's 18 dp hearts and the tea offer chip's wish sparkle drew
+	# from textures of their own (one draw call each)
+	[&"heart", 54.0], [&"heart_empty", 54.0], [&"sparkle", 30.0],
 ]
 ## Atlas rows wrap at this width (GLES3 mobile texture limits).
 const ATLAS_MAX_W := 2048.0
