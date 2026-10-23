@@ -202,6 +202,10 @@ Motion (`PanBody`, pure; maths in `PanMath`; tokens `motion_tokens.world.pan`):
 - **`is_blocked()`** is public: Game pauses the wish clock while a sheet or card is open.
 - **Wish fulfilment rides on release-to-fire.** Views report the actions the player already has through `Game.world_action(kind, args)` from `world_release(act = true)` only (`tap_creature`, `ring_chime`, `bed_tap` on every bed release whichever branch ran, `decor_tap`, `stream_tap`; pets and boats report themselves), so a pan or a cancelled press never grants a wish. The wish bubble is not a hit target.
 
+**Sheets follow the finger everywhere (round 9).** The header swipe zone is only `HEADER_TOP + HEADER_H` = 228 px (76 dp) tall, which at the medium detent on a 1080×2400 phone puts every way to resize or dismiss a sheet in the top quarter of the screen — while the ~77 % of the sheet actually under the thumb did nothing at all. `UiSheet` now bridges the list to the sheet the way a nested scroll does: while the list is at `scroll_vertical == 0` and the finger pulls **down** past `LIST_HANDOFF_PX` (24 px, `gui/common/drag_threshold` — under both the 10 dp button slop and the list's 10 dp scroll deadzone, so the sheet claims first), the gesture becomes the sheet's and the list does not scroll. Any other direction, and any list with content above the window, scrolls as before; pulling *up* to expand from the medium detent is deliberately not taken, so a long list still scrolls without first growing the sheet. The handoff re-anchors (`drag_begin` at the live finger), so it costs no jump, and `TapGuard.cancel_in` drops the row press underneath it. A sheet grabbed mid-animation carries its live `rise` into the drag (`_drag_rise0`) instead of snapping up by what was left of the open.
+
+**A rebuild never lands under a thumb (round 9).** A gift arriving, a bloom, a heart or a postcard fires a sim event, and the open sheet's `refresh()` rebuilds its rows — freeing the control a press belongs to, so the tap simply never happens. `SheetHost.refresh` holds the rebuild while `UiSheet.is_touched()` (a header or list drag, or a list still gliding) and applies it on the first frame after the finger leaves.
+
 **GUI consumption (no through-taps).** Every surface that looks like UI stops presses (`MOUSE_FILTER_STOP`):
 - **The sheet and its scrim.** The sheet's whole rect (padding, grabber, header) stops presses, and so does the full-screen scrim. While a sheet *closes*, it is input-dead (`mouse_behavior_recursive = DISABLED`, so a fast second tap on Plant or Collect never acts). Its rect and the scrim keep consuming until the sheet is freed. A scrim tap (press and release within 10 dp) closes the sheet and never reaches the world; a drag over it does nothing.
 - **Modal cards and their scrim.** They behave the same way, and dismissing one needs a tap, not a drag.
@@ -542,6 +546,26 @@ The contract is AUDIO_BIBLE §8; `tools/audio/mixsim.py` is its executable refer
   - **Variations:** TitleLabel, BodyLabel, StrongLabel, CaptionLabel, SecondaryLabel, HudNumeral, PriceLabel; the primary Button pill and SecondaryButton; panels Card, Sheet, Chip and ModalCard; LineEdit; thin scrollbars.
   - **CanvasLayer root Controls must call `UiTheme.attach(control)`**, because theme propagation stops at a CanvasLayer.
   - **Fonts** (`fonts/`) are subset WOFF2 files. They are imported with hinting None and no system fallback; `Baloo2-Bold-Numerals` is imported as MSDF.
+
+---
+
+### 8.4a Motion: when a spring stops (round 9)
+
+`Spring` is analytic, so its cost is one step per frame; what was expensive was how *long* it ran.
+The `rest_epsilon` in `motion_tokens.json` is absolute (0.0005), but half of these springs drive
+properties measured in **pixels**: settling a 300 px panel to within 1/2000 of a pixel takes the
+`move` spring 1.10 s, against 0.63 s to reach 0.15 px. That half-second is invisible and not free —
+`Motion._process` calls `FrameGovernor.hold_for` for as long as any drive is alive, so every sheet
+open, dock move, tray slide and drag release pinned the whole app at 60 fps for an extra half
+second before the idle timer could even start.
+
+A **driven** spring (`Motion.spring_to`) therefore rests within `REST_REL` (0.05 %) of the distance
+it set out to travel, never tighter than the token floor, and a drive that finishes writes the
+**exact** target so stopping early leaves no residue (a `rise` left 0.3 px short is invisible, but
+`rise > 0.0` is not). The relative form is right for a pixel property and an alpha alike without
+Motion knowing units, and 0.05 % keeps the final snap under a pixel even for the longest travel in
+the game (a full-height sheet, 1,709 px → 0.85 px). `Spring`'s own default is unchanged for the
+many places that step a spring themselves.
 
 ---
 

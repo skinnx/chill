@@ -84,6 +84,11 @@ const RING_INVALID_DP := 2.5
 const RING_SELECT_DP := 3.0
 const RING_SELECT_ALPHA := 0.7
 const IDLE_LINE_DP := 2.0
+## How far a ring's flat chords may sit from the true ellipse, in px. The rings are stroked
+## IDLE_LINE_DP (2 dp = 6 px) wide, so a tenth of that is well under what a screen can show.
+const RING_TOL_PX := 0.75
+const RING_SEGS_MIN := 12
+const RING_SEGS_MAX := 24
 const IDLE_ALPHA := 0.5
 const IDLE_K := 200.0
 ## Foot rings hug the footprint: half width = footprint x FOOT_RING_K (at least FOOT_RING_MIN_DP),
@@ -1178,12 +1183,30 @@ func _draw_sockets(t: Tris) -> void:
 		t.fan(q, star, col)
 
 
-static func _ellipse_points(c: Vector2, half: Vector2, n: int = 40) -> PackedVector2Array:
+## A closed ellipse outline. [param n] = 0 picks the segment count from the ring's own size so the
+## flat chords never sit more than [constant RING_TOL_PX] from the true curve (round 9).
+##
+## This was a flat 40 segments for every ring. The foot rings run 30-71 px wide, so 40 segments put
+## the chord error at 0.09-0.22 px inside a 6 px stroke - invisible oversampling, paid for on every
+## piece on every frame while edit mode is open (each segment is a quad: 4 point, 4 colour and 6
+## index appends, in GDScript). At the tolerance below the common sets drop to 14 segments.
+static func _ellipse_points(c: Vector2, half: Vector2, n: int = 0) -> PackedVector2Array:
+	var segs := n if n > 0 else ellipse_segments(maxf(half.x, half.y))
 	var pts := PackedVector2Array()
-	for k in n + 1:
-		var a := TAU * float(k) / float(n)
-		pts.append(c + Vector2(cos(a) * half.x, sin(a) * half.y))
+	pts.resize(segs + 1)
+	for k in segs + 1:
+		var a := TAU * float(k) / float(segs)
+		pts[k] = c + Vector2(cos(a) * half.x, sin(a) * half.y)
 	return pts
+
+
+## Segments for a ring of [param radius] px: the fewest whose chord sagitta stays within
+## [constant RING_TOL_PX]. r*(1 - cos(PI/n)) <= tol  ->  n >= PI / acos(1 - tol/r).
+static func ellipse_segments(radius: float) -> int:
+	if radius <= RING_TOL_PX:
+		return RING_SEGS_MIN
+	var n := ceili(PI / acos(clampf(1.0 - RING_TOL_PX / radius, -1.0, 1.0)))
+	return clampi(n, RING_SEGS_MIN, RING_SEGS_MAX)
 
 
 ## Every ring, halo, line and sparkle of one overlay as ONE triangle array (one draw call instead

@@ -168,6 +168,26 @@ func test_carry_offset_eases_the_foot_above_the_finger() -> void:
 	assert_between(mid.y, -72.0, 30.0)
 
 
+## Round 9: the foot rings are tessellated to a pixel tolerance instead of a flat 40 segments.
+## Every ring of every movable piece is rebuilt on every frame edit mode is open, and at 40
+## segments the chords sat 0.09-0.22 px from the true curve inside a 6 px stroke - invisible
+## oversampling, paid for per piece per frame.
+func test_ring_tessellation_follows_the_ring_size() -> void:
+	for r: float in [30.0, 46.2, 71.3]:
+		var n := DecorEdit.ellipse_segments(r)
+		assert_between(n, DecorEdit.RING_SEGS_MIN, DecorEdit.RING_SEGS_MAX,
+				"%d segments for a %d px ring" % [n, int(r)])
+		var sagitta := r * (1.0 - cos(PI / float(n)))
+		assert_lte(sagitta, DecorEdit.RING_TOL_PX + 1e-6, "within the tolerance at %d px" % int(r))
+		var coarser := r * (1.0 - cos(PI / float(n - 1)))
+		assert_true(n == DecorEdit.RING_SEGS_MIN or coarser > DecorEdit.RING_TOL_PX,
+				"and no more segments than it needs")
+	assert_lt(DecorEdit.ellipse_segments(30.0), 40, "the common sets cost far less than the old flat 40")
+	var pts := DecorEdit._ellipse_points(Vector2.ZERO, Vector2(30.0, 12.0))
+	assert_eq(pts.size(), DecorEdit.ellipse_segments(30.0) + 1, "closed ring: n + 1 points")
+	assert_almost_eq(pts[0].distance_to(pts[pts.size() - 1]), 0.0, 1e-5, "and it closes")
+
+
 func test_edge_pan_waits_eases_in_and_halves_under_reduce_motion() -> void:
 	assert_eq(DecorEdit.edge_pan_speed(10.0, 1080.0, 120.0, 660.0, 0.1, 0.25, false), 0.0, "waits 250 ms")
 	var left := DecorEdit.edge_pan_speed(10.0, 1080.0, 120.0, 660.0, 0.5, 0.25, false)

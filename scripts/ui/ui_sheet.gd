@@ -25,6 +25,10 @@ extends GlassPanel
 
 signal close_requested
 
+## The list-to-sheet handoff (round 9): PENDING = a finger is down in the list and undecided;
+## SHEET = the sheet has the gesture and the list will not scroll.
+enum ListDrag { NONE, PENDING, SHEET }
+
 const GRABBER := Vector2(120, 12)
 const GRABBER_Y := 22.0
 const GRABBER_ALPHA := 0.25
@@ -50,6 +54,11 @@ const OVERDRAG_K := 0.3
 const DETENT_FLING := 600.0
 ## The swipe velocity window, the same number WorldPan uses (motion_tokens world.pan).
 const VELOCITY_WINDOW_S := 0.1
+## How far a finger must pull DOWN inside the list before the sheet takes the gesture from it
+## (round 9). This is `gui/common/drag_threshold`, the project's "this is a drag now" number, and
+## it sits below both the 10 dp button slop and the list's 10 dp scroll deadzone, so the sheet
+## claims first and cleanly - the pending row press is cancelled explicitly.
+const LIST_HANDOFF_PX := 24.0
 const DETENT_SPRING := &"move"
 ## Scrolled content fades out over UiBatch.FADE_BOTTOM_PX at the bottom edge and FADE_TOP_PX at
 ## the top, each only while there is more to scroll that way (round 6).
@@ -105,6 +114,10 @@ var _drag_from: float = -1.0
 var _drag_h0: float = 0.0
 var _drag_base: float = 0.0
 var _drag_y: float = 0.0
+var _list_drag: ListDrag = ListDrag.NONE
+var _list_from := Vector2.ZERO
+## The sheet's rise when the drag began (it may have been mid-animation): see [method drag_begin].
+var _drag_rise0: float = 0.0
 ## (offset px, time s) samples of the swipe, pruned to VELOCITY_WINDOW_S.
 var _samples: Array[Vector2] = []
 var _built: bool = false
@@ -193,6 +206,16 @@ func _apply_geometry() -> void:
 	position.y = rest_bottom - lift - sheet_h + rise
 
 
+## True while a finger is on this sheet or its list is still gliding (round 9). A rebuild of the
+## rows under a thumb frees the control the press belongs to, so the tap it was going to be
+## simply never happens; SheetHost holds its refresh until this is false.
+func is_touched() -> bool:
+	if _drag_from >= 0.0 or _list_drag != ListDrag.NONE:
+		return true
+	var sc := scroll_list()
+	return sc != null and TapGuard.is_moving(sc)
+
+
 ## The scroll list (or null): QA, keyboard lift.
 func scroll_list() -> ScrollContainer:
 	return _fade_scroll if _fade_scroll != null and is_instance_valid(_fade_scroll) else null
@@ -235,6 +258,7 @@ func make_scroll(top: float, separation: int = 24) -> VBoxContainer:
 	sc.mouse_filter = Control.MOUSE_FILTER_PASS
 	# scroll deadzone = the 10 dp button slop; presses during a fling only catch it (TapGuard)
 	TapGuard.watch_scroll(sc)
+	sc.gui_input.connect(_on_list_input.bind(sc))
 	# the list's clip is the scroll window: everything inside it moves and clips with it
 	sc.clip_contents = true
 	UiBatch.mark_scroll(sc)
@@ -380,6 +404,57 @@ func _place_header_extra() -> void:
 
 # ------------------------------------------------------------------ swipe to dismiss (GDD §8.2)
 
+## Round 9: the sheet follows the finger ANYWHERE in the list, not only in its 76 dp header.
+##
+## The header swipe zone is `HEADER_TOP + HEADER_H` = 228 px tall. At the medium detent on a
+## 1080x2400 phone that puts the only way to resize or dismiss a sheet in the top quarter of the
+## screen, while the ~77 % of the sheet that actually sits under the thumb did nothing at all. This
+## is the standard nested-scroll bridge: while the list is scrolled to its top and the finger pulls
+## DOWN, the gesture belongs to the sheet; any other direction, or any list with content above,
+## scrolls as before. Pulling up to expand from the medium detent is deliberately NOT taken - a
+## long list must still scroll up without first growing the sheet.
+func _on_list_input(event: InputEvent, sc: ScrollContainer) -> void:
+	if rest_bottom <= 0.0:
+		return  # a sheet that does not resize has nothing to hand the gesture to
+	var now := Time.get_ticks_msec() * UiTokens.MS
+	if PointerGate.is_press(event):
+		_list_drag = ListDrag.PENDING
+		_list_from = TapGuard.global_of(event, sc)
+		return
+	var mb := event as InputEventMouseButton
+	if mb != null and not mb.pressed:
+		if _list_drag == ListDrag.SHEET:
+			drag_end(now)
+			sc.accept_event()
+		_list_drag = ListDrag.NONE
+		return
+	if _list_drag == ListDrag.NONE:
+		return
+	var mm := event as InputEventMouseMotion
+	if mm == null or not bool(mm.button_mask & MOUSE_BUTTON_MASK_LEFT):
+		return
+	var at := TapGuard.global_of(event, sc)
+	if _list_drag == ListDrag.SHEET:
+		drag_to(at.y, now)
+		sc.accept_event()
+		return
+	var d := at - _list_from
+	if absf(d.x) > absf(d.y) or d.y < -LIST_HANDOFF_PX:
+		_list_drag = ListDrag.NONE  # sideways, or upward: not ours
+		return
+	if d.y < LIST_HANDOFF_PX:
+		return
+	if sc.scroll_vertical > 0:
+		_list_drag = ListDrag.NONE  # there is list above the window: it scrolls first
+		return
+	# At the top of the list and pulling down: the sheet takes it. It begins tracking from where
+	# the finger IS, so the handoff costs no jump (the same rule as the map pan, ARCHITECTURE §3.4).
+	TapGuard.cancel_in(sc)
+	_list_drag = ListDrag.SHEET
+	drag_begin(at.y, now)
+	sc.accept_event()
+
+
 func _on_swipe_input(event: InputEvent) -> void:
 	var now := Time.get_ticks_msec() * UiTokens.MS
 	if event is InputEventMouseButton and (event as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
@@ -425,6 +500,11 @@ func drag_begin(y: float, now: float) -> void:
 	_drag_from = y
 	_drag_h0 = sheet_h if rest_bottom > 0.0 else size.y
 	_drag_base = position.y - rise
+	# Round 9: a sheet grabbed while it is still opening is mid-rise. Without carrying that rise
+	# into the drag, the first motion event recomputes it from dy alone and snaps the sheet up by
+	# whatever was left of the animation. Folding it in makes the finger pick the sheet up exactly
+	# where it is.
+	_drag_rise0 = rise
 	_drag_y = 0.0
 	_samples.clear()
 	_samples.append(Vector2(0.0, now))
@@ -436,10 +516,10 @@ func drag_to(y: float, now: float) -> void:
 	_sample(dy, now)
 	_drag_y = dy
 	if rest_bottom <= 0.0:
-		rise = maxf(dy, 0.0)
+		rise = maxf(dy + _drag_rise0, 0.0)
 		position.y = _drag_base + rise
 	else:
-		var want := _drag_h0 - dy
+		var want := _drag_h0 - dy - _drag_rise0
 		var top_h := h_large
 		if want > top_h:
 			sheet_h = top_h + minf((want - top_h) * OVERDRAG_K, OVERDRAG_PX)

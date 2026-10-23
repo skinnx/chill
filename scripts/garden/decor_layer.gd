@@ -173,6 +173,11 @@ var edit: DecorEdit
 var _content: GameContent
 var _pieces: Dictionary = {}           # decor id -> Array of Piece (copy order; cairn: one per stack)
 var _by_id: Dictionary = {}            # unit id ("set#n", a cairn stack's base) -> Piece
+## movable_pieces() is asked for on every frame of edit mode (the overlay draws a ring per piece)
+## and it used to build and lambda-sort a fresh Array each time. The set only changes when a
+## piece enters or leaves _by_id, so it is cached and rebuilt on demand (round 9).
+var _movable: Array[Piece] = []
+var _movable_dirty: bool = true
 var _shadows: Node2D
 var _chime_set: Node2D
 var _motes: Node2D
@@ -521,6 +526,7 @@ func _add_piece(id: StringName, i: int, foot: Vector2, rot: int, pebbles: Packed
 	_pieces[id] = list
 	if id != CHIME:
 		_by_id[uid] = p
+		_movable_dirty = true
 	if id == CHIME:
 		p.unit = "chimes"
 	elif _is_static(id):
@@ -621,6 +627,7 @@ func _remove_piece(p: Piece) -> void:
 		_press = null
 		_hide_fill()
 	_by_id.erase(p.id)
+	_movable_dirty = true
 	var list: Array = _pieces.get(p.decor, [])
 	list.erase(p)
 
@@ -1131,12 +1138,14 @@ func piece(id: String) -> Piece:
 
 ## Every movable unit drawn now (edit targets): Array of Piece.
 func movable_pieces() -> Array[Piece]:
-	var out: Array[Piece] = []
-	for p: Piece in _by_id.values():
-		if not p.temp:
-			out.append(p)
-	out.sort_custom(func(a: Piece, b: Piece) -> bool: return a.id < b.id)
-	return out
+	if _movable_dirty:
+		_movable_dirty = false
+		_movable.clear()
+		for p: Piece in _by_id.values():
+			if not p.temp:
+				_movable.append(p)
+		_movable.sort_custom(func(a: Piece, b: Piece) -> bool: return a.id < b.id)
+	return _movable
 
 
 ## Lifts unit [param id] out of its band onto its own stamp (z 1, above the friends) so the edit

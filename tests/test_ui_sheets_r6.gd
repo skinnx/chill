@@ -338,6 +338,121 @@ func test_the_same_flick_reads_the_same_at_30_and_60_fps() -> void:
 	assert_almost_eq(speeds[1], 1200.0, 1.0, "30 fps agrees")
 
 
+## Round 9: the sheet follows the finger anywhere in the list, not only in its 76 dp header.
+## On a 1080x2400 phone the header zone sits in the top quarter of the screen, so every way to
+## resize or dismiss a sheet was out of the thumb's reach while the part under the thumb did
+## nothing. Helper: one press, then drags, on the list itself.
+func _list_press(sc: ScrollContainer, at: Vector2) -> void:
+	var mb := InputEventMouseButton.new()
+	mb.button_index = MOUSE_BUTTON_LEFT
+	mb.pressed = true
+	mb.global_position = at
+	mb.position = at
+	sc.gui_input.emit(mb)
+
+
+func _list_move(sc: ScrollContainer, at: Vector2) -> void:
+	var mm := InputEventMouseMotion.new()
+	mm.button_mask = MOUSE_BUTTON_MASK_LEFT
+	mm.global_position = at
+	mm.position = at
+	sc.gui_input.emit(mm)
+
+
+func _list_release(sc: ScrollContainer, at: Vector2) -> void:
+	var mb := InputEventMouseButton.new()
+	mb.button_index = MOUSE_BUTTON_LEFT
+	mb.pressed = false
+	mb.global_position = at
+	mb.position = at
+	sc.gui_input.emit(mb)
+
+
+func test_pulling_down_in_the_list_drags_the_sheet() -> void:
+	var host := _host("settings")
+	host.open(&"settings", true)
+	var s := host.current
+	await wait_process_frames(3)
+	s.expand(true)
+	await wait_seconds(0.8)
+	assert_true(s.expanded, "start at the large detent")
+	var sc := s.scroll_list()
+	assert_eq(sc.scroll_vertical, 0, "premise: the list is at its top")
+	var h0 := s.sheet_h
+	var at := sc.get_global_rect().get_center()
+	_list_press(sc, at)
+	# The claiming event anchors the drag where the finger is and moves nothing (the no-jump rule).
+	_list_move(sc, at + Vector2(0.0, UiSheet.LIST_HANDOFF_PX + 1.0))
+	assert_almost_eq(s.sheet_h, h0, 0.5, "the handoff itself costs no jump")
+	_list_move(sc, at + Vector2(0.0, 120.0))
+	assert_lt(s.sheet_h, h0, "from there the sheet follows the finger toward medium")
+	_list_move(sc, at + Vector2(0.0, 400.0))
+	assert_almost_eq(s.sheet_h, s.h_medium, 1.0, "past medium the height clamps")
+	assert_gt(s.rise, 0.0, "and the whole sheet rides down with the finger")
+	# What the release then decides - settle at a detent or dismiss - is the header drag's own
+	# rule, already covered by test_tall_phone_sheet_opens_taller_and_drags_to_a_large_detent.
+	_list_release(sc, at + Vector2(0.0, 400.0))
+
+
+func test_a_small_or_sideways_or_upward_drag_leaves_the_list_alone() -> void:
+	var host := _host("settings")
+	host.open(&"settings", true)
+	var s := host.current
+	await wait_process_frames(3)
+	s.expand(true)
+	await wait_seconds(0.8)
+	var sc := s.scroll_list()
+	var h0 := s.sheet_h
+	var at := sc.get_global_rect().get_center()
+	for d: Vector2 in [Vector2(0.0, UiSheet.LIST_HANDOFF_PX - 2.0), Vector2(200.0, 10.0),
+			Vector2(0.0, -200.0)]:
+		_list_press(sc, at)
+		_list_move(sc, at + d)
+		_list_release(sc, at + d)
+		assert_almost_eq(s.sheet_h, h0, 0.5, "the sheet is untouched by %s" % d)
+
+
+## Content above the window means the list scrolls first; the sheet only takes a pull from the top.
+func test_a_scrolled_list_keeps_its_own_drag() -> void:
+	var host := _host("settings")
+	host.open(&"settings", true)
+	var s := host.current
+	await wait_process_frames(3)
+	s.expand(true)
+	await wait_seconds(0.8)
+	var sc := s.scroll_list()
+	sc.scroll_vertical = 120
+	await wait_process_frames(2)
+	var h0 := s.sheet_h
+	var at := sc.get_global_rect().get_center()
+	_list_press(sc, at)
+	_list_move(sc, at + Vector2(0.0, 200.0))
+	_list_release(sc, at + Vector2(0.0, 200.0))
+	assert_almost_eq(s.sheet_h, h0, 0.5, "the list scrolls, the sheet stays put")
+
+
+## Round 9: a gift landing, a bloom, a heart - each fires a sim event whose refresh rebuilds the
+## sheet's rows. Doing that under a thumb frees the control the press belongs to, so the tap it
+## was going to be never happens. The news waits for the finger to leave.
+func test_a_refresh_waits_for_the_finger_to_leave() -> void:
+	var host := _host("settings")
+	host.open(&"settings", true)
+	var s := host.current
+	await wait_process_frames(3)
+	var sc := s.scroll_list()
+	var at := sc.get_global_rect().get_center()
+	assert_false(s.is_touched(), "nothing is touching it yet")
+	_list_press(sc, at)
+	_list_move(sc, at + Vector2(0.0, UiSheet.LIST_HANDOFF_PX + 1.0))
+	assert_true(s.is_touched(), "a finger has the sheet")
+	host.refresh()
+	assert_true(host._refresh_pending, "the rebuild is held, not run under the thumb")
+	_list_release(sc, at + Vector2(0.0, UiSheet.LIST_HANDOFF_PX + 1.0))
+	assert_false(s.is_touched())
+	await wait_process_frames(2)
+	assert_false(host._refresh_pending, "and lands once the finger is gone")
+
+
 func test_16_9_keeps_the_art_bible_sheet() -> void:
 	var host := SheetHost.new()
 	add_child_autofree(host)
