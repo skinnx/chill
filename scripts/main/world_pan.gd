@@ -55,9 +55,14 @@ enum Kind { NONE, PRESS, MOVE, RELEASE, CANCEL }
 const GROUP_HIT := &"world_hit"
 ## Active F3: while edit mode is on, only these nodes offer targets (the DecorEdit controller).
 const GROUP_HIT_EDIT := &"world_hit_edit"
-## GDD §2.5 hit priority, highest first (choose-a-bed mode lifts beds with room above all).
-const PRIO_CHOOSE_BED := 7
-const PRIO_MOSSLING := 6
+## GDD §2.5 hit priority, highest first (choose-a-bed mode lifts beds with room above all), as
+## extended by §13.3.2: mossling > sign > ready bud > prop > décor tap_fx > bed > stream.
+## Round 10 opened a slot for the mystery signs, so everything above a ready bed moved up one.
+const PRIO_CHOOSE_BED := 8
+const PRIO_MOSSLING := 7
+## Retention v1 F2: a clue in the hollow outranks everything a tap could do to the ground under
+## it, because it is there to be found and it goes away once it is.
+const PRIO_SIGN := 6
 const PRIO_READY_BED := 5
 const PRIO_PROP := 4
 const PRIO_DECOR := 3
@@ -69,8 +74,8 @@ const PRIO_STREAM := 1
 const PRIO_PETAL_BED := 5
 const PRIO_TEA_NOOK := 4
 const PRIO_STILL := 1
-const PRIO_EDIT := 8
-const PRIO_EDIT_SELECTED := 9
+const PRIO_EDIT := 9
+const PRIO_EDIT_SELECTED := 10
 ## Fat-finger slop around every world hit area and the upward aim offset of a touch (dp).
 const SLOP_DP := 9.0
 const AIM_UP_DP := 3.0

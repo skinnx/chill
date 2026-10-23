@@ -25,6 +25,12 @@ const HEART_PX := 36.0
 const DETAIL_HEART_PX := 54.0
 const HEARTS := 5
 const EMPTY_HEART_ALPHA := 0.35
+## Tab order (round 10 inserted Clues after Friends, GDD §13.5.1).
+const TAB_FRIENDS := 0
+const TAB_CLUES := 1
+const TAB_PHOTOS := 2
+const TAB_POSTCARDS := 3
+
 const COLUMNS := 3
 const COLUMNS_LARGE_TEXT := 2
 const LARGE_TEXT := 150
@@ -114,7 +120,7 @@ func current_tab() -> int:
 
 
 func select_tab(i: int, animate: bool = true) -> void:
-	_tab = clampi(i, 0, 2)
+	_tab = clampi(i, TAB_FRIENDS, TAB_POSTCARDS)
 	_friend = &""
 	_tabs.select(_tab, animate)
 	_fill()
@@ -126,8 +132,8 @@ func select_tab(i: int, animate: bool = true) -> void:
 
 ## Friend detail (pushed with `standard`; Back / the back chevron returns to the grid).
 func show_friend(species: StringName) -> void:
-	_tab = 0
-	_tabs.select(0, false)
+	_tab = TAB_FRIENDS
+	_tabs.select(TAB_FRIENDS, false)
 	_friend = species
 	_fill()
 	_scroll.scroll_vertical = 0
@@ -185,7 +191,8 @@ func _style_name_field(e: LineEdit) -> void:
 
 
 func _tab_texts() -> PackedStringArray:
-	return PackedStringArray([tr("ALBUM_TAB_FRIENDS"), tr("ALBUM_TAB_PHOTOS"), tr("ALBUM_TAB_POSTCARDS")])
+	return PackedStringArray([tr("ALBUM_TAB_FRIENDS"), tr("ALBUM_TAB_CLUES"), tr("ALBUM_TAB_PHOTOS"),
+		tr("ALBUM_TAB_POSTCARDS")])
 
 
 func _fill() -> void:
@@ -198,7 +205,7 @@ func _fill() -> void:
 	if Game.sim == null:
 		return
 	_count.text = "%d / %d" % [Game.sim.met_count(), ContentRegistry.content.species.size()]
-	if _qa_wish_list and _friend == &"" and _tab == 0:
+	if _qa_wish_list and _friend == &"" and _tab == TAB_FRIENDS:
 		_qa_wish_list = false
 		_friend = WishAlbum.PAGE
 		_tabs.visible = false
@@ -210,11 +217,13 @@ func _fill() -> void:
 		_build_detail(_friend)
 		return
 	match _tab:
-		0:
+		TAB_FRIENDS:
 			_build_friends()
-		1:
+		TAB_CLUES:
+			_build_clues()
+		TAB_PHOTOS:
 			_build_photos()
-		2:
+		TAB_POSTCARDS:
 			_build_postcards()
 
 
@@ -294,6 +303,73 @@ func _friend_card(sp: StringName, s: Dictionary, w: float) -> Control:
 	c.resized.connect(sync)
 	b.custom_minimum_size = Vector2(w, c.get_combined_minimum_size().y)
 	return b
+
+
+## Album › Clues (Retention v1 F2, GDD §13.3.3). One card per OPENED mystery, in the order the
+## sim gives: species in album order, then cousins in opening order. A mystery that has not opened
+## is not here - the Friends tab's silhouette and hint already cover it.
+##
+## Round 10: the read-back half of the signs in the hollow. Nothing on this tab is a task; it is
+## where what you found goes, and what is still missing shows as an empty dot, never a count-down.
+func _build_clues() -> void:
+	var cards := Game.clue_cards()
+	if cards.is_empty():
+		var empty := label(tr("CLUES_EMPTY"), &"SecondaryLabel", true)
+		empty.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_list.add_child(empty)
+		return
+	for c: Dictionary in cards:
+		_list.add_child(_clue_card(c))
+
+
+func _clue_card(c: Dictionary) -> Control:
+	var sp := StringName(String(c.get("species", "")))
+	var solved := bool(c.get("solved", false))
+	var variant := StringName(String(c.get("variant", "")))
+	var box := card(CARD_PAD, ThemeBuilder.R_L, UiTokens.E1)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override(&"separation", 10)
+	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(v)
+	# Solved shows the friend as they are; still open shows the soft silhouette, no face.
+	v.add_child(_portrait_well(sp, solved, WELL_H, &"awake"))
+	var title := ""
+	if solved:
+		title = I18n.fmt(&"CLUES_SOLVED", {"name": Game.display_name(sp)})
+	elif variant != &"":
+		title = I18n.fmt(&"CLUES_COUSIN", {"name": Game.display_name(sp)})
+	else:
+		title = tr("CLUES_SOMEONE")
+	var t := label(title, &"StrongLabel", true)
+	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(t)
+	var found := int(c.get("found", 0))
+	var total := int(c.get("total", 0))
+	if total > 0:
+		var dots := _clue_dots(found, total)
+		dots.tooltip_text = I18n.fmt(&"CLUES_COUNT", {"count": found, "total": total})
+		v.add_child(dots)
+	# The riddle is the reward for finding the note, so it only appears once that one is in.
+	var riddle := String(c.get("riddle_key", ""))
+	if riddle != "" and (bool(c.get("riddle_found", false)) or solved):
+		var r := label(tr(riddle), &"BodyLabel", true)
+		r.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		v.add_child(r)
+	return box
+
+
+## ● found, ○ still out there. Dots, never a number: the tab says what you have, not what you owe.
+func _clue_dots(found: int, total: int) -> Control:
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override(&"separation", 12)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for i in total:
+		var d := label("\u25CF" if i < found else "\u25CB", &"StrongLabel")
+		d.modulate.a = 1.0 if i < found else EMPTY_HEART_ALPHA
+		d.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row.add_child(d)
+	return row
 
 
 ## A friend's well: the studio-lit portrait (or the soft silhouette of a friend not met yet),

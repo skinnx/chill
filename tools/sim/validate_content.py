@@ -871,7 +871,7 @@ def check_active(d: dict, rep: Report) -> set:
 		rep.err("decor_placement.hit: edit and still-piece hits below the I2 floors")
 	if hit["edit_hit_min_dp_after_clip"] < 48 or dp["storage"]["tile_dp"] < 48 or dp["storage"]["tile_gap_dp"] < GAP_DP:
 		rep.err("decor_placement: clipped hits and tray tiles >= 48 dp, gaps >= 8 dp")
-	if hit["prio_edit_piece"] <= 7 or hit["prio_still_piece_play"] != 1:
+	if hit["prio_edit_piece"] <= 8 or hit["prio_still_piece_play"] != 1:
 		rep.err("decor_placement.hit: edit pieces outrank every play target, still pieces sit at the stream's priority")
 	if dp["attraction"]["count"] != "owned":
 		rep.err("decor_placement.attraction.count must stay 'owned' (economy_sim parity, GDD 14)")

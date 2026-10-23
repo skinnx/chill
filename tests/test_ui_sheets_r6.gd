@@ -21,6 +21,10 @@ const MEDIUM_TALL := 1584.0
 const EPS := 1.0
 const MIN_TARGET_PX := 144.0
 const SCALES: Array[int] = [100, 150]
+## Extra _sheet() kinds: the album opened straight onto one of its other tabs, so the layout
+## sweeps below cover all four and not just Friends.
+const ALBUM_TABS := {"clues": AlbumSheet.TAB_CLUES, "photos": AlbumSheet.TAB_PHOTOS,
+	"postcards": AlbumSheet.TAB_POSTCARDS}
 const LOCALES: Array[String] = ["vi", "en"]
 
 var c: GameContent
@@ -75,6 +79,8 @@ func _sheet(kind: String, h: float = MEDIUM_TALL) -> UiSheet:
 	s.size = Vector2(SHEET_W, h)
 	s.position = Vector2(24.0, 400.0)
 	add_child_autofree(s)
+	if ALBUM_TABS.has(kind):
+		(s as AlbumSheet).select_tab(int(ALBUM_TABS[kind]), false)
 	return s
 
 
@@ -171,7 +177,7 @@ func test_every_label_lies_inside_its_parent_control() -> void:
 
 
 func _check_labels_in_parents() -> void:
-	for kind: String in ["settings", "garden", "basket", "album"]:
+	for kind: String in ["settings", "garden", "basket", "album", "clues", "photos", "postcards"]:
 		var s := _sheet(kind)
 		await wait_process_frames(4)
 		var count := 0
@@ -198,7 +204,7 @@ func _check_labels_in_parents() -> void:
 
 func test_nothing_draws_outside_the_sheet_clip() -> void:
 	TranslationServer.set_locale("vi")
-	for kind: String in ["settings", "garden", "basket", "album"]:
+	for kind: String in ["settings", "garden", "basket", "album", "clues", "photos", "postcards"]:
 		var s := _sheet(kind)
 		await wait_process_frames(4)
 		_check_clip(s, kind)
@@ -546,3 +552,71 @@ func test_friends_not_met_yet_stand_on_a_studio_well() -> void:
 	assert_false(p.known)
 	assert_true(CreaturePortrait.SILHOUETTE_ALPHA >= 0.2, "the silhouette reads on a phone (>= ink 0.20)")
 	assert_eq(p.find_children("*", "Mossling", true, false).size(), 0, "no face, no rig: a silhouette only")
+
+
+# ------------------------------------------------------------------ album > clues (round 10)
+
+## The retention_mid world, where two mysteries are open and clues have been found.
+func _mysteries_open() -> void:
+	var st := WorldSim.new_game(c, SEED, Clock.now_unix(), 0.0).state
+	GardenFixture.apply(c, st, GardenFixture.MID)
+	var sim := WorldSim.new(c, st)
+	RetentionFixture.apply(sim, StringName(c.scenes[0]["id"]))
+	sim = WorldSim.new(c, st)
+	sim.drain_events()
+	Game.sim = sim
+
+
+func test_the_clues_tab_is_reachable_and_reads_empty_before_anyone_is_on_the_way() -> void:
+	var s := _sheet("album") as AlbumSheet
+	for tab: int in [AlbumSheet.TAB_CLUES, AlbumSheet.TAB_PHOTOS, AlbumSheet.TAB_POSTCARDS]:
+		s.select_tab(tab, false)
+		assert_eq(s.current_tab(), tab, "tab %d is reachable (the clamp covers all four)" % tab)
+	s.select_tab(AlbumSheet.TAB_CLUES, false)
+	await wait_process_frames(4)
+	var texts: Array[String] = []
+	for n: Node in s.find_children("*", "Label", true, false):
+		texts.append((n as Label).text)
+	assert_true(texts.has(tr("CLUES_EMPTY")), "a fresh world says clues will gather here: %s" % [texts])
+
+
+## GDD §13.3.3: "dots, never a number" - the tab says what you have, not what you owe. The count
+## is only a tooltip, so the dots are the thing that has to be right.
+func test_a_clue_card_counts_in_dots_and_names_the_state_it_is_in() -> void:
+	_mysteries_open()
+	var cards := Game.clue_cards()
+	assert_false(cards.is_empty(), "premise: retention_mid has mysteries open")
+	for combo: int in 4:
+		TranslationServer.set_locale(LOCALES[combo % 2])
+		Settings.set_value(Settings.TEXT_SCALE, SCALES[combo >> 1])
+		var s := _sheet("clues")
+		await wait_process_frames(4)
+		var rows: Array[Node] = []
+		for n: Node in s.find_children("*", "HBoxContainer", true, false):
+			if not (n as Control).get_children().is_empty() and ((n as Control).get_child(0) as Label) != null \
+					and ((n as Control).get_child(0) as Label).text in ["\u25CF", "\u25CB"]:
+				rows.append(n)
+		assert_eq(rows.size(), cards.size(), "one dot row per open mystery")
+		for i in cards.size():
+			var full := 0
+			var dots := (rows[i] as Control).get_children()
+			for d: Node in dots:
+				if (d as Label).text == "\u25CF":
+					full += 1
+			assert_eq(dots.size(), int(cards[i]["total"]), "a dot for every clue of the mystery")
+			assert_eq(full, int(cards[i]["found"]), "filled dots = clues found")
+			assert_eq((rows[i] as Control).tooltip_text,
+					I18n.fmt(&"CLUES_COUNT", {"count": cards[i]["found"], "total": cards[i]["total"]}),
+					"the number is there for a screen reader, not on the card")
+		var texts: Array[String] = []
+		for n: Node in s.find_children("*", "Label", true, false):
+			texts.append((n as Label).text)
+		for card_i: Dictionary in cards:
+			var sp: StringName = StringName(String(card_i["species"]))
+			var want := tr("CLUES_SOMEONE")
+			if bool(card_i["solved"]):
+				want = I18n.fmt(&"CLUES_SOLVED", {"name": Game.display_name(sp)})
+			elif String(card_i["variant"]) != "":
+				want = I18n.fmt(&"CLUES_COUSIN", {"name": Game.display_name(sp)})
+			assert_true(texts.has(want), "%s: the card is titled '%s'" % [LOCALES[combo % 2], want])
+		s.free()

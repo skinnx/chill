@@ -41,7 +41,7 @@
 		"resume_in_edit_mode": false
 	},
 	"hit": {
-		"prio_edit_piece": 8,
+		"prio_edit_piece": 9,
 		"prio_edit_selected_bonus": 1,
 		"edit_piece_hit_dp": 60,
 		"edit_piece_hit_dp_look_zone": 64,

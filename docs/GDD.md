@@ -166,7 +166,7 @@ Props (⟲ `spots.json:props`):
 | `willow` | 0.120 | 0.300 | 140 × 170 | — | — |
 | `tea_nook` (Active F2, ⟲ `tea.json:nook`; sits on the stump once tea unlocks) | 0.900 | 0.400 | 56 × 44 | open_tea | 64 |
 
-**Hit priority** when targets overlap (world): mossling > bed with a ready bud **or ready petals** (Active F2) > prop (basket, mailbox, chime, tea nook) > décor piece with a `tap_fx` (pinwheel, lantern; optional delight, hit ≥ 60 dp, 64 dp in the look zone, nearest piece wins) > bed > stream = still décor piece (cairn, toadstool, stone: a small wobble, Active F3; a stone beats the brook only through its 20 dp core) > background. In Active F3 edit mode only décor pieces are targets (priority 8, the selected one 9). In choose-a-bed mode the beds with room come first. Round 7 (ARCHITECTURE §3.5): every press goes to exactly **one** target, picked by one arbiter. A target that contains the touch beats one only reached through the fat-finger slop (9 dp, aim 3 dp above the contact). Then the priority above decides, then the nearest centre. A décor piece's generous 64 dp ring only wins over empty ground and the stream; its 20 dp-radius core outranks a plain bed. The validator checks every static target for size floors, 8 dp gaps and that its hit area lies fully inside the frame (§10).
+**Hit priority** when targets overlap (world): mossling > bed with a ready bud **or ready petals** (Active F2) > prop (basket, mailbox, chime, tea nook) > décor piece with a `tap_fx` (pinwheel, lantern; optional delight, hit ≥ 60 dp, 64 dp in the look zone, nearest piece wins) > bed > stream = still décor piece (cairn, toadstool, stone: a small wobble, Active F3; a stone beats the brook only through its 20 dp core) > background. In Active F3 edit mode only décor pieces are targets (priority 9, the selected one 10). A visible mystery sign (§13.3.2) sits between the mossling and the ready bud. In choose-a-bed mode the beds with room come first. Round 7 (ARCHITECTURE §3.5): every press goes to exactly **one** target, picked by one arbiter. A target that contains the touch beats one only reached through the fat-finger slop (9 dp, aim 3 dp above the contact). Then the priority above decides, then the nearest centre. A décor piece's generous 64 dp ring only wins over empty ground and the stream; its 20 dp-radius core outranks a plain bed. The validator checks every static target for size floors, 8 dp gaps and that its hit area lies fully inside the frame (§10).
 
 ---
 
@@ -1105,6 +1105,7 @@ At most 1 scene and 3 signs are on screen at a time.
 #### 13.5.1 Album
 
 **Tabs:** **Friends · Clues · Memories · Keepsakes · Postcards** (`ALBUM_TAB_*`).
+- **Built so far (round 10):** Friends · **Clues** · Photos · Postcards. Clues ships with the signs in the hollow; Memories and Keepsakes wait on the away-scene front end, so Photos keeps its own tab until it has a Memories tab to move into.
 - **Photos** move into **Memories**, which has two sections: `MEMORIES_SECTION_MOMENTS` (scenes, newest first) and Photos (the 60 poses). The per-friend photo strip stays on the friend card.
 - **Tab bar:** icons plus labels. At 200 % text, labels wrap to 2 lines and the bar scrolls horizontally rather than shrinking text.
 - **Dots:** an unread dot (never a number) marks a tab with something new.

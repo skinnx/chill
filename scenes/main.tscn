@@ -1,4 +1,4 @@
-[gd_scene load_steps=17 format=3]
+[gd_scene load_steps=18 format=3]
 
 [ext_resource type="Script" path="res://scripts/main/main.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/main/layout_debug.gd" id="3_dbg"]
@@ -16,6 +16,7 @@
 [ext_resource type="PackedScene" path="res://scenes/world/props.tscn" id="w6_props"]
 [ext_resource type="PackedScene" path="res://scenes/world/foreground.tscn" id="w7_fg"]
 [ext_resource type="PackedScene" path="res://scenes/world/air.tscn" id="w8_air"]
+[ext_resource type="PackedScene" path="res://scenes/world/signs.tscn" id="w9_signs"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_main")
@@ -65,6 +66,11 @@ y_sort_enabled = true
 y_sort_enabled = true
 
 [node name="PlotsLayer" parent="World/Ground/Play/Plots" instance=ExtResource("5_plots")]
+
+[node name="Signs" type="Node2D" parent="World/Ground/Play"]
+y_sort_enabled = true
+
+[node name="SignLayer" parent="World/Ground/Play/Signs" instance=ExtResource("w9_signs")]
 
 [node name="Decor" type="Node2D" parent="World/Ground/Play"]
 y_sort_enabled = true

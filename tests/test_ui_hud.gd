@@ -426,3 +426,44 @@ func test_recap_card_lists_lines_with_names() -> void:
 	assert_string_contains(joined, tr("RECAP_GIFTS"))
 	o.close_modal(true)
 	assert_false(o.is_modal_open())
+
+
+# ------------------------------------------------------------------ clues (round 10)
+
+## GDD §13.3.3: a found clue says what it was; where clues go is explained once, on the first one,
+## and the note skips the toast entirely because it earns the riddle card.
+func test_a_found_clue_says_what_it_was_and_explains_itself_only_once() -> void:
+	var first := HudController.clue_line({"sign": "footprints"}, 1)
+	assert_string_contains(first, tr("CLUE_FOUND_TITLE"))
+	assert_string_contains(first, tr("CLUE_FOUND_FOOTPRINTS"))
+	assert_string_contains(first, tr("CLUE_ADDED"), "the first clue says where it went")
+	var later := HudController.clue_line({"sign": "rustle"}, 4)
+	assert_string_contains(later, tr("CLUE_FOUND_RUSTLE"))
+	assert_false(later.contains(tr("CLUE_ADDED")), "and never explains itself again")
+	assert_eq(HudController.clue_line({"sign": "note"}, 9), "", "the note opens the riddle instead")
+	for kind: String in ["footprints", "dropped", "rustle"]:
+		var line := HudController.clue_line({"sign": kind}, 9)
+		assert_false(line.contains("CLUE_FOUND_"), "%s has a written line, not a key: '%s'" % [kind, line])
+
+
+func test_the_riddle_card_reads_the_note_back_and_closes() -> void:
+	var o := OverlayHost.new()
+	add_child_autofree(o)
+	o.layout(SCREEN, Rect2(48, 72, 48, 127))
+	o.show_riddle({"sign": "note", "riddle_key": "RIDDLE_CAPLING", "mystery": &"capling"}, true)
+	assert_true(o.is_modal_open(), "the note stops the player, gently")
+	var texts := PackedStringArray()
+	for l: Node in o.find_children("*", "Label", true, false):
+		texts.append((l as Label).text)
+	var joined := " | ".join(texts)
+	assert_string_contains(joined, tr("CLUE_FOUND_TITLE"))
+	assert_string_contains(joined, tr("RIDDLE_CAPLING"), "the riddle itself, not its key")
+	var done: Button = null
+	for b: Node in o.find_children("*", "Button", true, false):
+		if (b as Button).text == tr("COMMON_DONE"):
+			done = b as Button
+	assert_not_null(done, "one way out, and it is a 48 dp pill")
+	assert_true(done.size.y >= MIN_TARGET_PX or done.custom_minimum_size.y >= MIN_TARGET_PX)
+	done.pressed.emit()
+	o.close_modal(true)
+	assert_false(o.is_modal_open())
