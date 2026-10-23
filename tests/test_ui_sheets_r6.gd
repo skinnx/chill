@@ -21,6 +21,10 @@ const MEDIUM_TALL := 1584.0
 const EPS := 1.0
 const MIN_TARGET_PX := 144.0
 const SCALES: Array[int] = [100, 150]
+## Extra _sheet() kinds: the album opened straight onto one of its other tabs, so the layout
+## sweeps below cover all four and not just Friends.
+const ALBUM_TABS := {"clues": AlbumSheet.TAB_CLUES, "memories": AlbumSheet.TAB_MEMORIES,
+	"keepsakes": AlbumSheet.TAB_KEEPSAKES, "postcards": AlbumSheet.TAB_POSTCARDS}
 const LOCALES: Array[String] = ["vi", "en"]
 
 var c: GameContent
@@ -75,6 +79,8 @@ func _sheet(kind: String, h: float = MEDIUM_TALL) -> UiSheet:
 	s.size = Vector2(SHEET_W, h)
 	s.position = Vector2(24.0, 400.0)
 	add_child_autofree(s)
+	if ALBUM_TABS.has(kind):
+		(s as AlbumSheet).select_tab(int(ALBUM_TABS[kind]), false)
 	return s
 
 
@@ -171,7 +177,7 @@ func test_every_label_lies_inside_its_parent_control() -> void:
 
 
 func _check_labels_in_parents() -> void:
-	for kind: String in ["settings", "garden", "basket", "album"]:
+	for kind: String in ["settings", "garden", "basket", "album", "clues", "memories", "keepsakes", "postcards"]:
 		var s := _sheet(kind)
 		await wait_process_frames(4)
 		var count := 0
@@ -198,7 +204,7 @@ func _check_labels_in_parents() -> void:
 
 func test_nothing_draws_outside_the_sheet_clip() -> void:
 	TranslationServer.set_locale("vi")
-	for kind: String in ["settings", "garden", "basket", "album"]:
+	for kind: String in ["settings", "garden", "basket", "album", "clues", "memories", "keepsakes", "postcards"]:
 		var s := _sheet(kind)
 		await wait_process_frames(4)
 		_check_clip(s, kind)
@@ -283,7 +289,7 @@ func test_tall_phone_sheet_opens_taller_and_drags_to_a_large_detent() -> void:
 	var sc_h := s.scroll_list().size.y
 	s.drag_begin(1000.0, 0.0)
 	s.drag_to(1000.0 - (large.size.y - med.size.y), 0.2)
-	s.drag_end()
+	s.drag_end(0.2)
 	await wait_seconds(1.2)
 	assert_true(s.expanded, "a drag up reaches the large detent")
 	assert_almost_eq(s.size.y, large.size.y, 2.0, "large height")
@@ -291,14 +297,166 @@ func test_tall_phone_sheet_opens_taller_and_drags_to_a_large_detent() -> void:
 	assert_almost_eq(s.scroll_list().size.y - sc_h, large.size.y - med.size.y, 2.0, "the scroll window follows")
 	s.drag_begin(500.0, 0.0)
 	s.drag_to(500.0 + (large.size.y - med.size.y), 0.2)
-	s.drag_end()
+	s.drag_end(0.2)
 	await wait_seconds(1.2)
 	assert_false(s.expanded, "back down to medium")
 	assert_true(host.is_open(), "still open at the medium detent")
 	s.drag_begin(500.0, 0.0)
 	s.drag_to(500.0 + med.size.y * 0.4, 0.2)
-	s.drag_end()
+	s.drag_end(0.2)
 	assert_false(host.is_open(), "below the medium detent the drag dismisses")
+
+
+## Round 8: the dismiss velocity is measured over a 100 ms window and is ZERO once the finger has
+## rested, so "pull the sheet down a little, hold it there to look at the world behind it, lift"
+## springs back instead of closing. It used to carry the speed of a pull that had finished a
+## second ago. The same change makes the threshold mean the same thing at 30 and at 60 fps,
+## because a per-event average's time constant is the frame interval (ARCHITECTURE §3.5).
+func test_swipe_velocity_is_windowed_and_goes_stale() -> void:
+	var host := _host("settings")
+	host.open(&"settings", true)
+	var s := host.current
+	await wait_process_frames(3)
+	# A real flick: 300 px over 100 ms = 3000 px/s, well past the 1000 px/s dismiss speed.
+	s.drag_begin(500.0, 0.0)
+	s.drag_to(600.0, 0.033)
+	s.drag_to(700.0, 0.066)
+	s.drag_to(800.0, 0.1)
+	assert_gt(s.drag_velocity(0.1), 1000.0, "the flick reads as a flick")
+	# The same samples, read a quarter of a second later: the finger has stopped.
+	assert_eq(s.drag_velocity(0.35), 0.0, "a finger that rested carries no speed")
+
+
+func test_the_same_flick_reads_the_same_at_30_and_60_fps() -> void:
+	var host := _host("settings")
+	host.open(&"settings", true)
+	var s := host.current
+	await wait_process_frames(3)
+	var speeds: Array[float] = []
+	for dt: float in [1.0 / 60.0, 1.0 / 30.0]:
+		# 1200 px/s for 100 ms, sampled once per rendered frame as accumulation delivers it.
+		var steps := int(roundf(0.1 / dt))
+		s.drag_begin(500.0, 0.0)
+		for i in range(1, steps + 1):
+			s.drag_to(500.0 + 1200.0 * dt * float(i), dt * float(i))
+		speeds.append(s.drag_velocity(dt * float(steps)))
+	assert_almost_eq(speeds[0], 1200.0, 1.0, "60 fps")
+	assert_almost_eq(speeds[1], 1200.0, 1.0, "30 fps agrees")
+
+
+## Round 9: the sheet follows the finger anywhere in the list, not only in its 76 dp header.
+## On a 1080x2400 phone the header zone sits in the top quarter of the screen, so every way to
+## resize or dismiss a sheet was out of the thumb's reach while the part under the thumb did
+## nothing. Helper: one press, then drags, on the list itself.
+func _list_press(sc: ScrollContainer, at: Vector2) -> void:
+	var mb := InputEventMouseButton.new()
+	mb.button_index = MOUSE_BUTTON_LEFT
+	mb.pressed = true
+	mb.global_position = at
+	mb.position = at
+	sc.gui_input.emit(mb)
+
+
+func _list_move(sc: ScrollContainer, at: Vector2) -> void:
+	var mm := InputEventMouseMotion.new()
+	mm.button_mask = MOUSE_BUTTON_MASK_LEFT
+	mm.global_position = at
+	mm.position = at
+	sc.gui_input.emit(mm)
+
+
+func _list_release(sc: ScrollContainer, at: Vector2) -> void:
+	var mb := InputEventMouseButton.new()
+	mb.button_index = MOUSE_BUTTON_LEFT
+	mb.pressed = false
+	mb.global_position = at
+	mb.position = at
+	sc.gui_input.emit(mb)
+
+
+func test_pulling_down_in_the_list_drags_the_sheet() -> void:
+	var host := _host("settings")
+	host.open(&"settings", true)
+	var s := host.current
+	await wait_process_frames(3)
+	s.expand(true)
+	await wait_seconds(0.8)
+	assert_true(s.expanded, "start at the large detent")
+	var sc := s.scroll_list()
+	assert_eq(sc.scroll_vertical, 0, "premise: the list is at its top")
+	var h0 := s.sheet_h
+	var at := sc.get_global_rect().get_center()
+	_list_press(sc, at)
+	# The claiming event anchors the drag where the finger is and moves nothing (the no-jump rule).
+	_list_move(sc, at + Vector2(0.0, UiSheet.LIST_HANDOFF_PX + 1.0))
+	assert_almost_eq(s.sheet_h, h0, 0.5, "the handoff itself costs no jump")
+	_list_move(sc, at + Vector2(0.0, 120.0))
+	assert_lt(s.sheet_h, h0, "from there the sheet follows the finger toward medium")
+	_list_move(sc, at + Vector2(0.0, 400.0))
+	assert_almost_eq(s.sheet_h, s.h_medium, 1.0, "past medium the height clamps")
+	assert_gt(s.rise, 0.0, "and the whole sheet rides down with the finger")
+	# What the release then decides - settle at a detent or dismiss - is the header drag's own
+	# rule, already covered by test_tall_phone_sheet_opens_taller_and_drags_to_a_large_detent.
+	_list_release(sc, at + Vector2(0.0, 400.0))
+
+
+func test_a_small_or_sideways_or_upward_drag_leaves_the_list_alone() -> void:
+	var host := _host("settings")
+	host.open(&"settings", true)
+	var s := host.current
+	await wait_process_frames(3)
+	s.expand(true)
+	await wait_seconds(0.8)
+	var sc := s.scroll_list()
+	var h0 := s.sheet_h
+	var at := sc.get_global_rect().get_center()
+	for d: Vector2 in [Vector2(0.0, UiSheet.LIST_HANDOFF_PX - 2.0), Vector2(200.0, 10.0),
+			Vector2(0.0, -200.0)]:
+		_list_press(sc, at)
+		_list_move(sc, at + d)
+		_list_release(sc, at + d)
+		assert_almost_eq(s.sheet_h, h0, 0.5, "the sheet is untouched by %s" % d)
+
+
+## Content above the window means the list scrolls first; the sheet only takes a pull from the top.
+func test_a_scrolled_list_keeps_its_own_drag() -> void:
+	var host := _host("settings")
+	host.open(&"settings", true)
+	var s := host.current
+	await wait_process_frames(3)
+	s.expand(true)
+	await wait_seconds(0.8)
+	var sc := s.scroll_list()
+	sc.scroll_vertical = 120
+	await wait_process_frames(2)
+	var h0 := s.sheet_h
+	var at := sc.get_global_rect().get_center()
+	_list_press(sc, at)
+	_list_move(sc, at + Vector2(0.0, 200.0))
+	_list_release(sc, at + Vector2(0.0, 200.0))
+	assert_almost_eq(s.sheet_h, h0, 0.5, "the list scrolls, the sheet stays put")
+
+
+## Round 9: a gift landing, a bloom, a heart - each fires a sim event whose refresh rebuilds the
+## sheet's rows. Doing that under a thumb frees the control the press belongs to, so the tap it
+## was going to be never happens. The news waits for the finger to leave.
+func test_a_refresh_waits_for_the_finger_to_leave() -> void:
+	var host := _host("settings")
+	host.open(&"settings", true)
+	var s := host.current
+	await wait_process_frames(3)
+	var sc := s.scroll_list()
+	var at := sc.get_global_rect().get_center()
+	assert_false(s.is_touched(), "nothing is touching it yet")
+	_list_press(sc, at)
+	_list_move(sc, at + Vector2(0.0, UiSheet.LIST_HANDOFF_PX + 1.0))
+	assert_true(s.is_touched(), "a finger has the sheet")
+	host.refresh()
+	assert_true(host._refresh_pending, "the rebuild is held, not run under the thumb")
+	_list_release(sc, at + Vector2(0.0, UiSheet.LIST_HANDOFF_PX + 1.0))
+	assert_false(s.is_touched())
+	await wait_process_frames(2)
+	assert_false(host._refresh_pending, "and lands once the finger is gone")
 
 
 func test_16_9_keeps_the_art_bible_sheet() -> void:
@@ -394,3 +552,188 @@ func test_friends_not_met_yet_stand_on_a_studio_well() -> void:
 	assert_false(p.known)
 	assert_true(CreaturePortrait.SILHOUETTE_ALPHA >= 0.2, "the silhouette reads on a phone (>= ink 0.20)")
 	assert_eq(p.find_children("*", "Mossling", true, false).size(), 0, "no face, no rig: a silhouette only")
+
+
+# ------------------------------------------------------------------ album > clues (round 10)
+
+## The retention_mid world, where two mysteries are open and clues have been found.
+func _mysteries_open() -> void:
+	var st := WorldSim.new_game(c, SEED, Clock.now_unix(), 0.0).state
+	GardenFixture.apply(c, st, GardenFixture.MID)
+	var sim := WorldSim.new(c, st)
+	RetentionFixture.apply(sim, StringName(c.scenes[0]["id"]))
+	sim = WorldSim.new(c, st)
+	sim.drain_events()
+	Game.sim = sim
+
+
+func test_the_clues_tab_is_reachable_and_reads_empty_before_anyone_is_on_the_way() -> void:
+	var s := _sheet("album") as AlbumSheet
+	for tab: int in [AlbumSheet.TAB_CLUES, AlbumSheet.TAB_MEMORIES, AlbumSheet.TAB_KEEPSAKES, AlbumSheet.TAB_POSTCARDS]:
+		s.select_tab(tab, false)
+		assert_eq(s.current_tab(), tab, "tab %d is reachable (the clamp covers all five)" % tab)
+	s.select_tab(AlbumSheet.TAB_CLUES, false)
+	await wait_process_frames(4)
+	var texts: Array[String] = []
+	for n: Node in s.find_children("*", "Label", true, false):
+		texts.append((n as Label).text)
+	assert_true(texts.has(tr("CLUES_EMPTY")), "a fresh world says clues will gather here: %s" % [texts])
+
+
+## GDD §13.3.3: "dots, never a number" - the tab says what you have, not what you owe. The count
+## is only a tooltip, so the dots are the thing that has to be right.
+func test_a_clue_card_counts_in_dots_and_names_the_state_it_is_in() -> void:
+	_mysteries_open()
+	var cards := Game.clue_cards()
+	assert_false(cards.is_empty(), "premise: retention_mid has mysteries open")
+	for combo: int in 4:
+		TranslationServer.set_locale(LOCALES[combo % 2])
+		Settings.set_value(Settings.TEXT_SCALE, SCALES[combo >> 1])
+		var s := _sheet("clues")
+		await wait_process_frames(4)
+		var rows: Array[Node] = []
+		for n: Node in s.find_children("*", "HBoxContainer", true, false):
+			if not (n as Control).get_children().is_empty() and ((n as Control).get_child(0) as Label) != null \
+					and ((n as Control).get_child(0) as Label).text in ["\u25CF", "\u25CB"]:
+				rows.append(n)
+		assert_eq(rows.size(), cards.size(), "one dot row per open mystery")
+		for i in cards.size():
+			var full := 0
+			var dots := (rows[i] as Control).get_children()
+			for d: Node in dots:
+				if (d as Label).text == "\u25CF":
+					full += 1
+			assert_eq(dots.size(), int(cards[i]["total"]), "a dot for every clue of the mystery")
+			assert_eq(full, int(cards[i]["found"]), "filled dots = clues found")
+			assert_eq((rows[i] as Control).tooltip_text,
+					I18n.fmt(&"CLUES_COUNT", {"count": cards[i]["found"], "total": cards[i]["total"]}),
+					"the number is there for a screen reader, not on the card")
+		var texts: Array[String] = []
+		for n: Node in s.find_children("*", "Label", true, false):
+			texts.append((n as Label).text)
+		for card_i: Dictionary in cards:
+			var sp: StringName = StringName(String(card_i["species"]))
+			var want := tr("CLUES_SOMEONE")
+			if bool(card_i["solved"]):
+				want = I18n.fmt(&"CLUES_SOLVED", {"name": Game.display_name(sp)})
+			elif String(card_i["variant"]) != "":
+				want = I18n.fmt(&"CLUES_COUSIN", {"name": Game.display_name(sp)})
+			assert_true(texts.has(want), "%s: the card is titled '%s'" % [LOCALES[combo % 2], want])
+		s.free()
+
+
+# ------------------------------------------------------------------ album > memories / keepsakes (round 11)
+
+func _labels(s: Control) -> Array[String]:
+	var texts: Array[String] = []
+	for n: Node in s.find_children("*", "Label", true, false):
+		texts.append((n as Label).text)
+	return texts
+
+
+func test_memories_lists_the_moments_newest_first_with_names_and_keeps_the_photos() -> void:
+	var s := _sheet("memories")
+	await wait_process_frames(4)
+	var texts := _labels(s)
+	assert_true(texts.has(tr("MEMORIES_SECTION_MOMENTS")), "the moments section")
+	assert_true(texts.has(tr("MEMORIES_EMPTY")), "a fresh world: moments will gather here")
+	assert_true(texts.has(tr("ALBUM_TAB_PHOTOS")), "the photos moved in as the second section")
+	s.free()
+	_mysteries_open()  # retention_mid: two memories (nap_pile, boat_regatta) and a pending scene
+	var moments := Game.memories()
+	assert_eq(moments.size(), 2, "premise")
+	s = _sheet("memories")
+	await wait_process_frames(4)
+	texts = _labels(s)
+	assert_false(texts.has(tr("MEMORIES_EMPTY")))
+	var newest: Dictionary = moments[1]
+	var oldest: Dictionary = moments[0]
+	var sc_new: Dictionary = c.scenes_by_id[StringName(String(newest["scene"]))]
+	var sc_old: Dictionary = c.scenes_by_id[StringName(String(oldest["scene"]))]
+	var i_new := texts.find(tr(String(sc_new["title_key"])))
+	var i_old := texts.find(tr(String(sc_old["title_key"])))
+	assert_true(i_new >= 0 and i_old >= 0, "both moments are titled: %s" % [texts])
+	assert_lt(i_new, i_old, "newest first")
+	var cast: Array = newest["cast"]
+	var want := I18n.fmt(StringName(String(sc_new["caption_key"])), {
+		"name": Game.display_name(StringName(String(cast[0]))),
+		"friend": Game.display_name(StringName(String(cast[1]))) if cast.size() > 1 else ""})
+	assert_true(texts.has(want), "the caption names the cast: '%s'" % want)
+	for t: String in texts:
+		assert_false(t.begins_with("SCENE_"), "no raw key on a card: %s" % t)
+	assert_eq(AlbumSheet.memory_pose(&"nap_pile"), &"asleep")
+	assert_eq(AlbumSheet.memory_pose(&"pair_nap"), &"asleep")
+	assert_eq(AlbumSheet.memory_pose(&"boat_regatta"), &"happy")
+	s.free()
+
+
+func test_keepsakes_shows_portraits_gifts_and_cousins_or_the_empty_line() -> void:
+	var s := _sheet("keepsakes")
+	await wait_process_frames(4)
+	assert_true(_labels(s).has(tr("KEEPSAKES_EMPTY")), "a fresh world: five hearts leave a keepsake here")
+	s.free()
+	_mysteries_open()
+	var k := Game.keepsakes()
+	assert_false((k["portraits"] as Array).is_empty(), "premise: a ♥5 friend")
+	assert_false((k["signature_gifts"] as Array).is_empty(), "premise: signature gifts")
+	assert_eq((k["cousins"] as Array).size(), 1, "premise: one cousin met")
+	s = _sheet("keepsakes")
+	await wait_process_frames(4)
+	var texts := _labels(s)
+	assert_false(texts.has(tr("KEEPSAKES_EMPTY")))
+	for p: Dictionary in k["portraits"]:
+		var name := Game.display_name(StringName(String(p["species"])))
+		assert_true(texts.has(I18n.fmt(&"KEEPSAKE_TITLE", {"name": name})), "%s's keepsake portrait" % name)
+	var g: Dictionary = (k["signature_gifts"] as Array)[0]
+	assert_true(texts.has(I18n.fmt(&"KEEPSAKE_GIFT", {"name": Game.display_name(StringName(String(g["species"]))),
+			"gift": tr(String(g["name_key"]))})), "the gift is named, not keyed")
+	var cv: Dictionary = (k["cousins"] as Array)[0]
+	assert_true(texts.has(tr(String(cv["name_key"]))), "the cousin met is here by name")
+	for t: String in texts:
+		assert_false(t.begins_with("KEEPSAKE_") or t.begins_with("VARIANT_"), "no raw key: %s" % t)
+	s.free()
+
+
+## GDD §13.5.1: five unlock lines, reached ones in ink, the rest "Comes with more hearts" - never
+## a countdown or points; the nest line and the best-buddy tag only once they are real.
+func test_the_friend_card_lists_its_unlocks_nest_and_buddy() -> void:
+	_mysteries_open()
+	var sp := &"puffmoss"  # ♥5, a canopy nest, best buddy active
+	var hearts := Game.sim.hearts_of(sp)
+	assert_eq(hearts, 5, "premise")
+	var s := _sheet("album") as AlbumSheet
+	s.show_friend(sp)
+	await wait_process_frames(4)
+	var texts := _labels(s)
+	for u: Dictionary in Game.unlocks(sp):
+		assert_true(texts.has(tr(String(u["album_key"]))), "unlock line ♥%d" % int(u["heart"]))
+	var nest := Game.nest_state(sp)
+	assert_true(texts.has(I18n.fmt(&"ALBUM_NEST", {"name": Game.display_name(sp),
+			"nest": "%s · %s" % [tr(String(nest["style_key"])), tr(String(nest["stage_key"]))]})), "the nest line")
+	var buddy := Game.best_buddy(sp)
+	assert_true(bool(buddy["active"]), "premise: the pair is active")
+	assert_true(texts.has(I18n.fmt(&"ALBUM_PAIR", {"friend": Game.display_name(StringName(String(buddy["friend"])))})))
+	assert_true(texts.has(tr(String(Game.cousin_of(sp)["name_key"]))), "the cousin met shows on the card")
+	s.free()
+	# A ♥1 friend: four lines still to come, no nest, no pair, no cousin.
+	var low := &"bellkin"
+	assert_eq(Game.sim.hearts_of(low), 1, "premise")
+	s = _sheet("album") as AlbumSheet
+	s.show_friend(low)
+	await wait_process_frames(4)
+	texts = _labels(s)
+	var later := 0
+	for t: String in texts:
+		if t.ends_with(tr("ALBUM_UNLOCK_LATER")):
+			later += 1
+	assert_eq(later, 4, "four of the five lines are still to come")
+	assert_true(texts.has(tr("UNLOCK_HEART_1")), "the reached line stands alone")
+	var low_buddy := Game.best_buddy(low)
+	assert_false(bool(low_buddy["active"]), "premise: no active pair at ♥1")
+	var low_friend := Game.display_name(StringName(String(low_buddy["friend"])))
+	assert_false(texts.has(I18n.fmt(&"ALBUM_PAIR", {"friend": low_friend})), "no pair tag yet")
+	assert_true(Game.nest_state(low).is_empty(), "premise: no nest at ♥1")
+	for t: String in texts:
+		assert_false(t.begins_with(I18n.fmt(&"ALBUM_NEST", {"name": Game.display_name(low), "nest": ""}).left(8)),
+				"no nest line yet: %s" % t)
+	s.free()

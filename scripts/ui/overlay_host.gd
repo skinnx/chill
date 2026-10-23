@@ -371,6 +371,32 @@ static func _card_shell(sep: int = 24, frosted: bool = false) -> Array:
 
 # ------------------------------------------------------------------ recap (GDD §7.5)
 
+## The display name of a nap spot for RECAP_NAPPED; a nibble point reads as its bed.
+func _spot_name(spot: StringName) -> StringName:
+	if spot == &"" or Game.content == null:
+		return &""
+	if CreatureBrain.is_nest_spot(spot):  # round 11: "napped at the Moss bowl"
+		var nest := Game.nest_state(CreatureBrain.nest_species(spot))
+		return StringName(tr(String(nest.get("style_key", "")))) if not nest.is_empty() else &""
+	var id := spot
+	if String(spot).contains(CreatureBrain.NIBBLE_SEP):
+		id = StringName(String(spot).get_slice(CreatureBrain.NIBBLE_SEP, 0))
+	var def: Dictionary = Game.content.spots_by_id.get(id, Game.content.beds_by_id.get(id, {}))
+	var key := String(def.get("name_key", ""))
+	return StringName(tr(key)) if key != "" else &""
+
+
+## The wish a friend is still hoping for, for RECAP_WISH_WAITING.
+func _waiting_wish(species: StringName) -> String:
+	if species == &"" or Game.sim == null:
+		return ""
+	var w: Dictionary = Game.wish_of(species)
+	if w.is_empty():
+		return ""
+	return WishText.title(Game.content, StringName(String(w.get("wish", ""))), species,
+			func(sp: StringName) -> String: return Game.display_name(sp))
+
+
 func sample_recap() -> Array:
 	return [{"key": &"RECAP_NEW_FRIEND", "species": &"buttonbud"}, {"key": &"RECAP_ONE_VISITED", "species": &"puffmoss"},
 		{"key": &"RECAP_GIFTS", "species": &""}]
@@ -395,7 +421,12 @@ func show_recap(lines: Array, hold: bool = false) -> void:
 		row.add_child(plate)
 		# round 5 (QA r4: "Pip dropped by" read as a truncated line): a complete, warm sentence
 		var text_key := RECAP_ONE_VISITED_HI if key == &"RECAP_ONE_VISITED" else key
-		var text := I18n.fmt(text_key, {"name": Game.display_name(sp) if sp != &"" and Game.sim != null else ""})
+		var args := {"name": Game.display_name(sp) if sp != &"" and Game.sim != null else ""}
+		if key == &"RECAP_NAPPED":
+			args["spot"] = _spot_name(StringName(String(d.get("spot", ""))))
+		elif key == &"RECAP_WISH_WAITING":
+			args["wish"] = _waiting_wish(sp)
+		var text := I18n.fmt(text_key, args)
 		var l := UiSheet.label(text, &"BodyLabel", true)
 		l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		row.add_child(l)
@@ -558,7 +589,7 @@ func show_postcard_or_album() -> void:
 		hud.open_sheet(&"album")
 		var a := hud.sheets.current as AlbumSheet
 		if a != null:
-			a.select_tab(2, false)
+			a.select_tab(AlbumSheet.TAB_POSTCARDS, false)
 
 
 func show_postcard(pc: Dictionary, instant: bool = false) -> void:
@@ -586,6 +617,29 @@ func show_postcard(pc: Dictionary, instant: bool = false) -> void:
 	keep.pressed.connect(func() -> void: close_modal())
 	v.add_child(keep)
 	Game.read_postcard(String(pc.get("id", "")))
+	AudioDirector.play_cue(CUE_OPEN)
+	_open_modal(card, &"postcard", instant)
+
+
+## The riddle card of a found note (Retention v1 F2, GDD §13.3.2: "a note instead opens a mini
+## postcard reader with the riddle"). Round 10: the one moment a mystery speaks for itself.
+func show_riddle(clue: Dictionary, instant: bool = false) -> void:
+	var shell := _card_shell(24)
+	var card: PanelContainer = shell[0]
+	var v: VBoxContainer = shell[1]
+	var well := UiSheet.chip(&"coral_tint", ThemeBuilder.R_L, Vector4.ZERO)
+	well.custom_minimum_size = Vector2(0.0, PORTRAIT * 0.6)
+	var ic := Icons.rect(&"postcard", PORTRAIT * 0.4)
+	ic.set_anchors_preset(Control.PRESET_CENTER)
+	well.add_child(ic)
+	v.add_child(well)
+	v.add_child(UiSheet.label(tr("CLUE_FOUND_TITLE"), &"StrongLabel", true))
+	var riddle := String(clue.get("riddle_key", ""))
+	if riddle != "":
+		v.add_child(UiSheet.label(tr(riddle), &"BodyLabel", true))
+	var keep := UiSheet.pill_button(tr("COMMON_DONE"), true, ThemeBuilder.BUTTON_H)
+	keep.pressed.connect(func() -> void: close_modal())
+	v.add_child(keep)
 	AudioDirector.play_cue(CUE_OPEN)
 	_open_modal(card, &"postcard", instant)
 

@@ -55,8 +55,7 @@ const SOFT_HOP_HEIGHT_K := 0.55
 const SOFT_HOP_SQUASH_K := 0.6
 const TAKEOFF_S := 0.05
 const LID_DOUBLE_P_KEY := "double_p"
-const STROKE_TIME_MIN_S := 0.06
-const TAP_MAX_MOVE_PX := 18.0
+## Tap vs stroke is ONE number: creature_rig.json pet.stroke_drag_px (ARCHITECTURE §3.5).
 ## Per-frame write threshold for animated uniforms (skip invisible changes).
 const UNIFORM_EPS := 1e-4
 const NAP_SETTLE_EASE := 2.0
@@ -658,7 +657,7 @@ func touch_move(point: Vector2) -> void:
 		return
 	_touch_at = point
 	var stroke := float((_cr.get("pet", {}) as Dictionary).get("stroke_drag_px", 24.0))
-	if not _petting and _touch_t > STROKE_TIME_MIN_S and point.distance_to(_touch_from) >= stroke:
+	if not _petting and point.distance_to(_touch_from) >= stroke:
 		_begin_pet()
 
 
@@ -671,7 +670,8 @@ func touch_up(_point: Vector2) -> void:
 		_end_pet(true)
 		return
 	_squash.target = _rest_squash
-	if _touch_at.distance_to(_touch_from) <= TAP_MAX_MOVE_PX:
+	var stroke := float((_cr.get("pet", {}) as Dictionary).get("stroke_drag_px", 24.0))
+	if _touch_at.distance_to(_touch_from) <= stroke:
 		_on_tap()
 		if not asleep:
 			# bespoke tap beat (QA r3 c7): the press squash springs up into a short stretch

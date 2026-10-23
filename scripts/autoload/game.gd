@@ -57,9 +57,11 @@ signal wish_shown(species: StringName, wish: StringName)
 ## Its friend left: the wish is kept for a later visit (no toast).
 signal wish_held(species: StringName, wish: StringName)
 ## Granted: delight pose, stamp (first_stamp), gift petal (gift_flower or &""), affection 0/1.
-## on_arrival: a decor_near piece was set while the friend was away.
+## on_arrival: a decor_near piece was set while the friend was away. offline: it happened during
+## catch-up, so the welcome-back card is already telling the player - the view must stay quiet
+## (ACTIVE_WISHES §7.5: the toast OR the recap line, never both), exactly as [signal heart_up] does.
 signal wish_granted(species: StringName, wish: StringName, affection: int, gift_flower: StringName,
-		first_stamp: bool, on_arrival: bool)
+		first_stamp: bool, on_arrival: bool, offline: bool)
 # Active F2 Tea & Treats:
 ## The tea nook woke (GDD §14.11 calls this signal tea_unlocked; renamed because the query
 ## [method tea_unlocked] holds that name): fade it in, toast TEA_NOOK_AWAKE once.
@@ -159,7 +161,9 @@ func boot() -> void:
 	var events := sim.drain_events()
 	var recap: Array[Dictionary] = []
 	if resumed_save and Recap.should_show(content, float(catch.get("raw_s", 0.0)), events):
-		recap = Recap.build(sim, events, sim.state.t - float(catch.get("delta_s", 0.0)), sim.state.t)
+		var from_t := sim.state.t - float(catch.get("delta_s", 0.0))
+		recap = Recap.build(sim, events, from_t, sim.state.t,
+				CreatureBrain.nap_during(content, sim, events, from_t, sim.state.t))
 	_plan_greeter(events, resumed_save)
 	_dispatch(events, true)
 	_push_audio_state()
@@ -195,6 +199,7 @@ func _notification(what: int) -> void:
 		NOTIFICATION_APPLICATION_RESUMED:
 			_resume()
 		NOTIFICATION_APPLICATION_FOCUS_OUT:
+			InputPrecision.release_all()
 			if not is_suspended:
 				SaveService.save_now(&"focus_out")
 		NOTIFICATION_WM_CLOSE_REQUEST:
@@ -873,11 +878,11 @@ func _emit_retention(ev: Dictionary, offline: bool) -> void:
 		WorldSim.EV_KEEPSAKE:
 			keepsake_added.emit(StringName(ev["species"]))
 		_:
-			_emit_active(ev)
+			_emit_active(ev, offline)
 
 
 ## Typed Active Play v1 signals (GDD §14.11 a5; the same events also went out as sim_event).
-func _emit_active(ev: Dictionary) -> void:
+func _emit_active(ev: Dictionary, offline: bool = false) -> void:
 	match StringName(ev["type"]):
 		WorldSim.EV_WISH_OPENED:
 			wish_opened.emit(StringName(ev["species"]), StringName(ev["wish"]), bool(ev["visible"]))
@@ -887,7 +892,7 @@ func _emit_active(ev: Dictionary) -> void:
 			wish_held.emit(StringName(ev["species"]), StringName(ev["wish"]))
 		WorldSim.EV_WISH_GRANTED:
 			wish_granted.emit(StringName(ev["species"]), StringName(ev["wish"]), int(ev["affection"]),
-				StringName(ev["gift_flower"]), bool(ev["first_stamp"]), bool(ev["on_arrival"]))
+				StringName(ev["gift_flower"]), bool(ev["first_stamp"]), bool(ev["on_arrival"]), offline)
 		WorldSim.EV_TEA_UNLOCKED:
 			tea_nook_awake.emit()
 		WorldSim.EV_PETALS:
@@ -954,6 +959,9 @@ func _rebase() -> void:
 func _suspend() -> void:
 	if is_suspended or sim == null:
 		return
+	# No release event arrives when the app goes away under a finger, so any gesture that holds the
+	# raw pointer would keep it for the rest of the session (ARCHITECTURE §3.5).
+	InputPrecision.release_all()
 	_sync()
 	sim.dismiss_greeter()
 	_greeter_left_s = -1.0
@@ -979,7 +987,9 @@ func _resume() -> void:
 	var events := sim.drain_events()
 	var recap: Array[Dictionary] = []
 	if Recap.should_show(content, float(catch["raw_s"]), events):
-		recap = Recap.build(sim, events, sim.state.t - float(catch["delta_s"]), sim.state.t)
+		var from_t := sim.state.t - float(catch["delta_s"])
+		recap = Recap.build(sim, events, from_t, sim.state.t,
+				CreatureBrain.nap_during(content, sim, events, from_t, sim.state.t))
 	_plan_greeter(events, true)
 	_dispatch(events, true)
 	is_suspended = false

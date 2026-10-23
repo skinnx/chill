@@ -168,6 +168,26 @@ func test_carry_offset_eases_the_foot_above_the_finger() -> void:
 	assert_between(mid.y, -72.0, 30.0)
 
 
+## Round 9: the foot rings are tessellated to a pixel tolerance instead of a flat 40 segments.
+## Every ring of every movable piece is rebuilt on every frame edit mode is open, and at 40
+## segments the chords sat 0.09-0.22 px from the true curve inside a 6 px stroke - invisible
+## oversampling, paid for per piece per frame.
+func test_ring_tessellation_follows_the_ring_size() -> void:
+	for r: float in [30.0, 46.2, 71.3]:
+		var n := DecorEdit.ellipse_segments(r)
+		assert_between(n, DecorEdit.RING_SEGS_MIN, DecorEdit.RING_SEGS_MAX,
+				"%d segments for a %d px ring" % [n, int(r)])
+		var sagitta := r * (1.0 - cos(PI / float(n)))
+		assert_lte(sagitta, DecorEdit.RING_TOL_PX + 1e-6, "within the tolerance at %d px" % int(r))
+		var coarser := r * (1.0 - cos(PI / float(n - 1)))
+		assert_true(n == DecorEdit.RING_SEGS_MIN or coarser > DecorEdit.RING_TOL_PX,
+				"and no more segments than it needs")
+	assert_lt(DecorEdit.ellipse_segments(30.0), 40, "the common sets cost far less than the old flat 40")
+	var pts := DecorEdit._ellipse_points(Vector2.ZERO, Vector2(30.0, 12.0))
+	assert_eq(pts.size(), DecorEdit.ellipse_segments(30.0) + 1, "closed ring: n + 1 points")
+	assert_almost_eq(pts[0].distance_to(pts[pts.size() - 1]), 0.0, 1e-5, "and it closes")
+
+
 func test_edge_pan_waits_eases_in_and_halves_under_reduce_motion() -> void:
 	assert_eq(DecorEdit.edge_pan_speed(10.0, 1080.0, 120.0, 660.0, 0.1, 0.25, false), 0.0, "waits 250 ms")
 	var left := DecorEdit.edge_pan_speed(10.0, 1080.0, 120.0, 660.0, 0.5, 0.25, false)
@@ -280,6 +300,31 @@ func test_long_press_enters_edit_mode_with_the_piece_carried_by_the_same_finger(
 			"it settled where it was carried (within the jitter and magnet)")
 	assert_false(tc.held, "and is set down")
 	assert_true(Game.edit_mode(), "edit mode stays open until Done")
+
+
+## Round 8: the carry is re-anchored on the frame it starts, exactly as the map pan is. Without
+## that the piece catches up the whole 24 px slop in one frame (a visible sideways pop on every
+## pick-up) and the first velocity sample divides that slop by one frame delta, slamming the lean
+## to its 6 deg cap - so a slow, careful lift began with a flinch (ACTIVE_DECOR §3.3: no shake).
+func test_the_carry_starts_without_a_pop_or_a_lean_kick() -> void:
+	var edit: DecorEdit = _layer.edit
+	edit.enter(false)
+	_tick(0.1)
+	var tc := _piece(DecorLayer.TOADSTOOL)
+	var at := _layer.to_canvas(tc.hit)
+	_touch(at, true)
+	_tick(FRAME_S)
+	var before: Vector2 = edit._raw_foot
+	# One slow drag just past the slop: the frame the carry begins.
+	var step := Vector2(_pan.threshold_px + 2.0, 0.0)
+	_drag(at + step)
+	_tick(FRAME_S)
+	# Measured on x alone: the slop was horizontal, while the carry's own 24 dp rise is vertical.
+	var slop_design: float = _layer.to_design(step).length()
+	assert_lt(absf(edit._raw_foot.x - before.x), slop_design * 0.4,
+			"the foot stays where it was drawn instead of catching up the swallowed slop")
+	var cap := deg_to_rad(6.0)  # decor_placement.json pick.lean_max_deg
+	assert_lt(absf(edit._lean.target), cap * 0.5, "and a slow lift does not slam the lean to its cap")
 
 
 func test_a_drag_before_the_long_press_pans_and_never_enters_edit_mode() -> void:

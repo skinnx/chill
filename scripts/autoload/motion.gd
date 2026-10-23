@@ -20,6 +20,13 @@ signal reduce_motion_changed(enabled: bool)
 const SPATIAL_PROPERTIES: Array[String] = ["position", "global_position", "scale", "rotation",
 	"offset", "size", "offset_transform_position", "offset_transform_scale", "offset_transform_rotation"]
 const MS := 0.001
+## A driven spring counts as settled within this fraction of the distance it set out to travel
+## (and this fraction of that distance per second), never tighter than the token's absolute
+## floor. See [method _scale_rest]. 0.05 % keeps the final snap below a pixel even for the longest
+## travel in the game (a full-height sheet, 1,709 px -> 0.85 px) while still cutting about 0.6 s
+## off the invisible tail of every panel move.
+const REST_REL := 0.0005
+const REST_REL_V := 0.0005
 
 var tokens: Dictionary = {}
 var reduce_motion: bool = false
@@ -59,10 +66,14 @@ func _process(delta: float) -> void:
 			var s2: Spring2D = d["spring"]
 			obj.set_indexed(prop, s2.step(delta))
 			done = s2.is_at_rest()
+			if done:
+				obj.set_indexed(prop, s2.target)
 		else:
 			var s1: Spring = d["spring"]
 			obj.set_indexed(prop, s1.step(delta))
 			done = s1.is_at_rest()
+			if done:
+				obj.set_indexed(prop, s1.target)
 		if done:
 			_drives.remove_at(i)
 		else:
@@ -201,16 +212,37 @@ func spring_to(object: Object, property: String, to: Variant, token: StringName)
 		var start: Vector2 = current
 		var s2 := spring_2d(token, start)
 		s2.target = to
+		_scale_rest(s2, start.distance_to(to))
 		s = s2
 	else:
 		var s1 := spring(token, float(current))
 		s1.target = float(to)
+		_scale_rest(s1, absf(float(to) - float(current)))
 		s = s1
 	_drives.append({"object": object, "property": NodePath(property), "spring": s, "is_vec2": is_vec2})
 
 
 func stop_springs(object: Object) -> void:
 	_drives = _drives.filter(func(d: Dictionary) -> bool: return d["object"] != object)
+
+
+## A driven spring rests once it is within [constant REST_REL] of the distance it set out to
+## travel, never tighter than the token's absolute floor (round 9).
+##
+## The token epsilon (0.0005) is absolute, but half of these springs drive properties measured in
+## PIXELS. Settling a 300 px sheet or panel to within 1/2000 of a pixel takes the `move` spring
+## 1.10 s, where 0.15 px - already invisible - takes 0.63 s: about half a second of travel nobody
+## can see. That tail is not free, because [method _process] calls FrameGovernor.hold_for for as
+## long as any drive is alive, so every sheet open, dock move, tray slide and drag release pinned
+## the whole app at 60 fps for an extra half second before the idle timer could even start.
+## Relative, so it is right for a pixel property and an alpha alike without Motion knowing units.
+## A drive that finishes writes the exact target, so ending early never leaves a residue behind
+## (a `rise` left at 0.3 px is invisible, but `rise > 0.0` is not).
+func _scale_rest(s: Object, span: float) -> void:
+	if span <= 0.0:
+		return
+	s.set(&"rest_epsilon_x", maxf(float(s.get(&"rest_epsilon_x")), span * REST_REL))
+	s.set(&"rest_epsilon_v", maxf(float(s.get(&"rest_epsilon_v")), span * REST_REL_V))
 
 
 # ------------------------------------------------------------------ internals

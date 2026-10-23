@@ -91,6 +91,30 @@ func test_tap_ends_in_a_stretch_beat_within_the_squash_cap() -> void:
 	assert_almost_eq(sq.target, float(m.get("_rest_squash")), 1e-4, "and settles back to rest")
 
 
+## Round 8, ARCHITECTURE §3.5: one slop on every target. The mossling used to tap at 18 px and
+## stroke at 24 px with a 60 ms hold, so a thumb that slid 19-24 px, and a flick that crossed
+## 24 px inside the first frame, both did nothing at all on the most-tapped thing in the game.
+func test_a_small_slide_still_taps_and_there_is_no_dead_band() -> void:
+	for slide: float in [0.0, 12.0, 19.0, 23.0]:
+		var m := _mossling(&"buttonbud")
+		m.touch_down(Vector2(540, 1040))
+		_run(m, 0.05)
+		m.touch_move(Vector2(540 + slide, 1040))
+		m.touch_up(Vector2(540 + slide, 1040))
+		var sq: Spring = m.get("_squash")
+		assert_almost_eq(sq.target, float(rig.behaviour()["tap_stretch"]), 1e-4,
+				"a %d px slide is still a tap" % int(slide))
+		assert_false(bool(m.get("_petting")), "and not a pet")
+
+
+func test_a_fast_flick_across_a_friend_pets_it_without_waiting_out_a_hold() -> void:
+	var m := _mossling(&"pebblepaw")
+	m.touch_down(Vector2(540, 1040))
+	# Past the slop inside the very first frame: the old 60 ms hold swallowed this entirely.
+	m.touch_move(Vector2(540 + 60.0, 1040))
+	assert_true(bool(m.get("_petting")), "a stroke is a stroke however quickly it crosses the slop")
+
+
 func test_held_pet_streams_three_hearts_by_1100_ms() -> void:
 	var m := _mossling(&"pebblepaw")
 	var fx: MosslingFx = m.get("_fx")

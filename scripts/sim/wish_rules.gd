@@ -451,6 +451,15 @@ func on_decor_placed(sim: WorldSim, set_id: StringName, pos: Vector2, t: float) 
 		if sim.active.decor.dist_dp(pos, fav) > float(_tu["near_dp"]):
 			continue
 		if sim.is_present(sp):
+			# Only a wish the player can actually SEE may be granted here, the same guard
+			# on_action has (round 8). HELD means two different things: a friend who LEFT keeps
+			# its wish (handled below, and granted on its next arrival), but a friend who is
+			# HERE and held has no bubble - its slot belongs to another friend - so granting it
+			# would hand out the pose, the stamp, the gift petal and the once-per-20 h affection
+			# for a goal that was never shown. That one waits for fill_slots; a wish never
+			# expires, so nothing is lost by waiting.
+			if String(w["state"]) != WorldState.WISH_OPEN:
+				continue
 			grant(sim, sp, t)
 			out.append(sp)
 		else:
